@@ -1,0 +1,86 @@
+.register-page { min-height: 100vh; display: grid; grid-template-columns: 5fr 7fr; background: #faf8ff; color: #131b2e; font: 14px 'Be Vietnam Pro', sans-serif; }
+.register-page button, .register-page input { font: inherit; }
+.register-page button { cursor: pointer; }
+.register-page a { color: inherit; text-decoration: none; }
+.register-page button:focus-visible, .register-page a:focus-visible { outline: 3px solid #82aaff; outline-offset: 3px; }
+.register-hero { padding: 44px; background: radial-gradient(ellipse at bottom right, #17ab8b60, transparent 50%), radial-gradient(#dbe1ff19 1px, transparent 1px), linear-gradient(145deg, #145bd4, #0042b2); background-size: auto, 24px 24px, auto; color: white; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; }
+.register-brand { display: inline-flex; align-items: center; gap: 12px; }
+.register-brand-icon { width: 48px; height: 48px; border-radius: 12px; background: white; color: #004ac6; display: grid; place-items: center; flex-shrink: 0; }
+.register-brand strong { font-size: 23px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.register-brand em { font-size: 10px; font-style: normal; letter-spacing: 1px; padding: 4px 7px; border-radius: 4px; color: #002113; background: #6ffbbe; }
+.register-brand small { display: block; color: #dbe1ff; font-size: 11px; margin-top: 5px; }
+.register-intro { margin-top: 40px; }
+.register-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid #ffffff35; background: #ffffff18; border-radius: 24px; font-size: 12px; }
+.register-badge i { width: 7px; height: 7px; border-radius: 50%; background: #6ffbbe; }
+.register-intro h1 { font-size: clamp(30px, 3vw, 42px); line-height: 1.25; letter-spacing: -1.3px; margin: 19px 0 16px; }
+.register-intro > p { font-size: 15px; line-height: 1.8; color: #dbe1ff; }
+.register-promotion { margin-top: 28px; padding: 20px; background: #ffffff18; border: 1px solid #ffffff35; border-radius: 12px; display: flex; align-items: flex-start; gap: 14px; }
+.register-promotion > span { background: #ffddb8; color: #653e00; border-radius: 8px; padding: 10px; display: flex; }
+.register-promotion small { font-size: 10px; color: #6ffbbe; letter-spacing: 1px; }
+.register-promotion h2 { font-size: 16px; line-height: 1.6; margin: 5px 0; }
+.register-promotion p { font-size: 12px; color: #dbe1ff; line-height: 1.7; }
+.register-benefits { margin-top: 28px; }
+.register-benefits h2 { text-transform: uppercase; font-size: 11px; letter-spacing: .6px; margin-bottom: 17px; line-height: 1.7; }
+.register-benefits > div { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.register-benefits > div > span { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; color: #6ffbbe; background: #6cf8bb25; }
+.register-benefits p { font-size: 12px; line-height: 1.7; }
+.register-hero-bottom { border-top: 1px solid #ffffff30; padding-top: 28px; }
+.register-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+.register-stats > div { padding: 14px 6px; border-radius: 8px; background: #ffffff0d; border: 1px solid #ffffff20; }
+.register-stats strong { display: block; font-size: 26px; letter-spacing: -1px; }
+.register-stats span { display: block; margin-top: 6px; color: #dbe1ff; font-size: 10px; }
+.register-stats > div:last-child strong { color: #6ffbbe; }
+.register-hero-bottom > p { color: #c5d4f5; font-size: 10px; margin-top: 24px; }
+.register-panel { min-width: 0; padding: 30px clamp(24px, 4vw, 72px); display: flex; flex-direction: column; justify-content: space-between; }
+.register-topbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #dfe2ee; padding-bottom: 22px; font-size: 11px; color: #626879; }
+.register-topbar a, .register-topbar > span { display: inline-flex; align-items: center; gap: 6px; }
+.register-topbar > span { background: #eaedff; padding: 8px 10px; border-radius: 24px; font-size: 9px; }
+.register-topbar b { color: #006c49; }
+.register-content { width: 100%; max-width: 580px; margin: 32px auto; }
+.register-content header h2 { font-size: 30px; letter-spacing: -.8px; margin-bottom: 9px; }
+.register-content header p { color: #626879; line-height: 1.7; font-size: 13px; }
+.register-tabs { display: flex; gap: 4px; background: #eaedff; border: 1px solid #dfe2ee; border-radius: 12px; padding: 4px; margin: 24px 0; }
+.register-tabs button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 7px; border: 0; background: transparent; border-radius: 8px; color: #626879; font-size: 12px; }
+.register-tabs svg { flex-shrink: 0; }
+.register-tabs button[aria-pressed='true'] { background: white; color: #004ac6; box-shadow: 0 2px 5px #18243a10; font-weight: 600; }
+.register-form { display: grid; gap: 18px; }
+.register-field { min-width: 0; }
+.register-field > label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 7px; }
+.register-field > label > span { color: #ba1a1a; }
+.register-input { display: flex; align-items: center; gap: 10px; border: 1px solid #c3c6d7; border-radius: 8px; padding: 0 12px; background: white; color: #737686; }
+.register-input:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px #2563eb18; }
+.register-input > svg { flex-shrink: 0; }
+.register-input input { width: 100%; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: #131b2e; font-size: 12px; }
+.register-input button { border: 0; background: transparent; color: #737686; display: flex; padding: 7px 0; }
+.register-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.register-sports { border: 0; min-width: 0; }
+.register-sports legend { font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+.register-sports legend span { color: #737686; font-weight: 400; font-size: 10px; }
+.register-sports > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.register-sports label { position: relative; cursor: pointer; }
+.register-sports input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.register-sports label > span { display: flex; align-items: center; gap: 7px; font-size: 11px; padding: 9px 11px; background: white; border: 1px solid #d2d5e0; border-radius: 8px; }
+.register-sports svg { visibility: hidden; }
+.register-sports input:checked + span { background: #dbe1ff; border-color: #004ac6; color: #003ea8; }
+.register-sports input:checked + span svg { visibility: visible; }
+.register-sports input:focus-visible + span { outline: 3px solid #82aaff; outline-offset: 2px; }
+.register-strength { padding: 12px; border: 1px solid #dfe2ee; border-radius: 8px; background: #f2f3ff; font-size: 11px; }
+.register-strength > div { display: flex; justify-content: space-between; gap: 10px; }
+.register-strength strong { color: #006c49; }
+.register-strength meter { width: 100%; height: 13px; margin: 5px 0; }
+.register-strength p { color: #737686; font-size: 10px; line-height: 1.6; }
+.register-consent { display: flex; align-items: flex-start; gap: 10px; color: #626879; font-size: 12px; line-height: 1.8; cursor: pointer; }
+.register-consent input { width: 16px; height: 16px; margin-top: 3px; flex-shrink: 0; accent-color: #2563eb; }
+.register-submit { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 14px 12px; min-height: 48px; border: 0; border-radius: 8px; background: #2563eb; color: white; font-weight: 600 !important; box-shadow: 0 5px 12px #2563eb25; }
+.register-submit:hover { background: #004ac6; }
+.register-submit svg { flex-shrink: 0; }
+.register-feedback:empty { display: none; }
+.register-feedback { padding: 12px; border-radius: 8px; color: #004ac6; background: #eaedff; line-height: 1.7; font-size: 12px; }
+.register-login { text-align: center; color: #626879; font-size: 12px; margin-top: 24px; line-height: 2; }
+.register-login a { color: #004ac6; font-weight: 600; display: inline-flex; gap: 5px; align-items: center; }
+.register-login a:hover { text-decoration: underline; }
+.register-support { border-top: 1px solid #dfe2ee; padding-top: 22px; color: #737686; font-size: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+.register-support a { display: inline-flex; align-items: center; gap: 6px; color: #004ac6; }
+@media(max-width:1100px) { .register-hero { padding: 30px; } .register-panel { padding: 26px; } .register-stats strong { font-size: 22px; } }
+@media(max-width:900px) { .register-page { grid-template-columns: 1fr; } .register-hero { padding: 28px; } .register-intro { margin-top: 24px; max-width: 620px; } .register-intro h1 { font-size: 30px; } .register-promotion, .register-benefits, .register-hero-bottom { display: none; } .register-content { max-width: 620px; } }
+@media(max-width:520px) { .register-panel { padding: 22px 18px; } .register-hero { padding: 24px 20px; } .register-intro h1 { font-size: 26px; } .register-intro > p { font-size: 12px; } .register-row { grid-template-columns: 1fr; gap: 18px; } .register-content header h2 { font-size: 25px; } .register-tabs button { font-size: 10px; } .register-submit { font-size: 12px !important; } .register-support { justify-content: center; text-align: center; } }
