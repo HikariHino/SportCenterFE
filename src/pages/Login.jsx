@@ -56,7 +56,7 @@ export default function Login() {
           <button className="login-otp" type="button" onClick={() => unavailable('Đăng nhập bằng mã OTP')}><MessageCircle size={19} /> Đăng nhập bằng mã OTP qua SMS / Zalo</button>
         </form>
         <p className="login-feedback" role="status" aria-live="polite">{message}</p>
-        <div className="login-register">Chưa có tài khoản SportPulse? <button type="button" className="login-text-button" onClick={() => unavailable('Đăng ký hội viên')}>Đăng ký hội viên mới ngay</button></div>
+        <div className="login-register">Chưa có tài khoản SportPulse? <Link className="login-text-button" to="/register">Đăng ký hội viên mới ngay</Link></div>
       </div>
       <div className="login-support"><span><ShieldCheck size={18} /> Đồng hành cùng bạn trên mọi sân đấu</span><a href="tel:19008899"><Phone size={16} /> Hotline: <strong>1900 8899</strong></a></div>
     </section>
