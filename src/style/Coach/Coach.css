@@ -1,0 +1,60 @@
+.coach-page {
+  min-height: 100vh;
+  padding: 48px;
+  background: #f5f8ff;
+  color: #172033;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.coach-page__content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px;
+  border: 1px solid #dbe5f5;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.coach-page__eyebrow {
+  margin: 0 0 10px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+
+.coach-page h1 {
+  margin: 0;
+  font-size: clamp(28px, 5vw, 42px);
+  line-height: 1.15;
+}
+
+.coach-page__content > p:not(.coach-page__eyebrow) {
+  margin: 14px 0 24px;
+  color: #667085;
+}
+
+.coach-page button {
+  border: 0;
+  border-radius: 8px;
+  padding: 13px 18px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.coach-page button:hover {
+  background: #1d4ed8;
+}
+
+@media (max-width: 640px) {
+  .coach-page {
+    padding: 28px 16px;
+  }
+
+  .coach-page__content {
+    padding: 28px 22px;
+  }
+}

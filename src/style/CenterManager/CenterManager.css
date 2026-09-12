@@ -1,0 +1,97 @@
+.center-manager {
+  min-height: 100vh;
+  padding: 48px;
+  background: #f4f7fb;
+  color: #172033;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.center-manager__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1120px;
+  margin: 0 auto 32px;
+}
+
+.center-manager__eyebrow {
+  margin: 0 0 8px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+
+.center-manager h1 {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 42px);
+  line-height: 1.15;
+}
+
+.center-manager__header p:last-child {
+  margin: 12px 0 0;
+  color: #667085;
+}
+
+.center-manager button {
+  border: 0;
+  border-radius: 8px;
+  padding: 13px 18px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.center-manager button:hover {
+  background: #1d4ed8;
+}
+
+.center-manager__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.center-manager__stats article {
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.center-manager__stats span {
+  display: block;
+  color: #667085;
+  font-size: 14px;
+}
+
+.center-manager__stats strong {
+  display: block;
+  margin-top: 8px;
+  color: #2563eb;
+  font-size: 32px;
+}
+
+@media (max-width: 640px) {
+  .center-manager {
+    padding: 28px 16px;
+  }
+
+  .center-manager__header {
+    display: block;
+  }
+
+  .center-manager button {
+    margin-top: 20px;
+  }
+
+  .center-manager__stats {
+    grid-template-columns: 1fr;
+  }
+}
