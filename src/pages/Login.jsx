@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CreditCard, Eye, EyeOff, LockKeyhole, Mail, MessageCircle, Phone, ShieldCheck, Trophy, Users } from 'lucide-react'
 import '../style/Login.css'
 
@@ -15,9 +15,11 @@ function Brand() {
 }
 
 export default function Login() {
+  const location = useLocation()
+  const selectedMembership = location.state?.membership
   const [portal, setPortal] = useState('member')
   const [showPassword, setShowPassword] = useState(false)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(() => selectedMembership ? `Vui lòng đăng nhập để tiếp tục đăng ký gói ${selectedMembership}.` : '')
   const unavailable = (feature) => setMessage(`${feature} hiện chưa được kết nối. Vui lòng liên hệ hotline 1900 8899 để được hỗ trợ.`)
 
   function handleSubmit(event) {
