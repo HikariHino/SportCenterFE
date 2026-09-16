@@ -73,3 +73,60 @@
 @media (max-width: 1100px) { .login-hero { padding: 32px; } .login-panel { padding: 24px 32px; } .login-stats { gap: 10px; } .login-stats strong { font-size: 22px; } }
 @media (max-width: 980px) { .login-page { grid-template-columns: 1fr; } .login-hero { display: none; } .login-panel { min-height: 100vh; } .login-mobile-brand { display: block; } .login-topbar { justify-content: space-between; border-bottom: 1px solid #eaedff; padding-bottom: 20px; } .login-support { justify-content: center; } }
 @media (max-width: 480px) { .login-panel { padding: 22px 20px; gap: 20px; } .login-brand small { font-size: 8px; letter-spacing: .3px; } .login-brand strong { font-size: 17px; } .login-brand-icon { width: 36px; height: 36px; } .login-brand { gap: 8px; } .login-back { font-size: 10px; } .login-content header h2 { font-size: 27px; } .login-content header p { font-size: 13px; } .login-portals button { font-size: 10px; gap: 5px; } .login-socials { gap: 8px; } }
+
+/* Motion */
+.login-hero { position: relative; overflow: hidden; animation: login-hero-in .8s cubic-bezier(.22, 1, .36, 1) both; }
+.login-hero::after { content: ''; position: absolute; width: 340px; height: 340px; right: -170px; top: 18%; border-radius: 50%; background: #4f8cff26; filter: blur(4px); pointer-events: none; animation: login-orb-drift 8s ease-in-out infinite alternate; }
+.login-hero > * { position: relative; z-index: 1; }
+.login-panel { animation: login-panel-in .72s .08s cubic-bezier(.22, 1, .36, 1) both; }
+.login-brand-icon { animation: login-icon-float 4s ease-in-out infinite; }
+.login-badge i { animation: login-pulse 1.8s ease-out infinite; }
+.login-intro > *, .login-feature, .login-stats > div, .login-content > * { animation: login-rise .55s cubic-bezier(.22, 1, .36, 1) both; }
+.login-intro > :nth-child(1) { animation-delay: .12s; }
+.login-intro > :nth-child(2) { animation-delay: .19s; }
+.login-intro > :nth-child(3) { animation-delay: .26s; }
+.login-feature:nth-child(1) { animation-delay: .24s; }
+.login-feature:nth-child(2) { animation-delay: .31s; }
+.login-feature:nth-child(3) { animation-delay: .38s; }
+.login-feature:nth-child(4) { animation-delay: .45s; }
+.login-stats > div:nth-child(1) { animation-delay: .42s; }
+.login-stats > div:nth-child(2) { animation-delay: .49s; }
+.login-stats > div:nth-child(3) { animation-delay: .56s; }
+.login-content > :nth-child(1) { animation-delay: .14s; }
+.login-content > :nth-child(2) { animation-delay: .2s; }
+.login-content > :nth-child(3) { animation-delay: .26s; }
+.login-content > :nth-child(4) { animation-delay: .32s; }
+.login-content > :nth-child(n+5) { animation-delay: .38s; }
+.login-feature { transition: transform .28s ease, background-color .28s ease, border-color .28s ease, box-shadow .28s ease; }
+.login-feature:hover { transform: translateY(-4px); background: #ffffff10; border-color: #ffffff38; box-shadow: 0 12px 26px #07162b24; }
+.login-portals button { transition: color .25s ease, background-color .25s ease, border-color .25s ease, box-shadow .25s ease, transform .25s ease; }
+.login-portals button:hover { color: #004ac6; }
+.login-portals button[aria-pressed='true'] { animation: login-tab-select .3s cubic-bezier(.22, 1, .36, 1); }
+.login-notice { animation: login-notice-in .35s cubic-bezier(.22, 1, .36, 1) both; }
+.login-socials button, .login-otp, .login-back, .login-text-button { transition: color .22s ease, background-color .22s ease, border-color .22s ease, transform .22s ease, box-shadow .22s ease; }
+.login-socials button:hover, .login-otp:hover { transform: translateY(-2px); border-color: #b8c8f4; box-shadow: 0 7px 16px #18243a12; }
+.login-back:hover { color: #004ac6 !important; transform: translateX(-3px); }
+.login-input { transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease; }
+.login-input:focus-within { transform: translateY(-1px); }
+.login-input > svg, .login-eye { transition: color .22s ease, transform .22s ease; }
+.login-input:focus-within > svg { color: #2563eb; transform: scale(1.08); }
+.login-eye:hover { color: #2563eb; transform: scale(1.08); }
+.login-submit, .login-submit svg { transition: background-color .22s ease, transform .22s ease, box-shadow .22s ease; }
+.login-submit:hover { transform: translateY(-2px); box-shadow: 0 9px 20px #2563eb36; }
+.login-submit:hover svg { transform: translateX(4px); }
+.login-submit:active { transform: translateY(0) scale(.985); }
+.login-feedback:not(:empty) { animation: login-feedback-in .35s cubic-bezier(.22, 1, .36, 1) both; }
+
+@keyframes login-hero-in { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes login-panel-in { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes login-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes login-tab-select { 0% { transform: scale(.97); } 100% { transform: scale(1); } }
+@keyframes login-notice-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes login-feedback-in { from { opacity: 0; transform: translateY(-6px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes login-pulse { 0% { box-shadow: 0 0 0 0 #6cf8bb70; } 70%, 100% { box-shadow: 0 0 0 7px #6cf8bb00; } }
+@keyframes login-icon-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes login-orb-drift { from { transform: translate3d(0, -18px, 0) scale(.92); } to { transform: translate3d(-55px, 42px, 0) scale(1.08); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page *, .login-page *::before, .login-page *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

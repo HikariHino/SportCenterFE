@@ -84,3 +84,71 @@
 @media(max-width:1100px) { .register-hero { padding: 30px; } .register-panel { padding: 26px; } .register-stats strong { font-size: 22px; } }
 @media(max-width:900px) { .register-page { grid-template-columns: 1fr; } .register-hero { padding: 28px; } .register-intro { margin-top: 24px; max-width: 620px; } .register-intro h1 { font-size: 30px; } .register-promotion, .register-benefits, .register-hero-bottom { display: none; } .register-content { max-width: 620px; } }
 @media(max-width:520px) { .register-panel { padding: 22px 18px; } .register-hero { padding: 24px 20px; } .register-intro h1 { font-size: 26px; } .register-intro > p { font-size: 12px; } .register-row { grid-template-columns: 1fr; gap: 18px; } .register-content header h2 { font-size: 25px; } .register-tabs button { font-size: 10px; } .register-submit { font-size: 12px !important; } .register-support { justify-content: center; text-align: center; } }
+
+/* Motion */
+.register-hero { position: relative; overflow: hidden; animation: register-hero-in .8s cubic-bezier(.22, 1, .36, 1) both; }
+.register-hero::after { content: ''; position: absolute; width: 320px; height: 320px; right: -170px; bottom: 10%; border: 1px solid #ffffff18; border-radius: 50%; box-shadow: 0 0 0 54px #ffffff08, 0 0 0 108px #ffffff05; pointer-events: none; animation: register-rings 9s ease-in-out infinite alternate; }
+.register-hero > * { position: relative; z-index: 1; }
+.register-panel { animation: register-panel-in .72s .08s cubic-bezier(.22, 1, .36, 1) both; }
+.register-brand-icon { animation: register-icon-float 4s ease-in-out infinite; }
+.register-badge i { animation: register-pulse 1.8s ease-out infinite; }
+.register-intro > *, .register-promotion, .register-benefits > *, .register-stats > div, .register-content > *, .register-form > * { animation: register-rise .55s cubic-bezier(.22, 1, .36, 1) both; }
+.register-intro > :nth-child(1) { animation-delay: .1s; }
+.register-intro > :nth-child(2) { animation-delay: .17s; }
+.register-intro > :nth-child(3) { animation-delay: .24s; }
+.register-promotion { animation-delay: .3s; }
+.register-benefits > :nth-child(1) { animation-delay: .34s; }
+.register-benefits > :nth-child(2) { animation-delay: .39s; }
+.register-benefits > :nth-child(3) { animation-delay: .44s; }
+.register-benefits > :nth-child(4) { animation-delay: .49s; }
+.register-benefits > :nth-child(5) { animation-delay: .54s; }
+.register-stats > div:nth-child(1) { animation-delay: .46s; }
+.register-stats > div:nth-child(2) { animation-delay: .52s; }
+.register-stats > div:nth-child(3) { animation-delay: .58s; }
+.register-content > :nth-child(1) { animation-delay: .14s; }
+.register-content > :nth-child(2) { animation-delay: .2s; }
+.register-content > :nth-child(n+3) { animation-delay: .26s; }
+.register-form > :nth-child(1) { animation-delay: .25s; }
+.register-form > :nth-child(2) { animation-delay: .29s; }
+.register-form > :nth-child(3) { animation-delay: .33s; }
+.register-form > :nth-child(4) { animation-delay: .37s; }
+.register-form > :nth-child(n+5) { animation-delay: .41s; }
+.register-promotion, .register-stats > div { transition: transform .28s ease, background-color .28s ease, border-color .28s ease, box-shadow .28s ease; }
+.register-promotion:hover, .register-stats > div:hover { transform: translateY(-4px); background: #ffffff20; border-color: #ffffff40; box-shadow: 0 12px 28px #00348124; }
+.register-tabs button { transition: color .25s ease, background-color .25s ease, box-shadow .25s ease, transform .25s ease; }
+.register-tabs button:hover { color: #004ac6; }
+.register-tabs button[aria-pressed='true'] { animation: register-tab-select .3s cubic-bezier(.22, 1, .36, 1); }
+.register-field { animation: register-field-in .35s cubic-bezier(.22, 1, .36, 1) both; }
+.register-input { transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease; }
+.register-input:focus-within { transform: translateY(-1px); }
+.register-input > svg, .register-input button { transition: color .22s ease, transform .22s ease; }
+.register-input:focus-within > svg { color: #2563eb; transform: scale(1.08); }
+.register-input button:hover { color: #2563eb; transform: scale(1.08); }
+.register-sports label > span { transition: color .22s ease, background-color .22s ease, border-color .22s ease, transform .22s ease, box-shadow .22s ease; }
+.register-sports label:hover > span { transform: translateY(-2px); border-color: #9eb7ef; box-shadow: 0 5px 12px #18243a0d; }
+.register-sports input:checked + span { animation: register-chip-select .28s cubic-bezier(.22, 1, .36, 1); }
+.register-sports input:checked + span svg { animation: register-check-in .3s cubic-bezier(.22, 1, .36, 1); }
+.register-strength { transition: border-color .25s ease, background-color .25s ease; }
+.register-submit, .register-submit svg, .register-login a { transition: background-color .22s ease, transform .22s ease, box-shadow .22s ease; }
+.register-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 22px #2563eb34; }
+.register-submit:hover svg, .register-login a:hover svg { transform: translateX(4px); }
+.register-submit:active { transform: translateY(0) scale(.985); }
+.register-feedback:not(:empty) { animation: register-feedback-in .35s cubic-bezier(.22, 1, .36, 1) both; }
+.register-topbar a { transition: color .22s ease, transform .22s ease; }
+.register-topbar a:hover { color: #004ac6; transform: translateX(-3px); }
+
+@keyframes register-hero-in { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes register-panel-in { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes register-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes register-field-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes register-tab-select { 0% { transform: scale(.97); } 100% { transform: scale(1); } }
+@keyframes register-chip-select { 0% { transform: scale(.94); } 100% { transform: scale(1); } }
+@keyframes register-check-in { from { opacity: 0; transform: scale(.4) rotate(-20deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes register-feedback-in { from { opacity: 0; transform: translateY(-6px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes register-pulse { 0% { box-shadow: 0 0 0 0 #6ffbbe70; } 70%, 100% { box-shadow: 0 0 0 7px #6ffbbe00; } }
+@keyframes register-icon-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes register-rings { from { transform: translate3d(20px, 24px, 0) scale(.9); } to { transform: translate3d(-35px, -24px, 0) scale(1.08); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .register-page *, .register-page *::before, .register-page *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
