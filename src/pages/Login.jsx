@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CreditCard, Eye, EyeOff, LockKeyhole, Mail, MessageCircle, Phone, ShieldCheck, Trophy, Users } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 import '../style/Login.css'
 
 const features = [
@@ -10,12 +11,20 @@ const features = [
   [Users, 'HLV Chuyên nghiệp', 'Cố vấn chuẩn kiện tướng quốc gia'],
 ]
 
+const mockCoachAccount = {
+  email: 'coach@sportpulse.vn',
+  password: 'Coach@123',
+  user: { id: 'coach-001', name: 'Nguyễn Hoàng Nam', email: 'coach@sportpulse.vn', role: 'coach' },
+}
+
 function Brand() {
   return <Link to="/" className="login-brand"><span className="login-brand-icon"><Trophy size={26} /></span><span><strong>SportPulse</strong><small>Trung tâm Thể thao Olympus</small></span></Link>
 }
 
 export default function Login() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { login } = useAuth()
   const selectedMembership = location.state?.membership
   const [portal, setPortal] = useState('member')
   const [showPassword, setShowPassword] = useState(false)
@@ -24,9 +33,20 @@ export default function Login() {
 
   function handleSubmit(event) {
     event.preventDefault()
-    const identifier = new FormData(event.currentTarget).get('identifier').trim()
+    const formData = new FormData(event.currentTarget)
+    const identifier = formData.get('identifier').trim()
+    const password = formData.get('password')
     if (!identifier) {
       setMessage('Vui lòng nhập email hoặc số điện thoại của bạn.')
+      return
+    }
+    if (identifier.toLowerCase() === mockCoachAccount.email && password === mockCoachAccount.password) {
+      login(mockCoachAccount.user, 'mock-coach-token')
+      navigate('/coach', { replace: true })
+      return
+    }
+    if (identifier.toLowerCase() === mockCoachAccount.email) {
+      setMessage('Mật khẩu Coach chưa chính xác. Vui lòng kiểm tra và thử lại.')
       return
     }
     setMessage('Form đăng nhập chưa được kết nối với hệ thống xác thực. Vui lòng thử lại khi dịch vụ sẵn sàng.')
