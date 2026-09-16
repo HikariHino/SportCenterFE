@@ -8,3 +8,43 @@
 @media(max-width:1250px){.sport-page .main-nav{height:auto;min-height:78px}.sport-page .nav-content{flex-wrap:wrap;gap:14px;padding-block:14px}.sport-page .nav-links{order:3;flex-basis:100%}}
 @media(max-width:700px){.sport-page .nav-content{gap:10px;padding-block:12px}.sport-page .nav-links{top:100%}.sport-page .nav-actions{flex-wrap:wrap;gap:8px}.sport-page .dashboard-register{font-size:11px;padding:10px}.sport-page .nav-actions .login{padding:10px}.sport-page .mobile-menu{padding:6px}}
 @media(max-width:520px){.sport-page .nav-actions{width:100%}.sport-page .mobile-menu{margin-left:auto}}
+
+html { scroll-behavior: smooth; }
+.sport-page { overflow-x: clip; overflow-y: visible; }
+.sport-page [id] { scroll-margin-top: 96px; }
+.sport-page .nav-links { position: relative; }
+.sport-page .nav-links a {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  transition: color .25s ease, background-color .25s ease, transform .25s ease;
+}
+.sport-page .nav-links a:hover { color: var(--blue); transform: translateY(-1px); }
+.sport-page .nav-links .active { color: var(--blue); }
+.sport-page .nav-indicator {
+  position: absolute;
+  top: 50%;
+  height: 36px;
+  border: 1px solid #cddcff;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #edf3ff, #f7faff);
+  box-shadow: 0 4px 12px #1557d512;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: left .38s cubic-bezier(.22, 1, .36, 1), width .38s cubic-bezier(.22, 1, .36, 1), opacity .2s ease;
+}
+@media(max-width:700px) {
+  .sport-page .nav-indicator { display: none; }
+  .sport-page .nav-links a { padding: 10px 12px; }
+  .sport-page .nav-links a:hover { transform: translateX(3px); }
+  .sport-page .nav-links .active { background: #edf3ff; }
+}
+@media(prefers-reduced-motion:reduce) {
+  html { scroll-behavior: auto; }
+  .sport-page .nav-links a,
+  .sport-page .nav-indicator { transition: none; }
+}
