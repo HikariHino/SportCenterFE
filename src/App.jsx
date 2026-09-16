@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import SportDashboard from './pages/SportDashboard'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Member from './pages/member/Member'
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
         <Route path="/" element={<SportDashboard />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/member" element={<Member />} />
       </Routes>
     </BrowserRouter>
   )
