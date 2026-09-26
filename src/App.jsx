@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Coach from './pages/Coach/Coach'
 import { useAuth } from './contexts/AuthContext'
+import Member from './pages/member/Member'
 
 function CoachRoute() {
   const { user } = useAuth()
@@ -19,6 +20,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/coach" element={<CoachRoute />} />
+        <Route path="/member" element={<Member />} />
       </Routes>
     </BrowserRouter>
   )
