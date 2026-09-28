@@ -5,10 +5,11 @@ import Register from './pages/Register'
 import Coach from './pages/Coach/Coach'
 import { useAuth } from './contexts/AuthContext'
 import Member from './pages/member/Member'
+import { getToken } from './utils/auth'
 
 function CoachRoute() {
   const { user } = useAuth()
-  const isCoach = user?.role === 'coach' && Boolean(localStorage.getItem('token'))
+  const isCoach = user?.role === 'coach' && Boolean(getToken())
   return isCoach ? <Coach /> : <Navigate to="/login" replace state={{ from: '/coach' }} />
 }
 

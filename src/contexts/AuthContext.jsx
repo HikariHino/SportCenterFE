@@ -1,22 +1,20 @@
 ﻿import { createContext, useContext, useState } from 'react'
 
+import { clearSession, getSavedUser, saveSession } from '../utils/auth'
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user')
-    return saved ? JSON.parse(saved) : null
-  })
+  const [user, setUser] = useState(getSavedUser)
 
-  const login = (userData, token) => {
-    localStorage.setItem('user', JSON.stringify(userData))
-    localStorage.setItem('token', token)
-    setUser(userData)
+  const login = (userData, token, remember = true) => {
+    const savedUser = saveSession(userData, token, remember)
+    setUser(savedUser)
+    return savedUser
   }
 
   const logout = () => {
-    localStorage.removeItem('user')
-    localStorage.removeItem('token')
+    clearSession()
     setUser(null)
   }
 

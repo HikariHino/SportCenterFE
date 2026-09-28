@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CreditCard, Eye, EyeOff, LockKeyhole, Mail, MessageCircle, Phone, ShieldCheck, Trophy, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { login as loginApi } from '../services/authService'
+import { getAuthDestination, getAuthErrorMessage } from '../utils/auth'
 import '../style/Login.css'
 
 const features = [
@@ -10,12 +12,6 @@ const features = [
   [CreditCard, 'Đặc quyền VIP', 'Tích điểm đổi giờ chơi miễn phí'],
   [Users, 'HLV Chuyên nghiệp', 'Cố vấn chuẩn kiện tướng quốc gia'],
 ]
-
-const mockCoachAccount = {
-  email: 'coach@sportpulse.vn',
-  password: 'Coach@123',
-  user: { id: 'coach-001', name: 'Nguyễn Hoàng Nam', email: 'coach@sportpulse.vn', role: 'coach' },
-}
 
 function Brand() {
   return <Link to="/" className="login-brand"><span className="login-brand-icon"><Trophy size={26} /></span><span><strong>SportPulse</strong><small>Trung tâm Thể thao Olympus</small></span></Link>
@@ -28,28 +24,35 @@ export default function Login() {
   const selectedMembership = location.state?.membership
   const [portal, setPortal] = useState('member')
   const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitting = useRef(false)
   const [message, setMessage] = useState(() => selectedMembership ? `Vui lòng đăng nhập để tiếp tục đăng ký gói ${selectedMembership}.` : '')
   const unavailable = (feature) => setMessage(`${feature} hiện chưa được kết nối. Vui lòng liên hệ hotline 1900 8899 để được hỗ trợ.`)
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
+    if (submitting.current) return
     const formData = new FormData(event.currentTarget)
-    const identifier = formData.get('identifier').trim()
+    const email = formData.get('email').trim()
     const password = formData.get('password')
-    if (!identifier) {
-      setMessage('Vui lòng nhập email hoặc số điện thoại của bạn.')
+    if (!email) {
+      setMessage('Vui lòng nhập email của bạn.')
       return
     }
-    if (identifier.toLowerCase() === mockCoachAccount.email && password === mockCoachAccount.password) {
-      login(mockCoachAccount.user, 'mock-coach-token')
-      navigate('/coach', { replace: true })
-      return
+    submitting.current = true
+    setIsSubmitting(true)
+    setMessage('')
+    try {
+      const result = await loginApi({ email, password })
+      if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Đăng nhập không thành công.'))
+      const user = login(result.data, result.data?.token, formData.has('remember'))
+      navigate(getAuthDestination(user.role, location.state?.from), { replace: true, state: { membership: selectedMembership } })
+    } catch (error) {
+      setMessage(getAuthErrorMessage(error, 'Đăng nhập không thành công. Vui lòng thử lại.'))
+    } finally {
+      submitting.current = false
+      setIsSubmitting(false)
     }
-    if (identifier.toLowerCase() === mockCoachAccount.email) {
-      setMessage('Mật khẩu Coach chưa chính xác. Vui lòng kiểm tra và thử lại.')
-      return
-    }
-    setMessage('Form đăng nhập chưa được kết nối với hệ thống xác thực. Vui lòng thử lại khi dịch vụ sẵn sàng.')
   }
 
   return <main className="login-page">
@@ -69,12 +72,12 @@ export default function Login() {
         </div>
         {portal === 'staff' && <div className="login-notice"><ShieldCheck size={22} /><p><strong>Cổng Điều Hành Nội Bộ:</strong> Dành riêng cho HLV và Quản lý cụm sân Olympus.</p></div>}
         <div className="login-socials"><button type="button" onClick={() => unavailable('Đăng nhập Google')}><b className="login-google">G</b> Google</button><button type="button" onClick={() => unavailable('Đăng nhập Apple ID')}>Apple ID</button><button type="button" onClick={() => unavailable('Đăng nhập Zalo')}><b className="login-zalo">Z</b> Zalo / SĐT</button></div>
-        <div className="login-divider"><span>Hoặc đăng nhập bằng email / số điện thoại</span></div>
-        <form onSubmit={handleSubmit} className="login-form">
-          <div><label htmlFor="login-identifier">Email hoặc Số điện thoại</label><div className="login-input"><Mail size={19} /><input id="login-identifier" name="identifier" type="text" autoComplete="username" placeholder="vd: athlete@sportpulse.vn hoặc 0912 345 678" required /></div></div>
+        <div className="login-divider"><span>Hoặc đăng nhập bằng email</span></div>
+        <form onSubmit={handleSubmit} className="login-form" aria-busy={isSubmitting}>
+          <div><label htmlFor="login-email">Email</label><div className="login-input"><Mail size={19} /><input id="login-email" name="email" type="email" autoComplete="username" placeholder="vd: athlete@sportpulse.vn" required /></div></div>
           <div><div className="login-label-row"><label htmlFor="login-password">Mật khẩu</label><button className="login-text-button" type="button" onClick={() => unavailable('Khôi phục mật khẩu')}>Quên mật khẩu?</button></div><div className="login-input"><LockKeyhole size={19} /><input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Nhập mật khẩu của bạn" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
           <label className="login-remember"><input name="remember" type="checkbox" defaultChecked /> Ghi nhớ đăng nhập trên thiết bị này</label>
-          <button className="login-submit" type="submit">{portal === 'staff' ? 'Đăng nhập Cổng Quản lý' : 'Đăng nhập ngay'}<ArrowRight size={19} /></button>
+          <button className="login-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng nhập...' : portal === 'staff' ? 'Đăng nhập Cổng Quản lý' : 'Đăng nhập ngay'}<ArrowRight size={19} /></button>
           <button className="login-otp" type="button" onClick={() => unavailable('Đăng nhập bằng mã OTP')}><MessageCircle size={19} /> Đăng nhập bằng mã OTP qua SMS / Zalo</button>
         </form>
         <p className="login-feedback" role="status" aria-live="polite">{message}</p>
