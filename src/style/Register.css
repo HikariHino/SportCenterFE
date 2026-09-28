@@ -50,7 +50,7 @@
 .register-input { display: flex; align-items: center; gap: 10px; border: 1px solid #c3c6d7; border-radius: 8px; padding: 0 12px; background: white; color: #737686; }
 .register-input:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px #2563eb18; }
 .register-input > svg { flex-shrink: 0; }
-.register-input input { width: 100%; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: #131b2e; font-size: 12px; }
+.register-input input, .register-input select { width: 100%; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: #131b2e; font-size: 12px; }
 .register-input button { border: 0; background: transparent; color: #737686; display: flex; padding: 7px 0; }
 .register-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .register-sports { border: 0; min-width: 0; }
@@ -73,6 +73,7 @@
 .register-consent input { width: 16px; height: 16px; margin-top: 3px; flex-shrink: 0; accent-color: #2563eb; }
 .register-submit { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 14px 12px; min-height: 48px; border: 0; border-radius: 8px; background: #2563eb; color: white; font-weight: 600 !important; box-shadow: 0 5px 12px #2563eb25; }
 .register-submit:hover { background: #004ac6; }
+.register-submit:disabled, .register-tabs button:disabled { opacity: .6; cursor: not-allowed; }
 .register-submit svg { flex-shrink: 0; }
 .register-feedback:empty { display: none; }
 .register-feedback { padding: 12px; border-radius: 8px; color: #004ac6; background: #eaedff; line-height: 1.7; font-size: 12px; }

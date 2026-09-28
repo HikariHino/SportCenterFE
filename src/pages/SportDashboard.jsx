@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Activity, ArrowRight, CalendarDays, Check, ChevronDown, CirclePlay, Clock3, Dumbbell, Globe2, MapPin, Menu, MessageCircle, Phone, Search, Trophy, Users, Waves, X, Zap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { getToken } from '../utils/auth'
 import '../style/SportDashboard.css'
 
 const sports = [
@@ -91,7 +92,7 @@ export default function SportDashboard() {
     setMenuOpen(false)
   }
   const selectMembership = (membershipName) => {
-    const isAuthenticated = Boolean(user && localStorage.getItem('token'))
+    const isAuthenticated = Boolean(user && getToken())
     if (!isAuthenticated) {
       navigate('/login', { state: { from: '/#memberships', membership: membershipName } })
     }

@@ -1,9 +1,11 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Bell, Building2, CalendarCheck, Check, CreditCard, Eye, EyeOff, Gift, LockKeyhole, Mail, MapPin, Phone, Trophy, UserRound } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, Bell, Building2, CalendarCheck, CreditCard, Eye, EyeOff, Gift, LockKeyhole, Mail, MapPin, Phone, Trophy, UserRound } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { register as registerApi } from '../services/authService'
+import { getAuthDestination, getAuthErrorMessage } from '../utils/auth'
 import '../style/Register.css'
 
-const sports = ['Pickleball', 'Tennis', 'Cầu lông', 'Bóng đá Futsal', 'Gym & Bơi lội']
 const benefits = [
   [Gift, 'Tích điểm thưởng', 'quy đổi giờ chơi miễn phí và voucher phụ kiện'],
   [CalendarCheck, 'Giữ chỗ sân giờ vàng', 'ưu tiên đặt trước đến 14 ngày'],
@@ -21,16 +23,20 @@ function PasswordField({ id, label, ...props }) {
 }
 
 export default function Register() {
-  const [accountType, setAccountType] = useState('individual')
+  const navigate = useNavigate()
+  const { login } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitting = useRef(false)
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const strength = password ? [password.length >= 8, /[a-z]/.test(password) && /[A-Z]/.test(password), /\d/.test(password), /[^\w\s]/.test(password)].filter(Boolean).length : 0
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
+    if (submitting.current) return
     const form = event.currentTarget
     const data = new FormData(form)
-    for (const name of ['fullname', ...(accountType === 'corporate' ? ['organization'] : [])]) {
+    for (const name of ['fullname', 'email', 'address', 'fitnessGoal']) {
       if (!data.get(name).trim()) {
         form.elements.namedItem(name).focus()
         setMessage('Vui lòng điền đầy đủ thông tin, không chỉ nhập khoảng trắng.')
@@ -47,7 +53,35 @@ export default function Register() {
       setMessage('Mật khẩu xác nhận chưa khớp. Vui lòng nhập lại.')
       return
     }
-    setMessage('Chức năng đăng ký chưa được kết nối với hệ thống xác thực. Tài khoản chưa được tạo. Vui lòng liên hệ 1900 8899 để được hỗ trợ.')
+    const dateOfBirth = new Date(`${data.get('dateOfBirth')}T00:00:00.000Z`)
+    if (Number.isNaN(dateOfBirth.getTime()) || dateOfBirth > new Date()) {
+      form.elements.namedItem('dateOfBirth').focus()
+      setMessage('Vui lòng nhập ngày sinh hợp lệ, không ở tương lai.')
+      return
+    }
+    submitting.current = true
+    setIsSubmitting(true)
+    setMessage('')
+    try {
+      const result = await registerApi({
+        email: data.get('email').trim(),
+        password: data.get('password'),
+        fullName: data.get('fullname').trim(),
+        phone: data.get('phone').replace(/[\s.-]/g, ''),
+        dateOfBirth: dateOfBirth.toISOString(),
+        gender: data.get('gender'),
+        address: data.get('address').trim(),
+        fitnessGoal: data.get('fitnessGoal').trim(),
+      })
+      if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Đăng ký không thành công.'))
+      const user = login(result.data, result.data?.token)
+      navigate(getAuthDestination(user.role), { replace: true })
+    } catch (error) {
+      setMessage(getAuthErrorMessage(error, 'Đăng ký không thành công. Vui lòng thử lại.'))
+    } finally {
+      submitting.current = false
+      setIsSubmitting(false)
+    }
   }
 
   return <main className="register-page">
@@ -64,18 +98,20 @@ export default function Register() {
       <div className="register-topbar"><Link to="/"><ArrowLeft size={16} /> Trở về trang chủ</Link><span><MapPin size={15} /> Cơ sở 1 - Cầu Giấy, Hà Nội <b>06:00 - 22:00</b></span></div>
       <div className="register-content">
         <header><h2 id="register-title">Đăng ký tài khoản Hội viên</h2><p>Tạo tài khoản nhanh chóng chỉ trong 1 phút để bắt đầu đặt sân và nhận trọn vẹn đặc quyền thể thao.</p></header>
-        <div className="register-tabs" role="group" aria-label="Loại tài khoản"><button type="button" aria-pressed={accountType === 'individual'} onClick={() => setAccountType('individual')}><UserRound size={18} /> Hội viên cá nhân</button><button type="button" aria-pressed={accountType === 'corporate'} onClick={() => setAccountType('corporate')}><Building2 size={18} /> CLB / Đội nhóm / Doanh nghiệp</button></div>
-        <form className="register-form" onSubmit={handleSubmit} onChange={() => setMessage('')}>
-          <input type="hidden" name="accountType" value={accountType} />
-          {accountType === 'corporate' && <Field id="organization" label="Tên CLB / Đội nhóm / Doanh nghiệp" icon={Building2} autoComplete="organization" placeholder="Tên tổ chức của bạn" />}
-          <Field id="fullname" label={accountType === 'corporate' ? 'Họ và tên người đại diện' : 'Họ và tên đầy đủ'} icon={UserRound} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
-          <div className="register-row"><Field id="phone" label="Số điện thoại (Nhận OTP)" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" autoComplete="email" placeholder="name@olympus.vn" /></div>
-          <fieldset className="register-sports"><legend>Môn thể thao quan tâm <span>(chọn một hoặc nhiều môn)</span></legend><div>{sports.map((sport, index) => <label key={sport}><input type="checkbox" name="sport" value={sport} defaultChecked={index < 2} /><span>{sport}<Check size={14} /></span></label>)}</div></fieldset>
+        <div className="register-tabs" role="group" aria-label="Loại tài khoản"><button type="button" aria-pressed="true"><UserRound size={18} /> Hội viên cá nhân</button><button type="button" aria-pressed="false" disabled title="Chưa hỗ trợ đăng ký tổ chức"><Building2 size={18} /> CLB / Đội nhóm / Doanh nghiệp (Chưa hỗ trợ)</button></div>
+        <form className="register-form" onSubmit={handleSubmit} onChange={() => setMessage('')} aria-busy={isSubmitting}>
+          <Field id="fullname" label="Họ và tên đầy đủ" icon={UserRound} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
+          <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" autoComplete="email" placeholder="name@olympus.vn" /></div>
+          <div className="register-row">
+            <Field id="dateOfBirth" label="Ngày sinh" icon={CalendarCheck} type="date" autoComplete="bday" max={new Date().toISOString().slice(0, 10)} />
+            <div className="register-field"><label htmlFor="gender">Giới tính <span>*</span></label><div className="register-input"><UserRound size={18} /><select id="gender" name="gender" autoComplete="sex" required defaultValue=""><option value="" disabled>Chọn giới tính</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></div></div>
+          </div>
+          <Field id="address" label="Địa chỉ" icon={MapPin} autoComplete="street-address" placeholder="Địa chỉ của bạn" />
+          <Field id="fitnessGoal" label="Mục tiêu tập luyện" icon={Trophy} placeholder="Ví dụ: Tăng sức bền, giảm cân, tập Tennis" />
           <div className="register-row"><PasswordField id="password" label="Mật khẩu khởi tạo" placeholder="Tối thiểu 8 ký tự" value={password} onChange={event => setPassword(event.target.value)} aria-describedby="register-strength" /><PasswordField id="confirm-password" label="Xác nhận mật khẩu" placeholder="Nhập lại mật khẩu" /></div>
           <div className="register-strength" id="register-strength"><div><span>Độ mạnh mật khẩu:</span><strong>{['Chưa nhập', 'Yếu', 'Trung bình', 'Khá', 'Mạnh'][strength]}</strong></div><meter min="0" max="4" value={strength} aria-label="Độ mạnh mật khẩu" /><p>Sử dụng ít nhất 8 ký tự, kết hợp chữ hoa, chữ thường, chữ số và ký tự đặc biệt.</p></div>
           <label className="register-consent"><input type="checkbox" name="terms" required /><span>Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của Trung tâm Thể thao SportPulse Olympus.</span></label>
-          <label className="register-consent"><input type="checkbox" name="marketing" /><span>Nhận thông báo ưu đãi giờ vàng giảm giá 30%, giải đấu giao lưu và lịch thi đấu qua Zalo/Email.</span></label>
-          <button type="submit" className="register-submit">Hoàn tất Đăng ký & Nhận ưu đãi 20% <ArrowRight size={19} /></button>
+          <button type="submit" className="register-submit" disabled={isSubmitting}>{isSubmitting ? 'Đang tạo tài khoản...' : 'Hoàn tất Đăng ký & Nhận ưu đãi 20%'} <ArrowRight size={19} /></button>
           <p className="register-feedback" role="status" aria-live="polite">{message}</p>
         </form>
         <p className="register-login">Đã có tài khoản SportPulse? <Link to="/login">Đăng nhập ngay <ArrowRight size={15} /></Link></p>
