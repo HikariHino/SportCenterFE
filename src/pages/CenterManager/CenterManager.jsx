@@ -1,3 +1,4 @@
+import ThemeToggle from '../../components/ThemeToggle'
 ﻿import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowDownToLine, ArrowUpRight, CalendarDays, Check, ChevronRight, Clock3, CreditCard, LayoutDashboard, LogOut, MapPin, Menu, Search, ShieldCheck, TrendingUp, Trophy, Users, Volleyball, X } from 'lucide-react'
@@ -136,7 +137,7 @@ export default function CenterManager() {
       <div className="manager-workspace">
         <header className="manager-topbar">
           <div><button type="button" className="manager-menu" aria-label={sidebarOpen ? 'Đóng menu' : 'Mở menu'} aria-expanded={sidebarOpen} aria-controls="manager-sidebar" onClick={() => setSidebarOpen(!sidebarOpen)}>{sidebarOpen ? <X size={21} /> : <Menu size={21} />}</button><span className="manager-breadcrumb">Không gian quản lý <ChevronRight size={14} /> <strong>{pageTitle}</strong></span></div>
-          <div className="manager-topbar-right"><span className="manager-demo"><i /> Dữ liệu minh họa</span><span className="manager-avatar">{initials}</span></div>
+          <div className="manager-topbar-right"><ThemeToggle /><span className="manager-demo"><i /> Dữ liệu minh họa</span><span className="manager-avatar">{initials}</span></div>
         </header>
         <main className="manager-main" id="manager-content">
           <section className="manager-welcome">

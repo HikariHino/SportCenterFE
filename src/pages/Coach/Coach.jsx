@@ -1,3 +1,4 @@
+import ThemeToggle from '../../components/ThemeToggle'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -93,7 +94,7 @@ export default function Coach() {
       <section className="coach-workspace">
         <header className="coach-topbar">
           <label className="coach-search"><Search size={18} /><input type="search" placeholder="Tìm học viên, giáo án..." aria-label="Tìm kiếm" /></label>
-          <div className="coach-topbar-actions">
+          <div className="coach-topbar-actions"><ThemeToggle />
             <button className="coach-notification" type="button" aria-label="Thông báo" onClick={() => showNotice('Bạn có 3 thông báo mới.')}><Bell size={20} /><i /></button>
             <span className="coach-topbar-profile"><span className="coach-avatar">HN<i /></span><span><strong>{coachName}</strong><small>Huấn luyện viên</small></span></span>
           </div>

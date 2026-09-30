@@ -1,8 +1,10 @@
+import ThemeToggle from '../../components/ThemeToggle'
 import '../../style/Receptionist/Receptionist.css'
 
 export default function Receptionist() {
   return (
     <main className="receptionist-page">
+      <div className="receptionist-theme-toolbar"><ThemeToggle /></div>
       <section className="receptionist-page__content">
         <p className="receptionist-page__eyebrow">KHU VỰC LỄ TÂN</p>
         <h1>Chào mừng đến với Receptionist</h1>
