@@ -9,6 +9,13 @@
 @media(max-width:700px){.sport-page .nav-content{gap:10px;padding-block:12px}.sport-page .nav-links{top:100%}.sport-page .nav-actions{flex-wrap:wrap;gap:8px}.sport-page .dashboard-register{font-size:11px;padding:10px}.sport-page .nav-actions .login{padding:10px}.sport-page .mobile-menu{padding:6px}}
 @media(max-width:520px){.sport-page .nav-actions{width:100%}.sport-page .mobile-menu{margin-left:auto}}
 
+.sport-page .dashboard-profile { display: inline-flex; align-items: center; gap: 9px; min-width: 0; max-width: 240px; color: var(--ink); text-decoration: none; }
+.sport-page .dashboard-avatar { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; background: #e7efff; color: var(--blue); font-size: 12px; font-weight: 800; }
+.sport-page .dashboard-profile-info { min-width: 0; overflow-wrap: anywhere; }
+.sport-page .dashboard-profile small { display: block; color: var(--muted); font-size: 10px; }
+.sport-page .dashboard-profile strong { display: block; font-size: 12px; }
+@media(max-width:700px) { .sport-page .nav-actions { min-width: 0; max-width: 100%; flex-shrink: 1; } .sport-page .dashboard-profile { max-width: 100%; } }
+
 html { scroll-behavior: smooth; }
 .sport-page { overflow-x: clip; overflow-y: visible; }
 .sport-page [id] { scroll-margin-top: 96px; }
