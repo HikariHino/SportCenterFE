@@ -33,6 +33,26 @@
 body { background: var(--theme-bg); color: var(--theme-text); }
 html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 
+/* Only animate theme changes, so page load and regular interactions stay intact. */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: background-color 280ms ease, color 280ms ease,
+      border-color 280ms ease, box-shadow 280ms ease,
+      fill 280ms ease, stroke 280ms ease !important;
+  }
+  html.theme-transitioning .theme-toggle svg {
+    animation: theme-icon-in 280ms ease-out both;
+  }
+}
+
+@keyframes theme-icon-in {
+  from { opacity: 0; transform: rotate(-45deg) scale(.7); }
+  to { opacity: 1; transform: rotate(0) scale(1); }
+}
+
 /* The selector also takes precedence over page-specific button defaults. */
 #root .theme-toggle {
   display: inline-flex;

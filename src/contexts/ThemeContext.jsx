@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 const ThemeContext = createContext(null)
 const storageKey = 'sportcenter-theme'
@@ -18,10 +18,26 @@ export function ThemeProvider({ children }) {
   const [preference, setPreference] = useState(getSavedTheme)
   const [systemDark, setSystemDark] = useState(() => window.matchMedia(systemQuery).matches)
   const theme = preference || (systemDark ? 'dark' : 'light')
+  const previousTheme = useRef(theme)
 
   useLayoutEffect(() => {
-    document.documentElement.dataset.theme = theme
-    document.documentElement.style.colorScheme = theme
+    const root = document.documentElement
+    const shouldAnimate = previousTheme.current !== theme
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (shouldAnimate) root.classList.add('theme-transitioning')
+    root.dataset.theme = theme
+    root.style.colorScheme = theme
+    previousTheme.current = theme
+
+    // Remove the temporary override after the 280ms color transition.
+    const timer = shouldAnimate
+      ? window.setTimeout(() => root.classList.remove('theme-transitioning'), 350)
+      : null
+    return () => {
+      window.clearTimeout(timer)
+      root.classList.remove('theme-transitioning')
+    }
   }, [theme])
 
   useEffect(() => {
