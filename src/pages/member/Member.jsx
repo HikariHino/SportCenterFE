@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowUpRight, Award, BadgeCheck, Bell, CalendarCheck, CalendarDays, CheckCircle2, Clock3, Coins, CreditCard, Diamond, Download, Dumbbell, Flame, History, Info, LayoutDashboard, MapPin, PauseCircle, Percent, PlusCircle, QrCode, ReceiptText, RefreshCw, ShieldCheck, Sparkles, Timer, Trophy, Wallet, Waves, X } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowUpRight, Award, BadgeCheck, Bell, CalendarCheck, CalendarDays, CheckCircle2, Clock3, Coins, CreditCard, Diamond, Download, Dumbbell, Flame, History, Info, LayoutDashboard, LogOut, MapPin, PauseCircle, Percent, PlusCircle, QrCode, ReceiptText, RefreshCw, ShieldCheck, Sparkles, Timer, Trophy, Wallet, Waves, X } from 'lucide-react'
 import '../../style/member/Member.css'
+import { useAuth } from '../../contexts/AuthContext'
 
 const packages = [
   { name: 'Flex Pass - Tự Do', category: 'period', tag: 'Linh hoạt', icon: RefreshCw, price: '500.000', unit: 'đ/tháng', description: 'Dành cho người chơi linh động, nạp tiền trừ dần theo từng lượt chơi.', note: 'Phí duy trì tài khoản hội viên số', benefits: ['Tích hợp ví SportPay chiết khấu 5% mọi khung giờ', 'Đặt trước sân 3 ngày không cần đặt cọc', 'Miễn phí gửi xe & khăn tập tiêu chuẩn'] },
@@ -57,6 +58,14 @@ function MemberDialog({ content, onClose }) {
 }
 
 export default function Member() {
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   const [packageFilter, setPackageFilter] = useState('all')
   const [sportFilter, setSportFilter] = useState('all')
   const [period, setPeriod] = useState('10/2024')
@@ -86,6 +95,7 @@ export default function Member() {
           <button type="button" className="member-icon-button member-notification" aria-label="Thông báo" onClick={() => setDialog({ title: 'Thông báo', description: 'Bạn đang xem giao diện hội viên với dữ liệu mẫu. Thông báo cá nhân sẽ xuất hiện khi hệ thống được kết nối.' })}><Bell size={22} /><i /></button>
           <button type="button" className="member-button member-button--primary member-book-button" onClick={() => showUnavailable('Đặt sân ngay')}><PlusCircle size={17} />Đặt sân ngay</button>
           <a href="#tong-quan" className="member-profile" aria-label="Xem thông tin hội viên"><span className="member-avatar">MT</span><span><strong>Trần Minh Tuấn <BadgeCheck size={15} /></strong><small>Olympus Gold Member</small></span></a>
+          <button type="button" className="member-button member-logout" aria-label="Đăng xuất" title="Đăng xuất" onClick={handleLogout}><LogOut size={17} /><span>Đăng xuất</span></button>
         </div>
       </div>
       <nav className="member-nav member-container" aria-label="Điều hướng hội viên">{navigation.map(([id, Icon, label]) => <a key={id} href={`#${id}`} className={activeNav === id ? 'is-active' : ''} aria-current={activeNav === id ? 'location' : undefined} onClick={() => setActiveNav(id)}><Icon size={17} />{label}</a>)}</nav>

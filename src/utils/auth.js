@@ -39,9 +39,14 @@ export function saveSession(userData, token, remember = true) {
   return user
 }
 
+export function isManagerRole(role) {
+  return ['manager', 'centermanager'].includes(String(role || '').toLowerCase().replace(/[\s_-]/g, ''))
+}
+
 export function getAuthDestination(role, from) {
   // Only return routes supported by the app and accessible to this role.
   if (from === '/' || from === '/#memberships') return from
+  if (isManagerRole(role)) return '/manager'
   if (role === 'coach') return '/coach'
   if (role === 'member') return '/member'
   return '/'

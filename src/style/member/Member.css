@@ -111,6 +111,8 @@
 .member-button--soft { background: #e5ebff; border-color: transparent; color: var(--member-blue); }
 .member-button--soft:hover { background: #d7e2ff; }
 .member-button--text { color: var(--member-blue); background: transparent; border-color: transparent; }
+.member-logout { flex-shrink: 0; white-space: nowrap; color: #b42318; border-color: #f0d0ce; }
+.member-logout:hover { background: #fff1f0; }
 .member-section { margin-top: 40px; }
 .member-section-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 22px; margin-bottom: 25px; }
 .member-section-heading > div:first-child { min-width: 0; }
@@ -230,6 +232,8 @@
   .member-brand small { font-size: 9px; }
   .member-brand .member-tag { font-size: 8px; padding: 3px 6px; }
   .member-header-actions { gap: 4px; }
+  .member-logout { padding: 8px; }
+  .member-logout > span { display: none; }
   .member-points, .member-book-button { display: none; }
   .member-avatar { width: 32px; height: 32px; font-size: 10px; }
   .member-icon-button { padding: 7px; }
@@ -279,6 +283,9 @@
   .member-invoice-note button { margin-left: 20px; }
   .member-footer > div { flex-direction: column; align-items: flex-start; gap: 10px; }
   .member-footer > div > a:last-child { margin-left: 0; }
+}
+@media (max-width: 360px) {
+  .member-header-main { flex-wrap: wrap; padding-block: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html:has(.member-page) { scroll-behavior: auto; }
