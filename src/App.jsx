@@ -5,12 +5,19 @@ import Register from './pages/Register'
 import Coach from './pages/Coach/Coach'
 import { useAuth } from './contexts/AuthContext'
 import Member from './pages/member/Member'
-import { getToken } from './utils/auth'
+import CenterManager from './pages/CenterManager/CenterManager'
+import { getToken, isManagerRole } from './utils/auth'
 
 function CoachRoute() {
   const { user } = useAuth()
   const isCoach = user?.role === 'coach' && Boolean(getToken())
   return isCoach ? <Coach /> : <Navigate to="/login" replace state={{ from: '/coach' }} />
+}
+
+function ManagerRoute() {
+  const { user } = useAuth()
+  const isManager = isManagerRole(user?.role) && Boolean(getToken())
+  return isManager ? <CenterManager /> : <Navigate to="/login" replace state={{ from: '/manager' }} />
 }
 
 function App() {
@@ -21,6 +28,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/coach" element={<CoachRoute />} />
+        <Route path="/manager" element={<ManagerRoute />} />
         <Route path="/member" element={<Member />} />
       </Routes>
     </BrowserRouter>
