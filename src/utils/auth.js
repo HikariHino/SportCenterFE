@@ -1,3 +1,13 @@
+export function getUserDisplayName(user) {
+  return [user?.fullName, user?.name, user?.email]
+    .find(value => typeof value === 'string' && value.trim())?.trim() || 'Hội viên'
+}
+
+export function getUserInitials(user) {
+  return getUserDisplayName(user).split(/\s+/).slice(-2)
+    .map(part => Array.from(part)[0]).join('').toLocaleUpperCase('vi-VN')
+}
+
 export function getToken() {
   return localStorage.getItem('token') || sessionStorage.getItem('token')
 }
