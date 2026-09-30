@@ -66,6 +66,14 @@ export default function CenterManager() {
   const busyCourts = courts.filter(court => court.status === 'busy').length
   const show = id => section === 'overview' || section === id
   const pageTitle = navigation.find(item => item.id === section).label
+  const exportActions = {
+    overview: { label: 'Xuất báo cáo tổng quan', onClick: exportOverview },
+    bookings: { label: 'Xuất lịch đặt sân', onClick: exportBookings },
+    courts: { label: 'Xuất danh sách sân', onClick: exportCourts },
+    staff: { label: 'Xuất danh sách nhân sự', onClick: exportStaff },
+    revenue: { label: 'Xuất báo cáo doanh thu', onClick: exportRevenue },
+  }
+  const exportAction = exportActions[section]
 
   function selectSection(id) {
     setSection(id)
@@ -86,6 +94,23 @@ export default function CenterManager() {
     link.click()
     link.remove()
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  // Keep the current CSV export until each section gets its own export logic.
+  function exportOverview() {
+    exportBookings()
+  }
+
+  function exportCourts() {
+    exportBookings()
+  }
+
+  function exportStaff() {
+    exportBookings()
+  }
+
+  function exportRevenue() {
+    exportBookings()
   }
 
   function openBooking(booking) {
@@ -116,7 +141,7 @@ export default function CenterManager() {
         <main className="manager-main" id="manager-content">
           <section className="manager-welcome">
             <div><p className="manager-eyebrow">VẬN HÀNH HIỆU QUẢ, KẾT NỐI ĐAM MÊ</p><h1>{section === 'overview' ? 'Tổng quan trung tâm' : pageTitle}</h1><p>Xin chào, {managerName}. Cùng theo dõi hoạt động tại Olympus.</p></div>
-            <button className="manager-button" type="button" onClick={exportBookings}><ArrowDownToLine size={17} /> Xuất lịch đặt</button>
+            <button className="manager-button" type="button" onClick={exportAction.onClick}><ArrowDownToLine size={17} /> {exportAction.label}</button>
           </section>
           <div className="manager-context"><span><CalendarDays size={16} /> Thứ Tư, 30 tháng 09, 2026</span><small>Bản xem trước · Chưa kết nối dữ liệu vận hành</small></div>
           {section === 'overview' && <section className="manager-metrics" aria-label="Chỉ số hoạt động minh họa">
