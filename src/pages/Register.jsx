@@ -1,3 +1,4 @@
+import ThemeToggle from '../components/ThemeToggle'
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Bell, Building2, CalendarCheck, CreditCard, Eye, EyeOff, Gift, LockKeyhole, Mail, MapPin, Phone, Trophy, UserRound } from 'lucide-react'
@@ -95,7 +96,7 @@ export default function Register() {
       <div className="register-hero-bottom"><div className="register-stats"><div><strong>15.000+</strong><span>Hội viên năng động</span></div><div><strong>25+</strong><span>Cụm sân thi đấu</span></div><div><strong>99.8%</strong><span>Đánh giá hài lòng</span></div></div><p>© {new Date().getFullYear()} SportPulse Olympus Center</p></div>
     </aside>
     <section className="register-panel" aria-labelledby="register-title">
-      <div className="register-topbar"><Link to="/"><ArrowLeft size={16} /> Trở về trang chủ</Link><span><MapPin size={15} /> Cơ sở 1 - Cầu Giấy, Hà Nội <b>06:00 - 22:00</b></span></div>
+      <div className="register-topbar"><ThemeToggle /><Link to="/"><ArrowLeft size={16} /> Trở về trang chủ</Link><span><MapPin size={15} /> Cơ sở 1 - Cầu Giấy, Hà Nội <b>06:00 - 22:00</b></span></div>
       <div className="register-content">
         <header><h2 id="register-title">Đăng ký tài khoản Hội viên</h2><p>Tạo tài khoản nhanh chóng chỉ trong 1 phút để bắt đầu đặt sân và nhận trọn vẹn đặc quyền thể thao.</p></header>
         <div className="register-tabs" role="group" aria-label="Loại tài khoản"><button type="button" aria-pressed="true"><UserRound size={18} /> Hội viên cá nhân</button><button type="button" aria-pressed="false" disabled title="Chưa hỗ trợ đăng ký tổ chức"><Building2 size={18} /> CLB / Đội nhóm / Doanh nghiệp (Chưa hỗ trợ)</button></div>

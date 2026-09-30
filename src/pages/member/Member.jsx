@@ -1,3 +1,4 @@
+import ThemeToggle from '../../components/ThemeToggle'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Award, BadgeCheck, Bell, CalendarCheck, CalendarDays, CheckCircle2, Clock3, Coins, CreditCard, Diamond, Download, Dumbbell, Flame, History, Info, LayoutDashboard, LogOut, MapPin, PauseCircle, Percent, PlusCircle, QrCode, ReceiptText, RefreshCw, ShieldCheck, Sparkles, Timer, Trophy, Wallet, Waves, X } from 'lucide-react'
@@ -93,7 +94,7 @@ export default function Member() {
       <div className="member-header-main member-container">
         <Link to="/member" className="member-brand"><span className="member-brand-icon"><Trophy size={26} /></span><span><span className="member-brand-name">SportPulse <span className="member-tag">Hội viên</span></span><small>Trung tâm Thể thao Olympus</small></span></Link>
         <div className="member-location"><MapPin size={17} /><span>Cơ sở 1 - Cầu Giấy, Hà Nội</span><b>● 06:00 - 22:00</b></div>
-        <div className="member-header-actions">
+        <div className="member-header-actions"><ThemeToggle />
           <a href="#rewards" className="member-points"><Coins size={22} /><span><small>Điểm thưởng</small><strong>1.250 <small>pts</small></strong></span></a>
           <button type="button" className="member-icon-button member-notification" aria-label="Thông báo" onClick={() => setDialog({ title: 'Thông báo', description: 'Bạn đang xem giao diện hội viên với dữ liệu mẫu. Thông báo cá nhân sẽ xuất hiện khi hệ thống được kết nối.' })}><Bell size={22} /><i /></button>
           <button type="button" className="member-button member-button--primary member-book-button" onClick={() => showUnavailable('Đặt sân ngay')}><PlusCircle size={17} />Đặt sân ngay</button>

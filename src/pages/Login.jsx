@@ -1,3 +1,4 @@
+import ThemeToggle from '../components/ThemeToggle'
 import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CreditCard, Eye, EyeOff, LockKeyhole, Mail, MessageCircle, Phone, ShieldCheck, Trophy, Users } from 'lucide-react'
@@ -63,7 +64,7 @@ export default function Login() {
     </aside>
 
     <section className="login-panel" aria-labelledby="login-title">
-      <div className="login-topbar"><div className="login-mobile-brand"><Brand /></div><Link to="/" className="login-back"><ArrowLeft size={16} /> Về trang chủ</Link></div>
+      <div className="login-topbar"><ThemeToggle /><div className="login-mobile-brand"><Brand /></div><Link to="/" className="login-back"><ArrowLeft size={16} /> Về trang chủ</Link></div>
       <div className="login-content">
         <header><h2 id="login-title">Chào mừng trở lại</h2><p>Đăng nhập vào tài khoản SportPulse của bạn để bắt đầu</p></header>
         <div className="login-portals" role="group" aria-label="Loại tài khoản">
