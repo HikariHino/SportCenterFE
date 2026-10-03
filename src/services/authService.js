@@ -39,4 +39,63 @@ export async function register({ email, password, fullName, phone, dateOfBirth, 
   return response.data
 }
 
-export default { login, register }
+/** POST /api/Auth/send-register-otp */
+export async function sendRegisterOtp({ email, password, fullName, phone, dateOfBirth, gender, address, fitnessGoal }) {
+  const response = await api.post('/Auth/send-register-otp', {
+    email,
+    password,
+    fullName,
+    phone,
+    dateOfBirth,
+    gender,
+    address,
+    fitnessGoal,
+  }, { skipAuth: true })
+  return response.data
+}
+
+/** POST /api/Auth/verify-register-otp */
+export async function verifyRegisterOtp({ email, otp }) {
+  const response = await api.post('/Auth/verify-register-otp', { email, otp }, { skipAuth: true })
+  return response.data
+}
+
+/** POST /api/Auth/request-reset-password */
+export async function requestResetPassword({ email }) {
+  const response = await api.post('/Auth/request-reset-password', { email }, { skipAuth: true })
+  return response.data
+}
+
+/** POST /api/Auth/verify-reset-password */
+export async function verifyResetPassword({ email, otp, newPassword, confirmPassword }) {
+  const response = await api.post('/Auth/verify-reset-password', {
+    email,
+    otp,
+    newPassword,
+    confirmPassword,
+  }, { skipAuth: true })
+  return response.data
+}
+
+/** POST /api/Auth/refresh-token */
+export async function refreshToken({ refreshTokenKey }) {
+  const response = await api.post('/Auth/refresh-token', { refreshTokenKey }, { skipAuth: true })
+  return response.data
+}
+
+/** POST /api/Auth/logout */
+export async function logout({ refreshTokenKey }) {
+  const response = await api.post('/Auth/logout', { refreshTokenKey })
+  return response.data
+}
+
+export default {
+  login,
+  register,
+  sendRegisterOtp,
+  verifyRegisterOtp,
+  requestResetPassword,
+  verifyResetPassword,
+  refreshToken,
+  logout,
+}

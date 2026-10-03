@@ -12,10 +12,21 @@ export function getToken() {
   return localStorage.getItem('token') || sessionStorage.getItem('token')
 }
 
+export function getRefreshTokenKey() {
+  return localStorage.getItem('refreshTokenKey') || sessionStorage.getItem('refreshTokenKey')
+}
+
+function getSessionStorage() {
+  if (localStorage.getItem('token') || localStorage.getItem('refreshTokenKey')) return localStorage
+  if (sessionStorage.getItem('token') || sessionStorage.getItem('refreshTokenKey')) return sessionStorage
+  return null
+}
+
 export function clearSession() {
   for (const storage of [localStorage, sessionStorage]) {
     storage.removeItem('user')
     storage.removeItem('token')
+    storage.removeItem('refreshTokenKey')
   }
 }
 
@@ -30,8 +41,19 @@ export function getSavedUser() {
   }
 }
 
+export function updateSessionTokens(token, refreshTokenKey) {
+  const storage = getSessionStorage()
+  if (!storage || typeof token !== 'string' || !token.trim()) return false
+  storage.setItem('token', token.trim())
+  if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
+    storage.setItem('refreshTokenKey', refreshTokenKey.trim())
+  }
+  return true
+}
+
 export function saveSession(userData, token, remember = true) {
-  if (typeof token !== 'string' || !token.trim()) {
+  const accessToken = token || userData?.token || userData?.accessToken
+  if (typeof accessToken !== 'string' || !accessToken.trim()) {
     throw new Error('Không nhận được phiên đăng nhập hợp lệ. Vui lòng đăng nhập lại.')
   }
   const user = {
@@ -45,7 +67,11 @@ export function saveSession(userData, token, remember = true) {
   clearSession()
   const storage = remember ? localStorage : sessionStorage
   storage.setItem('user', JSON.stringify(user))
-  storage.setItem('token', token)
+  storage.setItem('token', accessToken.trim())
+  const refreshTokenKey = userData?.refreshTokenKey || userData?.refreshToken
+  if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
+    storage.setItem('refreshTokenKey', refreshTokenKey.trim())
+  }
   return user
 }
 

@@ -1,9 +1,9 @@
 import ThemeToggle from '../components/ThemeToggle'
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Bell, Building2, CalendarCheck, CreditCard, Eye, EyeOff, Gift, LockKeyhole, Mail, MapPin, Phone, Trophy, UserRound } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bell, Building2, CalendarCheck, CreditCard, Eye, EyeOff, Gift, LockKeyhole, Mail, MapPin, MessageCircle, Phone, Trophy, UserRound } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { register as registerApi } from '../services/authService'
+import { sendRegisterOtp, verifyRegisterOtp } from '../services/authService'
 import { getAuthDestination, getAuthErrorMessage } from '../utils/auth'
 import '../style/Register.css'
 
@@ -30,13 +30,58 @@ export default function Register() {
   const submitting = useRef(false)
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
+  const [pendingRegistration, setPendingRegistration] = useState(null)
   const strength = password ? [password.length >= 8, /[a-z]/.test(password) && /[A-Z]/.test(password), /\d/.test(password), /[^\w\s]/.test(password)].filter(Boolean).length : 0
+
+  async function handleResendOtp() {
+    if (!pendingRegistration || submitting.current) return
+    submitting.current = true
+    setIsSubmitting(true)
+    setMessage('')
+    try {
+      const result = await sendRegisterOtp(pendingRegistration)
+      if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Không thể gửi lại mã OTP.'))
+      setMessage(result.message || `Mã OTP mới đã được gửi đến ${pendingRegistration.email}.`)
+    } catch (error) {
+      setMessage(getAuthErrorMessage(error, 'Không thể gửi lại mã OTP. Vui lòng thử lại.'))
+    } finally {
+      submitting.current = false
+      setIsSubmitting(false)
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
     if (submitting.current) return
     const form = event.currentTarget
     const data = new FormData(form)
+    if (pendingRegistration) {
+      const otp = data.get('otp')?.trim()
+      if (!otp) {
+        form.elements.namedItem('otp')?.focus()
+        setMessage('Vui lòng nhập mã OTP đã được gửi đến email của bạn.')
+        return
+      }
+      submitting.current = true
+      setIsSubmitting(true)
+      setMessage('')
+      try {
+        const result = await verifyRegisterOtp({ email: pendingRegistration.email, otp })
+        if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Mã OTP không hợp lệ.'))
+        if (result.data?.token || result.data?.accessToken) {
+          const user = login(result.data, result.data?.token || result.data?.accessToken)
+          navigate(getAuthDestination(user.role), { replace: true })
+        } else {
+          navigate('/login', { replace: true, state: { message: 'Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.' } })
+        }
+      } catch (error) {
+        setMessage(getAuthErrorMessage(error, 'Xác minh OTP không thành công. Vui lòng kiểm tra mã và thử lại.'))
+      } finally {
+        submitting.current = false
+        setIsSubmitting(false)
+      }
+      return
+    }
     for (const name of ['fullname', 'email', 'address', 'fitnessGoal']) {
       if (!data.get(name).trim()) {
         form.elements.namedItem(name).focus()
@@ -63,22 +108,23 @@ export default function Register() {
     submitting.current = true
     setIsSubmitting(true)
     setMessage('')
+    const registration = {
+      email: data.get('email').trim(),
+      password: data.get('password'),
+      fullName: data.get('fullname').trim(),
+      phone: data.get('phone').replace(/[\s.-]/g, ''),
+      dateOfBirth: dateOfBirth.toISOString(),
+      gender: data.get('gender'),
+      address: data.get('address').trim(),
+      fitnessGoal: data.get('fitnessGoal').trim(),
+    }
     try {
-      const result = await registerApi({
-        email: data.get('email').trim(),
-        password: data.get('password'),
-        fullName: data.get('fullname').trim(),
-        phone: data.get('phone').replace(/[\s.-]/g, ''),
-        dateOfBirth: dateOfBirth.toISOString(),
-        gender: data.get('gender'),
-        address: data.get('address').trim(),
-        fitnessGoal: data.get('fitnessGoal').trim(),
-      })
-      if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Đăng ký không thành công.'))
-      const user = login(result.data, result.data?.token)
-      navigate(getAuthDestination(user.role), { replace: true })
+      const result = await sendRegisterOtp(registration)
+      if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Không thể gửi mã OTP.'))
+      setPendingRegistration(registration)
+      setMessage(result.message || `Mã OTP đã được gửi đến ${registration.email}.`)
     } catch (error) {
-      setMessage(getAuthErrorMessage(error, 'Đăng ký không thành công. Vui lòng thử lại.'))
+      setMessage(getAuthErrorMessage(error, 'Không thể gửi mã OTP đăng ký. Vui lòng thử lại.'))
     } finally {
       submitting.current = false
       setIsSubmitting(false)
@@ -100,7 +146,10 @@ export default function Register() {
       <div className="register-content">
         <header><h2 id="register-title">Đăng ký tài khoản Hội viên</h2><p>Tạo tài khoản nhanh chóng chỉ trong 1 phút để bắt đầu đặt sân và nhận trọn vẹn đặc quyền thể thao.</p></header>
         <div className="register-tabs" role="group" aria-label="Loại tài khoản"><button type="button" aria-pressed="true"><UserRound size={18} /> Hội viên cá nhân</button><button type="button" aria-pressed="false" disabled title="Chưa hỗ trợ đăng ký tổ chức"><Building2 size={18} /> CLB / Đội nhóm / Doanh nghiệp (Chưa hỗ trợ)</button></div>
-        <form className="register-form" onSubmit={handleSubmit} onChange={() => setMessage('')} aria-busy={isSubmitting}>
+        <form className="register-form" onSubmit={handleSubmit} onChange={(event) => {
+          setMessage('')
+          if (pendingRegistration && event.target.name !== 'otp') setPendingRegistration(null)
+        }} aria-busy={isSubmitting}>
           <Field id="fullname" label="Họ và tên đầy đủ" icon={UserRound} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
           <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" autoComplete="email" placeholder="name@olympus.vn" /></div>
           <div className="register-row">
@@ -112,7 +161,9 @@ export default function Register() {
           <div className="register-row"><PasswordField id="password" label="Mật khẩu khởi tạo" placeholder="Tối thiểu 8 ký tự" value={password} onChange={event => setPassword(event.target.value)} aria-describedby="register-strength" /><PasswordField id="confirm-password" label="Xác nhận mật khẩu" placeholder="Nhập lại mật khẩu" /></div>
           <div className="register-strength" id="register-strength"><div><span>Độ mạnh mật khẩu:</span><strong>{['Chưa nhập', 'Yếu', 'Trung bình', 'Khá', 'Mạnh'][strength]}</strong></div><meter min="0" max="4" value={strength} aria-label="Độ mạnh mật khẩu" /><p>Sử dụng ít nhất 8 ký tự, kết hợp chữ hoa, chữ thường, chữ số và ký tự đặc biệt.</p></div>
           <label className="register-consent"><input type="checkbox" name="terms" required /><span>Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của Trung tâm Thể thao SportPulse Olympus.</span></label>
-          <button type="submit" className="register-submit" disabled={isSubmitting}>{isSubmitting ? 'Đang tạo tài khoản...' : 'Hoàn tất Đăng ký & Nhận ưu đãi 20%'} <ArrowRight size={19} /></button>
+          {pendingRegistration && <div className="register-otp-box"><p><strong>Xác minh email</strong><span>Nhập mã OTP đã gửi đến {pendingRegistration.email}</span></p><Field id="otp" label="Mã OTP" icon={MessageCircle} autoComplete="one-time-code" inputMode="numeric" placeholder="Nhập mã OTP" /></div>}
+          <button type="submit" className="register-submit" disabled={isSubmitting}>{isSubmitting ? (pendingRegistration ? 'Đang xác minh...' : 'Đang gửi mã OTP...') : (pendingRegistration ? 'Xác minh OTP & Hoàn tất đăng ký' : 'Gửi mã OTP đăng ký')} <ArrowRight size={19} /></button>
+          {pendingRegistration && <div className="register-otp-actions"><button type="button" className="register-edit" onClick={handleResendOtp} disabled={isSubmitting}>Gửi lại mã OTP</button><button type="button" className="register-edit" onClick={() => { setPendingRegistration(null); setMessage('Bạn có thể chỉnh sửa thông tin và gửi mã OTP mới.') }}>Chỉnh sửa thông tin</button></div>}
           <p className="register-feedback" role="status" aria-live="polite">{message}</p>
         </form>
         <p className="register-login">Đã có tài khoản SportPulse? <Link to="/login">Đăng nhập ngay <ArrowRight size={15} /></Link></p>
