@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import SportDashboard from './pages/SportDashboard'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
 import Coach from './pages/Coach/Coach'
 import { useAuth } from './contexts/AuthContext'
 import Member from './pages/member/Member'
@@ -27,6 +28,7 @@ function App() {
         <Route path="/" element={<SportDashboard />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/coach" element={<CoachRoute />} />
         <Route path="/manager" element={<ManagerRoute />} />
         <Route path="/member" element={<Member />} />

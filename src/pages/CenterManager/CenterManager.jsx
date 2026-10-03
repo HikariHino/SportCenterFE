@@ -131,7 +131,7 @@ export default function CenterManager() {
         <div className="manager-sidebar-bottom">
           <div className="manager-center"><span className="manager-center-icon"><MapPin size={20} /></span><small>TRUNG TÂM CỦA BẠN</small><strong>Olympus · Cầu Giấy</strong><p><i /> Mở cửa 06:00 – 22:00</p></div>
           <Link className="manager-home" to="/">Về trang chủ <ArrowUpRight size={16} /></Link>
-          <div className="manager-account"><span className="manager-avatar">{initials}</span><div><strong>{managerName}</strong><small>Quản lý trung tâm</small></div><button type="button" aria-label="Đăng xuất" onClick={() => { logout(); navigate('/login', { replace: true }) }}><LogOut size={18} /></button></div>
+          <div className="manager-account"><span className="manager-avatar">{initials}</span><div><strong>{managerName}</strong><small>Quản lý trung tâm</small></div><button type="button" aria-label="Đăng xuất" onClick={async () => { await logout(); navigate('/login', { replace: true }) }}><LogOut size={18} /></button></div>
         </div>
       </aside>
       <div className="manager-workspace">

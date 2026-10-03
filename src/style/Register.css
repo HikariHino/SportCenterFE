@@ -44,6 +44,7 @@
 .register-tabs svg { flex-shrink: 0; }
 .register-tabs button[aria-pressed='true'] { background: white; color: #004ac6; box-shadow: 0 2px 5px #18243a10; font-weight: 600; }
 .register-form { display: grid; gap: 18px; }
+.register-fields { display: grid; gap: 18px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .register-field { min-width: 0; }
 .register-field > label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 7px; }
 .register-field > label > span { color: #ba1a1a; }
@@ -71,6 +72,12 @@
 .register-strength p { color: #737686; font-size: 10px; line-height: 1.6; }
 .register-consent { display: flex; align-items: flex-start; gap: 10px; color: #626879; font-size: 12px; line-height: 1.8; cursor: pointer; }
 .register-consent input { width: 16px; height: 16px; margin-top: 3px; flex-shrink: 0; accent-color: #2563eb; }
+.register-otp-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.register-send-otp { padding: 0 14px; min-height: 44px; border: 1px solid #2563eb; border-radius: 8px; background: #2563eb; color: white; font-size: 12px !important; font-weight: 600 !important; white-space: nowrap; }
+.register-send-otp:hover { background: #004ac6; }
+.register-send-otp:disabled { opacity: .6; cursor: not-allowed; }
+.register-otp-hint { margin: 7px 0 0; color: #626879; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+[data-theme='dark'] .register-otp-hint { color: var(--theme-muted); }
 .register-submit { display: flex; justify-content: center; align-items: center; gap: 10px; padding: 14px 12px; min-height: 48px; border: 0; border-radius: 8px; background: #2563eb; color: white; font-weight: 600 !important; box-shadow: 0 5px 12px #2563eb25; }
 .register-submit:hover { background: #004ac6; }
 .register-submit:disabled, .register-tabs button:disabled { opacity: .6; cursor: not-allowed; }

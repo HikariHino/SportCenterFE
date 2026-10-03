@@ -55,8 +55,8 @@ export default function Coach() {
     if (label !== 'Tổng quan') showNotice(`${label} đang được hoàn thiện trong bản tiếp theo.`)
   }
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 

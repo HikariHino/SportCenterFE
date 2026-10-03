@@ -1,6 +1,7 @@
 ﻿import { createContext, useContext, useState } from 'react'
 
-import { clearSession, getSavedUser, saveSession } from '../utils/auth'
+import { logout as logoutApi } from '../services/authService'
+import { clearSession, getRefreshTokenKey, getSavedUser, saveSession } from '../utils/auth'
 
 const AuthContext = createContext(null)
 
@@ -13,9 +14,16 @@ export function AuthProvider({ children }) {
     return savedUser
   }
 
-  const logout = () => {
-    clearSession()
-    setUser(null)
+  const logout = async () => {
+    const refreshTokenKey = getRefreshTokenKey()
+    try {
+      if (refreshTokenKey) await logoutApi({ refreshTokenKey })
+    } catch {
+      // Local logout must still complete when the server session is already expired or offline.
+    } finally {
+      clearSession()
+      setUser(null)
+    }
   }
 
   return (
