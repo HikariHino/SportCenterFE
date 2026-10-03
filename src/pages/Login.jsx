@@ -44,9 +44,8 @@ export default function Login() {
     setIsSubmitting(true)
     setMessage('')
     try {
-      const result = await loginApi({ email, password })
-      if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Đăng nhập không thành công.'))
-      const user = login(result.data, result.data?.token, formData.has('remember'))
+      const session = await loginApi({ email, password })
+      const user = login(session, session.token, formData.has('remember'))
       navigate(getAuthDestination(user.role, location.state?.from), { replace: true, state: { membership: selectedMembership } })
     } catch (error) {
       setMessage(getAuthErrorMessage(error, 'Đăng nhập không thành công. Vui lòng thử lại.'))

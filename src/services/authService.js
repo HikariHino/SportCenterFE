@@ -1,16 +1,16 @@
 import api from './api'
+import { getLoginData } from '../utils/auth'
 
-// Return the complete API body: success, statusCode, message, data, errors, timestamp.
-// On success, data contains userId, email, fullName, role, token.
+// Login returns validated session data; other methods return the complete API body.
 // HTTP errors reject with the backend body available at error.response.data.
 
 /**
- * POST /api/auth/login
+ * POST /api/Auth/login
  * @param {{ email: string, password: string }} credentials
  */
 export async function login({ email, password }) {
-  const response = await api.post('/auth/login', { email, password }, { skipAuth: true })
-  return response.data
+  const response = await api.post('/Auth/login', { email: email.trim(), password }, { skipAuth: true })
+  return getLoginData(response.data)
 }
 
 /**

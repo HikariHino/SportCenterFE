@@ -51,6 +51,22 @@ export function updateSessionTokens(token, refreshTokenKey) {
   return true
 }
 
+export function getLoginData(body) {
+  // Auth endpoints may return AuthResponse directly or inside an ApiResponse.
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
+    throw new Error(getAuthErrorMessage({ response: { data: body, status: body?.statusCode } }, 'Đăng nhập không thành công.'))
+  }
+
+  const data = body?.data ?? body
+  const token = [data?.token, data?.accessToken]
+    .find(value => typeof value === 'string' && value.trim())
+  if (!token) {
+    throw new Error('Máy chủ không trả về phiên đăng nhập hợp lệ. Vui lòng thử lại.')
+  }
+
+  return { ...data, token: token.trim() }
+}
+
 export function saveSession(userData, token, remember = true) {
   const accessToken = token || userData?.token || userData?.accessToken
   if (typeof accessToken !== 'string' || !accessToken.trim()) {
@@ -93,6 +109,10 @@ export function getAuthErrorMessage(error, fallback) {
   const details = body?.errors
   const messages = (Array.isArray(details) ? details : details && typeof details === 'object' ? Object.values(details).flat() : [details])
     .filter(value => typeof value === 'string' && value.trim())
+  // Translate the backend's credential error without replacing OTP or validation errors.
+  if ([...messages, body?.message].some(value => typeof value === 'string' && /^Invalid email or password\.?$/i.test(value.trim()))) {
+    return 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại hoặc chọn Quên mật khẩu.'
+  }
   if (messages.length) return messages.join(' ')
   if (typeof body?.message === 'string' && body.message.trim()) return body.message
   if (error.response?.status === 401) return 'Email hoặc mật khẩu không chính xác.'
