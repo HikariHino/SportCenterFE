@@ -1,7 +1,9 @@
 import api from './api'
 import { getLoginData } from '../utils/auth'
+import { getRegistrationResult } from '../utils/registration'
 
-// Login returns validated session data; other methods return the complete API body.
+// Login returns validated session data; registration OTP responses are normalized.
+// Other methods return the complete API body.
 // HTTP errors reject with the backend body available at error.response.data.
 
 /**
@@ -51,13 +53,13 @@ export async function sendRegisterOtp({ email, password, fullName, phone, dateOf
     address,
     fitnessGoal,
   }, { skipAuth: true })
-  return response.data
+  return getRegistrationResult(response.data, 'Không thể gửi mã OTP đăng ký. Vui lòng thử lại.')
 }
 
 /** POST /api/Auth/verify-register-otp */
 export async function verifyRegisterOtp({ email, otp }) {
   const response = await api.post('/Auth/verify-register-otp', { email, otp }, { skipAuth: true })
-  return response.data
+  return getRegistrationResult(response.data, 'Xác minh OTP không thành công. Vui lòng kiểm tra mã và thử lại.')
 }
 
 /** POST /api/Auth/request-reset-password */
