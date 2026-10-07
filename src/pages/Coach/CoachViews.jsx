@@ -3,7 +3,12 @@ import {
   ArrowUpRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
   Clock3, MapPin, SearchX, TrendingUp, UserCheck, UserRound, Users,
 } from 'lucide-react'
-import { getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
+import {
+  checkInCoachRegistration,
+  getCoachSessionAttendances,
+  getCoachSessionRoster,
+  getMyCoachSessions,
+} from '../../services/coachService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -229,12 +234,14 @@ const attendanceLabel = status => ({
   present: 'Đã điểm danh',
   late: 'Đi trễ',
   absent: 'Vắng mặt',
+  excused: 'Có phép',
 }[String(status || '').toLowerCase()] || 'Chưa điểm danh')
 
 const attendanceTone = status => ({
   present: 'present',
   late: 'late',
   absent: 'absent',
+  excused: 'excused',
 }[String(status || '').toLowerCase()] || 'pending')
 
 const mapRosterStudent = student => ({
@@ -368,5 +375,162 @@ export function StudentsView({ query }) {
         {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </aside>
     </div>
+  </div>
+}
+
+const getCheckInWindow = session => {
+  if (!session) return { open: false, message: 'Chưa chọn buổi huấn luyện' }
+  if (String(session.status || '').toLowerCase() !== 'scheduled') return { open: false, message: 'Buổi học không ở trạng thái sẵn sàng điểm danh' }
+  const now = new Date()
+  const startsAt = new Date(session.startsAt)
+  const endsAt = new Date(session.endsAt)
+  const opensAt = new Date(startsAt.getTime() - 30 * 60 * 1000)
+  if (now < opensAt) return { open: false, message: `Mở điểm danh lúc ${timeFormatter.format(opensAt)}` }
+  if (now >= endsAt) return { open: false, message: 'Thời gian điểm danh đã kết thúc' }
+  return { open: true, message: `Đang mở đến ${timeFormatter.format(endsAt)}` }
+}
+
+export function AttendanceView({ query, showNotice }) {
+  const [sessions, setSessions] = useState([])
+  const [selectedSessionId, setSelectedSessionId] = useState('')
+  const [students, setStudents] = useState([])
+  const [status, setStatus] = useState('Tất cả')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [markingId, setMarkingId] = useState(null)
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadSessions = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getMyCoachSessions({ pageSize: 100 })
+        if (!active) return
+        setSessions(result.items)
+        setSelectedSessionId(current => {
+          if (current && result.items.some(session => String(session.id) === String(current))) return current
+          const upcoming = result.items.find(session => new Date(session.endsAt) >= new Date())
+          return String(upcoming?.id ?? result.items[0]?.id ?? '')
+        })
+      } catch (requestError) {
+        if (active) {
+          setSessions([])
+          setSelectedSessionId('')
+          setError(getStudentsError(requestError))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadSessions()
+    return () => { active = false }
+  }, [requestKey])
+
+  useEffect(() => {
+    let active = true
+    if (!selectedSessionId) {
+      setStudents([])
+      return () => { active = false }
+    }
+
+    const loadAttendances = async () => {
+      setLoading(true)
+      setError('')
+      setActionError('')
+      try {
+        const [roster, attendances] = await Promise.all([
+          getCoachSessionRoster(selectedSessionId),
+          getCoachSessionAttendances(selectedSessionId),
+        ])
+        if (!active) return
+        const attendanceByMember = new Map(attendances.map(item => [Number(item.memberId), item]))
+        setStudents(roster.map(student => {
+          const attendance = attendanceByMember.get(Number(student.memberId))
+          return mapRosterStudent({
+            ...student,
+            attendanceStatus: attendance?.status ?? student.attendanceStatus,
+            checkInTime: attendance?.checkInTime ?? student.checkInTime,
+          })
+        }))
+      } catch (requestError) {
+        if (active) {
+          setStudents([])
+          setError(getStudentsError(requestError))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadAttendances()
+    return () => { active = false }
+  }, [requestKey, selectedSessionId])
+
+  const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
+  const checkInWindow = getCheckInWindow(selectedSession)
+  const normalizedQuery = query.trim().toLocaleLowerCase('vi')
+  const filtered = students.filter(student => {
+    const matchesStatus = status === 'Tất cả' || student.attendanceStatus === status
+    const matchesQuery = !normalizedQuery || `${student.name} ${student.memberId} ${student.registrationStatus} ${student.attendanceStatus}`.toLocaleLowerCase('vi').includes(normalizedQuery)
+    return matchesStatus && matchesQuery
+  })
+  const presentCount = students.filter(student => ['Đã điểm danh', 'Đi trễ'].includes(student.attendanceStatus)).length
+  const pendingCount = students.filter(student => student.attendanceStatus === 'Chưa điểm danh').length
+
+  const handleCheckIn = async student => {
+    if (!checkInWindow.open || student.attendanceTone !== 'pending' || markingId) return
+    setMarkingId(student.registrationId)
+    setActionError('')
+    try {
+      const attendance = await checkInCoachRegistration(student.registrationId)
+      const updated = mapRosterStudent({
+        registrationId: student.registrationId,
+        memberId: student.memberId,
+        fullName: student.name,
+        registrationStatus: student.registrationStatus,
+        attendanceStatus: attendance.status,
+        checkInTime: attendance.checkInTime,
+      })
+      setStudents(current => current.map(item => item.id === student.id ? updated : item))
+      showNotice(`Đã điểm danh ${student.name}.`)
+    } catch (requestError) {
+      setActionError(getStudentsError(requestError))
+    } finally {
+      setMarkingId(null)
+    }
+  }
+
+  if (loading && !sessions.length) return <section className="coach-card coach-roster-state"><EmptyState title="Đang tải dữ liệu điểm danh" text="Coach API đang đồng bộ các buổi huấn luyện." /></section>
+  if (!sessions.length) return <section className="coach-card coach-roster-state"><EmptyState title={error ? 'Không thể tải dữ liệu điểm danh' : 'Chưa có buổi để điểm danh'} text={error || 'Huấn luyện viên chưa được phân công buổi học nào.'} />{error && <button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button>}</section>
+
+  return <div className="coach-section-view">
+    <section className="coach-card coach-session-picker">
+      <div className="coach-session-picker-main"><span><UserCheck size={21} /></span><div><small>BUỔI ĐIỂM DANH</small><strong>{selectedSession?.className || 'Buổi huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn một buổi để điểm danh'}</p></div></div>
+      <label><span>Chọn buổi huấn luyện</span><select value={selectedSessionId} onChange={event => { setSelectedSessionId(event.target.value); setStatus('Tất cả') }}>{sessions.map(session => <option key={session.id} value={session.id}>{formatSessionOption(session)}</option>)}</select></label>
+    </section>
+
+    <section className="coach-student-kpis coach-attendance-kpis">
+      <article><span className="blue"><Users size={21} /></span><div><small>Đăng ký trong buổi</small><strong>{students.length}</strong><p>Danh sách roster</p></div></article>
+      <article><span className="green"><CheckCircle2 size={21} /></span><div><small>Đã điểm danh</small><strong>{presentCount}</strong><p>Đồng bộ Attendance API</p></div></article>
+      <article><span className="purple"><Clock3 size={21} /></span><div><small>Chưa điểm danh</small><strong>{pendingCount}</strong><p>{checkInWindow.message}</p></div></article>
+    </section>
+
+    <section className="coach-card coach-attendance-list">
+      <div className="coach-view-toolbar"><div><strong>Điểm danh học viên</strong><span>{loading ? 'Đang đồng bộ...' : `${filtered.length} học viên`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã điểm danh', 'Chưa điểm danh', 'Vắng mặt', 'Có phép'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
+      <div className={`coach-checkin-window ${checkInWindow.open ? 'open' : ''}`}><Clock3 size={16} /><span><strong>{checkInWindow.open ? 'Có thể điểm danh' : 'Ngoài thời gian điểm danh'}</strong><small>{checkInWindow.message}. API cho phép từ 30 phút trước giờ học đến trước khi buổi học kết thúc.</small></span></div>
+      {actionError && <div className="coach-attendance-error" role="alert">{actionError}</div>}
+      {loading ? <EmptyState title="Đang tải danh sách điểm danh" text="Dữ liệu đang được đồng bộ từ Coach API." /> : error ? <div className="coach-inline-error"><EmptyState title="Không thể tải điểm danh" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-attendance-table"><div className="coach-attendance-heading"><span>Học viên</span><span>Đăng ký</span><span>Trạng thái</span><span>Thao tác</span></div>{filtered.map(student => {
+        const isMarking = markingId === student.registrationId
+        const canCheckIn = checkInWindow.open && student.attendanceTone === 'pending' && !markingId
+        return <article className="coach-attendance-row" key={student.id}>
+          <span className="coach-roster-person"><i className="coach-student-avatar blue">{initials(student.name)}</i><span><strong>{student.name}</strong><small>Member #{student.memberId}</small></span></span>
+          <span><strong>{student.registrationStatus}</strong><small>Đăng ký #{student.registrationId}</small></span>
+          <span><strong className={`coach-attendance ${student.attendanceTone}`}>{student.attendanceStatus}</strong><small>{student.checkInTime}</small></span>
+          <button type="button" className="coach-checkin-button" disabled={!canCheckIn && !isMarking} onClick={() => handleCheckIn(student)}>{isMarking ? 'Đang lưu...' : student.attendanceTone !== 'pending' ? 'Đã ghi nhận' : checkInWindow.open ? 'Điểm danh' : 'Ngoài giờ'}</button>
+        </article>
+      })}</div> : <EmptyState title="Chưa có học viên" text={query || status !== 'Tất cả' ? 'Không có học viên phù hợp với bộ lọc.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
+    </section>
   </div>
 }

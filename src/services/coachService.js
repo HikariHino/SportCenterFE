@@ -28,3 +28,21 @@ export async function getCoachSessionRoster(sessionId) {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+export async function getCoachSessionAttendances(sessionId) {
+  const response = await api.get(`/Attendances/session/${sessionId}`)
+  const body = response.data
+  const payload = body?.data ?? body
+  return Array.isArray(payload) ? payload : []
+}
+
+export async function checkInCoachRegistration(registrationId) {
+  const response = await api.post(`/class-registrations/${registrationId}/check-in`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể điểm danh học viên.')
+  }
+
+  return body?.data ?? body
+}
