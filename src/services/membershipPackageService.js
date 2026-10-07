@@ -123,3 +123,20 @@ export async function getMembershipPackagesForManagement() {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+/**
+ * GET /api/membership-packages/manage/{id} (requires authentication).
+ * @param {number} id Membership package ID (int32).
+ * @returns {Promise<MembershipPackage>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function getMembershipPackageForManagementById(id) {
+  const response = await api.get(`/membership-packages/manage/${id}`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải thông tin quản lý gói hội viên.')
+  }
+
+  return body?.data ?? body
+}
