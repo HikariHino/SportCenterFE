@@ -65,3 +65,27 @@ export async function getMembershipPackageById(id) {
 
   return body?.data ?? body
 }
+
+/**
+ * PUT /api/membership-packages/{id} (requires authentication).
+ * @param {number} id Membership package ID (int32).
+ * @param {{ packageName: string, description: string, price: number, durationInDays: number, isActive: boolean }} membershipPackage
+ * @returns {Promise<MembershipPackage>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function updateMembershipPackage(id, { packageName, description, price, durationInDays, isActive }) {
+  const response = await api.put(`/membership-packages/${id}`, {
+    packageName,
+    description,
+    price,
+    durationInDays,
+    isActive,
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể cập nhật gói hội viên.')
+  }
+
+  return body?.data ?? body
+}
