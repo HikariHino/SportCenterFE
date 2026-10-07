@@ -100,3 +100,19 @@ export async function deleteMember(id) {
 
   return body
 }
+
+/**
+ * GET /api/members/me (requires authentication, no parameters).
+ * @returns {Promise<Member>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function getMyMemberProfile() {
+  const response = await api.get('/members/me')
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải hồ sơ hội viên của bạn.')
+  }
+
+  return body?.data ?? body
+}
