@@ -48,3 +48,20 @@ export async function createMembershipPackage({ packageName, description, price,
 
   return body?.data ?? body
 }
+
+/**
+ * GET /api/membership-packages/{id} (requires authentication).
+ * @param {number} id Membership package ID (int32).
+ * @returns {Promise<MembershipPackage>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function getMembershipPackageById(id) {
+  const response = await api.get(`/membership-packages/${id}`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải thông tin gói hội viên.')
+  }
+
+  return body?.data ?? body
+}
