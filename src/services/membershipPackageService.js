@@ -26,3 +26,25 @@ export async function getMembershipPackages() {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+/**
+ * POST /api/membership-packages (requires authentication).
+ * @param {{ packageName: string, description: string, price: number, durationInDays: number }} membershipPackage
+ * @returns {Promise<MembershipPackage>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function createMembershipPackage({ packageName, description, price, durationInDays }) {
+  const response = await api.post('/membership-packages', {
+    packageName,
+    description,
+    price,
+    durationInDays,
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tạo gói hội viên.')
+  }
+
+  return body?.data ?? body
+}
