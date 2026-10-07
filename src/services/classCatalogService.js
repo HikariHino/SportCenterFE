@@ -76,3 +76,25 @@ export async function getCoaches() {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+/**
+ * PUT /api/coaches/{id}/profile (requires authentication).
+ * @param {number} id Coach ID (int32).
+ * @param {{ specialization: string, bio: string, yearsOfExperience: number }} profile
+ * @returns {Promise<{ id: number, specialization: string, bio: string, yearsOfExperience: number }>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function updateCoachProfile(id, { specialization, bio, yearsOfExperience }) {
+  const response = await api.put(`/coaches/${id}/profile`, {
+    specialization,
+    bio,
+    yearsOfExperience,
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể cập nhật hồ sơ huấn luyện viên.')
+  }
+
+  return body?.data ?? body
+}
