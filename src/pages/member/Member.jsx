@@ -1,17 +1,13 @@
 import ThemeToggle from '../../components/ThemeToggle'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowUpRight, Award, BadgeCheck, Bell, CalendarCheck, CalendarDays, CheckCircle2, Clock3, Coins, CreditCard, Diamond, Download, Dumbbell, Flame, History, Info, LayoutDashboard, LogOut, MapPin, PauseCircle, Percent, PlusCircle, QrCode, ReceiptText, RefreshCw, ShieldCheck, Sparkles, Timer, Trophy, Wallet, Waves, X } from 'lucide-react'
+import { ArrowUpRight, Award, BadgeCheck, Bell, CalendarCheck, CalendarDays, CheckCircle2, Clock3, Coins, CreditCard, Diamond, Dumbbell, ExternalLink, Flame, History, Info, LayoutDashboard, LoaderCircle, LogOut, MapPin, PauseCircle, Percent, PlusCircle, QrCode, ReceiptText, RefreshCw, ShieldCheck, Sparkles, Timer, Trophy, Wallet, Waves, X } from 'lucide-react'
 import '../../style/member/Member.css'
 import { useAuth } from '../../contexts/AuthContext'
-import { getUserDisplayName, getUserInitials } from '../../utils/auth'
-
-const packages = [
-  { name: 'Flex Pass - Tự Do', category: 'period', tag: 'Linh hoạt', icon: RefreshCw, price: '500.000', unit: 'đ/tháng', description: 'Dành cho người chơi linh động, nạp tiền trừ dần theo từng lượt chơi.', note: 'Phí duy trì tài khoản hội viên số', benefits: ['Tích hợp ví SportPay chiết khấu 5% mọi khung giờ', 'Đặt trước sân 3 ngày không cần đặt cọc', 'Miễn phí gửi xe & khăn tập tiêu chuẩn'] },
-  { name: 'Gold All-Access', category: 'period', tag: 'Toàn diện', icon: Sparkles, price: '1.450.000', unit: 'đ/tháng', featured: true, description: 'Trải nghiệm đỉnh cao với quyền ưu tiên giữ sân và thư giãn trọn vẹn.', note: 'Tiết kiệm 20% khi đóng 6 tháng', benefits: ['Ưu tiên giữ sân trước 14 ngày', 'Bơi lội & xông hơi đá muối không giới hạn', 'Tặng 1 buổi test thể lực & InBody cùng HLV', 'Miễn phí 100% sân Pickleball ngoài giờ cao điểm'] },
-  { name: 'Olympus VIP Club', category: 'club', tag: 'VIP doanh nhân', icon: Diamond, tone: 'gold', price: '3.800.000', unit: 'đ/tháng', description: 'Đẳng cấp doanh nhân & gia đình, đặc quyền không giới hạn.', note: 'Bao gồm 01 người đi kèm mỗi buổi', benefits: ['Trọn gói tất cả các sân & VIP Lounge riêng biệt', 'Tủ đồ Locker thông minh riêng mang tên hội viên', 'Tặng gói bảo hiểm chấn thương thể thao quốc tế', 'Phục vụ nước uống điện giải & snack dinh dưỡng'] },
-  { name: 'PT Pro Training 1-1', category: 'pt', tag: 'Chuyên sâu', icon: Dumbbell, tone: 'green', price: '5.200.000', unit: 'đ', description: 'Luyện tập cá nhân hóa trực tiếp với kiện tướng Tennis & Pickleball.', note: 'Gói 12 buổi tập kèm giáo án riêng', benefits: ['12 buổi huấn luyện trực tiếp (60 phút/buổi)', 'Phân tích video kỹ thuật swing & chiến thuật thi đấu', 'Chế độ dinh dưỡng thể thao tăng cơ giảm mỡ', 'Bao gồm miễn phí tiền thuê sân trong giờ học'] },
-]
+import { getAuthErrorMessage, getUserDisplayName, getUserInitials } from '../../utils/auth'
+import { getMembershipPackages } from '../../services/membershipPackageService'
+import { createMemberSubscription, getMySubscriptions } from '../../services/memberSubscriptionService'
+import { cancelPayment, createPayment, getMyPayments, syncPayment } from '../../services/paymentService'
 
 const activities = [
   { date: '24/10/2024', time: '17:15 - 18:45', court: 'Pickleball Arena 02', location: 'Cơ sở 1 - Khu liên hợp ngoài trời', sport: 'Pickleball', method: 'Quét mã QR hội viên tại quầy', minutes: 90, calories: 600, detail: 'Trận đấu đôi phong trào', icon: QrCode },
@@ -20,20 +16,59 @@ const activities = [
   { date: '18/10/2024', time: '19:30 - 21:00', court: 'Cầu Lông Yonex Court 04', location: 'Thảm thi đấu quốc tế BWF', sport: 'Cầu lông', method: 'Quét mã QR lễ tân', minutes: 90, calories: 600, detail: 'Đánh giao lưu CLB Olympus Cầu Giấy', icon: QrCode },
 ]
 
-const invoices = [
-  { id: 'INV-2024-8901', title: 'Gói Hội Viên Gold Pass 6 Tháng', detail: 'Gia hạn kỳ tập 15/06/2024 - 15/12/2024', date: '15/06/2024 - 09:30', amount: '8.100.000 đ', method: 'Thẻ Visa (*4492)', icon: CreditCard },
-  { id: 'INV-2024-9142', title: 'Nạp tiền Ví SportPay Trực Tuyến', detail: 'Nạp quỹ số dư tài khoản hội viên cá nhân', date: '10/10/2024 - 14:20', amount: '2.000.000 đ', method: 'VNPay QR', icon: QrCode },
-  { id: 'INV-2024-9330', title: 'Thuê Sân Cầu Lông Đèn VIP Ngoài Giờ', detail: 'Sân Yonex Court 04 (19:30 - 21:00)', date: '18/10/2024 - 21:05', amount: '180.000 đ', method: 'Trừ Ví SportPay', icon: Wallet },
-]
-
 const navigation = [
   ['tong-quan', LayoutDashboard, 'Tổng quan tài khoản'], ['goi-tap', CreditCard, 'Gói tập & Hội viên'],
   ['lich-dat', CalendarDays, 'Lịch đặt sân của tôi'], ['checkin-history', History, 'Lịch sử check-in'],
   ['hoa-don', ReceiptText, 'Hóa đơn'], ['rewards', Sparkles, 'Olympus Rewards'],
 ]
 
-function Status({ children }) {
-  return <span className="member-status"><span />{children}</span>
+const packageIcons = [RefreshCw, Sparkles, Diamond, Dumbbell]
+
+const paymentStatusLabels = {
+  Completed: ['Đã thanh toán', 'success'], Pending: ['Chờ thanh toán', 'pending'],
+  Cancelled: ['Đã hủy', 'muted'], Expired: ['Hết hạn', 'muted'], Failed: ['Thất bại', 'danger'],
+  NeedsReview: ['Cần đối soát', 'warning'],
+}
+
+function formatCurrency(value) {
+  return `${Number(value || 0).toLocaleString('vi-VN')} đ`
+}
+
+function formatDateTime(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function getPackageCategory(item) {
+  const text = `${item.packageName || ''} ${item.description || ''}`.toLocaleLowerCase('vi')
+  if (/pt|huấn luyện|coach/.test(text)) return 'pt'
+  if (/vip|club|doanh nghiệp/.test(text)) return 'club'
+  return 'period'
+}
+
+function decoratePackage(item, index) {
+  const category = getPackageCategory(item)
+  const duration = Number(item.durationInDays || 0)
+  const durationText = duration >= 30 && duration % 30 === 0 ? `${duration / 30} tháng` : `${duration} ngày`
+  return {
+    ...item,
+    name: item.packageName,
+    category,
+    tag: category === 'pt' ? 'Huấn luyện' : category === 'club' ? 'VIP / CLB' : 'Hội viên',
+    icon: packageIcons[index % packageIcons.length],
+    tone: category === 'club' ? 'gold' : category === 'pt' ? 'green' : undefined,
+    featured: index === 0,
+    price: Number(item.price || 0).toLocaleString('vi-VN'),
+    unit: 'đ/gói',
+    description: item.description || 'Gói hội viên đang được mở đăng ký tại trung tâm.',
+    note: `Thời hạn sử dụng ${durationText}`,
+    benefits: [`Hiệu lực trong ${durationText}`, 'Thanh toán trực tuyến an toàn qua PayOS', 'Kích hoạt tự động sau khi thanh toán thành công'],
+  }
+}
+
+function Status({ children, tone = 'success' }) {
+  return <span className={`member-status member-status--${tone}`}><span />{children}</span>
 }
 
 function SectionHeading({ icon: Icon, eyebrow, title, description, children }) {
@@ -76,18 +111,129 @@ export default function Member() {
   const [invoicePeriod, setInvoicePeriod] = useState('all')
   const [activeNav, setActiveNav] = useState('tong-quan')
   const [dialog, setDialog] = useState(null)
+  const [membershipPackages, setMembershipPackages] = useState([])
+  const [subscriptions, setSubscriptions] = useState([])
+  const [payments, setPayments] = useState([])
+  const [paymentLoading, setPaymentLoading] = useState(true)
+  const [paymentError, setPaymentError] = useState('')
+  const [processingPackageId, setProcessingPackageId] = useState(null)
+  const [updatingPaymentId, setUpdatingPaymentId] = useState(null)
   const showUnavailable = (title) => setDialog({ title, description: 'Tính năng này chưa được kết nối với hệ thống. Vui lòng liên hệ quầy lễ tân hoặc hotline 1900 6886 để được hỗ trợ.' })
+  const packages = membershipPackages.map(decoratePackage)
   const visiblePackages = packages.filter((item) => packageFilter === 'all' || item.category === packageFilter)
   const visibleActivities = activities.filter((item) => (sportFilter === 'all' || item.sport === sportFilter) && (period === 'all' || item.date.slice(3) === period))
-  const visibleInvoices = invoices.filter((item) => invoicePeriod === 'all' || item.date.slice(3, 10) === invoicePeriod)
+  const visiblePayments = payments.filter((item) => invoicePeriod === 'all' || String(item.paidAt || item.createdAt || '').slice(0, 7) === invoicePeriod)
+  const paymentMonths = [...new Set(payments.map((item) => String(item.paidAt || item.createdAt || '').slice(0, 7)).filter(Boolean))].sort().reverse()
   const minutes = visibleActivities.reduce((total, item) => total + item.minutes, 0)
   const calories = visibleActivities.reduce((total, item) => total + item.calories, 0)
+
+  const loadPaymentData = async ({ silent = false } = {}) => {
+    if (user?.role !== 'member') {
+      setPaymentLoading(false)
+      return
+    }
+
+    if (!silent) setPaymentLoading(true)
+    setPaymentError('')
+    try {
+      const [packageData, subscriptionData, paymentData] = await Promise.all([
+        getMembershipPackages(),
+        getMySubscriptions(),
+        getMyPayments(),
+      ])
+      setMembershipPackages(packageData)
+      setSubscriptions(subscriptionData)
+      setPayments(paymentData)
+    } catch (error) {
+      setPaymentError(getAuthErrorMessage(error, 'Không thể tải dữ liệu thanh toán.'))
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  const updatePayment = (nextPayment) => {
+    setPayments((current) => [nextPayment, ...current.filter((item) => item.id !== nextPayment.id)])
+  }
+
+  const openCheckout = (payment) => {
+    if (!payment?.checkoutUrl) throw new Error('Máy chủ chưa trả về liên kết thanh toán PayOS.')
+    const url = new URL(payment.checkoutUrl, window.location.origin)
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Liên kết thanh toán không hợp lệ.')
+    window.location.assign(url.toString())
+  }
+
+  const handleStartPayment = async (membershipPackage) => {
+    if (user?.role !== 'member') {
+      navigate('/login', { state: { from: '/member' } })
+      return
+    }
+
+    setProcessingPackageId(membershipPackage.id)
+    setPaymentError('')
+    try {
+      let subscription = subscriptions.find((item) => Number(item.packageId) === Number(membershipPackage.id) && item.status === 'Pending')
+      if (!subscription) {
+        subscription = await createMemberSubscription(membershipPackage.id)
+        setSubscriptions((current) => [subscription, ...current])
+      }
+      const payment = await createPayment(subscription.id)
+      updatePayment(payment)
+      openCheckout(payment)
+    } catch (error) {
+      setPaymentError(getAuthErrorMessage(error, 'Không thể bắt đầu thanh toán.'))
+    } finally {
+      setProcessingPackageId(null)
+    }
+  }
+
+  const handleSyncPayment = async (id) => {
+    setUpdatingPaymentId(id)
+    setPaymentError('')
+    try {
+      updatePayment(await syncPayment(id))
+    } catch (error) {
+      setPaymentError(getAuthErrorMessage(error, 'Không thể đồng bộ thanh toán.'))
+    } finally {
+      setUpdatingPaymentId(null)
+    }
+  }
+
+  const handleResumePayment = async (payment) => {
+    setUpdatingPaymentId(payment.id)
+    setPaymentError('')
+    try {
+      const nextPayment = await createPayment(payment.subscriptionId)
+      updatePayment(nextPayment)
+      openCheckout(nextPayment)
+    } catch (error) {
+      setPaymentError(getAuthErrorMessage(error, 'Không thể mở trang thanh toán.'))
+    } finally {
+      setUpdatingPaymentId(null)
+    }
+  }
+
+  const handleCancelPayment = async (id) => {
+    if (!window.confirm('Bạn muốn hủy yêu cầu thanh toán PayOS này?')) return
+    setUpdatingPaymentId(id)
+    setPaymentError('')
+    try {
+      updatePayment(await cancelPayment(id))
+    } catch (error) {
+      setPaymentError(getAuthErrorMessage(error, 'Không thể hủy thanh toán.'))
+    } finally {
+      setUpdatingPaymentId(null)
+    }
+  }
 
   useEffect(() => {
     const previousTitle = document.title
     document.title = 'Cổng thông tin Hội viên | SportPulse Olympus'
     return () => { document.title = previousTitle }
   }, [])
+
+  useEffect(() => {
+    loadPaymentData()
+  }, [user?.role])
 
   return <div className="member-page">
     <header className="member-header">
@@ -106,7 +252,8 @@ export default function Member() {
     </header>
 
     <main className="member-container member-main">
-      <p className="member-demo"><Info size={15} />Bản xem trước · Thông tin hội viên và giao dịch bên dưới là dữ liệu mẫu.</p>
+      <p className="member-demo"><Info size={15} />Gói hội viên và giao dịch thanh toán được đồng bộ trực tiếp từ hệ thống.</p>
+      {paymentError && <div className="member-api-message member-api-message--error" role="alert"><Info size={17} /><span>{paymentError}</span><button type="button" onClick={() => loadPaymentData()}>Thử lại</button></div>}
       <section id="tong-quan" className="member-overview" aria-label="Tổng quan tài khoản">
         <article className="member-id-card">
           <div className="member-row"><span className="member-tag member-tag--gold">Gold Membership</span><span className="member-id-number">#SP-VN-88924</span><Award size={25} /></div>
@@ -129,13 +276,17 @@ export default function Member() {
         <SectionHeading icon={BadgeCheck} eyebrow="Chương trình hội viên thể thao cao cấp" title="Đăng ký & Khám phá Gói tập mới" description="Lựa chọn gói hội viên linh hoạt theo nhu cầu rèn luyện, thi đấu và trải nghiệm của bạn.">
           <Filters label="Lọc gói tập" value={packageFilter} onChange={setPackageFilter} options={[[ 'all', 'Tất cả gói' ], ['period', 'Theo tháng / Năm'], ['pt', 'Huấn luyện viên PT'], ['club', 'CLB / Doanh nghiệp']]} />
         </SectionHeading>
-        <div className="member-package-grid">{visiblePackages.map((item) => <article key={item.name} className={`member-card member-package ${item.featured ? 'member-package--featured' : ''}`}>
-          {item.featured && <span className="member-popular">Được chọn nhiều nhất</span>}
-          <div className="member-row"><span className={`member-tag ${item.tone ? `member-tag--${item.tone}` : ''}`}>{item.tag}</span><item.icon size={23} /></div>
-          <h3>{item.name}</h3><p className="member-package-description">{item.description}</p><div className="member-price"><strong>{item.price} <small>{item.unit}</small></strong><p>{item.note}</p></div>
-          <ul>{item.benefits.map((benefit) => <li key={benefit}><CheckCircle2 size={17} /><span>{benefit}</span></li>)}</ul>
-          <div className="member-package-actions"><button type="button" className={`member-button ${item.featured ? 'member-button--primary' : 'member-button--soft'}`} onClick={() => showUnavailable(`Đăng ký ${item.name}`)}>Đăng ký ngay</button><button type="button" className="member-button member-button--text" onClick={() => setDialog({ title: item.name, description: `${item.price} ${item.unit} · ${item.note}`, benefits: item.benefits })}>Xem chi tiết quyền lợi</button></div>
-        </article>)}</div>
+        {paymentLoading ? <div className="member-card member-api-state"><LoaderCircle className="member-spin" size={26} /><strong>Đang tải gói hội viên...</strong></div> : visiblePackages.length ? <div className="member-package-grid">{visiblePackages.map((item) => {
+          const pendingSubscription = subscriptions.find((subscription) => Number(subscription.packageId) === Number(item.id) && subscription.status === 'Pending')
+          const isProcessing = processingPackageId === item.id
+          return <article key={item.id} className={`member-card member-package ${item.featured ? 'member-package--featured' : ''}`}>
+            {item.featured && <span className="member-popular">Gói đang mở đăng ký</span>}
+            <div className="member-row"><span className={`member-tag ${item.tone ? `member-tag--${item.tone}` : ''}`}>{item.tag}</span><item.icon size={23} /></div>
+            <h3>{item.name}</h3><p className="member-package-description">{item.description}</p><div className="member-price"><strong>{item.price} <small>{item.unit}</small></strong><p>{item.note}</p></div>
+            <ul>{item.benefits.map((benefit) => <li key={benefit}><CheckCircle2 size={17} /><span>{benefit}</span></li>)}</ul>
+            <div className="member-package-actions"><button type="button" disabled={isProcessing} className={`member-button ${item.featured ? 'member-button--primary' : 'member-button--soft'}`} onClick={() => handleStartPayment(item)}>{isProcessing ? <><LoaderCircle className="member-spin" size={16} />Đang tạo thanh toán...</> : <><CreditCard size={16} />{pendingSubscription ? 'Tiếp tục thanh toán' : 'Đăng ký và thanh toán'}</>}</button><button type="button" className="member-button member-button--text" onClick={() => setDialog({ title: item.name, description: `${item.price} ${item.unit} · ${item.note}`, benefits: item.benefits })}>Xem chi tiết quyền lợi</button></div>
+          </article>
+        })}</div> : <div className="member-card member-api-state"><Info size={26} /><strong>Chưa có gói hội viên đang mở đăng ký.</strong></div>}
       </section>
 
       <section id="lich-dat" className="member-section">
@@ -162,9 +313,14 @@ export default function Member() {
 
       <section id="hoa-don" className="member-section">
         <SectionHeading icon={ReceiptText} eyebrow="Thông tin giao dịch hội viên" title="Lịch sử Hóa đơn & Thanh toán" description="Tra cứu các giao dịch gia hạn, nạp ví và thanh toán dịch vụ.">
-          <div className="member-actions"><button type="button" className="member-button" onClick={() => showUnavailable('Xuất sao kê PDF')}><Download size={17} />Xuất sao kê PDF</button><select aria-label="Lọc tháng giao dịch" value={invoicePeriod} onChange={(event) => setInvoicePeriod(event.target.value)}><option value="all">Tất cả giao dịch</option><option value="10/2024">Tháng 10 / 2024</option><option value="06/2024">Tháng 06 / 2024</option></select></div>
+          <div className="member-actions"><button type="button" className="member-button" disabled={paymentLoading} onClick={() => loadPaymentData()}><RefreshCw className={paymentLoading ? 'member-spin' : ''} size={17} />Làm mới</button><select aria-label="Lọc tháng giao dịch" value={invoicePeriod} onChange={(event) => setInvoicePeriod(event.target.value)}><option value="all">Tất cả giao dịch</option>{paymentMonths.map((month) => <option key={month} value={month}>Tháng {month.slice(5)} / {month.slice(0, 4)}</option>)}</select></div>
         </SectionHeading>
-        <div className="member-card member-table-card"><div className="member-table-scroll" tabIndex={0} role="region" aria-label="Hóa đơn và thanh toán"><table><thead><tr>{['Mã hóa đơn', 'Dịch vụ thanh toán', 'Ngày giao dịch', 'Số tiền', 'Phương thức', 'Trạng thái', 'Chứng từ điện tử'].map((heading) => <th key={heading} scope="col">{heading}</th>)}</tr></thead><tbody>{visibleInvoices.map((item) => <tr key={item.id}><td className="member-invoice-id">#{item.id}</td><td><strong>{item.title}</strong><small>{item.detail}</small></td><td>{item.date}</td><td className="member-amount">{item.amount}</td><td><span className="member-inline"><item.icon size={17} />{item.method}</span></td><td><Status>Đã thanh toán</Status></td><td><button type="button" className="member-button" onClick={() => showUnavailable(`Tải hóa đơn ${item.id}`)}><Download size={15} />Tải VAT PDF</button></td></tr>)}</tbody></table></div><div className="member-invoice-note"><Info size={19} /><p>Liên hệ lễ tân để được hỗ trợ thông tin xuất hóa đơn điện tử VAT.</p><button type="button" className="member-button member-button--text" onClick={() => showUnavailable('Cập nhật thông tin xuất hóa đơn')}>Cập nhật thông tin doanh nghiệp</button></div></div>
+        <div className="member-card member-table-card"><div className="member-table-scroll" tabIndex={0} role="region" aria-label="Hóa đơn và thanh toán"><table><thead><tr>{['Mã giao dịch', 'Gói hội viên', 'Ngày giao dịch', 'Số tiền', 'Phương thức', 'Trạng thái', 'Thao tác'].map((heading) => <th key={heading} scope="col">{heading}</th>)}</tr></thead><tbody>{paymentLoading ? <tr><td colSpan={7} className="member-empty"><span className="member-inline"><LoaderCircle className="member-spin" size={18} />Đang tải lịch sử thanh toán...</span></td></tr> : visiblePayments.map((item) => {
+          const subscription = subscriptions.find((entry) => entry.id === item.subscriptionId)
+          const [statusLabel, statusTone] = paymentStatusLabels[item.status] || [item.status || 'Không xác định', 'muted']
+          const isUpdating = updatingPaymentId === item.id
+          return <tr key={item.id}><td className="member-invoice-id">#{item.transactionReference || `PAY-${item.id}`}</td><td><strong>{subscription?.packageName || 'Gói hội viên'}</strong><small>Đăng ký #{item.subscriptionId || '—'} · Đơn PayOS {item.payOSOrderCode || '—'}</small></td><td>{formatDateTime(item.paidAt || item.createdAt)}</td><td className="member-amount">{formatCurrency(item.amount)}</td><td><span className="member-inline"><QrCode size={17} />{item.paymentMethod || 'PayOS'}</span></td><td><Status tone={statusTone}>{statusLabel}</Status>{item.reviewReason && <small>{item.reviewReason}</small>}</td><td><div className="member-payment-actions">{item.status === 'Pending' && <button type="button" className="member-button member-button--primary" disabled={isUpdating} onClick={() => handleResumePayment(item)}>{isUpdating ? <LoaderCircle className="member-spin" size={15} /> : <ExternalLink size={15} />}Thanh toán</button>}<button type="button" className="member-button" disabled={isUpdating} onClick={() => handleSyncPayment(item.id)}><RefreshCw className={isUpdating ? 'member-spin' : ''} size={15} />Đồng bộ</button>{item.status === 'Pending' && <button type="button" className="member-button member-button--text" disabled={isUpdating} onClick={() => handleCancelPayment(item.id)}>Hủy</button>}</div></td></tr>
+        })}{!paymentLoading && !visiblePayments.length && <tr><td colSpan={7} className="member-empty">Chưa có giao dịch thanh toán nào.</td></tr>}</tbody></table></div><div className="member-invoice-note"><ShieldCheck size={19} /><p>Trạng thái được lấy từ Payment API. Giao dịch thành công sẽ tự kích hoạt gói hội viên.</p></div></div>
       </section>
     </main>
     <footer className="member-footer"><div className="member-container"><Link to="/" className="member-brand"><span className="member-brand-icon"><Trophy size={20} /></span><strong>SportPulse Olympus</strong></Link><p>© {new Date().getFullYear()} Olympus Sports Center</p><a href="tel:19006886">Hotline CSKH: <strong>1900 6886</strong></a></div></footer>

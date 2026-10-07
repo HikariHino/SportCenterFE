@@ -7,6 +7,7 @@ import Coach from './pages/Coach/Coach'
 import Receptionist from './pages/Receptionist/Receptionist'
 import { useAuth } from './contexts/AuthContext'
 import Member from './pages/member/Member'
+import PaymentResult from './pages/member/PaymentResult'
 import CenterManager from './pages/CenterManager/CenterManager'
 import { getToken, isManagerRole } from './utils/auth'
 
@@ -28,6 +29,12 @@ function ReceptionistRoute() {
   return isReceptionist ? <Receptionist /> : <Navigate to="/login" replace state={{ from: '/receptionist' }} />
 }
 
+function MemberRoute({ children }) {
+  const { user } = useAuth()
+  const isMember = user?.role === 'member' && Boolean(getToken())
+  return isMember ? children : <Navigate to="/login" replace state={{ from: '/member' }} />
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -39,7 +46,9 @@ function App() {
         <Route path="/coach" element={<CoachRoute />} />
         <Route path="/manager" element={<ManagerRoute />} />
         <Route path="/receptionist" element={<ReceptionistRoute />} />
-        <Route path="/member" element={<Member />} />
+        <Route path="/member" element={<MemberRoute><Member /></MemberRoute>} />
+        <Route path="/payment/success" element={<MemberRoute><PaymentResult /></MemberRoute>} />
+        <Route path="/payment/cancel" element={<MemberRoute><PaymentResult cancelled /></MemberRoute>} />
       </Routes>
     </BrowserRouter>
   )
