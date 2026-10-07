@@ -19,7 +19,7 @@ const navigation = [
 const pageMeta = {
   'Lịch huấn luyện': { eyebrow: 'QUẢN LÝ THỜI GIAN', title: 'Lịch huấn luyện', description: 'Theo dõi và sắp xếp toàn bộ buổi huấn luyện trong tuần.' },
   'Học viên': { eyebrow: 'HỌC VIÊN THEO BUỔI', title: 'Danh sách học viên', description: 'Chọn một buổi huấn luyện để xem đăng ký và trạng thái điểm danh.' },
-  'Điểm danh': { eyebrow: 'CHUYÊN CẦN THEO BUỔI', title: 'Điểm danh học viên', description: 'Chọn buổi huấn luyện và ghi nhận học viên có mặt trong thời gian cho phép.' },
+  'Điểm danh': { eyebrow: 'CHUYÊN CẦN THEO BUỔI', title: 'Điểm danh học viên', description: 'Chọn buổi huấn luyện và cập nhật trạng thái chuyên cần của từng học viên.' },
 }
 
 export default function Coach() {

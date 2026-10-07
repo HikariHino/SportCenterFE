@@ -36,6 +36,21 @@ export async function getCoachSessionAttendances(sessionId) {
   return Array.isArray(payload) ? payload : []
 }
 
+export async function markCoachAttendance({ memberId, sessionId, status }) {
+  const response = await api.post('/Attendances/mark', {
+    memberId,
+    sessionId,
+    status,
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể cập nhật trạng thái điểm danh.')
+  }
+
+  return body?.data ?? body
+}
+
 export async function checkInCoachRegistration(registrationId) {
   const response = await api.post(`/class-registrations/${registrationId}/check-in`)
   const body = response.data

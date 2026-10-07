@@ -210,7 +210,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 
 /* Coach workspace. */
 [data-theme='dark'] :is(.coach-topbar, .coach-card, .coach-notification, .coach-metrics article, .coach-student-kpis article) { background: var(--theme-surface); border-color: var(--theme-border); }
-[data-theme='dark'] :is(.coach-search, .coach-session > button, .coach-student-list article > button, .coach-session-picker select) { background: var(--theme-raised); border-color: var(--theme-border); color: var(--theme-text); }
+[data-theme='dark'] :is(.coach-search, .coach-session > button, .coach-student-list article > button, .coach-session-picker select, .coach-attendance-actions select) { background: var(--theme-raised); border-color: var(--theme-border); color: var(--theme-text); }
 [data-theme='dark'] :is(.coach-card-head, .coach-session, .coach-student-list article, .coach-quick-actions > div:last-child > button) { border-color: var(--theme-border); }
 [data-theme='dark'] :is(.coach-notification, .coach-session-info small, .coach-student-list article > b, .coach-chart small) { color: var(--theme-muted); }
 [data-theme='dark'] :is(.coach-metric-icon.blue, .coach-status.done, .coach-student-avatar.blue, .coach-quick-actions .video) { background: var(--theme-blue-bg); color: var(--theme-accent); }

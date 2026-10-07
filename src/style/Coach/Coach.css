@@ -220,7 +220,7 @@
 .coach-checkin-window strong { font-size: 9px; }.coach-checkin-window small { margin-top: 3px; color: #7d8798; font-size: 7px; line-height: 1.5; }
 .coach-attendance-error { margin: 12px 18px 0; padding: 10px 12px; border: 1px solid #f0b7bd; border-radius: 8px; color: #a62d3a; background: #fff0f2; font-size: 8px; font-weight: 700; }
 .coach-attendance-table { padding: 11px 18px 14px; }
-.coach-attendance-heading, .coach-attendance-row { display: grid; grid-template-columns: 1.35fr .9fr 1fr 94px; gap: 14px; align-items: center; }
+.coach-attendance-heading, .coach-attendance-row { display: grid; grid-template-columns: 1.35fr .9fr 1fr 210px; gap: 14px; align-items: center; }
 .coach-attendance-heading { padding: 0 9px 9px; color: #929cac; font-size: 7px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
 .coach-attendance-row { min-height: 70px; padding: 10px 9px; border-top: 1px solid #edf1f6; }
 .coach-attendance-row > span { min-width: 0; }
@@ -229,6 +229,8 @@
 .coach-checkin-button { min-height: 33px; padding: 0 11px; border: 1px solid var(--coach-blue); border-radius: 7px; color: #fff; background: var(--coach-blue); font-size: 8px; font-weight: 800; transition: transform .2s, opacity .2s, background-color .2s; }
 .coach-checkin-button:hover:not(:disabled) { background: #104abb; transform: translateY(-1px); }
 .coach-checkin-button:disabled { border-color: #dfe4ec; color: #8993a4; background: #edf1f6; cursor: not-allowed; }
+.coach-attendance-actions { display: grid; grid-template-columns: minmax(92px, 1fr) auto; align-items: center; gap: 7px; }
+.coach-attendance-actions select { width: 100%; min-height: 33px; padding: 0 8px; border: 1px solid #dfe5ef; border-radius: 7px; color: var(--coach-ink); background: #fff; font-size: 8px; font-weight: 700; }
 
 .coach-plan-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; }.coach-plan-overview > div { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border: 1px solid var(--coach-line); border-radius: 11px; background: #fff; }.coach-plan-overview > div > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 9px; color: #2563df; background: #eaf1ff; }.coach-plan-overview > div:nth-child(2) > span { color: #099069; background: #e3f9f1; }.coach-plan-overview > div:nth-child(3) > span { color: #ca850f; background: #fff3dc; }.coach-plan-overview > div:nth-child(4) > span { color: #7354c9; background: #f0ebff; }.coach-plan-overview strong, .coach-plan-overview small { display: block; }.coach-plan-overview strong { font-size: 17px; }.coach-plan-overview small { margin-top: 3px; color: #7d8798; font-size: 7px; }
 .coach-plan-toolbar { margin-top: 16px; padding-inline: 0; border: 0; }.coach-plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
@@ -276,7 +278,7 @@
   .coach-roster-table > button > span:last-child { display: none; }
   .coach-attendance-heading { display: none; }
   .coach-attendance-row { grid-template-columns: 1.2fr 1fr .9fr; }
-  .coach-attendance-row > button { grid-column: 1 / -1; }
+  .coach-attendance-row > .coach-attendance-actions { grid-column: 1 / -1; }
   .coach-performance-bottom { grid-template-columns: 1fr; }
   .coach-student-profile { display: block; }
   .coach-profile-cover { height: 76px; min-height: 0; border-radius: 12px 12px 0 0; }
@@ -309,6 +311,7 @@
   .coach-attendance-table { padding-inline: 10px; }
   .coach-attendance-row { grid-template-columns: 1fr 1fr; gap: 9px; }
   .coach-attendance-row > span:nth-child(2) { display: none; }
+  .coach-attendance-actions { grid-column: 1 / -1; }
   .coach-performance-filter { justify-content: space-between; }
   .coach-large-chart { height: 220px; gap: 6px; padding-inline: 12px; }
   .coach-large-chart > div > span { height: 155px; width: min(30px, 75%); }
