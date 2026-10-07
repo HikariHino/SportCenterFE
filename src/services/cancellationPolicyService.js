@@ -37,3 +37,25 @@ export async function createCancellationPolicy({ name, minimumHoursBeforeStart, 
 
   return body
 }
+
+/**
+ * PUT /api/cancellation-policies/{id} (requires authentication).
+ * @param {number} id Policy ID (int32).
+ * @param {{ name: string, minimumHoursBeforeStart: number, isActive: boolean }} policy
+ * Returns the complete API body; the response schema is not specified.
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function updateCancellationPolicy(id, { name, minimumHoursBeforeStart, isActive }) {
+  const response = await api.put(`/cancellation-policies/${id}`, {
+    name,
+    minimumHoursBeforeStart,
+    isActive,
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể cập nhật chính sách hủy.')
+  }
+
+  return body
+}
