@@ -37,3 +37,25 @@ export async function createSport({ name, description, isActive }) {
 
   return body?.data ?? body
 }
+
+/**
+ * PUT /api/sports/{id} (requires authentication).
+ * @param {number} id Sport ID (int32).
+ * @param {{ name: string, description: string, isActive: boolean }} sport
+ * @returns {Promise<{ id: number, name: string, description: string, isActive: boolean }>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function updateSport(id, { name, description, isActive }) {
+  const response = await api.put(`/sports/${id}`, {
+    name,
+    description,
+    isActive,
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể cập nhật môn thể thao.')
+  }
+
+  return body?.data ?? body
+}
