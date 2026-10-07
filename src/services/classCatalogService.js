@@ -59,3 +59,20 @@ export async function updateSport(id, { name, description, isActive }) {
 
   return body?.data ?? body
 }
+
+/**
+ * GET /api/coaches (requires authentication, no parameters).
+ * @returns {Promise<Array<{ id: number, fullName: string, specialization: string, bio: string, yearsOfExperience: number }>>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function getCoaches() {
+  const response = await api.get('/coaches')
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải danh sách huấn luyện viên.')
+  }
+
+  const payload = body?.data ?? body
+  return Array.isArray(payload) ? payload : []
+}
