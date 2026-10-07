@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import ThemeToggle from '../../components/ThemeToggle'
 import {
   Bell, CalendarDays, CheckCircle2, Dumbbell,
   LayoutDashboard, LogOut, Search, Trophy, Users,
@@ -40,8 +41,8 @@ export default function Coach() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 
@@ -72,7 +73,7 @@ export default function Coach() {
     <section className="coach-workspace">
       <header className="coach-topbar">
         <label className="coach-search"><Search size={18} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm học viên..." aria-label="Tìm kiếm" /></label>
-        <div className="coach-topbar-actions"><button className="coach-notification" type="button" aria-label="Thông báo" onClick={() => showNotice('Chưa có dữ liệu thông báo từ API.')}><Bell size={20} /></button><span className="coach-topbar-profile"><span className="coach-avatar">{coachInitials}</span><span><strong>{coachName}</strong><small>Huấn luyện viên</small></span></span></div>
+        <div className="coach-topbar-actions"><ThemeToggle /><button className="coach-notification" type="button" aria-label="Thông báo" onClick={() => showNotice('Chưa có dữ liệu thông báo từ API.')}><Bell size={20} /></button><span className="coach-topbar-profile"><span className="coach-avatar">{coachInitials}</span><span><strong>{coachName}</strong><small>Huấn luyện viên</small></span></span></div>
       </header>
 
       <div className="coach-main">

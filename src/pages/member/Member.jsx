@@ -1,7 +1,10 @@
+import ThemeToggle from '../../components/ThemeToggle'
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowUpRight, Award, BadgeCheck, Bell, CalendarCheck, CalendarDays, CheckCircle2, Clock3, Coins, CreditCard, Diamond, Download, Dumbbell, Flame, History, Info, LayoutDashboard, MapPin, PauseCircle, Percent, PlusCircle, QrCode, ReceiptText, RefreshCw, ShieldCheck, Sparkles, Timer, Trophy, Wallet, Waves, X } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowUpRight, Award, BadgeCheck, Bell, CalendarCheck, CalendarDays, CheckCircle2, Clock3, Coins, CreditCard, Diamond, Download, Dumbbell, Flame, History, Info, LayoutDashboard, LogOut, MapPin, PauseCircle, Percent, PlusCircle, QrCode, ReceiptText, RefreshCw, ShieldCheck, Sparkles, Timer, Trophy, Wallet, Waves, X } from 'lucide-react'
 import '../../style/member/Member.css'
+import { useAuth } from '../../contexts/AuthContext'
+import { getUserDisplayName, getUserInitials } from '../../utils/auth'
 
 const packages = [
   { name: 'Flex Pass - Tự Do', category: 'period', tag: 'Linh hoạt', icon: RefreshCw, price: '500.000', unit: 'đ/tháng', description: 'Dành cho người chơi linh động, nạp tiền trừ dần theo từng lượt chơi.', note: 'Phí duy trì tài khoản hội viên số', benefits: ['Tích hợp ví SportPay chiết khấu 5% mọi khung giờ', 'Đặt trước sân 3 ngày không cần đặt cọc', 'Miễn phí gửi xe & khăn tập tiêu chuẩn'] },
@@ -57,6 +60,16 @@ function MemberDialog({ content, onClose }) {
 }
 
 export default function Member() {
+  const { user, logout } = useAuth()
+  const displayName = getUserDisplayName(user)
+  const initials = getUserInitials(user)
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login', { replace: true })
+  }
+
   const [packageFilter, setPackageFilter] = useState('all')
   const [sportFilter, setSportFilter] = useState('all')
   const [period, setPeriod] = useState('10/2024')
@@ -81,11 +94,12 @@ export default function Member() {
       <div className="member-header-main member-container">
         <Link to="/member" className="member-brand"><span className="member-brand-icon"><Trophy size={26} /></span><span><span className="member-brand-name">SportPulse <span className="member-tag">Hội viên</span></span><small>Trung tâm Thể thao Olympus</small></span></Link>
         <div className="member-location"><MapPin size={17} /><span>Cơ sở 1 - Cầu Giấy, Hà Nội</span><b>● 06:00 - 22:00</b></div>
-        <div className="member-header-actions">
+        <div className="member-header-actions"><ThemeToggle />
           <a href="#rewards" className="member-points"><Coins size={22} /><span><small>Điểm thưởng</small><strong>1.250 <small>pts</small></strong></span></a>
           <button type="button" className="member-icon-button member-notification" aria-label="Thông báo" onClick={() => setDialog({ title: 'Thông báo', description: 'Bạn đang xem giao diện hội viên với dữ liệu mẫu. Thông báo cá nhân sẽ xuất hiện khi hệ thống được kết nối.' })}><Bell size={22} /><i /></button>
           <button type="button" className="member-button member-button--primary member-book-button" onClick={() => showUnavailable('Đặt sân ngay')}><PlusCircle size={17} />Đặt sân ngay</button>
-          <a href="#tong-quan" className="member-profile" aria-label="Xem thông tin hội viên"><span className="member-avatar">MT</span><span><strong>Trần Minh Tuấn <BadgeCheck size={15} /></strong><small>Olympus Gold Member</small></span></a>
+          <a href="#tong-quan" className="member-profile" aria-label={`Xem thông tin của ${displayName}`} title={displayName}><span className="member-avatar" aria-hidden="true">{initials}</span><span className="member-profile-info"><small>Xin chào,</small><strong><span className="member-profile-name">{displayName}</span><BadgeCheck size={15} /></strong></span></a>
+          <button type="button" className="member-button member-logout" aria-label="Đăng xuất" title="Đăng xuất" onClick={handleLogout}><LogOut size={17} /><span>Đăng xuất</span></button>
         </div>
       </div>
       <nav className="member-nav member-container" aria-label="Điều hướng hội viên">{navigation.map(([id, Icon, label]) => <a key={id} href={`#${id}`} className={activeNav === id ? 'is-active' : ''} aria-current={activeNav === id ? 'location' : undefined} onClick={() => setActiveNav(id)}><Icon size={17} />{label}</a>)}</nav>
@@ -96,7 +110,7 @@ export default function Member() {
       <section id="tong-quan" className="member-overview" aria-label="Tổng quan tài khoản">
         <article className="member-id-card">
           <div className="member-row"><span className="member-tag member-tag--gold">Gold Membership</span><span className="member-id-number">#SP-VN-88924</span><Award size={25} /></div>
-          <div className="member-identity"><span className="member-avatar member-avatar--large">MT</span><div><h1>Trần Minh Tuấn</h1><p>Tham gia: 15/06/2023</p><div className="member-identity-status"><Status>Đang hoạt động</Status><small>• Cơ sở Cầu Giấy</small></div></div></div>
+          <div className="member-identity"><span className="member-avatar member-avatar--large" aria-hidden="true">{initials}</span><div><h1>{displayName}</h1><p>Tham gia: 15/06/2023</p><div className="member-identity-status"><Status>Đang hoạt động</Status><small>• Cơ sở Cầu Giấy</small></div></div></div>
           <div className="member-quick-pass"><span className="member-qr"><QrCode size={39} /></span><div><strong>Mã QR Check-in Tức thì</strong><small>Quét tại cổng quay / Quầy lễ tân</small></div><button type="button" onClick={() => setDialog({ title: 'Mã QR hội viên', qr: true, description: 'Mã check-in cá nhân sẽ được cấp sau khi kết nối hệ thống hội viên.' })}>Phóng to</button></div>
           <div className="member-wallet"><div><small>Số dư ví SportPay</small><strong>2.450.000 đ</strong></div><button type="button" onClick={() => showUnavailable('Nạp ví SportPay')}><Wallet size={17} />Nạp ví</button></div>
         </article>

@@ -1,3 +1,4 @@
+import ThemeToggle from '../components/ThemeToggle'
 import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CreditCard, Eye, EyeOff, LockKeyhole, Mail, MessageCircle, Phone, ShieldCheck, Trophy, Users } from 'lucide-react'
@@ -26,7 +27,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const submitting = useRef(false)
-  const [message, setMessage] = useState(() => selectedMembership ? `Vui lòng đăng nhập để tiếp tục đăng ký gói ${selectedMembership}.` : '')
+  const [message, setMessage] = useState(() => selectedMembership ? `Vui lòng đăng nhập để tiếp tục đăng ký gói ${selectedMembership}.` : location.state?.message || '')
   const unavailable = (feature) => setMessage(`${feature} hiện chưa được kết nối. Vui lòng liên hệ hotline 1900 8899 để được hỗ trợ.`)
 
   async function handleSubmit(event) {
@@ -43,9 +44,8 @@ export default function Login() {
     setIsSubmitting(true)
     setMessage('')
     try {
-      const result = await loginApi({ email, password })
-      if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Đăng nhập không thành công.'))
-      const user = login(result.data, result.data?.token, formData.has('remember'))
+      const session = await loginApi({ email, password })
+      const user = login(session, session.token, formData.has('remember'))
       navigate(getAuthDestination(user.role, location.state?.from), { replace: true, state: { membership: selectedMembership } })
     } catch (error) {
       setMessage(getAuthErrorMessage(error, 'Đăng nhập không thành công. Vui lòng thử lại.'))
@@ -63,7 +63,7 @@ export default function Login() {
     </aside>
 
     <section className="login-panel" aria-labelledby="login-title">
-      <div className="login-topbar"><div className="login-mobile-brand"><Brand /></div><Link to="/" className="login-back"><ArrowLeft size={16} /> Về trang chủ</Link></div>
+      <div className="login-topbar"><ThemeToggle /><div className="login-mobile-brand"><Brand /></div><Link to="/" className="login-back"><ArrowLeft size={16} /> Về trang chủ</Link></div>
       <div className="login-content">
         <header><h2 id="login-title">Chào mừng trở lại</h2><p>Đăng nhập vào tài khoản SportPulse của bạn để bắt đầu</p></header>
         <div className="login-portals" role="group" aria-label="Loại tài khoản">
@@ -75,7 +75,7 @@ export default function Login() {
         <div className="login-divider"><span>Hoặc đăng nhập bằng email</span></div>
         <form onSubmit={handleSubmit} className="login-form" aria-busy={isSubmitting}>
           <div><label htmlFor="login-email">Email</label><div className="login-input"><Mail size={19} /><input id="login-email" name="email" type="email" autoComplete="username" placeholder="vd: athlete@sportpulse.vn" required /></div></div>
-          <div><div className="login-label-row"><label htmlFor="login-password">Mật khẩu</label><button className="login-text-button" type="button" onClick={() => unavailable('Khôi phục mật khẩu')}>Quên mật khẩu?</button></div><div className="login-input"><LockKeyhole size={19} /><input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Nhập mật khẩu của bạn" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
+          <div><div className="login-label-row"><label htmlFor="login-password">Mật khẩu</label><Link className="login-text-button" to="/forgot-password">Quên mật khẩu?</Link></div><div className="login-input"><LockKeyhole size={19} /><input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Nhập mật khẩu của bạn" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
           <label className="login-remember"><input name="remember" type="checkbox" defaultChecked /> Ghi nhớ đăng nhập trên thiết bị này</label>
           <button className="login-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng nhập...' : portal === 'staff' ? 'Đăng nhập Cổng Quản lý' : 'Đăng nhập ngay'}<ArrowRight size={19} /></button>
           <button className="login-otp" type="button" onClick={() => unavailable('Đăng nhập bằng mã OTP')}><MessageCircle size={19} /> Đăng nhập bằng mã OTP qua SMS / Zalo</button>

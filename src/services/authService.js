@@ -1,16 +1,18 @@
 import api from './api'
+import { getLoginData } from '../utils/auth'
+import { getRegistrationResult } from '../utils/registration'
 
-// Return the complete API body: success, statusCode, message, data, errors, timestamp.
-// On success, data contains userId, email, fullName, role, token.
+// Login returns validated session data; registration OTP responses are normalized.
+// Other methods return the complete API body.
 // HTTP errors reject with the backend body available at error.response.data.
 
 /**
- * POST /api/auth/login
+ * POST /api/Auth/login
  * @param {{ email: string, password: string }} credentials
  */
 export async function login({ email, password }) {
-  const response = await api.post('/auth/login', { email, password }, { skipAuth: true })
-  return response.data
+  const response = await api.post('/Auth/login', { email: email.trim(), password }, { skipAuth: true })
+  return getLoginData(response.data)
 }
 
 /**
@@ -39,4 +41,63 @@ export async function register({ email, password, fullName, phone, dateOfBirth, 
   return response.data
 }
 
-export default { login, register }
+/** POST /api/Auth/send-register-otp */
+export async function sendRegisterOtp({ email, password, fullName, phone, dateOfBirth, gender, address, fitnessGoal }) {
+  const response = await api.post('/Auth/send-register-otp', {
+    email,
+    password,
+    fullName,
+    phone,
+    dateOfBirth,
+    gender,
+    address,
+    fitnessGoal,
+  }, { skipAuth: true })
+  return getRegistrationResult(response.data, 'Không thể gửi mã OTP đăng ký. Vui lòng thử lại.')
+}
+
+/** POST /api/Auth/verify-register-otp */
+export async function verifyRegisterOtp({ email, otp }) {
+  const response = await api.post('/Auth/verify-register-otp', { email, otp }, { skipAuth: true })
+  return getRegistrationResult(response.data, 'Xác minh OTP không thành công. Vui lòng kiểm tra mã và thử lại.')
+}
+
+/** POST /api/Auth/request-reset-password */
+export async function requestResetPassword({ email }) {
+  const response = await api.post('/Auth/request-reset-password', { email }, { skipAuth: true })
+  return response.data
+}
+
+/** POST /api/Auth/verify-reset-password */
+export async function verifyResetPassword({ email, otp, newPassword, confirmPassword }) {
+  const response = await api.post('/Auth/verify-reset-password', {
+    email,
+    otp,
+    newPassword,
+    confirmPassword,
+  }, { skipAuth: true })
+  return response.data
+}
+
+/** POST /api/Auth/refresh-token */
+export async function refreshToken({ refreshTokenKey }) {
+  const response = await api.post('/Auth/refresh-token', { refreshTokenKey }, { skipAuth: true })
+  return response.data
+}
+
+/** POST /api/Auth/logout */
+export async function logout({ refreshTokenKey }) {
+  const response = await api.post('/Auth/logout', { refreshTokenKey })
+  return response.data
+}
+
+export default {
+  login,
+  register,
+  sendRegisterOtp,
+  verifyRegisterOtp,
+  requestResetPassword,
+  verifyResetPassword,
+  refreshToken,
+  logout,
+}

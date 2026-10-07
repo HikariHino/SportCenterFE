@@ -1,11 +1,32 @@
+export function getUserDisplayName(user) {
+  return [user?.fullName, user?.name, user?.email]
+    .find(value => typeof value === 'string' && value.trim())?.trim() || 'Hội viên'
+}
+
+export function getUserInitials(user) {
+  return getUserDisplayName(user).split(/\s+/).slice(-2)
+    .map(part => Array.from(part)[0]).join('').toLocaleUpperCase('vi-VN')
+}
+
 export function getToken() {
   return localStorage.getItem('token') || sessionStorage.getItem('token')
+}
+
+export function getRefreshTokenKey() {
+  return localStorage.getItem('refreshTokenKey') || sessionStorage.getItem('refreshTokenKey')
+}
+
+function getSessionStorage() {
+  if (localStorage.getItem('token') || localStorage.getItem('refreshTokenKey')) return localStorage
+  if (sessionStorage.getItem('token') || sessionStorage.getItem('refreshTokenKey')) return sessionStorage
+  return null
 }
 
 export function clearSession() {
   for (const storage of [localStorage, sessionStorage]) {
     storage.removeItem('user')
     storage.removeItem('token')
+    storage.removeItem('refreshTokenKey')
   }
 }
 
@@ -20,8 +41,35 @@ export function getSavedUser() {
   }
 }
 
+export function updateSessionTokens(token, refreshTokenKey) {
+  const storage = getSessionStorage()
+  if (!storage || typeof token !== 'string' || !token.trim()) return false
+  storage.setItem('token', token.trim())
+  if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
+    storage.setItem('refreshTokenKey', refreshTokenKey.trim())
+  }
+  return true
+}
+
+export function getLoginData(body) {
+  // Auth endpoints may return AuthResponse directly or inside an ApiResponse.
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
+    throw new Error(getAuthErrorMessage({ response: { data: body, status: body?.statusCode } }, 'Đăng nhập không thành công.'))
+  }
+
+  const data = body?.data ?? body
+  const token = [data?.token, data?.accessToken]
+    .find(value => typeof value === 'string' && value.trim())
+  if (!token) {
+    throw new Error('Máy chủ không trả về phiên đăng nhập hợp lệ. Vui lòng thử lại.')
+  }
+
+  return { ...data, token: token.trim() }
+}
+
 export function saveSession(userData, token, remember = true) {
-  if (typeof token !== 'string' || !token.trim()) {
+  const accessToken = token || userData?.token || userData?.accessToken
+  if (typeof accessToken !== 'string' || !accessToken.trim()) {
     throw new Error('Không nhận được phiên đăng nhập hợp lệ. Vui lòng đăng nhập lại.')
   }
   const user = {
@@ -35,13 +83,22 @@ export function saveSession(userData, token, remember = true) {
   clearSession()
   const storage = remember ? localStorage : sessionStorage
   storage.setItem('user', JSON.stringify(user))
-  storage.setItem('token', token)
+  storage.setItem('token', accessToken.trim())
+  const refreshTokenKey = userData?.refreshTokenKey || userData?.refreshToken
+  if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
+    storage.setItem('refreshTokenKey', refreshTokenKey.trim())
+  }
   return user
+}
+
+export function isManagerRole(role) {
+  return ['manager', 'centermanager'].includes(String(role || '').toLowerCase().replace(/[\s_-]/g, ''))
 }
 
 export function getAuthDestination(role, from) {
   // Only return routes supported by the app and accessible to this role.
   if (from === '/' || from === '/#memberships') return from
+  if (isManagerRole(role)) return '/manager'
   if (role === 'coach') return '/coach'
   if (role === 'receptionist') return '/receptionist'
   if (role === 'member') return '/member'
@@ -53,6 +110,10 @@ export function getAuthErrorMessage(error, fallback) {
   const details = body?.errors
   const messages = (Array.isArray(details) ? details : details && typeof details === 'object' ? Object.values(details).flat() : [details])
     .filter(value => typeof value === 'string' && value.trim())
+  // Translate the backend's credential error without replacing OTP or validation errors.
+  if ([...messages, body?.message].some(value => typeof value === 'string' && /^Invalid email or password\.?$/i.test(value.trim()))) {
+    return 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại hoặc chọn Quên mật khẩu.'
+  }
   if (messages.length) return messages.join(' ')
   if (typeof body?.message === 'string' && body.message.trim()) return body.message
   if (error.response?.status === 401) return 'Email hoặc mật khẩu không chính xác.'

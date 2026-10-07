@@ -23,7 +23,7 @@
 .member-container { width: min(1440px, calc(100% - 48px)); margin-inline: auto; }
 .member-muted { color: var(--member-muted); }
 .member-header { position: sticky; top: 0; z-index: 20; background: #fff; box-shadow: 0 2px 8px #15244609; }
-.member-header-main { min-height: 85px; display: flex; align-items: center; gap: 24px; }
+.member-header-main { min-height: 85px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding-block: 12px; }
 .member-brand { display: inline-flex; align-items: center; gap: 11px; flex-shrink: 0; }
 .member-brand-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--member-blue); color: #fff; }
 .member-brand-name { display: flex; align-items: center; gap: 8px; color: var(--member-blue); font-size: 21px; font-weight: 800; letter-spacing: -.6px; }
@@ -34,7 +34,7 @@
 .member-location { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--member-soft); border: 1px solid var(--member-line); border-radius: 8px; font-size: 10px; }
 .member-location svg { color: var(--member-blue); }
 .member-location b { color: #006c49; white-space: nowrap; }
-.member-header-actions { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.member-header-actions { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; min-width: 0; max-width: 100%; }
 .member-points { display: flex; align-items: center; gap: 8px; border: 1px solid var(--member-line); padding: 5px 12px; border-radius: 30px; background: var(--member-soft); line-height: 1.4; }
 .member-points > svg { color: #996100; }
 .member-points small { font-size: 9px; font-weight: 500; }
@@ -44,7 +44,9 @@
 .member-icon-button:hover { background: #eaedff; }
 .member-notification { position: relative; }
 .member-notification i { position: absolute; top: 8px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: #2563eb; border: 1px solid #fff; }
-.member-profile { display: flex; align-items: center; gap: 10px; }
+.member-profile { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 250px; }
+.member-profile-info { min-width: 0; }
+.member-profile-name { min-width: 0; overflow-wrap: anywhere; }
 .member-profile strong { display: flex; align-items: center; gap: 5px; font-size: 12px; }
 .member-profile small { display: block; color: var(--member-blue); font-size: 10px; font-weight: 600; }
 .member-profile svg { color: var(--member-blue); }
@@ -57,27 +59,28 @@
 .member-demo { display: flex; align-items: center; gap: 8px; color: var(--member-muted); font-size: 11px; margin-bottom: 18px !important; }
 .member-overview { display: grid; grid-template-columns: minmax(330px, 1fr) minmax(0, 2fr); gap: 24px; }
 .member-card { min-width: 0; background: #fff; border: 1px solid var(--member-line); border-radius: 13px; box-shadow: 0 2px 5px #131b2e03; }
-.member-id-card { position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 24px; border-radius: 13px; color: #fff; background: radial-gradient(circle at 95% 25%, #334466 0, transparent 45%), linear-gradient(125deg, #283044, #131b2e); }
+.member-id-card { position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 24px; border: 1px solid var(--member-line); border-radius: 13px; color: var(--member-ink); background: var(--theme-surface); }
 .member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.member-id-card > .member-row > svg { color: #ffb95f; }
-.member-id-number { color: #b4c5ff; font-size: 10px; }
+.member-id-card > .member-row > svg { color: var(--theme-gold, #996100); }
+.member-id-number { color: var(--member-blue); font-size: 10px; }
 .member-identity { display: flex; align-items: center; gap: 14px; margin-block: 26px; }
+.member-identity > div { min-width: 0; overflow-wrap: anywhere; }
 .member-avatar--large { width: 62px; height: 66px; border-radius: 12px; font-size: 21px; }
 .member-identity h1 { font-size: 19px; margin-bottom: 4px; }
-.member-identity p, .member-identity small { color: #c8cfdf; font-size: 11px; }
+.member-identity p, .member-identity small { color: var(--member-muted); font-size: 11px; }
 .member-identity-status { display: flex; align-items: center; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
 .member-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 20px; color: #00714d; background: #d6f8e6; font-size: 10px; font-weight: 600; white-space: nowrap; }
 .member-status > span { width: 5px; height: 5px; border-radius: 50%; background: #00845c; }
-.member-quick-pass { display: flex; align-items: center; gap: 10px; padding: 13px; border: 1px solid #ffffff26; background: #ffffff0c; border-radius: 10px; }
+.member-quick-pass { display: flex; align-items: center; gap: 10px; padding: 13px; border: 1px solid var(--member-line); background: var(--member-soft); border-radius: 10px; }
 .member-qr { display: grid; place-items: center; padding: 4px; border-radius: 7px; color: #131b2e; background: #fff; }
 .member-quick-pass strong { display: block; font-size: 11px; }
-.member-quick-pass small { display: block; font-size: 9px; color: #c8cfdf; }
-.member-id-card button { padding: 8px 10px; background: #ffffff18; border: 0; border-radius: 7px; color: #fff; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 10px; }
-.member-id-card button:hover { background: #ffffff30; }
+.member-quick-pass small { display: block; font-size: 9px; color: var(--member-muted); }
+.member-id-card button { padding: 8px 10px; background: var(--theme-surface); border: 1px solid var(--member-line); border-radius: 7px; color: var(--member-blue); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 10px; }
+.member-id-card button:hover { background: var(--member-line); }
 .member-quick-pass button { margin-left: auto; }
-.member-wallet { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #ffffff24; padding-top: 18px; margin-top: 24px; }
-.member-wallet small { color: #c8cfdf; font-size: 11px; display: block; }
-.member-wallet strong { display: block; color: #6ffbbe; font-size: 21px; }
+.member-wallet { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--member-line); padding-top: 18px; margin-top: 24px; }
+.member-wallet small { color: var(--member-muted); font-size: 11px; display: block; }
+.member-wallet strong { display: block; color: var(--theme-green, #006c49); font-size: 21px; }
 .member-active-pass { padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
 .member-pass-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--member-line); }
 .member-pass-heading h2 { font-size: 22px; margin: 9px 0 6px; }
@@ -111,6 +114,8 @@
 .member-button--soft { background: #e5ebff; border-color: transparent; color: var(--member-blue); }
 .member-button--soft:hover { background: #d7e2ff; }
 .member-button--text { color: var(--member-blue); background: transparent; border-color: transparent; }
+.member-logout { flex-shrink: 0; white-space: nowrap; color: #b42318; border-color: #f0d0ce; }
+.member-logout:hover { background: #fff1f0; }
 .member-section { margin-top: 40px; }
 .member-section-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 22px; margin-bottom: 25px; }
 .member-section-heading > div:first-child { min-width: 0; }
@@ -206,7 +211,7 @@
   .member-quick-pass { flex-wrap: wrap; }
 }
 @media (max-width: 980px) {
-  .member-profile > span:last-child { display: none; }
+  .member-header-actions { gap: 10px; }
   .member-overview { grid-template-columns: minmax(0, 1fr); }
   .member-id-card { padding: 24px; }
   .member-identity { margin-block: 22px; }
@@ -229,7 +234,10 @@
   .member-brand { gap: 8px; }
   .member-brand small { font-size: 9px; }
   .member-brand .member-tag { font-size: 8px; padding: 3px 6px; }
-  .member-header-actions { gap: 4px; }
+  .member-header-actions { gap: 8px; width: 100%; }
+  .member-profile { flex: 1; max-width: none; }
+  .member-logout { padding: 8px; }
+  .member-logout > span { display: none; }
   .member-points, .member-book-button { display: none; }
   .member-avatar { width: 32px; height: 32px; font-size: 10px; }
   .member-icon-button { padding: 7px; }
@@ -279,6 +287,9 @@
   .member-invoice-note button { margin-left: 20px; }
   .member-footer > div { flex-direction: column; align-items: flex-start; gap: 10px; }
   .member-footer > div > a:last-child { margin-left: 0; }
+}
+@media (max-width: 360px) {
+  .member-header-main { flex-wrap: wrap; padding-block: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html:has(.member-page) { scroll-behavior: auto; }
