@@ -66,7 +66,7 @@ export default function Coach() {
         </button>)}
       </nav>
 
-      <div className="coach-sidebar-card"><span><Dumbbell size={20} /></span><p>Nguồn dữ liệu</p><strong>Coach API</strong><small>Chờ kết nối dữ liệu</small></div>
+      <div className="coach-sidebar-card"><span><Dumbbell size={20} /></span><p>Nguồn dữ liệu</p><strong>Coach API</strong><small>Lịch huấn luyện đã kết nối</small></div>
       <div className="coach-sidebar-user"><span className="coach-avatar">{coachInitials}</span><div><strong>{coachName}</strong><small>Huấn luyện viên</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div>
     </aside>
 

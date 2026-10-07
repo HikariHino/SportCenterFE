@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
   Clock3, MapPin, SearchX, Target, TrendingUp, Users,
 } from 'lucide-react'
+import { getMyCoachSessions } from '../../services/coachService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -75,16 +76,100 @@ const getWeekDays = offset => {
   })
 }
 
-export function ScheduleView({ sessions = [] }) {
+const timeFormatter = new Intl.DateTimeFormat('vi-VN', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+const mapSession = session => {
+  const startsAt = new Date(session.startsAt)
+  const endsAt = new Date(session.endsAt)
+  const now = new Date()
+  const rawStatus = String(session.status || '').toLowerCase()
+  let status = 'Sắp tới'
+  let tone = 'next'
+
+  if (rawStatus === 'cancelled' || rawStatus === 'canceled') {
+    status = 'Đã hủy'
+    tone = 'cancelled'
+  } else if (rawStatus === 'completed') {
+    status = 'Đã hoàn thành'
+    tone = 'done'
+  } else if (startsAt <= now && endsAt > now) {
+    status = 'Đang diễn ra'
+    tone = 'live'
+  } else if (endsAt <= now) {
+    status = 'Đã kết thúc'
+    tone = 'done'
+  }
+
+  const durationMinutes = Math.max(0, Math.round((endsAt - startsAt) / 60000))
+  const currentEnrollment = Number(session.currentEnrollment || 0)
+  const capacity = Number(session.capacity || 0)
+
+  return {
+    id: session.id,
+    date: toDateKey(startsAt),
+    time: timeFormatter.format(startsAt),
+    endTime: timeFormatter.format(endsAt),
+    durationMinutes,
+    studentName: session.className || 'Buổi huấn luyện',
+    program: `${currentEnrollment}/${capacity} học viên đã đăng ký`,
+    type: session.coachName || 'Huấn luyện viên',
+    status,
+    tone,
+    currentEnrollment,
+    capacity,
+    availableSeats: Number(session.availableSeats || 0),
+  }
+}
+
+const getScheduleError = error => error.response?.data?.message || error.message || 'Không thể kết nối tới Coach API.'
+
+export function ScheduleView() {
   const [weekOffset, setWeekOffset] = useState(0)
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset])
   const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()))
   const [filter, setFilter] = useState('Tất cả')
+  const [sessions, setSessions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
   const selectedDay = weekDays.find(day => day.key === selectedDate) || weekDays[0]
   const daySessions = sessions.filter(item => item.date === selectedDate && (filter === 'Tất cả' || item.status === filter))
   const allDaySessions = sessions.filter(item => item.date === selectedDate)
   const totalMinutes = allDaySessions.reduce((total, item) => total + Number(item.durationMinutes || 0), 0)
-  const courtCount = new Set(allDaySessions.map(item => item.court).filter(Boolean)).size
+  const enrollmentCount = allDaySessions.reduce((total, item) => total + Number(item.currentEnrollment || 0), 0)
+
+  useEffect(() => {
+    let active = true
+    const firstDay = new Date(`${weekDays[0].key}T00:00:00`)
+    const nextWeek = new Date(firstDay)
+    nextWeek.setDate(firstDay.getDate() + 7)
+
+    const loadSchedule = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getMyCoachSessions({
+          from: firstDay.toISOString(),
+          to: nextWeek.toISOString(),
+        })
+        if (active) setSessions(result.items.map(mapSession))
+      } catch (requestError) {
+        if (active) {
+          setSessions([])
+          setError(getScheduleError(requestError))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    loadSchedule()
+    return () => { active = false }
+  }, [requestKey, weekDays])
 
   const changeWeek = direction => {
     const nextOffset = weekOffset + direction
@@ -102,16 +187,16 @@ export function ScheduleView({ sessions = [] }) {
 
     <div className="coach-schedule-layout">
       <section className="coach-card coach-agenda">
-        <div className="coach-view-toolbar"><div><strong>Lịch ngày {selectedDay.date}/{selectedDay.month}</strong><span>{allDaySessions.length} buổi huấn luyện</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã hoàn thành', 'Đang diễn ra', 'Sắp tới'].map(label => <button type="button" key={label} className={filter === label ? 'active' : ''} onClick={() => setFilter(label)}>{label}</button>)}</div></div>
-        {daySessions.length ? <div className="coach-agenda-list">{daySessions.map(session => <article key={session.id} className={session.tone || 'next'}>
+        <div className="coach-view-toolbar"><div><strong>Lịch ngày {selectedDay.date}/{selectedDay.month}</strong><span>{loading ? 'Đang tải lịch...' : `${allDaySessions.length} buổi huấn luyện`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã hoàn thành', 'Đang diễn ra', 'Sắp tới', 'Đã hủy'].map(label => <button type="button" key={label} className={filter === label ? 'active' : ''} onClick={() => setFilter(label)}>{label}</button>)}</div></div>
+        {loading ? <EmptyState title="Đang tải lịch huấn luyện" text="Dữ liệu đang được đồng bộ từ Coach API." /> : error ? <EmptyState title="Không thể tải lịch" text={error} /> : daySessions.length ? <div className="coach-agenda-list">{daySessions.map(session => <article key={session.id} className={session.tone || 'next'}>
           <div className="coach-agenda-time"><strong>{session.time || '--:--'}</strong><span>{session.endTime || '--:--'}</span></div><div className="coach-agenda-line"><i /></div>
-          <div className="coach-agenda-body"><div><span className={`coach-status ${session.tone || 'next'}`}>{session.status || 'Chưa xác định'}</span><small>{session.type || ''}</small></div><h3>{session.studentName || session.student}</h3><p>{session.program || 'Chưa có chương trình'}</p><footer><span><MapPin size={14} />{session.court || 'Chưa xếp sân'}</span><span><Clock3 size={14} />{session.durationMinutes || 0} phút</span></footer></div>
-        </article>)}</div> : <EmptyState title="Chưa có lịch huấn luyện" text="Dữ liệu lịch của ngày này sẽ xuất hiện sau khi kết nối API." />}
+          <div className="coach-agenda-body"><div><span className={`coach-status ${session.tone || 'next'}`}>{session.status || 'Chưa xác định'}</span><small>{session.type || ''}</small></div><h3>{session.studentName || session.student}</h3><p>{session.program || 'Chưa có chương trình'}</p><footer><span><Users size={14} />Còn {session.availableSeats} chỗ</span><span><Clock3 size={14} />{session.durationMinutes || 0} phút</span></footer></div>
+        </article>)}</div> : <EmptyState title="Chưa có lịch huấn luyện" text="Coach API chưa trả về buổi huấn luyện nào trong ngày này." />}
       </section>
 
       <aside className="coach-day-summary">
-        <section className="coach-card"><div className="coach-summary-title"><CalendarDays size={20} /><div><small>TỔNG QUAN NGÀY</small><strong>{selectedDay.date}/{selectedDay.month}/{selectedDate.slice(0, 4)}</strong></div></div><div className="coach-summary-stats"><div><strong>{allDaySessions.length}</strong><span>Buổi tập</span></div><div><strong>{totalMinutes ? `${(totalMinutes / 60).toFixed(totalMinutes % 60 ? 1 : 0)}h` : '0h'}</strong><span>Thời lượng</span></div><div><strong>{courtCount}</strong><span>Sân sử dụng</span></div></div></section>
-        <section className="coach-card coach-api-note"><CheckCircle2 size={22} /><strong>Sẵn sàng nhận dữ liệu</strong><p>Khu vực lịch sẽ tự động cập nhật khi Coach API được kết nối.</p></section>
+        <section className="coach-card"><div className="coach-summary-title"><CalendarDays size={20} /><div><small>TỔNG QUAN NGÀY</small><strong>{selectedDay.date}/{selectedDay.month}/{selectedDate.slice(0, 4)}</strong></div></div><div className="coach-summary-stats"><div><strong>{allDaySessions.length}</strong><span>Buổi tập</span></div><div><strong>{totalMinutes ? `${(totalMinutes / 60).toFixed(totalMinutes % 60 ? 1 : 0)}h` : '0h'}</strong><span>Thời lượng</span></div><div><strong>{enrollmentCount}</strong><span>Lượt đăng ký</span></div></div></section>
+        <section className={`coach-card coach-api-note${error ? ' error' : ''}`}><CheckCircle2 size={22} /><strong>{loading ? 'Đang đồng bộ lịch' : error ? 'Mất kết nối Coach API' : 'Đã kết nối Coach API'}</strong><p>{error || 'Lịch được tải trực tiếp từ tài khoản huấn luyện viên đang đăng nhập.'}</p>{error && <button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button>}</section>
       </aside>
     </div>
   </div>

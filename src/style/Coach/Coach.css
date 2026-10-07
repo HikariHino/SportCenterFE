@@ -146,6 +146,8 @@
 .coach-api-note svg { color: #22a879; }
 .coach-api-note strong { color: var(--coach-ink); font-size: 10px; }
 .coach-api-note p { max-width: 220px; margin: 0; font-size: 8px; line-height: 1.55; }
+.coach-api-note.error svg { color: #d05b52; }
+.coach-api-note button { margin-top: 4px; padding: 7px 12px; border: 0; border-radius: 7px; color: #fff; background: var(--coach-blue); font-size: 8px; font-weight: 700; cursor: pointer; }
 .coach-view-toolbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 19px; border-bottom: 1px solid #e9edf4; }
 .coach-view-toolbar > div:first-child strong, .coach-view-toolbar > div:first-child span { display: block; }
 .coach-view-toolbar > div:first-child strong { font-size: 14px; }
