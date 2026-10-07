@@ -49,3 +49,20 @@ export async function createMember({ email, password, fullName, phone, dateOfBir
 
   return body?.data ?? body
 }
+
+/**
+ * GET /api/members (requires authentication, no parameters).
+ * @returns {Promise<Array<Member>>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function getMembers() {
+  const response = await api.get('/members')
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải danh sách hội viên.')
+  }
+
+  const payload = body?.data ?? body
+  return Array.isArray(payload) ? payload : []
+}
