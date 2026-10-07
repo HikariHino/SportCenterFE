@@ -66,3 +66,20 @@ export async function getMembers() {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+/**
+ * GET /api/members/{id} (requires authentication).
+ * @param {number} id Member ID (int32).
+ * @returns {Promise<Member>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function getMemberById(id) {
+  const response = await api.get(`/members/${id}`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải thông tin hội viên.')
+  }
+
+  return body?.data ?? body
+}
