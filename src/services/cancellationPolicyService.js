@@ -16,3 +16,24 @@ export async function getCancellationPolicies() {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+/**
+ * POST /api/cancellation-policies (requires authentication).
+ * @param {{ name: string, minimumHoursBeforeStart: number, isActive: boolean }} policy
+ * Returns the complete API body; the response schema is not specified.
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function createCancellationPolicy({ name, minimumHoursBeforeStart, isActive }) {
+  const response = await api.post('/cancellation-policies', {
+    name,
+    minimumHoursBeforeStart,
+    isActive,
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tạo chính sách hủy.')
+  }
+
+  return body
+}
