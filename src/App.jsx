@@ -3,6 +3,7 @@ import SportDashboard from './pages/SportDashboard'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Coach from './pages/Coach/Coach'
+import Receptionist from './pages/Receptionist/Receptionist'
 import { useAuth } from './contexts/AuthContext'
 import Member from './pages/member/Member'
 import { getToken } from './utils/auth'
@@ -13,6 +14,12 @@ function CoachRoute() {
   return isCoach ? <Coach /> : <Navigate to="/login" replace state={{ from: '/coach' }} />
 }
 
+function ReceptionistRoute() {
+  const { user } = useAuth()
+  const isReceptionist = user?.role === 'receptionist' && Boolean(getToken())
+  return isReceptionist ? <Receptionist /> : <Navigate to="/login" replace state={{ from: '/receptionist' }} />
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -21,6 +28,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/coach" element={<CoachRoute />} />
+        <Route path="/receptionist" element={<ReceptionistRoute />} />
         <Route path="/member" element={<Member />} />
       </Routes>
     </BrowserRouter>

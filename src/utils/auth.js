@@ -43,6 +43,7 @@ export function getAuthDestination(role, from) {
   // Only return routes supported by the app and accessible to this role.
   if (from === '/' || from === '/#memberships') return from
   if (role === 'coach') return '/coach'
+  if (role === 'receptionist') return '/receptionist'
   if (role === 'member') return '/member'
   return '/'
 }
