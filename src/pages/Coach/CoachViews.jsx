@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  Clock3, MapPin, SearchX, Target, TrendingUp, Users,
+  Clock3, MapPin, SearchX, TrendingUp, UserCheck, UserRound, Users,
 } from 'lucide-react'
-import { getMyCoachSessions } from '../../services/coachService'
+import { getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -202,35 +202,170 @@ export function ScheduleView() {
   </div>
 }
 
-export function StudentsView({ query, showNotice, students = [] }) {
+const sessionDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  weekday: 'short',
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+const checkInFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+const initials = name => String(name || 'Học viên').split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toLocaleUpperCase('vi-VN')
+
+const registrationLabel = status => ({
+  registered: 'Đã đăng ký',
+  completed: 'Hoàn thành',
+  cancelled: 'Đã hủy',
+}[String(status || '').toLowerCase()] || status || 'Chưa xác định')
+
+const attendanceLabel = status => ({
+  present: 'Đã điểm danh',
+  late: 'Đi trễ',
+  absent: 'Vắng mặt',
+}[String(status || '').toLowerCase()] || 'Chưa điểm danh')
+
+const attendanceTone = status => ({
+  present: 'present',
+  late: 'late',
+  absent: 'absent',
+}[String(status || '').toLowerCase()] || 'pending')
+
+const mapRosterStudent = student => ({
+  id: student.registrationId,
+  registrationId: student.registrationId,
+  memberId: student.memberId,
+  name: student.fullName || 'Học viên chưa cập nhật tên',
+  registrationStatus: registrationLabel(student.registrationStatus),
+  attendanceStatus: attendanceLabel(student.attendanceStatus),
+  attendanceTone: attendanceTone(student.attendanceStatus),
+  checkInTime: student.checkInTime ? checkInFormatter.format(new Date(student.checkInTime)) : 'Chưa check-in',
+})
+
+const formatSessionOption = session => {
+  const start = new Date(session.startsAt)
+  const end = new Date(session.endsAt)
+  return `${session.className} · ${sessionDateFormatter.format(start)} · ${timeFormatter.format(start)}–${timeFormatter.format(end)}`
+}
+
+const getStudentsError = error => error.response?.data?.message || error.message || 'Không thể kết nối tới API học viên theo buổi.'
+
+export function StudentsView({ query }) {
   const [status, setStatus] = useState('Tất cả')
+  const [sessions, setSessions] = useState([])
+  const [selectedSessionId, setSelectedSessionId] = useState('')
+  const [students, setStudents] = useState([])
   const [selectedId, setSelectedId] = useState(null)
+  const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [rosterLoading, setRosterLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadSessions = async () => {
+      setSessionsLoading(true)
+      setError('')
+      try {
+        const result = await getMyCoachSessions({ pageSize: 100 })
+        if (!active) return
+        setSessions(result.items)
+        setSelectedSessionId(current => {
+          if (current && result.items.some(session => String(session.id) === String(current))) return current
+          const upcoming = result.items.find(session => new Date(session.endsAt) >= new Date())
+          return String(upcoming?.id ?? result.items[0]?.id ?? '')
+        })
+      } catch (requestError) {
+        if (active) {
+          setSessions([])
+          setSelectedSessionId('')
+          setError(getStudentsError(requestError))
+        }
+      } finally {
+        if (active) setSessionsLoading(false)
+      }
+    }
+    loadSessions()
+    return () => { active = false }
+  }, [requestKey])
+
+  useEffect(() => {
+    let active = true
+    if (!selectedSessionId) {
+      setStudents([])
+      setSelectedId(null)
+      setRosterLoading(false)
+      return () => { active = false }
+    }
+
+    const loadRoster = async () => {
+      setRosterLoading(true)
+      setError('')
+      try {
+        const result = await getCoachSessionRoster(selectedSessionId)
+        if (!active) return
+        const mapped = result.map(mapRosterStudent)
+        setStudents(mapped)
+        setSelectedId(current => mapped.some(student => student.id === current) ? current : mapped[0]?.id ?? null)
+      } catch (requestError) {
+        if (active) {
+          setStudents([])
+          setSelectedId(null)
+          setError(getStudentsError(requestError))
+        }
+      } finally {
+        if (active) setRosterLoading(false)
+      }
+    }
+    loadRoster()
+    return () => { active = false }
+  }, [requestKey, selectedSessionId])
+
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
-  const filtered = students.filter(student => (status === 'Tất cả' || student.status === status) && (!normalizedQuery || `${student.name || ''} ${student.program || ''} ${student.level || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery)))
+  const filtered = students.filter(student => {
+    const matchesStatus = status === 'Tất cả' || student.attendanceStatus === status
+    const matchesQuery = !normalizedQuery || `${student.name} ${student.memberId} ${student.registrationStatus} ${student.attendanceStatus}`.toLocaleLowerCase('vi').includes(normalizedQuery)
+    return matchesStatus && matchesQuery
+  })
   const selected = students.find(student => student.id === selectedId)
-  const activeCount = students.filter(student => student.status === 'Đang tập').length
-  const averageProgress = students.length ? Math.round(students.reduce((sum, student) => sum + Number(student.progress || 0), 0) / students.length) : 0
+  const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
+  const checkedInCount = students.filter(student => ['Đã điểm danh', 'Đi trễ'].includes(student.attendanceStatus)).length
+  const absentCount = students.filter(student => student.attendanceStatus === 'Vắng mặt').length
+
+  if (sessionsLoading) return <section className="coach-card coach-roster-state"><EmptyState title="Đang tải các buổi huấn luyện" text="Coach API đang đồng bộ danh sách buổi học." /></section>
+  if (!sessions.length) return <section className="coach-card coach-roster-state"><EmptyState title={error ? 'Không thể tải buổi huấn luyện' : 'Chưa có buổi huấn luyện'} text={error || 'Huấn luyện viên chưa được phân công buổi học nào, nên chưa có danh sách học viên để hiển thị.'} />{error && <button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button>}</section>
 
   return <div className="coach-section-view">
+    <section className="coach-card coach-session-picker">
+      <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>BUỔI ĐANG XEM</small><strong>{selectedSession?.className || 'Buổi huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn một buổi để xem học viên'}</p></div></div>
+      <label><span>Chọn buổi huấn luyện</span><select value={selectedSessionId} onChange={event => { setSelectedSessionId(event.target.value); setStatus('Tất cả') }}>{sessions.map(session => <option key={session.id} value={session.id}>{formatSessionOption(session)}</option>)}</select></label>
+    </section>
+
     <section className="coach-student-kpis">
-      <article><span className="blue"><Users size={21} /></span><div><small>Tổng học viên</small><strong>{students.length}</strong><p>Chờ đồng bộ từ API</p></div></article>
-      <article><span className="green"><CheckCircle2 size={21} /></span><div><small>Đang tập luyện</small><strong>{activeCount}</strong><p>Chờ đồng bộ từ API</p></div></article>
-      <article><span className="purple"><TrendingUp size={21} /></span><div><small>Tiến độ trung bình</small><strong>{averageProgress}%</strong><p>Chờ đồng bộ từ API</p></div></article>
+      <article><span className="blue"><Users size={21} /></span><div><small>Học viên trong buổi</small><strong>{students.length}</strong><p>Dữ liệu trực tiếp từ roster</p></div></article>
+      <article><span className="green"><UserCheck size={21} /></span><div><small>Đã điểm danh</small><strong>{checkedInCount}</strong><p>Bao gồm đúng giờ và đi trễ</p></div></article>
+      <article><span className="purple"><UserRound size={21} /></span><div><small>Vắng mặt</small><strong>{absentCount}</strong><p>Theo trạng thái chuyên cần</p></div></article>
     </section>
 
     <div className="coach-student-layout">
       <section className="coach-card coach-roster">
-        <div className="coach-view-toolbar"><div><strong>Danh sách học viên</strong><span>{filtered.length} kết quả</span></div><div className="coach-filter-pills">{['Tất cả', 'Đang tập', 'Sắp hoàn thành', 'Tạm nghỉ'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
-        {filtered.length ? <div className="coach-roster-table"><div className="coach-roster-heading"><span>Học viên</span><span>Chương trình</span><span>Tiến độ</span><span>Buổi tiếp theo</span></div>{filtered.map(student => <button type="button" className={selected?.id === student.id ? 'selected' : ''} key={student.id} onClick={() => setSelectedId(student.id)}>
-          <span className="coach-roster-person"><i className={`coach-student-avatar ${student.color || 'blue'}`}>{student.initials || 'HV'}</i><span><strong>{student.name}</strong><small>{student.level || 'Chưa cập nhật'}</small></span></span>
-          <span><strong>{student.program || 'Chưa cập nhật'}</strong><small>{student.completedSessions || 0}/{student.totalSessions || 0} buổi</small></span>
-          <span className="coach-roster-progress"><span><i style={{ width: `${student.progress || 0}%` }} /></span><b>{student.progress || 0}%</b></span>
-          <span><strong>{student.nextSession || 'Chưa xếp lịch'}</strong><small className={`student-state ${student.status === 'Tạm nghỉ' ? 'paused' : ''}`}>{student.status || 'Chưa cập nhật'}</small></span>
-        </button>)}</div> : <EmptyState title="Chưa có học viên" text="Danh sách học viên sẽ xuất hiện sau khi kết nối API." />}
+        <div className="coach-view-toolbar"><div><strong>Danh sách học viên theo buổi</strong><span>{rosterLoading ? 'Đang tải roster...' : `${filtered.length} kết quả`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã điểm danh', 'Chưa điểm danh', 'Vắng mặt'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
+        {rosterLoading ? <EmptyState title="Đang tải học viên" text="Danh sách đăng ký của buổi học đang được đồng bộ." /> : error ? <div className="coach-inline-error"><EmptyState title="Không thể tải học viên" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-roster-table"><div className="coach-roster-heading"><span>Học viên</span><span>Đăng ký</span><span>Điểm danh</span><span>Giờ check-in</span></div>{filtered.map(student => <button type="button" className={selected?.id === student.id ? 'selected' : ''} key={student.id} onClick={() => setSelectedId(student.id)}>
+          <span className="coach-roster-person"><i className="coach-student-avatar blue">{initials(student.name)}</i><span><strong>{student.name}</strong><small>Member #{student.memberId}</small></span></span>
+          <span><strong>{student.registrationStatus}</strong><small>Đăng ký #{student.registrationId}</small></span>
+          <span><strong className={`coach-attendance ${student.attendanceTone}`}>{student.attendanceStatus}</strong><small>{student.attendanceTone === 'pending' ? 'Chưa có dữ liệu điểm danh' : 'Đã cập nhật từ API'}</small></span>
+          <span><strong>{student.checkInTime}</strong><small>Thời gian ghi nhận</small></span>
+        </button>)}</div> : <EmptyState title="Chưa có học viên" text={query || status !== 'Tất cả' ? 'Không có học viên phù hợp với bộ lọc hiện tại.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </section>
 
       <aside className="coach-card coach-student-profile">
-        {selected ? <><div className="coach-profile-cover"><span className={`coach-student-avatar ${selected.color || 'blue'}`}>{selected.initials || 'HV'}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selected.program || 'Chưa cập nhật chương trình'}</p><span className="coach-profile-state"><i />{selected.status || 'Chưa cập nhật'}</span><div className="coach-profile-numbers"><div><strong>{selected.progress || 0}%</strong><small>Tiến độ</small></div><div><strong>{selected.attendance || 0}%</strong><small>Chuyên cần</small></div><div><strong>{selected.completedSessions || 0}/{selected.totalSessions || 0}</strong><small>Buổi học</small></div></div><div className="coach-profile-info"><span><Target size={16} /><span><small>Mục tiêu</small><strong>{selected.goal || 'Chưa cập nhật'}</strong></span></span></div><div className="coach-profile-actions"><button type="button" onClick={() => showNotice('Chức năng nhắn tin đang chờ API.')}><Users size={16} /> Liên hệ</button><button type="button" onClick={() => showNotice('Chức năng xếp lịch đang chờ API.')}><CalendarDays size={16} /> Xếp lịch</button></div></div></> : <EmptyState title="Chưa chọn học viên" text="Chi tiết học viên sẽ hiển thị tại đây khi có dữ liệu API." />}
+        {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </aside>
     </div>
   </div>

@@ -17,7 +17,7 @@ const navigation = [
 
 const pageMeta = {
   'Lịch huấn luyện': { eyebrow: 'QUẢN LÝ THỜI GIAN', title: 'Lịch huấn luyện', description: 'Theo dõi và sắp xếp toàn bộ buổi huấn luyện trong tuần.' },
-  'Học viên': { eyebrow: 'QUẢN LÝ HỌC VIÊN', title: 'Học viên của tôi', description: 'Theo dõi lộ trình, chuyên cần và mục tiêu của từng học viên.' },
+  'Học viên': { eyebrow: 'HỌC VIÊN THEO BUỔI', title: 'Danh sách học viên', description: 'Chọn một buổi huấn luyện để xem đăng ký và trạng thái điểm danh.' },
 }
 
 export default function Coach() {
@@ -48,7 +48,7 @@ export default function Coach() {
 
   const renderActiveView = () => {
     if (activeNav === 'Lịch huấn luyện') return <ScheduleView showNotice={showNotice} />
-    if (activeNav === 'Học viên') return <StudentsView query={query} showNotice={showNotice} />
+    if (activeNav === 'Học viên') return <StudentsView query={query} />
     return <OverviewView onNavigate={selectNavigation} showNotice={showNotice} />
   }
 
@@ -66,7 +66,7 @@ export default function Coach() {
         </button>)}
       </nav>
 
-      <div className="coach-sidebar-card"><span><Dumbbell size={20} /></span><p>Nguồn dữ liệu</p><strong>Coach API</strong><small>Lịch huấn luyện đã kết nối</small></div>
+      <div className="coach-sidebar-card"><span><Dumbbell size={20} /></span><p>Nguồn dữ liệu</p><strong>Coach API</strong><small>Lịch và học viên đã kết nối</small></div>
       <div className="coach-sidebar-user"><span className="coach-avatar">{coachInitials}</span><div><strong>{coachName}</strong><small>Huấn luyện viên</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div>
     </aside>
 
@@ -77,7 +77,7 @@ export default function Coach() {
       </header>
 
       <div className="coach-main">
-        {activeNav === 'Tổng quan' ? <section className="coach-welcome"><div><p>{today}</p><h1>Chào bạn, {coachName}! <span>👋</span></h1><small>Dữ liệu lịch huấn luyện và học viên sẽ hiển thị khi API được kết nối.</small></div></section> : <section className="coach-page-heading"><div><p>{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div></section>}
+        {activeNav === 'Tổng quan' ? <section className="coach-welcome"><div><p>{today}</p><h1>Chào bạn, {coachName}! <span>👋</span></h1><small>Lịch huấn luyện và học viên theo buổi được đồng bộ từ Coach API.</small></div></section> : <section className="coach-page-heading"><div><p>{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div></section>}
 
         {notice && <div className="coach-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
         <div className="coach-view-content" key={activeNav}>{renderActiveView()}</div>

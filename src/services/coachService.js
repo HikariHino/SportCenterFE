@@ -16,3 +16,15 @@ export async function getMyCoachSessions({ from, to, page = 1, pageSize = 100 })
     total: Number(payload?.total || 0),
   }
 }
+
+export async function getCoachSessionRoster(sessionId) {
+  const response = await api.get(`/class-sessions/${sessionId}/roster`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải học viên của buổi huấn luyện.')
+  }
+
+  const payload = body?.data ?? body
+  return Array.isArray(payload) ? payload : []
+}

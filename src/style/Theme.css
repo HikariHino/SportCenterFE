@@ -210,7 +210,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 
 /* Coach workspace. */
 [data-theme='dark'] :is(.coach-topbar, .coach-card, .coach-notification, .coach-metrics article) { background: var(--theme-surface); border-color: var(--theme-border); }
-[data-theme='dark'] :is(.coach-search, .coach-session > button, .coach-student-list article > button) { background: var(--theme-raised); border-color: var(--theme-border); color: var(--theme-muted); }
+[data-theme='dark'] :is(.coach-search, .coach-session > button, .coach-student-list article > button, .coach-session-picker select) { background: var(--theme-raised); border-color: var(--theme-border); color: var(--theme-text); }
 [data-theme='dark'] :is(.coach-card-head, .coach-session, .coach-student-list article, .coach-quick-actions > div:last-child > button) { border-color: var(--theme-border); }
 [data-theme='dark'] :is(.coach-notification, .coach-session-info small, .coach-student-list article > b, .coach-chart small) { color: var(--theme-muted); }
 [data-theme='dark'] :is(.coach-metric-icon.blue, .coach-status.done, .coach-student-avatar.blue, .coach-quick-actions .video) { background: var(--theme-blue-bg); color: var(--theme-accent); }
@@ -222,6 +222,10 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-goal::before, [data-theme='dark'] .coach-student-progress > span { background: var(--theme-border); }
 [data-theme='dark'] .coach-welcome > button { background: #2563eb; color: #fff; }
 [data-theme='dark'] .coach-welcome > button:hover { background: #1d4ed8; }
+[data-theme='dark'] .coach-session-picker-main > span { background: var(--theme-blue-bg); color: var(--theme-accent); }
+[data-theme='dark'] .coach-roster-table > button { border-color: var(--theme-border); color: var(--theme-text); }
+[data-theme='dark'] :is(.coach-roster-table > button:hover, .coach-roster-table > button.selected) { background: var(--theme-raised); }
+[data-theme='dark'] .coach-attendance.pending, [data-theme='dark'] .coach-profile-state.pending { background: var(--theme-raised); color: var(--theme-muted); }
 
 /* Receptionist page (also ready for when its route is connected). */
 [data-theme='dark'] .receptionist-page__content { background: var(--theme-surface); border-color: var(--theme-border); }
