@@ -83,3 +83,20 @@ export async function getMemberById(id) {
 
   return body?.data ?? body
 }
+
+/**
+ * DELETE /api/members/{id} (requires authentication).
+ * @param {number} id Member ID (int32).
+ * Returns the complete API body; the response schema is not specified.
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function deleteMember(id) {
+  const response = await api.delete(`/members/${id}`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể xóa hội viên.')
+  }
+
+  return body
+}
