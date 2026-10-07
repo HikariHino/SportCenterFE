@@ -16,3 +16,24 @@ export async function getSports() {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+/**
+ * POST /api/sports (requires authentication).
+ * @param {{ name: string, description: string, isActive: boolean }} sport
+ * @returns {Promise<{ id: number, name: string, description: string, isActive: boolean }>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function createSport({ name, description, isActive }) {
+  const response = await api.post('/sports', {
+    name,
+    description,
+    isActive,
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tạo môn thể thao.')
+  }
+
+  return body?.data ?? body
+}
