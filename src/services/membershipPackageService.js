@@ -106,3 +106,20 @@ export async function deleteMembershipPackage(id) {
 
   return body
 }
+
+/**
+ * GET /api/membership-packages/manage (requires authentication, no parameters).
+ * @returns {Promise<Array<MembershipPackage>>}
+ * HTTP errors propagate with the backend body at error.response.data.
+ */
+export async function getMembershipPackagesForManagement() {
+  const response = await api.get('/membership-packages/manage')
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải danh sách quản lý gói hội viên.')
+  }
+
+  const payload = body?.data ?? body
+  return Array.isArray(payload) ? payload : []
+}
