@@ -4,6 +4,7 @@ import {
   Clock3, MapPin, SearchX, TrendingUp, UserCheck, UserRound, Users,
 } from 'lucide-react'
 import {
+  completeCoachSession,
   getCoachSessionAttendances,
   getCoachSessionRoster,
   getMyCoachSessions,
@@ -115,6 +116,7 @@ const mapSession = session => {
 
   return {
     id: session.id,
+    rawStatus,
     date: toDateKey(startsAt),
     time: timeFormatter.format(startsAt),
     endTime: timeFormatter.format(endsAt),
@@ -127,12 +129,13 @@ const mapSession = session => {
     currentEnrollment,
     capacity,
     availableSeats: Number(session.availableSeats || 0),
+    canComplete: rawStatus === 'scheduled' && endsAt <= now,
   }
 }
 
 const getScheduleError = error => error.response?.data?.message || error.message || 'Không thể kết nối tới Coach API.'
 
-export function ScheduleView() {
+export function ScheduleView({ showNotice }) {
   const [weekOffset, setWeekOffset] = useState(0)
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset])
   const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()))
@@ -140,6 +143,8 @@ export function ScheduleView() {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [completingId, setCompletingId] = useState(null)
   const [requestKey, setRequestKey] = useState(0)
   const selectedDay = weekDays.find(day => day.key === selectedDate) || weekDays[0]
   const daySessions = sessions.filter(item => item.date === selectedDate && (filter === 'Tất cả' || item.status === filter))
@@ -183,6 +188,27 @@ export function ScheduleView() {
     setSelectedDate(nextWeek[0].key)
   }
 
+  const handleCompleteSession = async session => {
+    if (!session.canComplete || completingId) return
+    setCompletingId(session.id)
+    setActionError('')
+    try {
+      await completeCoachSession(session.id)
+      setSessions(current => current.map(item => item.id === session.id ? {
+        ...item,
+        rawStatus: 'completed',
+        status: 'Đã hoàn thành',
+        tone: 'done',
+        canComplete: false,
+      } : item))
+      showNotice?.(`Đã hoàn thành buổi ${session.studentName}.`)
+    } catch (requestError) {
+      setActionError(getScheduleError(requestError))
+    } finally {
+      setCompletingId(null)
+    }
+  }
+
   return <div className="coach-section-view">
     <section className="coach-calendar-strip coach-card">
       <button type="button" aria-label="Tuần trước" onClick={() => changeWeek(-1)}><ChevronLeft size={18} /></button>
@@ -193,9 +219,10 @@ export function ScheduleView() {
     <div className="coach-schedule-layout">
       <section className="coach-card coach-agenda">
         <div className="coach-view-toolbar"><div><strong>Lịch ngày {selectedDay.date}/{selectedDay.month}</strong><span>{loading ? 'Đang tải lịch...' : `${allDaySessions.length} buổi huấn luyện`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã hoàn thành', 'Đang diễn ra', 'Sắp tới', 'Đã hủy'].map(label => <button type="button" key={label} className={filter === label ? 'active' : ''} onClick={() => setFilter(label)}>{label}</button>)}</div></div>
+        {actionError && <div className="coach-attendance-error" role="alert">{actionError}</div>}
         {loading ? <EmptyState title="Đang tải lịch huấn luyện" text="Dữ liệu đang được đồng bộ từ Coach API." /> : error ? <EmptyState title="Không thể tải lịch" text={error} /> : daySessions.length ? <div className="coach-agenda-list">{daySessions.map(session => <article key={session.id} className={session.tone || 'next'}>
           <div className="coach-agenda-time"><strong>{session.time || '--:--'}</strong><span>{session.endTime || '--:--'}</span></div><div className="coach-agenda-line"><i /></div>
-          <div className="coach-agenda-body"><div><span className={`coach-status ${session.tone || 'next'}`}>{session.status || 'Chưa xác định'}</span><small>{session.type || ''}</small></div><h3>{session.studentName || session.student}</h3><p>{session.program || 'Chưa có chương trình'}</p><footer><span><Users size={14} />Còn {session.availableSeats} chỗ</span><span><Clock3 size={14} />{session.durationMinutes || 0} phút</span></footer></div>
+          <div className="coach-agenda-body"><div><span className={`coach-status ${session.tone || 'next'}`}>{session.status || 'Chưa xác định'}</span><small>{session.type || ''}</small></div><h3>{session.studentName || session.student}</h3><p>{session.program || 'Chưa có chương trình'}</p><footer><span><Users size={14} />Còn {session.availableSeats} chỗ</span><span><Clock3 size={14} />{session.durationMinutes || 0} phút</span>{session.canComplete && <button type="button" className="coach-complete-session" disabled={Boolean(completingId)} onClick={() => handleCompleteSession(session)}><CheckCircle2 size={14} />{completingId === session.id ? 'Đang hoàn thành...' : 'Hoàn thành buổi'}</button>}</footer></div>
         </article>)}</div> : <EmptyState title="Chưa có lịch huấn luyện" text="Coach API chưa trả về buổi huấn luyện nào trong ngày này." />}
       </section>
 

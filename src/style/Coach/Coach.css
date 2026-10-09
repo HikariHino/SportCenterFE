@@ -172,7 +172,10 @@
 .coach-agenda-line i { z-index: 1; width: 10px; height: 10px; margin-top: 3px; border: 2px solid #fff; border-radius: 50%; background: #f0a629; box-shadow: 0 0 0 2px #ffd88d; }.coach-agenda-list article.done .coach-agenda-line i { background: #2563eb; box-shadow: 0 0 0 2px #a8c5fa; }.coach-agenda-list article.live .coach-agenda-line i { background: #0dab79; box-shadow: 0 0 0 2px #8de3c4; animation: coach-live 1.7s ease-out infinite; }
 .coach-agenda-body > div { display: flex; align-items: center; gap: 8px; }.coach-agenda-body > div small { color: #7d8798; font-size: 7px; }
 .coach-agenda-body h3 { margin: 8px 0 4px; font-size: 12px; }.coach-agenda-body p { margin: 0; color: #687386; font-size: 9px; }
-.coach-dashboard .coach-agenda-body footer { display: flex; gap: 15px; margin-top: 11px; padding: 0; color: #7e899c; background: transparent; font-size: 8px; }.coach-agenda-body footer span { display: flex; align-items: center; gap: 5px; }
+.coach-dashboard .coach-agenda-body footer { display: flex; align-items: center; gap: 15px; margin-top: 11px; padding: 0; color: #7e899c; background: transparent; font-size: 8px; }.coach-agenda-body footer span { display: flex; align-items: center; gap: 5px; }
+.coach-complete-session { min-height: 30px; display: flex; align-items: center; gap: 5px; margin-left: auto; padding: 0 10px; border: 1px solid #b9d9cb; border-radius: 7px; color: #087251; background: #e8f8f1; font-size: 8px; font-weight: 800; transition: transform .2s, background-color .2s; }
+.coach-complete-session:hover:not(:disabled) { background: #d8f2e7; transform: translateY(-1px); }
+.coach-complete-session:disabled { opacity: .65; cursor: wait; }
 .coach-agenda-list article > button { width: 27px; height: 27px; display: grid; place-items: center; border: 0; border-radius: 6px; color: #8b96a8; background: #f3f6fa; }
 .coach-day-summary { display: grid; gap: 15px; }
 .coach-summary-title { display: flex; align-items: center; gap: 11px; padding: 17px 18px; border-bottom: 1px solid #e9edf4; color: var(--coach-blue); }.coach-summary-title > svg { padding: 8px; box-sizing: content-box; border-radius: 8px; background: #eaf1ff; }.coach-summary-title small, .coach-summary-title strong { display: block; }.coach-summary-title small { font-size: 7px; letter-spacing: .9px; }.coach-summary-title strong { margin-top: 4px; color: var(--coach-ink); font-size: 11px; }
@@ -298,7 +301,8 @@
   .coach-agenda-list { padding-inline: 14px; }
   .coach-agenda-list article { grid-template-columns: 43px 12px minmax(0, 1fr); gap: 8px; }
   .coach-agenda-list article > button { display: none; }
-  .coach-agenda-body footer { display: grid; gap: 6px; }
+  .coach-dashboard .coach-agenda-body footer { display: grid; gap: 7px; }
+  .coach-complete-session { width: 100%; justify-content: center; margin: 3px 0 0; }
   .coach-day-summary { grid-template-columns: 1fr; }
   .coach-plan-overview, .coach-performance-kpis { grid-template-columns: 1fr 1fr; gap: 9px; }
   .coach-plan-overview > div, .coach-performance-kpis article { padding: 13px; }

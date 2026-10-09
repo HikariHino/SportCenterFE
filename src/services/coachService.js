@@ -51,6 +51,17 @@ export async function markCoachAttendance({ memberId, sessionId, status }) {
   return body?.data ?? body
 }
 
+export async function completeCoachSession(sessionId) {
+  const response = await api.post(`/class-sessions/${sessionId}/complete`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể hoàn thành buổi huấn luyện.')
+  }
+
+  return body?.data ?? body
+}
+
 export async function checkInCoachRegistration(registrationId) {
   const response = await api.post(`/class-registrations/${registrationId}/check-in`)
   const body = response.data
