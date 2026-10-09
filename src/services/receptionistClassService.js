@@ -22,3 +22,14 @@ export async function getReceptionistSessionRoster(sessionId) {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+export async function completeReceptionistSession(sessionId) {
+  const response = await api.post(`/class-sessions/${sessionId}/complete`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể hoàn thành buổi học.')
+  }
+
+  return body
+}

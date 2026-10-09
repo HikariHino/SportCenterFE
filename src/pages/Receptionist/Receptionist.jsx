@@ -8,7 +8,11 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
-import { getReceptionistSessionRoster, registerMemberForSession } from '../../services/receptionistClassService'
+import {
+  completeReceptionistSession,
+  getReceptionistSessionRoster,
+  registerMemberForSession,
+} from '../../services/receptionistClassService'
 import '../../style/Receptionist/Receptionist.css'
 
 const navigation = [
@@ -73,6 +77,33 @@ function EmptyState({ icon: Icon = Search, title, text }) {
   return <div className="reception-empty"><span><Icon size={25} /></span><strong>{title}</strong><p>{text}</p></div>
 }
 
+function CompleteSessionDialog({ sessionId, onClose, onCompleted }) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async event => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      await completeReceptionistSession(sessionId)
+      onCompleted()
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể hoàn thành buổi học.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog reception-complete-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-complete-session-title">
+      <header><div><span>XÁC NHẬN TRẠNG THÁI</span><h2 id="reception-complete-session-title">Hoàn thành buổi học #{sessionId}</h2><p>Thao tác này cập nhật trạng thái chính thức trên hệ thống.</p></div><button type="button" aria-label="Đóng xác nhận" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}><div className="reception-complete-copy"><span><CheckCircle2 size={25} /></span><strong>Xác nhận buổi học đã kết thúc?</strong><p>BE sẽ kiểm tra thời gian và quyền thao tác trước khi cập nhật.</p></div>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang cập nhật...' : 'Xác nhận hoàn thành'}</button></footer></form>
+    </section>
+  </div>
+}
+
 function Overview({ onNavigate }) {
   const metrics = [
     [CalendarDays, 'Lượt đặt hôm nay', '--', 'blue'],
@@ -120,6 +151,8 @@ function SessionsView({ showNotice }) {
   const [rosterLoading, setRosterLoading] = useState(false)
   const [rosterError, setRosterError] = useState('')
   const [rosterLoaded, setRosterLoaded] = useState(false)
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false)
+  const [completedSessionId, setCompletedSessionId] = useState(null)
 
   const submitRegistration = async event => {
     event.preventDefault()
@@ -143,6 +176,7 @@ function SessionsView({ showNotice }) {
     setRosterLoading(true)
     setRosterError('')
     setRosterLoaded(true)
+    setCompletedSessionId(null)
     try {
       const result = await getReceptionistSessionRoster(Number(rosterSessionId))
       setRoster(result)
@@ -168,10 +202,11 @@ function SessionsView({ showNotice }) {
       {registration ? <div className="reception-registration-summary"><span><CheckCircle2 size={25} /></span><h3>{registration.className}</h3><p>Hội viên #{registration.memberId} đã được thêm vào buổi học.</p><div><small>Mã đăng ký<strong>#{registration.id}</strong></small><small>Mã buổi học<strong>#{registration.sessionId}</strong></small><small>Trạng thái<strong>{registration.status}</strong></small><small>Thời gian<strong>{registration.startsAt ? sessionDateTimeFormatter.format(new Date(registration.startsAt)) : 'Chưa xác định'}</strong></small></div></div> : <EmptyState icon={CalendarDays} title="Chưa có lượt đăng ký mới" text="Nhập mã buổi học và mã hội viên để thực hiện đăng ký tại quầy." />}
     </section></div>
     <section className="reception-card reception-session-roster">
-      <div className="reception-card-head"><div><span>DANH SÁCH THEO BUỔI</span><h2>Học viên đã đăng ký</h2></div><strong>{rosterLoaded && !rosterLoading ? `${roster.length} học viên` : 'Roster API'}</strong></div>
+      <div className="reception-card-head"><div><span>DANH SÁCH THEO BUỔI</span><h2>Học viên đã đăng ký</h2></div><div className="reception-roster-head-actions"><strong>{rosterLoaded && !rosterLoading ? `${roster.length} học viên` : 'Roster API'}</strong><button type="button" className={completedSessionId === Number(rosterSessionId) ? 'completed' : ''} disabled={!rosterLoaded || rosterLoading || !rosterSessionId || completedSessionId === Number(rosterSessionId)} onClick={() => setShowCompleteDialog(true)}><CheckCircle2 size={14} />{completedSessionId === Number(rosterSessionId) ? 'Đã hoàn thành' : 'Hoàn thành buổi học'}</button></div></div>
       <form className="reception-roster-lookup" onSubmit={loadRoster}><label htmlFor="reception-roster-session">Mã buổi học</label><div><CalendarDays size={16} /><input id="reception-roster-session" type="number" min="1" value={rosterSessionId} onChange={event => setRosterSessionId(event.target.value)} placeholder="Nhập mã buổi học" required /><button type="submit" disabled={rosterLoading}>{rosterLoading ? 'Đang tải...' : 'Xem danh sách'}</button></div></form>
       {rosterLoading ? <EmptyState icon={Users} title="Đang tải danh sách" text="Dữ liệu học viên đang được đồng bộ từ API." /> : rosterError ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải danh sách" text={rosterError} /><button type="button" onClick={loadRoster}>Thử lại</button></div> : rosterLoaded ? roster.length ? <div className="reception-roster-table"><div className="reception-roster-heading"><span>Mã đăng ký</span><span>Học viên</span><span>Mã hội viên</span><span>Đăng ký</span><span>Điểm danh</span></div>{roster.map(student => <div className="reception-roster-row" key={student.registrationId}><span>#{student.registrationId}</span><strong>{student.fullName}</strong><span>#{student.memberId}</span><span>{student.registrationStatus}</span><span><b>{student.attendanceStatus || 'Chưa điểm danh'}</b><small>{student.checkInTime ? sessionDateTimeFormatter.format(new Date(student.checkInTime)) : 'Chưa có giờ check-in'}</small></span></div>)}</div> : <EmptyState icon={Users} title="Chưa có học viên" text="Buổi học này chưa có lượt đăng ký." /> : <EmptyState icon={Users} title="Chọn một buổi học" text="Nhập mã buổi học để xem danh sách học viên đã đăng ký." />}
     </section>
+    {showCompleteDialog && <CompleteSessionDialog sessionId={Number(rosterSessionId)} onClose={() => setShowCompleteDialog(false)} onCompleted={() => { setCompletedSessionId(Number(rosterSessionId)); showNotice(`Đã hoàn thành buổi học #${rosterSessionId}.`) }} />}
   </div>
 }
 
