@@ -62,6 +62,25 @@ export async function completeCoachSession(sessionId) {
   return body?.data ?? body
 }
 
+export async function getCoachSessionReviews(sessionId, { page = 1, pageSize = 5 } = {}) {
+  const response = await api.get(`/class-sessions/${sessionId}/reviews`, {
+    params: { page, pageSize },
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải đánh giá của buổi huấn luyện.')
+  }
+
+  const payload = body?.data ?? body
+  return {
+    items: Array.isArray(payload?.items) ? payload.items : [],
+    total: Number(payload?.total || 0),
+    page: Number(payload?.page || page),
+    pageSize: Number(payload?.pageSize || pageSize),
+  }
+}
+
 export async function checkInCoachRegistration(registrationId) {
   const response = await api.post(`/class-registrations/${registrationId}/check-in`)
   const body = response.data
