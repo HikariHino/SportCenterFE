@@ -17,3 +17,15 @@ export async function createTrainingPlan({ planName, goal, memberId, startDate, 
 
   return body?.data ?? body
 }
+
+export async function getMemberTrainingPlans(memberId) {
+  const response = await api.get(`/TrainingPlans/members/${memberId}`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải giáo án của học viên.')
+  }
+
+  const payload = body?.data ?? body
+  return Array.isArray(payload) ? payload : []
+}
