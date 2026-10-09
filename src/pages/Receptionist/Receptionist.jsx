@@ -4,9 +4,10 @@ import ThemeToggle from '../../components/ThemeToggle'
 import {
   ArrowRight, BadgeCheck, Bell, CalendarDays, CheckCircle2, CircleDollarSign,
   Clock3, CreditCard, LayoutDashboard, LogOut, MapPin, QrCode, ReceiptText,
-  ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards,
+  Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { createMember } from '../../services/memberService'
 import '../../style/Receptionist/Receptionist.css'
 
 const navigation = [
@@ -27,6 +28,25 @@ const pageMeta = {
 const emptyBookings = []
 const emptyMembers = []
 const emptyPayments = []
+
+const emptyMemberForm = {
+  fullName: '',
+  email: '',
+  password: '',
+  phone: '',
+  dateOfBirth: '',
+  gender: '',
+  address: '',
+  fitnessGoal: '',
+}
+
+const requestErrorMessage = (error, fallback) => {
+  const validationErrors = error.response?.data?.errors
+  return error.response?.data?.message
+    || (validationErrors && Object.values(validationErrors).flat()[0])
+    || error.message
+    || fallback
+}
 
 const toDateKey = date => {
   const year = date.getFullYear()
@@ -105,14 +125,66 @@ function CheckInView({ showNotice }) {
   </div>
 }
 
-function MembersView({ query }) {
+function CreateMemberDialog({ onClose, onCreated }) {
+  const [form, setForm] = useState(emptyMemberForm)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const updateField = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }))
+
+  const submit = async event => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const member = await createMember({
+        ...form,
+        phone: form.phone.trim() || null,
+        dateOfBirth: form.dateOfBirth || null,
+        gender: form.gender || null,
+        address: form.address.trim() || null,
+        fitnessGoal: form.fitnessGoal.trim() || null,
+      })
+      onCreated(member)
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể đăng ký hội viên tại quầy.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-create-member-title">
+      <header><div><span>ĐĂNG KÝ TẠI QUẦY</span><h2 id="reception-create-member-title">Tạo tài khoản hội viên</h2><p>Thông tin đăng nhập sẽ được bàn giao trực tiếp cho hội viên.</p></div><button type="button" aria-label="Đóng biểu mẫu" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}>
+        <div className="reception-member-form-grid">
+          <label>Họ và tên<input name="fullName" value={form.fullName} onChange={updateField} maxLength="100" required /></label>
+          <label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="256" required /></label>
+          <label>Mật khẩu ban đầu<input name="password" type="password" value={form.password} onChange={updateField} minLength="6" autoComplete="new-password" required /></label>
+          <label>Số điện thoại<input name="phone" type="tel" value={form.phone} onChange={updateField} /></label>
+          <label>Ngày sinh<input name="dateOfBirth" type="date" value={form.dateOfBirth} max={new Date().toISOString().slice(0, 10)} onChange={updateField} /></label>
+          <label>Giới tính<select name="gender" value={form.gender} onChange={updateField}><option value="">Chưa cung cấp</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></label>
+          <label className="wide">Địa chỉ<input name="address" value={form.address} onChange={updateField} maxLength="200" /></label>
+          <label className="wide">Mục tiêu tập luyện<input name="fitnessGoal" value={form.fitnessGoal} onChange={updateField} maxLength="100" placeholder="Ví dụ: tăng sức bền, giảm cân..." /></label>
+        </div>
+        {error && <p className="reception-form-error" role="alert">{error}</p>}
+        <footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang đăng ký...' : 'Đăng ký hội viên'}</button></footer>
+      </form>
+    </section>
+  </div>
+}
+
+function MembersView({ query, showNotice }) {
   const [status, setStatus] = useState('Tất cả')
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
   const members = useMemo(() => emptyMembers.filter(member => (status === 'Tất cả' || member.status === status) && (!normalizedQuery || `${member.name || ''} ${member.phone || ''} ${member.memberCode || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery))), [normalizedQuery, status])
 
   return <>
     <section className="reception-member-metrics"><article><span><Users size={20} /></span><div><small>Tổng hội viên</small><strong>0</strong><p>Chờ dữ liệu API</p></div></article><article><span><BadgeCheck size={20} /></span><div><small>Đang hoạt động</small><strong>0</strong><p>Chờ dữ liệu API</p></div></article><article><span><Clock3 size={20} /></span><div><small>Sắp hết hạn</small><strong>0</strong><p>Chờ dữ liệu API</p></div></article></section>
-    <section className="reception-card reception-table-card reception-members-card"><div className="reception-table-tools"><div><strong>Danh sách hội viên</strong><small>{members.length} kết quả</small></div><div>{['Tất cả', 'Đang hoạt động', 'Sắp hết hạn', 'Đã hết hạn'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}</div></div><div className="reception-table-heading"><span>Mã hội viên</span><span>Họ và tên</span><span>Gói dịch vụ</span><span>Ngày hết hạn</span><span>Trạng thái</span></div>{members.length ? <div>{members.map(member => <button type="button" className="reception-table-row" key={member.id}><span>{member.memberCode}</span><span>{member.name}</span><span>{member.planName}</span><span>{member.expiryDate}</span><span>{member.status}</span></button>)}</div> : <EmptyState icon={Users} title="Chưa có dữ liệu hội viên" text="Danh sách sẽ được đồng bộ từ Member API." />}</section>
+    <section className="reception-card reception-table-card reception-members-card"><div className="reception-table-tools"><div><strong>Danh sách hội viên</strong><small>{members.length} kết quả</small></div><div>{['Tất cả', 'Đang hoạt động', 'Sắp hết hạn', 'Đã hết hạn'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}<button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Đăng ký hội viên</button></div></div><div className="reception-table-heading"><span>Mã hội viên</span><span>Họ và tên</span><span>Gói dịch vụ</span><span>Ngày hết hạn</span><span>Trạng thái</span></div>{members.length ? <div>{members.map(member => <button type="button" className="reception-table-row" key={member.id}><span>{member.memberCode}</span><span>{member.name}</span><span>{member.planName}</span><span>{member.expiryDate}</span><span>{member.status}</span></button>)}</div> : <EmptyState icon={Users} title="Chưa có dữ liệu hội viên" text="Danh sách sẽ được đồng bộ từ Member API." />}</section>
+    {showCreateDialog && <CreateMemberDialog onClose={() => setShowCreateDialog(false)} onCreated={member => showNotice(`Đã đăng ký ${member.fullName} với mã hội viên #${member.memberId}.`)} />}
   </>
 }
 
@@ -156,7 +228,7 @@ export default function Receptionist() {
   const renderView = () => {
     if (activeNav === 'Lịch đặt sân') return <BookingsView query={query} />
     if (activeNav === 'Check-in') return <CheckInView showNotice={showNotice} />
-    if (activeNav === 'Hội viên') return <MembersView query={query} />
+    if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
     if (activeNav === 'Thanh toán') return <PaymentsView query={query} />
     return <Overview onNavigate={selectNavigation} />
   }
