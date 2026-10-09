@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
-import { registerMemberForSession } from '../../services/receptionistClassService'
+import { getReceptionistSessionRoster, registerMemberForSession } from '../../services/receptionistClassService'
 import '../../style/Receptionist/Receptionist.css'
 
 const navigation = [
@@ -115,6 +115,11 @@ function SessionsView({ showNotice }) {
   const [registration, setRegistration] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [rosterSessionId, setRosterSessionId] = useState('')
+  const [roster, setRoster] = useState([])
+  const [rosterLoading, setRosterLoading] = useState(false)
+  const [rosterError, setRosterError] = useState('')
+  const [rosterLoaded, setRosterLoaded] = useState(false)
 
   const submitRegistration = async event => {
     event.preventDefault()
@@ -123,6 +128,7 @@ function SessionsView({ showNotice }) {
     try {
       const result = await registerMemberForSession(Number(sessionId), Number(memberId))
       setRegistration(result)
+      setRosterSessionId(String(result.sessionId))
       showNotice(`Đã đăng ký hội viên #${result.memberId} vào buổi học #${result.sessionId}.`)
     } catch (requestError) {
       setRegistration(null)
@@ -132,8 +138,24 @@ function SessionsView({ showNotice }) {
     }
   }
 
-  return <div className="reception-session-layout">
-    <section className="reception-card reception-session-register">
+  const loadRoster = async event => {
+    event?.preventDefault()
+    setRosterLoading(true)
+    setRosterError('')
+    setRosterLoaded(true)
+    try {
+      const result = await getReceptionistSessionRoster(Number(rosterSessionId))
+      setRoster(result)
+    } catch (requestError) {
+      setRoster([])
+      setRosterError(requestErrorMessage(requestError, 'Không thể tải danh sách học viên của buổi học.'))
+    } finally {
+      setRosterLoading(false)
+    }
+  }
+
+  return <div className="reception-session-page">
+    <div className="reception-session-layout"><section className="reception-card reception-session-register">
       <div className="reception-card-head"><div><span>ĐĂNG KÝ BUỔI HỌC</span><h2>Thêm hội viên vào buổi học</h2></div><CalendarDays size={20} /></div>
       <form onSubmit={submitRegistration}>
         <label>Mã buổi học<input type="number" min="1" value={sessionId} onChange={event => setSessionId(event.target.value)} placeholder="Ví dụ: 12" required /></label>
@@ -141,10 +163,14 @@ function SessionsView({ showNotice }) {
         {error && <p role="alert">{error}</p>}
         <button type="submit" disabled={saving}><Plus size={15} />{saving ? 'Đang đăng ký...' : 'Đăng ký buổi học'}</button>
       </form>
-    </section>
-    <section className="reception-card reception-registration-result">
+    </section><section className="reception-card reception-registration-result">
       <div className="reception-card-head"><div><span>KẾT QUẢ ĐĂNG KÝ</span><h2>Thông tin lượt đăng ký</h2></div><UserCheck size={20} /></div>
       {registration ? <div className="reception-registration-summary"><span><CheckCircle2 size={25} /></span><h3>{registration.className}</h3><p>Hội viên #{registration.memberId} đã được thêm vào buổi học.</p><div><small>Mã đăng ký<strong>#{registration.id}</strong></small><small>Mã buổi học<strong>#{registration.sessionId}</strong></small><small>Trạng thái<strong>{registration.status}</strong></small><small>Thời gian<strong>{registration.startsAt ? sessionDateTimeFormatter.format(new Date(registration.startsAt)) : 'Chưa xác định'}</strong></small></div></div> : <EmptyState icon={CalendarDays} title="Chưa có lượt đăng ký mới" text="Nhập mã buổi học và mã hội viên để thực hiện đăng ký tại quầy." />}
+    </section></div>
+    <section className="reception-card reception-session-roster">
+      <div className="reception-card-head"><div><span>DANH SÁCH THEO BUỔI</span><h2>Học viên đã đăng ký</h2></div><strong>{rosterLoaded && !rosterLoading ? `${roster.length} học viên` : 'Roster API'}</strong></div>
+      <form className="reception-roster-lookup" onSubmit={loadRoster}><label htmlFor="reception-roster-session">Mã buổi học</label><div><CalendarDays size={16} /><input id="reception-roster-session" type="number" min="1" value={rosterSessionId} onChange={event => setRosterSessionId(event.target.value)} placeholder="Nhập mã buổi học" required /><button type="submit" disabled={rosterLoading}>{rosterLoading ? 'Đang tải...' : 'Xem danh sách'}</button></div></form>
+      {rosterLoading ? <EmptyState icon={Users} title="Đang tải danh sách" text="Dữ liệu học viên đang được đồng bộ từ API." /> : rosterError ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải danh sách" text={rosterError} /><button type="button" onClick={loadRoster}>Thử lại</button></div> : rosterLoaded ? roster.length ? <div className="reception-roster-table"><div className="reception-roster-heading"><span>Mã đăng ký</span><span>Học viên</span><span>Mã hội viên</span><span>Đăng ký</span><span>Điểm danh</span></div>{roster.map(student => <div className="reception-roster-row" key={student.registrationId}><span>#{student.registrationId}</span><strong>{student.fullName}</strong><span>#{student.memberId}</span><span>{student.registrationStatus}</span><span><b>{student.attendanceStatus || 'Chưa điểm danh'}</b><small>{student.checkInTime ? sessionDateTimeFormatter.format(new Date(student.checkInTime)) : 'Chưa có giờ check-in'}</small></span></div>)}</div> : <EmptyState icon={Users} title="Chưa có học viên" text="Buổi học này chưa có lượt đăng ký." /> : <EmptyState icon={Users} title="Chọn một buổi học" text="Nhập mã buổi học để xem danh sách học viên đã đăng ký." />}
     </section>
   </div>
 }
