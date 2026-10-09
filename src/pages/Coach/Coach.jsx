@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
-  Bell, CalendarDays, CheckCircle2, Dumbbell,
-  ClipboardCheck, LayoutDashboard, LogOut, Search, Trophy, Users,
+  Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Dumbbell,
+  ClipboardCheck, LayoutDashboard, LogOut, Search, Trophy, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { getNotifications } from '../../services/notificationService'
 import { AttendanceView, OverviewView, ScheduleView, StudentsView } from './CoachViews'
 import '../../style/Coach/Coach.css'
 
@@ -22,15 +23,70 @@ const pageMeta = {
   'Điểm danh': { eyebrow: 'CHUYÊN CẦN THEO BUỔI', title: 'Điểm danh học viên', description: 'Chọn buổi huấn luyện và cập nhật trạng thái chuyên cần của từng học viên.' },
 }
 
+const notificationDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
 export default function Coach() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [activeNav, setActiveNav] = useState('Tổng quan')
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
+  const [notificationOpen, setNotificationOpen] = useState(false)
+  const [notificationPage, setNotificationPage] = useState({ items: [], total: 0, page: 1, pageSize: 6 })
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsError, setNotificationsError] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
+  const notificationRef = useRef(null)
   const coachName = user?.name || user?.fullName || 'Huấn luyện viên'
   const coachInitials = coachName.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase() || 'HLV'
   const today = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date())
+  const notificationPageCount = Math.max(1, Math.ceil(notificationPage.total / notificationPage.pageSize))
+
+  useEffect(() => {
+    let active = true
+    getNotifications({ unreadOnly: true, page: 1, pageSize: 1 })
+      .then(result => { if (active) setUnreadCount(result.total) })
+      .catch(() => { if (active) setUnreadCount(0) })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!notificationOpen) return undefined
+    const closeOnOutsideClick = event => {
+      if (!notificationRef.current?.contains(event.target)) setNotificationOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [notificationOpen])
+
+  const loadNotifications = async (page = 1) => {
+    setNotificationsLoading(true)
+    setNotificationsError('')
+    try {
+      const [result, unreadResult] = await Promise.all([
+        getNotifications({ page, pageSize: 6 }),
+        getNotifications({ unreadOnly: true, page: 1, pageSize: 1 }),
+      ])
+      setNotificationPage(result)
+      setUnreadCount(unreadResult.total)
+    } catch (error) {
+      setNotificationsError(error.response?.data?.message || error.message || 'Không thể tải thông báo.')
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
+  const toggleNotifications = () => {
+    const nextOpen = !notificationOpen
+    setNotificationOpen(nextOpen)
+    if (nextOpen) loadNotifications(1)
+  }
 
   const showNotice = text => {
     setNotice(text)
@@ -76,7 +132,7 @@ export default function Coach() {
     <section className="coach-workspace">
       <header className="coach-topbar">
         <label className="coach-search"><Search size={18} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm học viên..." aria-label="Tìm kiếm" /></label>
-        <div className="coach-topbar-actions"><ThemeToggle /><button className="coach-notification" type="button" aria-label="Thông báo" onClick={() => showNotice('Chưa có dữ liệu thông báo từ API.')}><Bell size={20} /></button><span className="coach-topbar-profile"><span className="coach-avatar">{coachInitials}</span><span><strong>{coachName}</strong><small>Huấn luyện viên</small></span></span></div>
+        <div className="coach-topbar-actions"><ThemeToggle /><div className="coach-notification-wrap" ref={notificationRef}><button className="coach-notification" type="button" aria-label="Thông báo" aria-expanded={notificationOpen} onClick={toggleNotifications}><Bell size={20} />{unreadCount > 0 && <i><span>{unreadCount > 99 ? '99+' : unreadCount}</span></i>}</button>{notificationOpen && <section className="coach-notification-panel" aria-label="Thông báo Coach"><header><div><span>THÔNG BÁO</span><strong>{unreadCount ? `${unreadCount} chưa đọc` : 'Đã xem tất cả'}</strong></div><button type="button" aria-label="Đóng thông báo" onClick={() => setNotificationOpen(false)}><X size={17} /></button></header>{notificationsLoading ? <div className="coach-notification-state">Đang tải thông báo...</div> : notificationsError ? <div className="coach-notification-state error"><strong>Không thể tải thông báo</strong><span>{notificationsError}</span><button type="button" onClick={() => loadNotifications(notificationPage.page)}>Thử lại</button></div> : notificationPage.items.length ? <><div className="coach-notification-list">{notificationPage.items.map(item => <article className={item.isRead ? '' : 'unread'} key={item.id}><span><Bell size={15} /></span><div><strong>{item.title}</strong><p>{item.content}</p><small>{notificationDateFormatter.format(new Date(item.sentAt))}</small></div>{!item.isRead && <i />}</article>)}</div>{notificationPageCount > 1 && <footer><button type="button" disabled={notificationPage.page <= 1} onClick={() => loadNotifications(notificationPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{notificationPage.page}/{notificationPageCount}</span><button type="button" disabled={notificationPage.page >= notificationPageCount} onClick={() => loadNotifications(notificationPage.page + 1)}>Sau<ChevronRight size={14} /></button></footer>}</> : <div className="coach-notification-state"><Bell size={24} /><strong>Chưa có thông báo</strong><span>Thông báo dành cho Coach sẽ xuất hiện tại đây.</span></div>}</section>}</div><span className="coach-topbar-profile"><span className="coach-avatar">{coachInitials}</span><span><strong>{coachName}</strong><small>Huấn luyện viên</small></span></span></div>
       </header>
 
       <div className="coach-main">
