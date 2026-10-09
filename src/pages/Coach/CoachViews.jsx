@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  Clock3, MapPin, SearchX, Star, TrendingUp, UserCheck, UserRound, Users,
+  Clock3, MapPin, Plus, SearchX, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
 import {
   completeCoachSession,
@@ -11,6 +11,7 @@ import {
   getMyCoachSessions,
   markCoachAttendance,
 } from '../../services/coachService'
+import { createTrainingPlan } from '../../services/trainingPlanService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -333,7 +334,97 @@ const formatSessionOption = session => {
 
 const getStudentsError = error => error.response?.data?.message || error.message || 'Không thể kết nối tới API học viên theo buổi.'
 
-export function StudentsView({ query }) {
+const toDateInput = date => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const trainingGoals = [
+  ['WeightLoss', 'Giảm cân'],
+  ['MuscleGain', 'Tăng cơ'],
+  ['Endurance', 'Tăng sức bền'],
+  ['Flexibility', 'Cải thiện độ dẻo'],
+  ['GeneralFitness', 'Thể lực tổng quát'],
+]
+
+const newPlanExercise = () => ({ exerciseId: '', sets: '', reps: '', durationInMinutes: '', notes: '' })
+
+function TrainingPlanDialog({ student, onClose, onCreated }) {
+  const today = new Date()
+  const defaultEndDate = new Date(today)
+  defaultEndDate.setDate(defaultEndDate.getDate() + 28)
+  const [form, setForm] = useState({
+    planName: `Giáo án cho ${student.name}`,
+    goal: 'GeneralFitness',
+    startDate: toDateInput(today),
+    endDate: toDateInput(defaultEndDate),
+  })
+  const [exercises, setExercises] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const updateExercise = (index, field, value) => {
+    setExercises(current => current.map((exercise, exerciseIndex) => exerciseIndex === index ? { ...exercise, [field]: value } : exercise))
+  }
+
+  const handleSubmit = async event => {
+    event.preventDefault()
+    setError('')
+    if (!form.planName.trim() || !form.goal || !form.startDate || !form.endDate) {
+      setError('Vui lòng nhập đầy đủ tên, mục tiêu và thời gian giáo án.')
+      return
+    }
+    if (form.endDate < form.startDate) {
+      setError('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.')
+      return
+    }
+    const invalidExercise = exercises.some(exercise => Number(exercise.exerciseId) < 1 || Number(exercise.sets) < 1 || Number(exercise.reps) < 1)
+    if (invalidExercise) {
+      setError('Mỗi bài tập cần mã bài tập, số hiệp và số lần lớn hơn 0.')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const plan = await createTrainingPlan({
+        planName: form.planName.trim(),
+        goal: form.goal,
+        memberId: student.memberId,
+        startDate: `${form.startDate}T00:00:00`,
+        endDate: `${form.endDate}T23:59:59`,
+        exercises: exercises.map(exercise => ({
+          exerciseId: Number(exercise.exerciseId),
+          sets: Number(exercise.sets),
+          reps: Number(exercise.reps),
+          durationInMinutes: exercise.durationInMinutes ? Number(exercise.durationInMinutes) : null,
+          notes: exercise.notes.trim() || null,
+        })),
+      })
+      onCreated(plan)
+      onClose()
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || requestError.message || 'Không thể tạo giáo án.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="coach-plan-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="coach-plan-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-plan-title">
+      <header><div><span>TẠO GIÁO ÁN</span><h2 id="coach-plan-title">{student.name}</h2><p>Member #{student.memberId}</p></div><button type="button" aria-label="Đóng tạo giáo án" disabled={saving} onClick={onClose}><X size={19} /></button></header>
+      <form onSubmit={handleSubmit}>
+        <div className="coach-plan-form-grid"><label><span>Tên giáo án</span><input value={form.planName} maxLength={150} onChange={event => setForm(current => ({ ...current, planName: event.target.value }))} /></label><label><span>Mục tiêu</span><select value={form.goal} onChange={event => setForm(current => ({ ...current, goal: event.target.value }))}>{trainingGoals.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>Ngày bắt đầu</span><input type="date" value={form.startDate} onChange={event => setForm(current => ({ ...current, startDate: event.target.value }))} /></label><label><span>Ngày kết thúc</span><input type="date" min={form.startDate} value={form.endDate} onChange={event => setForm(current => ({ ...current, endDate: event.target.value }))} /></label></div>
+        <div className="coach-plan-exercises"><div className="coach-plan-exercises-head"><div><strong>Bài tập</strong><span>Không bắt buộc · nhập mã bài tập từ hệ thống</span></div><button type="button" onClick={() => setExercises(current => [...current, newPlanExercise()])}><Plus size={15} />Thêm bài tập</button></div>{exercises.length ? exercises.map((exercise, index) => <article key={index}><div className="coach-plan-exercise-title"><strong>Bài tập {index + 1}</strong><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div><div><label><span>Mã bài tập</span><input type="number" min="1" value={exercise.exerciseId} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} /></label><label><span>Số hiệp</span><input type="number" min="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} /></label><label><span>Số lần</span><input type="number" min="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={500} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article>) : <p className="coach-plan-exercises-empty">Có thể tạo giáo án trước và bổ sung bài tập khi đã có mã bài tập.</p>}</div>
+        {error && <div className="coach-plan-form-error" role="alert">{error}</div>}
+        <footer><button type="button" disabled={saving} onClick={onClose}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang tạo...' : 'Tạo giáo án'}</button></footer>
+      </form>
+    </section>
+  </div>
+}
+
+export function StudentsView({ query, showNotice }) {
   const [status, setStatus] = useState('Tất cả')
   const [sessions, setSessions] = useState([])
   const [selectedSessionId, setSelectedSessionId] = useState('')
@@ -342,6 +433,7 @@ export function StudentsView({ query }) {
   const [sessionsLoading, setSessionsLoading] = useState(true)
   const [rosterLoading, setRosterLoading] = useState(false)
   const [error, setError] = useState('')
+  const [planStudent, setPlanStudent] = useState(null)
   const [requestKey, setRequestKey] = useState(0)
 
   useEffect(() => {
@@ -442,9 +534,10 @@ export function StudentsView({ query }) {
       </section>
 
       <aside className="coach-card coach-student-profile">
-        {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
+        {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div><div className="coach-profile-actions"><button type="button" onClick={() => setPlanStudent(selected)}><Plus size={15} />Tạo giáo án</button></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </aside>
     </div>
+    {planStudent && <TrainingPlanDialog student={planStudent} onClose={() => setPlanStudent(null)} onCreated={plan => showNotice?.(`Đã tạo giáo án “${plan.planName}” cho ${planStudent.name}.`)} />}
   </div>
 }
 

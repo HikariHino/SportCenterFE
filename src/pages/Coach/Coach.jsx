@@ -127,7 +127,7 @@ export default function Coach() {
 
   const renderActiveView = () => {
     if (activeNav === 'Lịch huấn luyện') return <ScheduleView showNotice={showNotice} />
-    if (activeNav === 'Học viên') return <StudentsView query={query} />
+    if (activeNav === 'Học viên') return <StudentsView query={query} showNotice={showNotice} />
     if (activeNav === 'Điểm danh') return <AttendanceView query={query} showNotice={showNotice} />
     return <OverviewView onNavigate={selectNavigation} showNotice={showNotice} />
   }
