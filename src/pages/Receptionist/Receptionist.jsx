@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
@@ -7,7 +7,7 @@ import {
   Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { createMember } from '../../services/memberService'
+import { createMember, getMembers } from '../../services/memberService'
 import '../../style/Receptionist/Receptionist.css'
 
 const navigation = [
@@ -26,7 +26,6 @@ const pageMeta = {
 }
 
 const emptyBookings = []
-const emptyMembers = []
 const emptyPayments = []
 
 const emptyMemberForm = {
@@ -178,13 +177,57 @@ function CreateMemberDialog({ onClose, onCreated }) {
 function MembersView({ query, showNotice }) {
   const [status, setStatus] = useState('Tất cả')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [members, setMembers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
-  const members = useMemo(() => emptyMembers.filter(member => (status === 'Tất cả' || member.status === status) && (!normalizedQuery || `${member.name || ''} ${member.phone || ''} ${member.memberCode || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery))), [normalizedQuery, status])
+
+  useEffect(() => {
+    let active = true
+    const loadMembers = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getMembers()
+        if (active) setMembers(result)
+      } catch (requestError) {
+        if (active) {
+          setMembers([])
+          setError(requestErrorMessage(requestError, 'Không thể tải danh sách hội viên.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadMembers()
+    return () => { active = false }
+  }, [requestKey])
+
+  const filteredMembers = useMemo(() => members.filter(member => {
+    const matchesStatus = status === 'Tất cả'
+      || (status === 'Đang hoạt động' && member.isActive)
+      || (status === 'Ngừng hoạt động' && !member.isActive)
+    const matchesQuery = !normalizedQuery
+      || `${member.memberId} ${member.fullName || ''} ${member.email || ''} ${member.phone || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery)
+    return matchesStatus && matchesQuery
+  }), [members, normalizedQuery, status])
+
+  const activeCount = members.filter(member => member.isActive).length
+
+  const handleCreated = member => {
+    showNotice(`Đã đăng ký ${member.fullName} với mã hội viên #${member.memberId}.`)
+    setRequestKey(key => key + 1)
+  }
 
   return <>
-    <section className="reception-member-metrics"><article><span><Users size={20} /></span><div><small>Tổng hội viên</small><strong>0</strong><p>Chờ dữ liệu API</p></div></article><article><span><BadgeCheck size={20} /></span><div><small>Đang hoạt động</small><strong>0</strong><p>Chờ dữ liệu API</p></div></article><article><span><Clock3 size={20} /></span><div><small>Sắp hết hạn</small><strong>0</strong><p>Chờ dữ liệu API</p></div></article></section>
-    <section className="reception-card reception-table-card reception-members-card"><div className="reception-table-tools"><div><strong>Danh sách hội viên</strong><small>{members.length} kết quả</small></div><div>{['Tất cả', 'Đang hoạt động', 'Sắp hết hạn', 'Đã hết hạn'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}<button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Đăng ký hội viên</button></div></div><div className="reception-table-heading"><span>Mã hội viên</span><span>Họ và tên</span><span>Gói dịch vụ</span><span>Ngày hết hạn</span><span>Trạng thái</span></div>{members.length ? <div>{members.map(member => <button type="button" className="reception-table-row" key={member.id}><span>{member.memberCode}</span><span>{member.name}</span><span>{member.planName}</span><span>{member.expiryDate}</span><span>{member.status}</span></button>)}</div> : <EmptyState icon={Users} title="Chưa có dữ liệu hội viên" text="Danh sách sẽ được đồng bộ từ Member API." />}</section>
-    {showCreateDialog && <CreateMemberDialog onClose={() => setShowCreateDialog(false)} onCreated={member => showNotice(`Đã đăng ký ${member.fullName} với mã hội viên #${member.memberId}.`)} />}
+    <section className="reception-member-metrics"><article><span><Users size={20} /></span><div><small>Tổng hội viên</small><strong>{loading ? '--' : members.length}</strong><p>Dữ liệu tài khoản</p></div></article><article><span><BadgeCheck size={20} /></span><div><small>Đang hoạt động</small><strong>{loading ? '--' : activeCount}</strong><p>Có thể sử dụng dịch vụ</p></div></article><article><span><Clock3 size={20} /></span><div><small>Ngừng hoạt động</small><strong>{loading ? '--' : members.length - activeCount}</strong><p>Tài khoản đã khóa</p></div></article></section>
+    <section className="reception-card reception-table-card reception-members-card">
+      <div className="reception-table-tools"><div><strong>Danh sách hội viên</strong><small>{filteredMembers.length} kết quả</small></div><div>{['Tất cả', 'Đang hoạt động', 'Ngừng hoạt động'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}<button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Đăng ký hội viên</button></div></div>
+      <div className="reception-table-heading"><span>Mã hội viên</span><span>Họ và tên</span><span>Email</span><span>Số điện thoại</span><span>Trạng thái</span></div>
+      {loading ? <EmptyState icon={Users} title="Đang tải hội viên" text="Dữ liệu đang được đồng bộ từ Member API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải hội viên" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filteredMembers.length ? <div>{filteredMembers.map(member => <button type="button" className="reception-table-row" key={member.memberId}><span>#{member.memberId}</span><span>{member.fullName}</span><span>{member.email}</span><span>{member.phone || 'Chưa cập nhật'}</span><span className={member.isActive ? 'reception-member-active' : 'reception-member-inactive'}>{member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}</span></button>)}</div> : <EmptyState icon={Users} title="Không có hội viên phù hợp" text={query || status !== 'Tất cả' ? 'Thử thay đổi từ khóa hoặc bộ lọc trạng thái.' : 'Hệ thống chưa có tài khoản hội viên.'} />}
+    </section>
+    {showCreateDialog && <CreateMemberDialog onClose={() => setShowCreateDialog(false)} onCreated={handleCreated} />}
   </>
 }
 
