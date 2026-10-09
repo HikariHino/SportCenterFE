@@ -33,3 +33,22 @@ export async function completeReceptionistSession(sessionId) {
 
   return body
 }
+
+export async function getReceptionistMemberRegistrations(memberId, { page = 1, pageSize = 20 } = {}) {
+  const response = await api.get(`/class-registrations/members/${memberId}`, {
+    params: { page, pageSize },
+  })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải các lượt đăng ký của hội viên.')
+  }
+
+  const payload = body?.data ?? body
+  return {
+    items: Array.isArray(payload?.items) ? payload.items : [],
+    total: Number(payload?.total || 0),
+    page: Number(payload?.page || page),
+    pageSize: Number(payload?.pageSize || pageSize),
+  }
+}

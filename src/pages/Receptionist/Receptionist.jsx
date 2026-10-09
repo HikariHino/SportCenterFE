@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import {
   completeReceptionistSession,
+  getReceptionistMemberRegistrations,
   getReceptionistSessionRoster,
   registerMemberForSession,
 } from '../../services/receptionistClassService'
@@ -277,7 +278,7 @@ function CreateMemberDialog({ onClose, onCreated }) {
   </div>
 }
 
-function MemberDetailDialog({ memberId, onClose }) {
+function MemberDetailDialog({ memberId, onClose, onViewRegistrations }) {
   const [member, setMember] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -320,8 +321,50 @@ function MemberDetailDialog({ memberId, onClose }) {
             <div className="wide"><small>Địa chỉ</small><strong>{member.address || 'Chưa cập nhật'}</strong></div>
             <div className="wide"><small>Mục tiêu tập luyện</small><strong>{member.fitnessGoal || 'Chưa cập nhật'}</strong></div>
           </div>
+          <button className="reception-member-registrations-button" type="button" onClick={onViewRegistrations}><CalendarDays size={15} />Xem các lượt đăng ký</button>
         </>}
       </div>
+    </section>
+  </div>
+}
+
+function MemberRegistrationsDialog({ memberId, onClose }) {
+  const [registrations, setRegistrations] = useState({ items: [], total: 0, page: 1, pageSize: 20 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadRegistrations = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getReceptionistMemberRegistrations(memberId, { page, pageSize: 20 })
+        if (active) setRegistrations(result)
+      } catch (requestError) {
+        if (active) {
+          setRegistrations({ items: [], total: 0, page, pageSize: 20 })
+          setError(requestErrorMessage(requestError, 'Không thể tải các lượt đăng ký của hội viên.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadRegistrations()
+    return () => { active = false }
+  }, [memberId, page, requestKey])
+
+  const pageCount = Math.max(1, Math.ceil(registrations.total / registrations.pageSize))
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="reception-dialog reception-registrations-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-registrations-title">
+      <header><div><span>LỊCH SỬ BUỔI HỌC</span><h2 id="reception-member-registrations-title">Lượt đăng ký của hội viên #{memberId}</h2><p>{registrations.total} lượt đăng ký được tìm thấy.</p></div><button type="button" aria-label="Đóng lịch sử đăng ký" onClick={onClose}><X size={19} /></button></header>
+      <div className="reception-registrations-body">
+        {loading ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Đang tải lượt đăng ký</strong><span>Dữ liệu đang được đồng bộ từ Class Registrations API.</span></div> : error ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Không thể tải lượt đăng ký</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : registrations.items.length ? <div className="reception-registration-list">{registrations.items.map(item => <article key={item.id}><header><div><small>Mã đăng ký #{item.id}</small><strong>{item.className}</strong></div><b className={String(item.status || '').toLowerCase()}>{item.status}</b></header><div><span><small>Mã buổi học</small><strong>{item.sessionId ? `#${item.sessionId}` : 'Chưa gắn buổi'}</strong></span><span><small>Thời gian bắt đầu</small><strong>{item.startsAt ? sessionDateTimeFormatter.format(new Date(item.startsAt)) : 'Chưa xác định'}</strong></span><span><small>Ngày đăng ký</small><strong>{formatMemberDate(item.registrationDate)}</strong></span></div></article>)}</div> : <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Chưa có lượt đăng ký</strong><span>Hội viên này chưa đăng ký buổi học nào.</span></div>}
+      </div>
+      {!loading && !error && pageCount > 1 && <footer className="reception-registration-pagination"><button type="button" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Trang trước</button><span>{page}/{pageCount}</span><button type="button" disabled={page >= pageCount} onClick={() => setPage(current => current + 1)}>Trang sau</button></footer>}
     </section>
   </div>
 }
@@ -330,6 +373,7 @@ function MembersView({ query, showNotice }) {
   const [status, setStatus] = useState('Tất cả')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState(null)
+  const [registrationsMemberId, setRegistrationsMemberId] = useState(null)
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -381,7 +425,8 @@ function MembersView({ query, showNotice }) {
       {loading ? <EmptyState icon={Users} title="Đang tải hội viên" text="Dữ liệu đang được đồng bộ từ Member API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải hội viên" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filteredMembers.length ? <div>{filteredMembers.map(member => <button type="button" className="reception-table-row" key={member.memberId} onClick={() => setSelectedMemberId(member.memberId)} aria-label={`Xem chi tiết ${member.fullName}`}><span>#{member.memberId}</span><span>{member.fullName}</span><span>{member.email}</span><span>{member.phone || 'Chưa cập nhật'}</span><span className={member.isActive ? 'reception-member-active' : 'reception-member-inactive'}>{member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}</span></button>)}</div> : <EmptyState icon={Users} title="Không có hội viên phù hợp" text={query || status !== 'Tất cả' ? 'Thử thay đổi từ khóa hoặc bộ lọc trạng thái.' : 'Hệ thống chưa có tài khoản hội viên.'} />}
     </section>
     {showCreateDialog && <CreateMemberDialog onClose={() => setShowCreateDialog(false)} onCreated={handleCreated} />}
-    {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} />}
+    {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} onViewRegistrations={() => { setRegistrationsMemberId(selectedMemberId); setSelectedMemberId(null) }} />}
+    {registrationsMemberId !== null && <MemberRegistrationsDialog memberId={registrationsMemberId} onClose={() => setRegistrationsMemberId(null)} />}
   </>
 }
 
