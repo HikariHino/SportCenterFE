@@ -18,3 +18,12 @@ export async function getNotifications({ unreadOnly = false, page = 1, pageSize 
     pageSize: Number(payload?.pageSize || pageSize),
   }
 }
+
+export async function markNotificationRead(notificationId) {
+  const response = await api.patch(`/notifications/${notificationId}/read`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể đánh dấu thông báo đã đọc.')
+  }
+}
