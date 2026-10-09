@@ -7,7 +7,7 @@ import {
   Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { createMember, getMembers } from '../../services/memberService'
+import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import '../../style/Receptionist/Receptionist.css'
 
 const navigation = [
@@ -46,6 +46,20 @@ const requestErrorMessage = (error, fallback) => {
     || error.message
     || fallback
 }
+
+const memberDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+const formatMemberDate = value => {
+  if (!value) return 'Chưa cập nhật'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Chưa cập nhật' : memberDateFormatter.format(date)
+}
+
+const genderLabel = gender => ({ Male: 'Nam', Female: 'Nữ', Other: 'Khác' })[gender] || gender || 'Chưa cập nhật'
 
 const toDateKey = date => {
   const year = date.getFullYear()
@@ -174,9 +188,59 @@ function CreateMemberDialog({ onClose, onCreated }) {
   </div>
 }
 
+function MemberDetailDialog({ memberId, onClose }) {
+  const [member, setMember] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadMember = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getMemberById(memberId)
+        if (active) setMember(result)
+      } catch (requestError) {
+        if (active) {
+          setMember(null)
+          setError(requestErrorMessage(requestError, 'Không thể tải thông tin hội viên.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadMember()
+    return () => { active = false }
+  }, [memberId, requestKey])
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="reception-dialog reception-member-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-detail-title">
+      <header><div><span>HỒ SƠ HỘI VIÊN</span><h2 id="reception-member-detail-title">Chi tiết hội viên #{memberId}</h2><p>Thông tin được tải trực tiếp từ Member API.</p></div><button type="button" aria-label="Đóng hồ sơ hội viên" onClick={onClose}><X size={19} /></button></header>
+      <div className="reception-member-detail-body">
+        {loading ? <div className="reception-member-detail-state"><Users size={26} /><strong>Đang tải hồ sơ</strong><span>Vui lòng chờ dữ liệu hội viên được đồng bộ.</span></div> : error ? <div className="reception-member-detail-state"><Users size={26} /><strong>Không thể tải hồ sơ</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : member && <>
+          <div className="reception-member-detail-profile"><span><UserCheck size={25} /></span><div><h3>{member.fullName}</h3><p>{member.email}</p></div><b className={member.isActive ? 'active' : 'inactive'}>{member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}</b></div>
+          <div className="reception-member-detail-grid">
+            <div><small>Mã hội viên</small><strong>#{member.memberId}</strong></div>
+            <div><small>Mã tài khoản</small><strong>#{member.userId}</strong></div>
+            <div><small>Số điện thoại</small><strong>{member.phone || 'Chưa cập nhật'}</strong></div>
+            <div><small>Ngày sinh</small><strong>{formatMemberDate(member.dateOfBirth)}</strong></div>
+            <div><small>Giới tính</small><strong>{genderLabel(member.gender)}</strong></div>
+            <div><small>Ngày đăng ký</small><strong>{formatMemberDate(member.createdAt)}</strong></div>
+            <div className="wide"><small>Địa chỉ</small><strong>{member.address || 'Chưa cập nhật'}</strong></div>
+            <div className="wide"><small>Mục tiêu tập luyện</small><strong>{member.fitnessGoal || 'Chưa cập nhật'}</strong></div>
+          </div>
+        </>}
+      </div>
+    </section>
+  </div>
+}
+
 function MembersView({ query, showNotice }) {
   const [status, setStatus] = useState('Tất cả')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [selectedMemberId, setSelectedMemberId] = useState(null)
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -225,9 +289,10 @@ function MembersView({ query, showNotice }) {
     <section className="reception-card reception-table-card reception-members-card">
       <div className="reception-table-tools"><div><strong>Danh sách hội viên</strong><small>{filteredMembers.length} kết quả</small></div><div>{['Tất cả', 'Đang hoạt động', 'Ngừng hoạt động'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}<button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Đăng ký hội viên</button></div></div>
       <div className="reception-table-heading"><span>Mã hội viên</span><span>Họ và tên</span><span>Email</span><span>Số điện thoại</span><span>Trạng thái</span></div>
-      {loading ? <EmptyState icon={Users} title="Đang tải hội viên" text="Dữ liệu đang được đồng bộ từ Member API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải hội viên" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filteredMembers.length ? <div>{filteredMembers.map(member => <button type="button" className="reception-table-row" key={member.memberId}><span>#{member.memberId}</span><span>{member.fullName}</span><span>{member.email}</span><span>{member.phone || 'Chưa cập nhật'}</span><span className={member.isActive ? 'reception-member-active' : 'reception-member-inactive'}>{member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}</span></button>)}</div> : <EmptyState icon={Users} title="Không có hội viên phù hợp" text={query || status !== 'Tất cả' ? 'Thử thay đổi từ khóa hoặc bộ lọc trạng thái.' : 'Hệ thống chưa có tài khoản hội viên.'} />}
+      {loading ? <EmptyState icon={Users} title="Đang tải hội viên" text="Dữ liệu đang được đồng bộ từ Member API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải hội viên" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filteredMembers.length ? <div>{filteredMembers.map(member => <button type="button" className="reception-table-row" key={member.memberId} onClick={() => setSelectedMemberId(member.memberId)} aria-label={`Xem chi tiết ${member.fullName}`}><span>#{member.memberId}</span><span>{member.fullName}</span><span>{member.email}</span><span>{member.phone || 'Chưa cập nhật'}</span><span className={member.isActive ? 'reception-member-active' : 'reception-member-inactive'}>{member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}</span></button>)}</div> : <EmptyState icon={Users} title="Không có hội viên phù hợp" text={query || status !== 'Tất cả' ? 'Thử thay đổi từ khóa hoặc bộ lọc trạng thái.' : 'Hệ thống chưa có tài khoản hội viên.'} />}
     </section>
     {showCreateDialog && <CreateMemberDialog onClose={() => setShowCreateDialog(false)} onCreated={handleCreated} />}
+    {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} />}
   </>
 }
 
