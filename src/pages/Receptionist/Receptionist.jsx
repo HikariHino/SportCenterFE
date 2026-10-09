@@ -4,11 +4,12 @@ import ThemeToggle from '../../components/ThemeToggle'
 import {
   ArrowRight, BadgeCheck, Bell, CalendarDays, CheckCircle2, CircleDollarSign,
   Clock3, CreditCard, LayoutDashboard, LogOut, MapPin, QrCode, ReceiptText,
-  Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
+  Ban, Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import {
+  cancelReceptionistRegistration,
   completeReceptionistSession,
   getReceptionistMemberRegistrations,
   getReceptionistSessionRoster,
@@ -328,12 +329,46 @@ function MemberDetailDialog({ memberId, onClose, onViewRegistrations }) {
   </div>
 }
 
-function MemberRegistrationsDialog({ memberId, onClose }) {
+function CancelRegistrationDialog({ registration, onClose, onCancelled }) {
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async event => {
+    event.preventDefault()
+    const normalizedReason = reason.trim()
+    if (!normalizedReason) {
+      setError('Vui lòng nhập lý do hủy đăng ký.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const result = await cancelReceptionistRegistration(registration.id, normalizedReason)
+      onCancelled(result)
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể hủy lượt đăng ký.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog reception-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-cancel-registration-title">
+      <header><div><span>HỦY LƯỢT ĐĂNG KÝ</span><h2 id="reception-cancel-registration-title">Đăng ký #{registration.id}</h2><p>{registration.className} · Buổi #{registration.sessionId}</p></div><button type="button" aria-label="Đóng biểu mẫu hủy" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}><label className="reception-cancel-reason">Lý do hủy<textarea value={reason} onChange={event => setReason(event.target.value)} rows="4" maxLength="500" placeholder="Nhập lý do hủy để lưu vào lịch sử..." required /></label>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button type="submit" disabled={saving}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
+    </section>
+  </div>
+}
+
+function MemberRegistrationsDialog({ memberId, onClose, showNotice }) {
   const [registrations, setRegistrations] = useState({ items: [], total: 0, page: 1, pageSize: 20 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
   const [requestKey, setRequestKey] = useState(0)
+  const [cancelRegistration, setCancelRegistration] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -358,13 +393,22 @@ function MemberRegistrationsDialog({ memberId, onClose }) {
 
   const pageCount = Math.max(1, Math.ceil(registrations.total / registrations.pageSize))
 
+  const handleCancelled = updatedRegistration => {
+    setRegistrations(current => ({
+      ...current,
+      items: current.items.map(item => item.id === updatedRegistration.id ? updatedRegistration : item),
+    }))
+    showNotice(`Đã hủy lượt đăng ký #${updatedRegistration.id}.`)
+  }
+
   return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="reception-dialog reception-registrations-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-registrations-title">
       <header><div><span>LỊCH SỬ BUỔI HỌC</span><h2 id="reception-member-registrations-title">Lượt đăng ký của hội viên #{memberId}</h2><p>{registrations.total} lượt đăng ký được tìm thấy.</p></div><button type="button" aria-label="Đóng lịch sử đăng ký" onClick={onClose}><X size={19} /></button></header>
       <div className="reception-registrations-body">
-        {loading ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Đang tải lượt đăng ký</strong><span>Dữ liệu đang được đồng bộ từ Class Registrations API.</span></div> : error ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Không thể tải lượt đăng ký</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : registrations.items.length ? <div className="reception-registration-list">{registrations.items.map(item => <article key={item.id}><header><div><small>Mã đăng ký #{item.id}</small><strong>{item.className}</strong></div><b className={String(item.status || '').toLowerCase()}>{item.status}</b></header><div><span><small>Mã buổi học</small><strong>{item.sessionId ? `#${item.sessionId}` : 'Chưa gắn buổi'}</strong></span><span><small>Thời gian bắt đầu</small><strong>{item.startsAt ? sessionDateTimeFormatter.format(new Date(item.startsAt)) : 'Chưa xác định'}</strong></span><span><small>Ngày đăng ký</small><strong>{formatMemberDate(item.registrationDate)}</strong></span></div></article>)}</div> : <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Chưa có lượt đăng ký</strong><span>Hội viên này chưa đăng ký buổi học nào.</span></div>}
+        {loading ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Đang tải lượt đăng ký</strong><span>Dữ liệu đang được đồng bộ từ Class Registrations API.</span></div> : error ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Không thể tải lượt đăng ký</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : registrations.items.length ? <div className="reception-registration-list">{registrations.items.map(item => <article key={item.id}><header><div><small>Mã đăng ký #{item.id}</small><strong>{item.className}</strong></div><div className="reception-registration-card-actions"><b className={String(item.status || '').toLowerCase()}>{item.status}</b>{item.status === 'Registered' && item.sessionId && <button type="button" onClick={() => setCancelRegistration(item)}><Ban size={13} />Hủy đăng ký</button>}</div></header><div><span><small>Mã buổi học</small><strong>{item.sessionId ? `#${item.sessionId}` : 'Chưa gắn buổi'}</strong></span><span><small>Thời gian bắt đầu</small><strong>{item.startsAt ? sessionDateTimeFormatter.format(new Date(item.startsAt)) : 'Chưa xác định'}</strong></span><span><small>Ngày đăng ký</small><strong>{formatMemberDate(item.registrationDate)}</strong></span></div></article>)}</div> : <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Chưa có lượt đăng ký</strong><span>Hội viên này chưa đăng ký buổi học nào.</span></div>}
       </div>
       {!loading && !error && pageCount > 1 && <footer className="reception-registration-pagination"><button type="button" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Trang trước</button><span>{page}/{pageCount}</span><button type="button" disabled={page >= pageCount} onClick={() => setPage(current => current + 1)}>Trang sau</button></footer>}
+      {cancelRegistration && <CancelRegistrationDialog registration={cancelRegistration} onClose={() => setCancelRegistration(null)} onCancelled={handleCancelled} />}
     </section>
   </div>
 }
@@ -426,7 +470,7 @@ function MembersView({ query, showNotice }) {
     </section>
     {showCreateDialog && <CreateMemberDialog onClose={() => setShowCreateDialog(false)} onCreated={handleCreated} />}
     {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} onViewRegistrations={() => { setRegistrationsMemberId(selectedMemberId); setSelectedMemberId(null) }} />}
-    {registrationsMemberId !== null && <MemberRegistrationsDialog memberId={registrationsMemberId} onClose={() => setRegistrationsMemberId(null)} />}
+    {registrationsMemberId !== null && <MemberRegistrationsDialog memberId={registrationsMemberId} onClose={() => setRegistrationsMemberId(null)} showNotice={showNotice} />}
   </>
 }
 

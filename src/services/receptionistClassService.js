@@ -52,3 +52,14 @@ export async function getReceptionistMemberRegistrations(memberId, { page = 1, p
     pageSize: Number(payload?.pageSize || pageSize),
   }
 }
+
+export async function cancelReceptionistRegistration(registrationId, reason) {
+  const response = await api.post(`/class-registrations/${registrationId}/cancel`, { reason })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể hủy lượt đăng ký.')
+  }
+
+  return body?.data ?? body
+}

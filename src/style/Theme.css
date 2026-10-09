@@ -300,3 +300,5 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-registration-list article>header { border-color:var(--theme-border); }
 [data-theme='dark'] .reception-registration-pagination { border-color:var(--theme-border); }
 [data-theme='dark'] .reception-registration-pagination button { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
+[data-theme='dark'] .reception-registration-card-actions>button { border-color:#6d3a41; color:#ff9eaa; background:#351f25; }
+[data-theme='dark'] .reception-cancel-reason textarea { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
