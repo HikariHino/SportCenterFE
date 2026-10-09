@@ -29,3 +29,14 @@ export async function getMemberTrainingPlans(memberId) {
   const payload = body?.data ?? body
   return Array.isArray(payload) ? payload : []
 }
+
+export async function updateTrainingPlanExerciseResult(planExerciseId, notes) {
+  const response = await api.put(`/TrainingPlans/exercises/${planExerciseId}/result`, { notes })
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể cập nhật kết quả bài tập.')
+  }
+
+  return body
+}

@@ -235,6 +235,12 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-plan-list-state button { border-color: #3c5f9f; color: var(--theme-accent); background: var(--theme-blue-bg); }
 [data-theme='dark'] .coach-member-plan > header b { color: var(--theme-muted); background: var(--theme-surface); }
 [data-theme='dark'] .coach-member-plan > header b.active { color: var(--theme-green); background: var(--theme-green-bg); }
+[data-theme='dark'] .coach-member-exercise-head > button { border-color: #3c5f9f; color: var(--theme-accent); background: var(--theme-blue-bg); }
+[data-theme='dark'] .coach-exercise-result-form { border-color: var(--theme-border); }
+[data-theme='dark'] .coach-exercise-result-form textarea { border-color: var(--theme-border); color: var(--theme-text); background: var(--theme-surface); }
+[data-theme='dark'] .coach-exercise-result-form > footer button:not([type='submit']) { border-color: var(--theme-border); color: var(--theme-text); background: var(--theme-surface); }
+[data-theme='dark'] .coach-exercise-result-form > p { color: #ff9eaa; }
+[data-theme='dark'] .coach-exercise-result-saved { color: var(--theme-green); }
 [data-theme='dark'] :is(.coach-search, .coach-session > button, .coach-student-list article > button, .coach-session-picker select, .coach-attendance-actions select) { background: var(--theme-raised); border-color: var(--theme-border); color: var(--theme-text); }
 [data-theme='dark'] :is(.coach-card-head, .coach-session, .coach-student-list article, .coach-quick-actions > div:last-child > button) { border-color: var(--theme-border); }
 [data-theme='dark'] :is(.coach-notification, .coach-session-info small, .coach-student-list article > b, .coach-chart small) { color: var(--theme-muted); }

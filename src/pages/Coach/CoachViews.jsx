@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  Clock3, MapPin, Plus, SearchX, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
+  Clock3, MapPin, PencilLine, Plus, SearchX, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
 import {
   completeCoachSession,
@@ -11,7 +11,11 @@ import {
   getMyCoachSessions,
   markCoachAttendance,
 } from '../../services/coachService'
-import { createTrainingPlan, getMemberTrainingPlans } from '../../services/trainingPlanService'
+import {
+  createTrainingPlan,
+  getMemberTrainingPlans,
+  updateTrainingPlanExerciseResult,
+} from '../../services/trainingPlanService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -437,6 +441,11 @@ function TrainingPlanListDialog({ student, onClose }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const [editingExerciseId, setEditingExerciseId] = useState(null)
+  const [resultDraft, setResultDraft] = useState('')
+  const [savingExerciseId, setSavingExerciseId] = useState(null)
+  const [exerciseError, setExerciseError] = useState('')
+  const [updatedExerciseId, setUpdatedExerciseId] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -459,10 +468,65 @@ function TrainingPlanListDialog({ student, onClose }) {
     return () => { active = false }
   }, [requestKey, student.memberId])
 
+  const editExerciseResult = exercise => {
+    setEditingExerciseId(exercise.id)
+    setResultDraft(exercise.notes || '')
+    setExerciseError('')
+    setUpdatedExerciseId(null)
+  }
+
+  const cancelExerciseResult = () => {
+    setEditingExerciseId(null)
+    setResultDraft('')
+    setExerciseError('')
+  }
+
+  const saveExerciseResult = async (event, exerciseId) => {
+    event.preventDefault()
+    const notes = resultDraft.trim()
+    if (!notes) {
+      setExerciseError('Vui lòng nhập kết quả hoặc ghi chú thực hiện.')
+      return
+    }
+
+    setSavingExerciseId(exerciseId)
+    setExerciseError('')
+    try {
+      await updateTrainingPlanExerciseResult(exerciseId, notes)
+      setPlans(currentPlans => currentPlans.map(plan => ({
+        ...plan,
+        exercises: Array.isArray(plan.exercises)
+          ? plan.exercises.map(exercise => exercise.id === exerciseId ? { ...exercise, notes } : exercise)
+          : [],
+      })))
+      setEditingExerciseId(null)
+      setResultDraft('')
+      setUpdatedExerciseId(exerciseId)
+    } catch (requestError) {
+      setExerciseError(requestError.response?.data?.message || requestError.message || 'Không thể cập nhật kết quả bài tập.')
+    } finally {
+      setSavingExerciseId(null)
+    }
+  }
+
   return <div className="coach-plan-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="coach-plan-dialog coach-plan-list-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-plan-list-title">
       <header><div><span>GIÁO ÁN HỌC VIÊN</span><h2 id="coach-plan-list-title">{student.name}</h2><p>Member #{student.memberId} · {plans.length} giáo án</p></div><button type="button" aria-label="Đóng danh sách giáo án" onClick={onClose}><X size={19} /></button></header>
-      <div className="coach-plan-list-body">{loading ? <div className="coach-plan-list-state"><BookOpen size={26} /><strong>Đang tải giáo án</strong><span>Dữ liệu đang được đồng bộ từ TrainingPlans API.</span></div> : error ? <div className="coach-plan-list-state error"><BookOpen size={26} /><strong>Không thể tải giáo án</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : plans.length ? <div className="coach-member-plan-list">{plans.map(plan => <article className="coach-member-plan" key={plan.id}><header><div><span>{trainingGoalLabel(plan.goal)}</span><h3>{plan.planName}</h3></div><b className={String(plan.status || '').toLowerCase()}>{plan.status || 'Chưa xác định'}</b></header><div className="coach-member-plan-meta"><span><CalendarDays size={14} /><span><small>Bắt đầu</small><strong>{planDateFormatter.format(new Date(plan.startDate))}</strong></span></span><span><CalendarDays size={14} /><span><small>Kết thúc</small><strong>{planDateFormatter.format(new Date(plan.endDate))}</strong></span></span></div>{Array.isArray(plan.exercises) && plan.exercises.length ? <div className="coach-member-plan-exercises">{plan.exercises.map(exercise => <div key={exercise.id}><span><strong>{exercise.exerciseName}</strong><small>{exercise.sets} hiệp × {exercise.reps} lần{exercise.durationInMinutes ? ` · ${exercise.durationInMinutes} phút` : ''}</small></span>{exercise.notes && <p>{exercise.notes}</p>}</div>)}</div> : <p className="coach-member-plan-empty">Giáo án chưa có bài tập.</p>}</article>)}</div> : <div className="coach-plan-list-state"><BookOpen size={26} /><strong>Chưa có giáo án</strong><span>Học viên này chưa được tạo giáo án tập luyện.</span></div>}</div>
+      <div className="coach-plan-list-body">
+        {loading ? <div className="coach-plan-list-state"><BookOpen size={26} /><strong>Đang tải giáo án</strong><span>Dữ liệu đang được đồng bộ từ TrainingPlans API.</span></div> : error ? <div className="coach-plan-list-state error"><BookOpen size={26} /><strong>Không thể tải giáo án</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : plans.length ? <div className="coach-member-plan-list">
+          {plans.map(plan => <article className="coach-member-plan" key={plan.id}>
+            <header><div><span>{trainingGoalLabel(plan.goal)}</span><h3>{plan.planName}</h3></div><b className={String(plan.status || '').toLowerCase()}>{plan.status || 'Chưa xác định'}</b></header>
+            <div className="coach-member-plan-meta"><span><CalendarDays size={14} /><span><small>Bắt đầu</small><strong>{planDateFormatter.format(new Date(plan.startDate))}</strong></span></span><span><CalendarDays size={14} /><span><small>Kết thúc</small><strong>{planDateFormatter.format(new Date(plan.endDate))}</strong></span></span></div>
+            {Array.isArray(plan.exercises) && plan.exercises.length ? <div className="coach-member-plan-exercises">
+              {plan.exercises.map(exercise => <div key={exercise.id}>
+                <div className="coach-member-exercise-head"><span><strong>{exercise.exerciseName}</strong><small>{exercise.sets} hiệp × {exercise.reps} lần{exercise.durationInMinutes ? ` · ${exercise.durationInMinutes} phút` : ''}</small></span><button type="button" onClick={() => editExerciseResult(exercise)} disabled={savingExerciseId !== null}><PencilLine size={13} />{exercise.notes ? 'Sửa kết quả' : 'Cập nhật kết quả'}</button></div>
+                {editingExerciseId === exercise.id ? <form className="coach-exercise-result-form" onSubmit={event => saveExerciseResult(event, exercise.id)}><label htmlFor={`coach-exercise-result-${exercise.id}`}>Kết quả / ghi chú thực hiện</label><textarea id={`coach-exercise-result-${exercise.id}`} rows="3" value={resultDraft} onChange={event => setResultDraft(event.target.value)} placeholder="Ví dụ: Hoàn thành đủ 3 hiệp, kỹ thuật ổn định..." disabled={savingExerciseId === exercise.id} autoFocus />{exerciseError && <p role="alert">{exerciseError}</p>}<footer><button type="button" onClick={cancelExerciseResult} disabled={savingExerciseId === exercise.id}>Hủy</button><button type="submit" disabled={savingExerciseId === exercise.id}>{savingExerciseId === exercise.id ? 'Đang lưu...' : 'Lưu kết quả'}</button></footer></form> : <p className={exercise.notes ? '' : 'coach-exercise-result-empty'}>{exercise.notes || 'Chưa cập nhật kết quả thực hiện.'}</p>}
+                {updatedExerciseId === exercise.id && editingExerciseId !== exercise.id && <span className="coach-exercise-result-saved"><CheckCircle2 size={12} />Đã lưu kết quả</span>}
+              </div>)}
+            </div> : <p className="coach-member-plan-empty">Giáo án chưa có bài tập.</p>}
+          </article>)}
+        </div> : <div className="coach-plan-list-state"><BookOpen size={26} /><strong>Chưa có giáo án</strong><span>Học viên này chưa được tạo giáo án tập luyện.</span></div>}
+      </div>
     </section>
   </div>
 }
