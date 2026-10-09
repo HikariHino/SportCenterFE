@@ -8,24 +8,24 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
+import { registerMemberForSession } from '../../services/receptionistClassService'
 import '../../style/Receptionist/Receptionist.css'
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
-  [CalendarDays, 'Lịch đặt sân'],
+  [CalendarDays, 'Buổi học'],
   [ScanLine, 'Check-in'],
   [Users, 'Hội viên'],
   [ReceiptText, 'Thanh toán'],
 ]
 
 const pageMeta = {
-  'Lịch đặt sân': ['VẬN HÀNH ĐẶT SÂN', 'Lịch đặt sân', 'Theo dõi lượt đặt sân và trạng thái phục vụ trong ngày.'],
+  'Buổi học': ['VẬN HÀNH BUỔI HỌC', 'Quản lý buổi học', 'Đăng ký học viên, kiểm tra danh sách và cập nhật trạng thái buổi học.'],
   'Check-in': ['TIẾP NHẬN KHÁCH', 'Check-in tại quầy', 'Xác minh mã đặt sân hoặc tài khoản hội viên trước khi sử dụng dịch vụ.'],
   'Hội viên': ['HỖ TRỢ HỘI VIÊN', 'Tra cứu hội viên', 'Kiểm tra trạng thái tài khoản, gói dịch vụ và thông tin liên hệ.'],
   'Thanh toán': ['GIAO DỊCH TẠI QUẦY', 'Thanh toán', 'Theo dõi giao dịch và hóa đơn phát sinh tại quầy lễ tân.'],
 }
 
-const emptyBookings = []
 const emptyPayments = []
 
 const emptyMemberForm = {
@@ -61,12 +61,13 @@ const formatMemberDate = value => {
 
 const genderLabel = gender => ({ Male: 'Nam', Female: 'Nữ', Other: 'Khác' })[gender] || gender || 'Chưa cập nhật'
 
-const toDateKey = date => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+const sessionDateTimeFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
 
 function EmptyState({ icon: Icon = Search, title, text }) {
   return <div className="reception-empty"><span><Icon size={25} /></span><strong>{title}</strong><p>{text}</p></div>
@@ -99,7 +100,7 @@ function Overview({ onNavigate }) {
     <section className="reception-card reception-shortcuts">
       <div className="reception-card-head"><div><span>TRUY CẬP NHANH</span><h2>Nghiệp vụ tại quầy</h2></div></div>
       <div className="reception-shortcut-grid">
-        <button type="button" onClick={() => onNavigate('Lịch đặt sân')}><span className="blue"><CalendarDays size={21} /></span><div><strong>Tra cứu lịch đặt sân</strong><small>Tìm theo ngày và trạng thái</small></div><ArrowRight size={17} /></button>
+        <button type="button" onClick={() => onNavigate('Buổi học')}><span className="blue"><CalendarDays size={21} /></span><div><strong>Quản lý buổi học</strong><small>Đăng ký và kiểm tra học viên</small></div><ArrowRight size={17} /></button>
         <button type="button" onClick={() => onNavigate('Check-in')}><span className="green"><QrCode size={21} /></span><div><strong>Quét mã check-in</strong><small>Xác minh lượt đặt tại quầy</small></div><ArrowRight size={17} /></button>
         <button type="button" onClick={() => onNavigate('Hội viên')}><span className="purple"><Users size={21} /></span><div><strong>Tra cứu hội viên</strong><small>Kiểm tra tài khoản và gói dịch vụ</small></div><ArrowRight size={17} /></button>
         <button type="button" onClick={() => onNavigate('Thanh toán')}><span className="amber"><CreditCard size={21} /></span><div><strong>Kiểm tra thanh toán</strong><small>Theo dõi giao dịch và hóa đơn</small></div><ArrowRight size={17} /></button>
@@ -108,17 +109,44 @@ function Overview({ onNavigate }) {
   </>
 }
 
-function BookingsView({ query }) {
-  const [date, setDate] = useState(toDateKey(new Date()))
-  const [status, setStatus] = useState('Tất cả')
-  const normalizedQuery = query.trim().toLocaleLowerCase('vi')
-  const bookings = useMemo(() => emptyBookings.filter(booking => booking.date === date && (status === 'Tất cả' || booking.status === status) && (!normalizedQuery || `${booking.code || ''} ${booking.memberName || ''} ${booking.phone || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery))), [date, normalizedQuery, status])
+function SessionsView({ showNotice }) {
+  const [sessionId, setSessionId] = useState('')
+  const [memberId, setMemberId] = useState('')
+  const [registration, setRegistration] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  return <section className="reception-card reception-table-card">
-    <div className="reception-table-tools"><label><CalendarDays size={16} /><input type="date" value={date} onChange={event => setDate(event.target.value)} /></label><div>{['Tất cả', 'Chờ check-in', 'Đang sử dụng', 'Đã hoàn thành', 'Đã hủy'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}</div></div>
-    <div className="reception-table-heading"><span>Mã đặt</span><span>Khách hàng</span><span>Khung giờ</span><span>Sân</span><span>Trạng thái</span></div>
-    {bookings.length ? <div>{bookings.map(booking => <button type="button" className="reception-table-row" key={booking.id}><span>{booking.code}</span><span>{booking.memberName}</span><span>{booking.startTime} – {booking.endTime}</span><span>{booking.courtName}</span><span>{booking.status}</span></button>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có lượt đặt sân" text="Các lượt đặt sẽ xuất hiện tại đây sau khi kết nối Booking API." />}
-  </section>
+  const submitRegistration = async event => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const result = await registerMemberForSession(Number(sessionId), Number(memberId))
+      setRegistration(result)
+      showNotice(`Đã đăng ký hội viên #${result.memberId} vào buổi học #${result.sessionId}.`)
+    } catch (requestError) {
+      setRegistration(null)
+      setError(requestErrorMessage(requestError, 'Không thể đăng ký buổi học cho hội viên.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-session-layout">
+    <section className="reception-card reception-session-register">
+      <div className="reception-card-head"><div><span>ĐĂNG KÝ BUỔI HỌC</span><h2>Thêm hội viên vào buổi học</h2></div><CalendarDays size={20} /></div>
+      <form onSubmit={submitRegistration}>
+        <label>Mã buổi học<input type="number" min="1" value={sessionId} onChange={event => setSessionId(event.target.value)} placeholder="Ví dụ: 12" required /></label>
+        <label>Mã hội viên<input type="number" min="1" value={memberId} onChange={event => setMemberId(event.target.value)} placeholder="Ví dụ: 25" required /></label>
+        {error && <p role="alert">{error}</p>}
+        <button type="submit" disabled={saving}><Plus size={15} />{saving ? 'Đang đăng ký...' : 'Đăng ký buổi học'}</button>
+      </form>
+    </section>
+    <section className="reception-card reception-registration-result">
+      <div className="reception-card-head"><div><span>KẾT QUẢ ĐĂNG KÝ</span><h2>Thông tin lượt đăng ký</h2></div><UserCheck size={20} /></div>
+      {registration ? <div className="reception-registration-summary"><span><CheckCircle2 size={25} /></span><h3>{registration.className}</h3><p>Hội viên #{registration.memberId} đã được thêm vào buổi học.</p><div><small>Mã đăng ký<strong>#{registration.id}</strong></small><small>Mã buổi học<strong>#{registration.sessionId}</strong></small><small>Trạng thái<strong>{registration.status}</strong></small><small>Thời gian<strong>{registration.startsAt ? sessionDateTimeFormatter.format(new Date(registration.startsAt)) : 'Chưa xác định'}</strong></small></div></div> : <EmptyState icon={CalendarDays} title="Chưa có lượt đăng ký mới" text="Nhập mã buổi học và mã hội viên để thực hiện đăng ký tại quầy." />}
+    </section>
+  </div>
 }
 
 function CheckInView({ showNotice }) {
@@ -334,7 +362,7 @@ export default function Receptionist() {
   }
 
   const renderView = () => {
-    if (activeNav === 'Lịch đặt sân') return <BookingsView query={query} />
+    if (activeNav === 'Buổi học') return <SessionsView showNotice={showNotice} />
     if (activeNav === 'Check-in') return <CheckInView showNotice={showNotice} />
     if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
     if (activeNav === 'Thanh toán') return <PaymentsView query={query} />

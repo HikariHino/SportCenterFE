@@ -285,3 +285,6 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-member-detail-profile>b.active { color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .reception-member-detail-profile>b.inactive { color:var(--theme-gold); background:var(--theme-gold-bg); }
 [data-theme='dark'] .reception-member-detail-state button { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] :is(.reception-session-register input,.reception-registration-summary small) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
+[data-theme='dark'] .reception-session-register form>p { border-color:#6d3a41; color:#ff9eaa; background:#351f25; }
+[data-theme='dark'] .reception-registration-summary>span { color:var(--theme-green); background:var(--theme-green-bg); }
