@@ -342,6 +342,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-notification-panel>footer button { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
 [data-theme='dark'] .reception-notification-read { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .reception-notification-action-error { border-color:#6d3a41; color:#ff9eaa; background:#351f25; }
+[data-theme='dark'] .reception-subscription-detail-loading { border-color:var(--theme-border); color:var(--theme-muted); }
 
 [data-theme='dark'] .reception-subscription-actions button.payment { color:var(--theme-gold); background:var(--theme-gold-bg); }
 [data-theme='dark'] :is(.reception-payment-form-grid input,.reception-payment-form-grid select,.reception-payment-confirm) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
