@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import StaffManagement from './StaffManagement'
+import ClassManagement from './ClassManagement'
 import '../../style/CenterManager/CenterManager.css'
 
 const managerNavSections = [
@@ -187,17 +188,7 @@ export default function CenterManager() {
           {section === 'users' && <StaffManagement />}
 
           {/* 2. Danh mục & Lớp học (SportClassesController, ClassCatalogController) */}
-          {section === 'classes' && <section className="manager-card manager-section-placeholder">
-            <div className="manager-card-heading"><div><h2>Quản lý danh mục & Lớp học</h2><p>Tạo danh mục thể thao, quản lý lớp học và lịch dạy huấn luyện viên.</p></div><span className="manager-icon purple"><BookOpen size={21} /></span></div>
-            <div className="manager-placeholder-body">
-              <div className="manager-placeholder-features">
-                <article><span className="purple"><BookOpen size={20} /></span><div><strong>Danh mục thể thao</strong><small>Yoga, Gym, Boxing, Swimming...</small></div></article>
-                <article><span className="blue"><CalendarDays size={20} /></span><div><strong>Lịch lớp học</strong><small>Quản lý buổi học theo tuần, tháng</small></div></article>
-                <article><span className="green"><Users size={20} /></span><div><strong>Gán huấn luyện viên</strong><small>Phân công Coach cho từng lớp</small></div></article>
-              </div>
-              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>SportClassesController</strong> và <strong>ClassCatalogController API</strong>.</span></div>
-            </div>
-          </section>}
+          {section === 'classes' && <ClassManagement />}
 
           {/* 3. Phòng tập / Cơ sở vật chất (RoomsController) */}
           {section === 'rooms' && <section className="manager-card manager-section-placeholder">
