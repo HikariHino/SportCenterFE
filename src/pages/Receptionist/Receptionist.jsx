@@ -13,6 +13,7 @@ import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment,
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../services/paymentService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
+import { getReceptionistClassSessions } from '../../services/receptionistCatalogService'
 import {
   cancelReceptionistRegistration,
   checkInReceptionistRegistration,
@@ -168,6 +169,37 @@ function SessionsView({ showNotice }) {
   const [rosterLoaded, setRosterLoaded] = useState(false)
   const [showCompleteDialog, setShowCompleteDialog] = useState(false)
   const [completedSessionId, setCompletedSessionId] = useState(null)
+  const [catalog, setCatalog] = useState({ items: [], total: 0, page: 1, pageSize: 20 })
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState('')
+  const [catalogRequestKey, setCatalogRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadCatalog = async () => {
+      setCatalogLoading(true)
+      setCatalogError('')
+      try {
+        const result = await getReceptionistClassSessions({ page: 1, pageSize: 20 })
+        if (active) setCatalog(result)
+      } catch (requestError) {
+        if (active) {
+          setCatalog({ items: [], total: 0, page: 1, pageSize: 20 })
+          setCatalogError(requestErrorMessage(requestError, 'Không thể tải danh mục buổi học.'))
+        }
+      } finally {
+        if (active) setCatalogLoading(false)
+      }
+    }
+    loadCatalog()
+    return () => { active = false }
+  }, [catalogRequestKey])
+
+  const selectCatalogSession = session => {
+    setSessionId(String(session.id))
+    setRosterSessionId(String(session.id))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const submitRegistration = async event => {
     event.preventDefault()
@@ -204,6 +236,7 @@ function SessionsView({ showNotice }) {
   }
 
   return <div className="reception-session-page">
+    <section className="reception-card reception-session-catalog"><div className="reception-card-head"><div><span>DANH MỤC CÔNG KHAI</span><h2>Chọn buổi học</h2></div><strong>{catalogLoading ? 'Đang tải...' : `${catalog.total} buổi`}</strong></div>{catalogLoading ? <EmptyState icon={CalendarDays} title="Đang tải buổi học" text="Dữ liệu đang được đồng bộ từ Class Sessions API." /> : catalogError ? <div className="reception-inline-error"><EmptyState icon={CalendarDays} title="Không thể tải buổi học" text={catalogError} /><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : catalog.items.length ? <div className="reception-session-catalog-list">{catalog.items.map(item => <button type="button" key={item.id} className={Number(sessionId) === item.id ? 'selected' : ''} onClick={() => selectCatalogSession(item)}><span><small>Buổi #{item.id}</small><strong>{item.className}</strong><em>{item.coachName}</em></span><span><small>{formatDateTime(item.startsAt)}</small><strong>{item.availableSeats}/{item.capacity} chỗ trống</strong><b className={String(item.status || '').toLowerCase()}>{item.status}</b></span></button>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có buổi học" text="Class Sessions API chưa có dữ liệu công khai." />}</section>
     <div className="reception-session-layout"><section className="reception-card reception-session-register">
       <div className="reception-card-head"><div><span>ĐĂNG KÝ BUỔI HỌC</span><h2>Thêm hội viên vào buổi học</h2></div><CalendarDays size={20} /></div>
       <form onSubmit={submitRegistration}>
