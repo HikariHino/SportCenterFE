@@ -17,10 +17,12 @@ import {
   Headset,
   HelpCircle,
   Layers,
+  LifeBuoy,
   LogIn,
   LogOut,
   Mail,
   MapPin,
+  MessageSquare,
   Package,
   Phone,
   Plus,
@@ -73,6 +75,11 @@ import {
   getReceptionistSessionAttendances,
   markReceptionistAttendance,
 } from '../../services/receptionistAttendanceService'
+import {
+  getAllSupportTickets,
+  getTicketErrorMessage,
+  resolveSupportTicket,
+} from '../../services/supportTicketService'
 import '../../style/CenterManager/FrontDeskOperations.css'
 
 function formatVND(value) {
@@ -121,12 +128,14 @@ export default function FrontDeskOperations() {
   const [members, setMembers] = useState([])
   const [todayCheckIns, setTodayCheckIns] = useState([])
   const [packages, setPackages] = useState([])
+  const [tickets, setTickets] = useState([])
 
   // Loading states
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [loadingCheckIns, setLoadingCheckIns] = useState(false)
   const [loadingPackages, setLoadingPackages] = useState(false)
   const [loadingSubscriptions, setLoadingSubscriptions] = useState(false)
+  const [loadingTickets, setLoadingTickets] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   // Feedback states
@@ -164,6 +173,14 @@ export default function FrontDeskOperations() {
   const [loadingRoster, setLoadingRoster] = useState(false)
   const [cancelRegModal, setCancelRegModal] = useState(null) // { registrationId, memberName }
   const [cancelReason, setCancelReason] = useState('')
+
+  // Tab 5: Support Tickets states
+  const [ticketSearch, setTicketSearch] = useState('')
+  const [ticketStatusFilter, setTicketStatusFilter] = useState('all')
+  const [ticketPriorityFilter, setTicketPriorityFilter] = useState('all')
+  const [ticketToResolve, setTicketToResolve] = useState(null)
+  const [resolutionStatus, setResolutionStatus] = useState('Resolved')
+  const [resolutionNote, setResolutionNote] = useState('')
 
   // Auto-dismiss success message
   useEffect(() => {
@@ -216,11 +233,25 @@ export default function FrontDeskOperations() {
     }
   }
 
+  // Load Support Tickets
+  async function loadTicketsData(showSpinner = true) {
+    if (showSpinner) setLoadingTickets(true)
+    try {
+      const data = await getAllSupportTickets(ticketStatusFilter !== 'all' ? ticketStatusFilter : null)
+      setTickets(data)
+    } catch (err) {
+      setErrorMessage(getTicketErrorMessage(err, 'Không thể tải danh sách phiếu hỗ trợ.'))
+    } finally {
+      setLoadingTickets(false)
+    }
+  }
+
   // Initial load
   useEffect(() => {
     loadMembersData(true)
     loadTodayCheckInsData(false)
     loadPackagesData()
+    loadTicketsData(false)
   }, [])
 
   // Refresh handler
@@ -232,8 +263,17 @@ export default function FrontDeskOperations() {
       if (subMemberId) handleLoadMemberSubscriptions(subMemberId)
     } else if (activeTab === 'classes') {
       if (rosterSessionId) handleLoadRoster(rosterSessionId)
+    } else if (activeTab === 'tickets') {
+      loadTicketsData(true)
     }
   }
+
+  // Effect when switching tabs
+  useEffect(() => {
+    if (activeTab === 'tickets' && tickets.length === 0) {
+      loadTicketsData(true)
+    }
+  }, [activeTab])
 
   // Create member at counter
   async function handleCreateMember(e) {
@@ -494,6 +534,29 @@ export default function FrontDeskOperations() {
     }
   }
 
+  // Resolve Ticket
+  async function handleResolveTicket(e) {
+    e.preventDefault()
+    if (!ticketToResolve) return
+
+    setSubmitting(true)
+    setErrorMessage(null)
+    try {
+      await resolveSupportTicket(ticketToResolve.id, {
+        status: resolutionStatus,
+        resolutionNote: resolutionNote || 'Đã tiếp nhận và hỗ trợ tại quầy lễ tân.',
+      })
+      setSuccessMessage(`Đã xử lý phiếu hỗ trợ #${ticketToResolve.id} thành công!`)
+      setTicketToResolve(null)
+      setResolutionNote('')
+      await loadTicketsData(false)
+    } catch (err) {
+      setErrorMessage(getTicketErrorMessage(err, 'Không thể cập nhật phiếu hỗ trợ.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   // Filtered members
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
@@ -525,6 +588,36 @@ export default function FrontDeskOperations() {
     }
   }, [todayCheckIns])
 
+  // Filtered tickets
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((t) => {
+      const query = ticketSearch.toLowerCase().trim()
+      const matchesSearch =
+        !query ||
+        t.title?.toLowerCase().includes(query) ||
+        t.description?.toLowerCase().includes(query) ||
+        t.memberName?.toLowerCase().includes(query) ||
+        String(t.id).includes(query)
+
+      if (!matchesSearch) return false
+
+      if (ticketStatusFilter !== 'all' && t.status !== ticketStatusFilter) {
+        return false
+      }
+
+      if (ticketPriorityFilter !== 'all' && t.priority !== ticketPriorityFilter) {
+        return false
+      }
+
+      return true
+    })
+  }, [tickets, ticketSearch, ticketStatusFilter, ticketPriorityFilter])
+
+  // Pending tickets count
+  const pendingTicketsCount = useMemo(() => {
+    return tickets.filter((t) => t.status === 'Open' || t.status === 'Pending').length
+  }, [tickets])
+
   return (
     <div className="fdesk-mgmt">
       {/* Header */}
@@ -546,7 +639,7 @@ export default function FrontDeskOperations() {
             disabled={loadingMembers || loadingCheckIns || submitting}
             title="Làm mới dữ liệu"
           >
-            <RefreshCw size={15} className={loadingMembers || loadingCheckIns ? 'fdesk-spin' : ''} />
+            <RefreshCw size={15} className={loadingMembers || loadingCheckIns || loadingTickets ? 'fdesk-spin' : ''} />
             Làm mới
           </button>
           <button
@@ -653,18 +746,18 @@ export default function FrontDeskOperations() {
 
         <div className="fdesk-metric-card">
           <div className="fdesk-metric-top">
-            <span className="fdesk-metric-label">Tài khoản bị khóa</span>
-            <span className="fdesk-metric-icon red">
-              <UserX size={20} />
+            <span className="fdesk-metric-label">Phiếu hỗ trợ / Ticket chờ</span>
+            <span className="fdesk-metric-icon amber">
+              <Headset size={20} />
             </span>
           </div>
-          <div className="fdesk-metric-value" style={{ color: '#dc2626' }}>
-            {members.filter((m) => !m.isActive).length}
-            <small style={{ color: '#dc2626' }}>hồ sơ vi phạm</small>
+          <div className="fdesk-metric-value" style={{ color: pendingTicketsCount > 0 ? '#d97706' : 'inherit' }}>
+            {pendingTicketsCount}
+            <small>yêu cầu</small>
           </div>
           <p className="fdesk-metric-note">
-            <ShieldAlert size={13} color="#dc2626" />
-            Đã vô hiệu hóa quyền ra vào
+            <LifeBuoy size={13} color="#d97706" />
+            Khiếu nại/trợ giúp từ hội viên
           </p>
         </div>
       </div>
@@ -720,6 +813,11 @@ export default function FrontDeskOperations() {
         >
           <Headset size={16} />
           Chăm sóc khách hàng & Ticket
+          {pendingTicketsCount > 0 ? (
+            <span className="fdesk-tab-badge danger">{pendingTicketsCount} cần xử lý</span>
+          ) : (
+            <span className="fdesk-tab-badge">{tickets.length}</span>
+          )}
         </button>
       </div>
 
@@ -1521,12 +1619,256 @@ export default function FrontDeskOperations() {
         </div>
       )}
 
-      {/* Placeholder for tab 5 in Commit 2 */}
+      {/* Tab 5: Chăm sóc khách hàng & Ticket */}
       {activeTab === 'tickets' && (
         <div className="fdesk-section">
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-            <Headset size={32} color="var(--manager-blue, #2463eb)" />
-            <p style={{ marginTop: 10 }}>Đang chuẩn bị module Chăm sóc khách hàng & Xử lý Ticket...</p>
+          <div className="fdesk-card">
+            <div className="fdesk-card-header">
+              <div>
+                <h3>Danh sách phiếu khiếu nại & yêu cầu hỗ trợ</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
+                  Tiếp nhận các vấn đề hội viên gửi lên, cập nhật tiến độ và gửi ghi chú giải quyết trực tiếp.
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {pendingTicketsCount > 0 && (
+                  <span className="fdesk-badge warning">
+                    {pendingTicketsCount} phiếu chưa xử lý
+                  </span>
+                )}
+                <span className="fdesk-badge info">
+                  Tổng {tickets.length} phiếu
+                </span>
+              </div>
+            </div>
+
+            {/* Filter toolbar */}
+            <div className="fdesk-toolbar">
+              <div className="fdesk-search-box">
+                <Search size={16} color="var(--manager-muted, #748096)" />
+                <input
+                  type="text"
+                  placeholder="Tìm theo tiêu đề, nội dung, tên hội viên..."
+                  value={ticketSearch}
+                  onChange={(e) => setTicketSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="fdesk-filter-group">
+                <select
+                  className="fdesk-select"
+                  value={ticketStatusFilter}
+                  onChange={(e) => {
+                    setTicketStatusFilter(e.target.value)
+                  }}
+                >
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="Pending">Chờ xử lý (Pending)</option>
+                  <option value="Open">Đang mở (Open)</option>
+                  <option value="Resolved">Đã giải quyết (Resolved)</option>
+                  <option value="Closed">Đã đóng (Closed)</option>
+                </select>
+
+                <select
+                  className="fdesk-select"
+                  value={ticketPriorityFilter}
+                  onChange={(e) => setTicketPriorityFilter(e.target.value)}
+                >
+                  <option value="all">Tất cả mức độ ưu tiên</option>
+                  <option value="Urgent">Khẩn cấp (Urgent)</option>
+                  <option value="High">Cao (High)</option>
+                  <option value="Normal">Bình thường (Normal)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Tickets table */}
+            {loadingTickets ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                <RefreshCw size={28} className="fdesk-spin" />
+                <p style={{ marginTop: 10 }}>Đang tải danh sách phiếu hỗ trợ...</p>
+              </div>
+            ) : filteredTickets.length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                <Headset size={32} />
+                <p style={{ marginTop: 10 }}>Không có phiếu hỗ trợ nào phù hợp với bộ lọc.</p>
+              </div>
+            ) : (
+              <div className="fdesk-table-scroll">
+                <table className="fdesk-table">
+                  <thead>
+                    <tr>
+                      <th>Mã</th>
+                      <th>Tiêu đề & Nội dung khiếu nại</th>
+                      <th>Hội viên</th>
+                      <th>Ưu tiên</th>
+                      <th>Thời gian gửi</th>
+                      <th>Trạng thái</th>
+                      <th>Người xử lý & Phản hồi</th>
+                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTickets.map((t) => {
+                      const isPending = t.status === 'Pending' || t.status === 'Open'
+                      const priorityTone =
+                        t.priority === 'Urgent'
+                          ? 'urgent'
+                          : t.priority === 'High'
+                          ? 'high'
+                          : 'normal'
+
+                      return (
+                        <tr key={t.id}>
+                          <td>
+                            <strong>#{t.id}</strong>
+                          </td>
+                          <td style={{ maxWidth: 300 }}>
+                            <strong style={{ display: 'block', fontSize: 13, color: 'var(--manager-ink, #18263e)' }}>
+                              {t.title}
+                            </strong>
+                            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)', lineHeight: 1.4 }}>
+                              {t.description}
+                            </p>
+                          </td>
+                          <td>
+                            <strong>{t.memberName || 'Hội viên'}</strong>
+                          </td>
+                          <td>
+                            <span className={`fdesk-priority-pill ${priorityTone}`}>
+                              {t.priority}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: 12 }}>
+                            {formatDateTime(t.createdAt)}
+                          </td>
+                          <td>
+                            {t.status === 'Resolved' ? (
+                              <span className="fdesk-badge success">
+                                <CheckCircle2 size={12} /> Đã giải quyết
+                              </span>
+                            ) : t.status === 'Closed' ? (
+                              <span className="fdesk-badge" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                                Đã đóng
+                              </span>
+                            ) : (
+                              <span className="fdesk-badge warning">
+                                <Clock3 size={12} /> Chờ xử lý
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: 12, maxWidth: 240 }}>
+                            {t.handledByUserName && (
+                              <div style={{ color: 'var(--manager-blue, #2463eb)', fontWeight: 600 }}>
+                                Xử lý bởi: {t.handledByUserName}
+                              </div>
+                            )}
+                            {t.resolutionNote ? (
+                              <div className="fdesk-ticket-note-box">
+                                {t.resolutionNote}
+                              </div>
+                            ) : (
+                              <span style={{ color: '#94a3b8' }}>Chưa có phản hồi</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="fdesk-btn fdesk-btn-primary"
+                              style={{ padding: '6px 12px', fontSize: 11 }}
+                              onClick={() => {
+                                setTicketToResolve(t)
+                                setResolutionStatus(t.status === 'Resolved' ? 'Closed' : 'Resolved')
+                                setResolutionNote(t.resolutionNote || '')
+                              }}
+                              title="Xử lý và gửi phản hồi"
+                            >
+                              <MessageSquare size={13} />
+                              {isPending ? 'Xử lý ticket' : 'Cập nhật lại'}
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Xử lý Ticket */}
+      {ticketToResolve && (
+        <div className="fdesk-dialog-overlay" onClick={() => setTicketToResolve(null)}>
+          <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="fdesk-dialog-header">
+              <h3>Phản hồi & Xử lý phiếu hỗ trợ #{ticketToResolve.id}</h3>
+              <button
+                type="button"
+                className="fdesk-dialog-close"
+                onClick={() => setTicketToResolve(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleResolveTicket}>
+              <div className="fdesk-dialog-body">
+                <div style={{ background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div>Hội viên gửi: <strong>{ticketToResolve.memberName}</strong></div>
+                  <div>Tiêu đề: <strong>{ticketToResolve.title}</strong></div>
+                  <div style={{ fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
+                    Nội dung: {ticketToResolve.description}
+                  </div>
+                </div>
+
+                <div className="fdesk-input-group">
+                  <label htmlFor="resolve-status-select">Cập nhật trạng thái (*):</label>
+                  <select
+                    id="resolve-status-select"
+                    className="fdesk-select"
+                    value={resolutionStatus}
+                    onChange={(e) => setResolutionStatus(e.target.value)}
+                    required
+                  >
+                    <option value="Resolved">Đã giải quyết (Resolved)</option>
+                    <option value="Closed">Đóng phiếu hỗ trợ (Closed)</option>
+                    <option value="In Progress">Đang xử lý (In Progress)</option>
+                  </select>
+                </div>
+
+                <div className="fdesk-input-group">
+                  <label htmlFor="resolve-note-input">Nội dung giải quyết / Phản hồi tới hội viên (*):</label>
+                  <textarea
+                    id="resolve-note-input"
+                    rows={4}
+                    required
+                    className="fdesk-input"
+                    placeholder="Ghi rõ giải pháp đã hỗ trợ (vd: Đã kiểm tra và đổi lịch học / Đã hướng dẫn tại quầy)..."
+                    value={resolutionNote}
+                    onChange={(e) => setResolutionNote(e.target.value)}
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+              </div>
+
+              <div className="fdesk-dialog-footer">
+                <button
+                  type="button"
+                  className="fdesk-btn fdesk-btn-secondary"
+                  onClick={() => setTicketToResolve(null)}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="fdesk-btn fdesk-btn-primary"
+                  disabled={submitting || !resolutionNote.trim()}
+                >
+                  {submitting ? 'Đang cập nhật...' : 'Xác nhận xử lý'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
