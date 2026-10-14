@@ -12,12 +12,16 @@ import {
   Clock3,
   CreditCard,
   DoorOpen,
+  ExternalLink,
+  FileText,
   Headset,
+  HelpCircle,
   Layers,
   LogIn,
   LogOut,
   Mail,
   MapPin,
+  Package,
   Phone,
   Plus,
   QrCode,
@@ -28,11 +32,13 @@ import {
   ShieldAlert,
   ShieldCheck,
   TicketCheck,
+  Trash2,
   User,
   UserCheck,
   UserPlus,
   Users,
   UserX,
+  Wallet,
   X,
   Zap,
 } from 'lucide-react'
@@ -49,7 +55,30 @@ import {
   manualCheckIn,
   scanQrCheckIn,
 } from '../../services/gymCheckInService'
+import { getMembershipPackages } from '../../services/membershipPackageService'
+import {
+  cancelPendingSubscription,
+  confirmSubscriptionPayment,
+  createReceptionistMemberSubscription,
+  getReceptionistMemberSubscriptions,
+} from '../../services/memberSubscriptionService'
+import { createPayment } from '../../services/paymentService'
+import {
+  cancelReceptionistRegistration,
+  checkInReceptionistRegistration,
+  getReceptionistSessionRoster,
+  registerMemberForSession,
+} from '../../services/receptionistClassService'
+import {
+  getReceptionistSessionAttendances,
+  markReceptionistAttendance,
+} from '../../services/receptionistAttendanceService'
 import '../../style/CenterManager/FrontDeskOperations.css'
+
+function formatVND(value) {
+  const number = Number(value) || 0
+  return number.toLocaleString('vi-VN') + ' ₫'
+}
 
 function formatDate(dateString) {
   if (!dateString) return '—'
@@ -91,17 +120,20 @@ export default function FrontDeskOperations() {
   // Data states
   const [members, setMembers] = useState([])
   const [todayCheckIns, setTodayCheckIns] = useState([])
+  const [packages, setPackages] = useState([])
 
   // Loading states
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [loadingCheckIns, setLoadingCheckIns] = useState(false)
+  const [loadingPackages, setLoadingPackages] = useState(false)
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   // Feedback states
   const [errorMessage, setErrorMessage] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
 
-  // Modals
+  // Modals - Members
   const [showCreateMemberModal, setShowCreateMemberModal] = useState(false)
   const [memberForm, setMemberForm] = useState(emptyMemberForm)
   const [memberToDeactivate, setMemberToDeactivate] = useState(null)
@@ -116,6 +148,22 @@ export default function FrontDeskOperations() {
   const [manualMemberId, setManualMemberId] = useState('')
   const [manualPhone, setManualPhone] = useState('')
   const [checkInNotes, setCheckInNotes] = useState('')
+
+  // Tab 3: Packages & Payment states
+  const [subMemberId, setSubMemberId] = useState('')
+  const [selectedPackageId, setSelectedPackageId] = useState('')
+  const [memberSubscriptions, setMemberSubscriptions] = useState([])
+  const [payModalSubscription, setPayModalSubscription] = useState(null)
+  const [payOsData, setPayOsData] = useState(null) // { qrCode, checkoutUrl }
+
+  // Tab 4: Class & Attendance states
+  const [classSessionId, setClassSessionId] = useState('')
+  const [classMemberId, setClassMemberId] = useState('')
+  const [rosterSessionId, setRosterSessionId] = useState('')
+  const [sessionRoster, setSessionRoster] = useState([])
+  const [loadingRoster, setLoadingRoster] = useState(false)
+  const [cancelRegModal, setCancelRegModal] = useState(null) // { registrationId, memberName }
+  const [cancelReason, setCancelReason] = useState('')
 
   // Auto-dismiss success message
   useEffect(() => {
@@ -151,16 +199,40 @@ export default function FrontDeskOperations() {
     }
   }
 
+  // Load Packages
+  async function loadPackagesData() {
+    setLoadingPackages(true)
+    try {
+      const data = await getMembershipPackages()
+      const activePkgs = data.filter((p) => p.isActive !== false)
+      setPackages(activePkgs)
+      if (activePkgs.length > 0 && !selectedPackageId) {
+        setSelectedPackageId(String(activePkgs[0].id))
+      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Không thể tải danh sách gói tập.')
+    } finally {
+      setLoadingPackages(false)
+    }
+  }
+
   // Initial load
   useEffect(() => {
     loadMembersData(true)
     loadTodayCheckInsData(false)
+    loadPackagesData()
   }, [])
 
   // Refresh handler
   function handleRefresh() {
     if (activeTab === 'members') loadMembersData(true)
     else if (activeTab === 'checkin') loadTodayCheckInsData(true)
+    else if (activeTab === 'packages') {
+      loadPackagesData()
+      if (subMemberId) handleLoadMemberSubscriptions(subMemberId)
+    } else if (activeTab === 'classes') {
+      if (rosterSessionId) handleLoadRoster(rosterSessionId)
+    }
   }
 
   // Create member at counter
@@ -264,6 +336,159 @@ export default function FrontDeskOperations() {
       await loadTodayCheckInsData(false)
     } catch (err) {
       setErrorMessage(getCheckInErrorMessage(err, 'Check-out thất bại.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Load subscriptions of member
+  async function handleLoadMemberSubscriptions(memId) {
+    if (!memId) return
+    setLoadingSubscriptions(true)
+    try {
+      const data = await getReceptionistMemberSubscriptions(Number(memId))
+      setMemberSubscriptions(data)
+    } catch (err) {
+      setMemberSubscriptions([])
+      setErrorMessage(err.message || 'Không thể tải gói của hội viên.')
+    } finally {
+      setLoadingSubscriptions(false)
+    }
+  }
+
+  // Register subscription at counter
+  async function handleRegisterSubscription(e) {
+    e.preventDefault()
+    if (!subMemberId || !selectedPackageId) {
+      setErrorMessage('Vui lòng chọn hội viên và gói tập.')
+      return
+    }
+
+    setSubmitting(true)
+    setErrorMessage(null)
+    try {
+      const newSub = await createReceptionistMemberSubscription(
+        Number(subMemberId),
+        Number(selectedPackageId)
+      )
+      setSuccessMessage(`Đã tạo đăng ký gói "${newSub.packageName || ''}" cho hội viên #${subMemberId}!`)
+      await handleLoadMemberSubscriptions(subMemberId)
+      // Open payment confirmation right away
+      setPayModalSubscription(newSub)
+    } catch (err) {
+      setErrorMessage(err.message || 'Không thể tạo đăng ký gói.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Confirm direct counter payment (Cash / BankTransfer)
+  async function handleConfirmCounterPayment(paymentMethod) {
+    if (!payModalSubscription) return
+    setSubmitting(true)
+    setErrorMessage(null)
+
+    try {
+      const amount = payModalSubscription.agreedPrice || payModalSubscription.price || 0
+      await confirmSubscriptionPayment(payModalSubscription.id, {
+        amount,
+        paymentMethod,
+        paymentReceived: true,
+      })
+      setSuccessMessage(`Đã xác nhận thanh toán (${paymentMethod}) và kích hoạt gói thành công!`)
+      setPayModalSubscription(null)
+      setPayOsData(null)
+      if (subMemberId) await handleLoadMemberSubscriptions(subMemberId)
+    } catch (err) {
+      setErrorMessage(err.message || 'Không thể xác nhận thanh toán.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Create PayOS online link
+  async function handleCreatePayOsLink() {
+    if (!payModalSubscription) return
+    setSubmitting(true)
+    setErrorMessage(null)
+
+    try {
+      const payment = await createPayment(payModalSubscription.id)
+      setPayOsData(payment)
+      setSuccessMessage('Đã tạo link thanh toán PayOS thành công! Khách hàng có thể quét mã QR để trả tiền.')
+    } catch (err) {
+      setErrorMessage(err.message || 'Không thể tạo mã thanh toán PayOS.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Book session for member
+  async function handleRegisterSession(e) {
+    e.preventDefault()
+    if (!classSessionId || !classMemberId) {
+      setErrorMessage('Vui lòng nhập Mã buổi học và Mã hội viên.')
+      return
+    }
+
+    setSubmitting(true)
+    setErrorMessage(null)
+    try {
+      const reg = await registerMemberForSession(Number(classSessionId), Number(classMemberId))
+      setSuccessMessage(`Đã đăng ký hội viên #${classMemberId} vào buổi học #${classSessionId} thành công!`)
+      setRosterSessionId(classSessionId)
+      await handleLoadRoster(classSessionId)
+      setClassMemberId('')
+    } catch (err) {
+      setErrorMessage(err.message || 'Không thể đăng ký buổi học.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Load roster
+  async function handleLoadRoster(sessId) {
+    if (!sessId) return
+    setLoadingRoster(true)
+    try {
+      const data = await getReceptionistSessionRoster(Number(sessId))
+      setSessionRoster(data)
+    } catch (err) {
+      setSessionRoster([])
+      setErrorMessage(err.message || 'Không thể tải danh sách học viên của buổi học.')
+    } finally {
+      setLoadingRoster(false)
+    }
+  }
+
+  // Check in student in roster
+  async function handleCheckInStudent(student) {
+    setSubmitting(true)
+    setErrorMessage(null)
+    try {
+      await checkInReceptionistRegistration(student.registrationId)
+      setSuccessMessage(`Đã điểm danh cho học viên ${student.fullName || `#${student.memberId}`} thành công!`)
+      if (rosterSessionId) await handleLoadRoster(rosterSessionId)
+    } catch (err) {
+      setErrorMessage(err.message || 'Không thể điểm danh học viên.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Cancel student registration
+  async function handleCancelRegistration() {
+    if (!cancelRegModal) return
+    setSubmitting(true)
+    setErrorMessage(null)
+    try {
+      await cancelReceptionistRegistration(cancelRegModal.registrationId, cancelReason || 'Hủy tại quầy lễ tân')
+      setSuccessMessage('Đã hủy đăng ký buổi học và giải phóng chỗ thành công!')
+      setCancelRegModal(null)
+      setCancelReason('')
+      if (rosterSessionId) await handleLoadRoster(rosterSessionId)
+    } catch (err) {
+      setErrorMessage(err.message || 'Không thể hủy đăng ký buổi học.')
     } finally {
       setSubmitting(false)
     }
@@ -612,6 +837,20 @@ export default function FrontDeskOperations() {
                               type="button"
                               className="fdesk-btn fdesk-btn-secondary"
                               style={{ padding: '6px 10px', fontSize: 11 }}
+                              onClick={() => {
+                                setSubMemberId(String(m.memberId))
+                                setActiveTab('packages')
+                                handleLoadMemberSubscriptions(m.memberId)
+                              }}
+                              title="Đăng ký gói thẻ cho hội viên này"
+                            >
+                              Đăng ký gói
+                            </button>
+
+                            <button
+                              type="button"
+                              className="fdesk-btn fdesk-btn-secondary"
+                              style={{ padding: '6px 10px', fontSize: 11 }}
                               onClick={() => setSelectedMemberDetail(m)}
                               title="Xem chi tiết hồ sơ"
                             >
@@ -628,7 +867,7 @@ export default function FrontDeskOperations() {
                                 title="Khóa / Vô hiệu hóa tài khoản vi phạm quy định"
                               >
                                 <Ban size={12} />
-                                Khóa tài khoản
+                                Khóa
                               </button>
                             ) : (
                               <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
@@ -863,30 +1102,589 @@ export default function FrontDeskOperations() {
         </div>
       )}
 
-      {/* Placeholder for tabs 3, 4, 5 in Commit 1 */}
+      {/* Tab 3: Đăng ký gói thẻ & Thanh toán tại quầy */}
       {activeTab === 'packages' && (
         <div className="fdesk-section">
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-            <ReceiptText size={32} color="var(--manager-blue, #2463eb)" />
-            <p style={{ marginTop: 10 }}>Đang chuẩn bị module Đăng ký gói thẻ & Thanh toán tại quầy...</p>
+          {/* Card: Đăng ký gói mới cho hội viên */}
+          <div className="fdesk-card">
+            <div className="fdesk-card-header">
+              <div>
+                <h3>Đăng ký gói thẻ hội viên tại quầy</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
+                  Chọn hội viên và gói tập phù hợp. Sau khi đăng ký có thể xác nhận thu tiền mặt hoặc tạo link PayOS.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleRegisterSubscription} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+                <div className="fdesk-input-group">
+                  <label htmlFor="sub-member-select">Chọn hội viên (*):</label>
+                  <select
+                    id="sub-member-select"
+                    className="fdesk-select"
+                    value={subMemberId}
+                    onChange={(e) => {
+                      setSubMemberId(e.target.value)
+                      handleLoadMemberSubscriptions(e.target.value)
+                    }}
+                    required
+                  >
+                    <option value="">-- Chọn hội viên --</option>
+                    {members.map((m) => (
+                      <option key={m.memberId} value={m.memberId}>
+                        #{m.memberId} - {m.fullName} ({m.phone || m.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="fdesk-input-group">
+                  <label htmlFor="sub-package-select">Chọn gói thẻ (*):</label>
+                  <select
+                    id="sub-package-select"
+                    className="fdesk-select"
+                    value={selectedPackageId}
+                    onChange={(e) => setSelectedPackageId(e.target.value)}
+                    required
+                  >
+                    {packages.map((pkg) => (
+                      <option key={pkg.id} value={pkg.id}>
+                        {pkg.packageName} — {formatVND(pkg.price)} ({pkg.durationInDays} ngày)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Package cards preview */}
+              <div className="fdesk-package-grid" style={{ padding: 0 }}>
+                {packages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className={`fdesk-package-card ${selectedPackageId === String(pkg.id) ? 'selected' : ''}`}
+                    onClick={() => setSelectedPackageId(String(pkg.id))}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <strong>{pkg.packageName}</strong>
+                      {selectedPackageId === String(pkg.id) && <CheckCircle2 size={16} color="var(--manager-blue, #2463eb)" />}
+                    </div>
+                    <div className="fdesk-package-price">{formatVND(pkg.price)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
+                      Thời hạn: <strong>{pkg.durationInDays} ngày</strong>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>
+                      {pkg.description || 'Gói tập chất lượng cao tại Sports Center.'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+                <button
+                  type="submit"
+                  className="fdesk-btn fdesk-btn-primary"
+                  disabled={submitting || !subMemberId || !selectedPackageId}
+                >
+                  <Plus size={16} />
+                  {submitting ? 'Đang tạo...' : 'Tạo đăng ký gói & Chuyển sang thanh toán'}
+                </button>
+              </div>
+            </form>
           </div>
+
+          {/* Subscriptions history of selected member */}
+          {subMemberId && (
+            <div className="fdesk-card">
+              <div className="fdesk-card-header">
+                <div>
+                  <h3>Lịch sử đăng ký gói của hội viên #{subMemberId}</h3>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
+                    Danh sách các gói thẻ đã đăng ký, trạng thái thanh toán và hiệu lực.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="fdesk-btn fdesk-btn-secondary"
+                  style={{ padding: '6px 12px', fontSize: 11 }}
+                  onClick={() => handleLoadMemberSubscriptions(subMemberId)}
+                  disabled={loadingSubscriptions}
+                >
+                  <RefreshCw size={13} className={loadingSubscriptions ? 'fdesk-spin' : ''} />
+                  Làm mới gói
+                </button>
+              </div>
+
+              {loadingSubscriptions ? (
+                <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                  <RefreshCw size={26} className="fdesk-spin" />
+                  <p style={{ marginTop: 8 }}>Đang tải danh sách gói của hội viên...</p>
+                </div>
+              ) : memberSubscriptions.length === 0 ? (
+                <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                  <Package size={30} />
+                  <p style={{ marginTop: 8 }}>Hội viên này chưa đăng ký gói thẻ nào.</p>
+                </div>
+              ) : (
+                <div className="fdesk-table-scroll">
+                  <table className="fdesk-table">
+                    <thead>
+                      <tr>
+                        <th>Mã ĐK</th>
+                        <th>Gói thẻ</th>
+                        <th>Giá thỏa thuận</th>
+                        <th>Thời hạn</th>
+                        <th>Hiệu lực</th>
+                        <th>Trạng thái</th>
+                        <th style={{ textAlign: 'right' }}>Thanh toán</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {memberSubscriptions.map((sub) => {
+                        const isPending = sub.status === 'Pending'
+
+                        return (
+                          <tr key={sub.id}>
+                            <td>
+                              <strong>#{sub.id}</strong>
+                            </td>
+                            <td>
+                              <strong>{sub.packageName}</strong>
+                            </td>
+                            <td style={{ fontWeight: 600, color: '#059669' }}>
+                              {formatVND(sub.agreedPrice || sub.price)}
+                            </td>
+                            <td>{sub.durationInDays} ngày</td>
+                            <td style={{ fontSize: 12 }}>
+                              {sub.startDate
+                                ? `${formatDate(sub.startDate)} – ${formatDate(sub.endDate)}`
+                                : 'Chờ kích hoạt khi thanh toán'}
+                            </td>
+                            <td>
+                              {sub.status === 'Active' ? (
+                                <span className="fdesk-badge active">
+                                  <CheckCircle2 size={12} /> Đang hoạt động
+                                </span>
+                              ) : sub.status === 'Pending' ? (
+                                <span className="fdesk-badge warning">
+                                  <Clock3 size={12} /> Chờ thanh toán
+                                </span>
+                              ) : sub.status === 'Expired' ? (
+                                <span className="fdesk-badge inactive">Hết hạn</span>
+                              ) : (
+                                <span className="fdesk-badge">{sub.status}</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {isPending ? (
+                                <button
+                                  type="button"
+                                  className="fdesk-btn fdesk-btn-success"
+                                  style={{ padding: '6px 12px', fontSize: 12 }}
+                                  onClick={() => {
+                                    setPayModalSubscription(sub)
+                                    setPayOsData(null)
+                                  }}
+                                >
+                                  <CreditCard size={13} />
+                                  Thu tiền / PayOS
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>
+                                  Đã thanh toán
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
+      {/* Tab 4: Điểm danh & Quản lý đăng ký lớp */}
       {activeTab === 'classes' && (
         <div className="fdesk-section">
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-            <CalendarDays size={32} color="var(--manager-blue, #2463eb)" />
-            <p style={{ marginTop: 10 }}>Đang chuẩn bị module Điểm danh & Quản lý đăng ký lớp...</p>
+          {/* Card 1: Thêm học viên vào buổi học */}
+          <div className="fdesk-card">
+            <div className="fdesk-card-header">
+              <div>
+                <h3>Đăng ký buổi học cho học viên tại quầy</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
+                  Hỗ trợ học viên đăng ký hoặc đặt chỗ ca học trực tiếp tại quầy lễ tân.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleRegisterSession} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+                <div className="fdesk-input-group">
+                  <label htmlFor="class-session-id">Mã buổi học (Session ID) (*):</label>
+                  <input
+                    id="class-session-id"
+                    type="number"
+                    min="1"
+                    className="fdesk-input"
+                    placeholder="Ví dụ: 12"
+                    value={classSessionId}
+                    onChange={(e) => setClassSessionId(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="fdesk-input-group">
+                  <label htmlFor="class-member-select">Học viên (*):</label>
+                  <select
+                    id="class-member-select"
+                    className="fdesk-select"
+                    value={classMemberId}
+                    onChange={(e) => setClassMemberId(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Chọn hội viên --</option>
+                    {members.map((m) => (
+                      <option key={m.memberId} value={m.memberId}>
+                        #{m.memberId} - {m.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  type="submit"
+                  className="fdesk-btn fdesk-btn-primary"
+                  disabled={submitting || !classSessionId || !classMemberId}
+                >
+                  <Plus size={16} />
+                  {submitting ? 'Đang đăng ký...' : 'Xác nhận đăng ký buổi học'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Card 2: Danh sách học viên & Điểm danh buổi học */}
+          <div className="fdesk-card">
+            <div className="fdesk-card-header">
+              <div>
+                <h3>Danh sách học viên & Điểm danh buổi học</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
+                  Nhập mã buổi học để tra cứu danh sách học viên đăng ký, điểm danh hoặc hủy đăng ký khi có yêu cầu.
+                </p>
+              </div>
+            </div>
+
+            <div className="fdesk-toolbar">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', width: '100%' }}>
+                <div className="fdesk-input-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <label htmlFor="roster-session-input" style={{ whiteSpace: 'nowrap' }}>Mã buổi học:</label>
+                  <input
+                    id="roster-session-input"
+                    type="number"
+                    min="1"
+                    className="fdesk-input"
+                    style={{ width: 140 }}
+                    placeholder="Nhập Session ID"
+                    value={rosterSessionId}
+                    onChange={(e) => setRosterSessionId(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className="fdesk-btn fdesk-btn-primary"
+                  onClick={() => handleLoadRoster(rosterSessionId)}
+                  disabled={loadingRoster || !rosterSessionId}
+                >
+                  <Search size={15} />
+                  {loadingRoster ? 'Đang tải...' : 'Xem danh sách học viên'}
+                </button>
+
+                {sessionRoster.length > 0 && (
+                  <span className="fdesk-badge info" style={{ marginLeft: 'auto' }}>
+                    {sessionRoster.length} học viên đăng ký
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {loadingRoster ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                <RefreshCw size={28} className="fdesk-spin" />
+                <p style={{ marginTop: 10 }}>Đang tải danh sách học viên của buổi học...</p>
+              </div>
+            ) : sessionRoster.length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                <CalendarDays size={32} />
+                <p style={{ marginTop: 10 }}>
+                  {rosterSessionId
+                    ? 'Buổi học này chưa có học viên nào đăng ký.'
+                    : 'Nhập mã buổi học và bấm "Xem danh sách học viên" để điểm danh.'}
+                </p>
+              </div>
+            ) : (
+              <div className="fdesk-table-scroll">
+                <table className="fdesk-table">
+                  <thead>
+                    <tr>
+                      <th>Mã ĐK</th>
+                      <th>Học viên</th>
+                      <th>Mã hội viên</th>
+                      <th>Trạng thái đăng ký</th>
+                      <th>Điểm danh</th>
+                      <th>Thời gian check-in</th>
+                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessionRoster.map((student) => {
+                      const isPresent = Boolean(student.checkInTime) || student.attendanceStatus === 'Present'
+
+                      return (
+                        <tr key={student.registrationId}>
+                          <td>
+                            <strong>#{student.registrationId}</strong>
+                          </td>
+                          <td>
+                            <strong>{student.fullName || 'Học viên'}</strong>
+                          </td>
+                          <td>#{student.memberId}</td>
+                          <td>
+                            <span className="fdesk-badge info">
+                              {student.registrationStatus || 'Registered'}
+                            </span>
+                          </td>
+                          <td>
+                            {isPresent ? (
+                              <span className="fdesk-badge present">
+                                <Check size={12} /> Có mặt
+                              </span>
+                            ) : (
+                              <span className="fdesk-badge absent">
+                                Chưa điểm danh
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: 12 }}>
+                            {student.checkInTime ? formatDateTime(student.checkInTime) : '—'}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="fdesk-action-group">
+                              {!isPresent ? (
+                                <button
+                                  type="button"
+                                  className="fdesk-btn fdesk-btn-success"
+                                  style={{ padding: '6px 12px', fontSize: 11 }}
+                                  onClick={() => handleCheckInStudent(student)}
+                                  disabled={submitting}
+                                  title="Điểm danh có mặt tại lớp"
+                                >
+                                  <Check size={12} />
+                                  Điểm danh
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>
+                                  Đã check-in
+                                </span>
+                              )}
+
+                              <button
+                                type="button"
+                                className="fdesk-btn fdesk-btn-danger"
+                                style={{ padding: '6px 10px', fontSize: 11 }}
+                                onClick={() => setCancelRegModal({
+                                  registrationId: student.registrationId,
+                                  memberName: student.fullName,
+                                })}
+                                disabled={submitting}
+                                title="Hủy đăng ký và giải phóng chỗ"
+                              >
+                                <Trash2 size={12} />
+                                Hủy chỗ
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* Placeholder for tab 5 in Commit 2 */}
       {activeTab === 'tickets' && (
         <div className="fdesk-section">
           <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
             <Headset size={32} color="var(--manager-blue, #2463eb)" />
             <p style={{ marginTop: 10 }}>Đang chuẩn bị module Chăm sóc khách hàng & Xử lý Ticket...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Thanh toán gói tập (Tiền mặt / PayOS QR) */}
+      {payModalSubscription && (
+        <div className="fdesk-dialog-overlay" onClick={() => setPayModalSubscription(null)}>
+          <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="fdesk-dialog-header">
+              <h3>
+                Xác nhận thanh toán gói #{payModalSubscription.id}
+              </h3>
+              <button
+                type="button"
+                className="fdesk-dialog-close"
+                onClick={() => setPayModalSubscription(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="fdesk-dialog-body">
+              <div style={{ background: '#f8fafc', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div>Gói thẻ: <strong>{payModalSubscription.packageName}</strong></div>
+                <div>Số tiền cần thanh toán: <strong style={{ color: '#059669', fontSize: 16 }}>{formatVND(payModalSubscription.agreedPrice || payModalSubscription.price)}</strong></div>
+                <div>Thời hạn: <strong>{payModalSubscription.durationInDays} ngày</strong></div>
+              </div>
+
+              {/* PayOS QR code preview if generated */}
+              {payOsData ? (
+                <div className="fdesk-qr-container">
+                  <h4>Mã QR thanh toán PayOS</h4>
+                  <p style={{ margin: 0, fontSize: 12, color: '#64748b' }}>
+                    Cho hội viên quét mã bằng ứng dụng Ngân hàng để thanh toán ngay lập tức.
+                  </p>
+                  {payOsData.qrCode ? (
+                    <img
+                      src={payOsData.qrCode}
+                      alt="PayOS QR Code"
+                      className="fdesk-qr-image"
+                    />
+                  ) : (
+                    <div style={{ padding: 20 }}>
+                      <QrCode size={80} color="#2563eb" />
+                    </div>
+                  )}
+                  {payOsData.checkoutUrl && (
+                    <a
+                      href={payOsData.checkoutUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="fdesk-btn fdesk-btn-primary"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <ExternalLink size={14} />
+                      Mở cổng thanh toán PayOS
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Chọn hình thức thanh toán:</p>
+                  <button
+                    type="button"
+                    className="fdesk-btn fdesk-btn-success"
+                    style={{ justifyContent: 'center', padding: '12px' }}
+                    onClick={() => handleConfirmCounterPayment('Cash')}
+                    disabled={submitting}
+                  >
+                    <Wallet size={16} />
+                    Thu tiền mặt tại quầy (Kích hoạt ngay)
+                  </button>
+
+                  <button
+                    type="button"
+                    className="fdesk-btn fdesk-btn-secondary"
+                    style={{ justifyContent: 'center', padding: '12px', borderColor: '#2563eb', color: '#2563eb' }}
+                    onClick={() => handleConfirmCounterPayment('BankTransfer')}
+                    disabled={submitting}
+                  >
+                    <CreditCard size={16} />
+                    Chuyển khoản trực tiếp vào tài khoản trung tâm
+                  </button>
+
+                  <button
+                    type="button"
+                    className="fdesk-btn fdesk-btn-primary"
+                    style={{ justifyContent: 'center', padding: '12px' }}
+                    onClick={handleCreatePayOsLink}
+                    disabled={submitting}
+                  >
+                    <QrCode size={16} />
+                    Tạo mã QR thanh toán PayOS trực tuyến
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="fdesk-dialog-footer">
+              <button
+                type="button"
+                className="fdesk-btn fdesk-btn-secondary"
+                onClick={() => setPayModalSubscription(null)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Hủy đăng ký buổi học */}
+      {cancelRegModal && (
+        <div className="fdesk-dialog-overlay" onClick={() => setCancelRegModal(null)}>
+          <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="fdesk-dialog-header">
+              <h3 style={{ color: '#dc2626' }}>Hủy đăng ký buổi học</h3>
+              <button
+                type="button"
+                className="fdesk-dialog-close"
+                onClick={() => setCancelRegModal(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="fdesk-dialog-body">
+              <p style={{ margin: 0, fontSize: 13 }}>
+                Xác nhận hủy lượt đăng ký <strong>#{cancelRegModal.registrationId}</strong> của học viên{' '}
+                <strong>{cancelRegModal.memberName || ''}</strong>?
+              </p>
+              <div className="fdesk-input-group">
+                <label htmlFor="cancel-reason-input">Lý do hủy:</label>
+                <input
+                  id="cancel-reason-input"
+                  type="text"
+                  className="fdesk-input"
+                  placeholder="Học viên báo bận / Yêu cầu hủy tại quầy..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="fdesk-dialog-footer">
+              <button
+                type="button"
+                className="fdesk-btn fdesk-btn-secondary"
+                onClick={() => setCancelRegModal(null)}
+              >
+                Giữ lại
+              </button>
+              <button
+                type="button"
+                className="fdesk-btn fdesk-btn-danger"
+                style={{ background: '#dc2626', color: '#fff' }}
+                onClick={handleCancelRegistration}
+                disabled={submitting}
+              >
+                {submitting ? 'Đang hủy...' : 'Xác nhận hủy chỗ'}
+              </button>
+            </div>
           </div>
         </div>
       )}
