@@ -330,6 +330,8 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] :is(.reception-payment-detail-title,.reception-payment-detail-grid>div) { border-color:var(--theme-border); background:var(--theme-raised); }
 [data-theme='dark'] .reception-payment-detail-title>span { color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .reception-payment-checkout-link { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .reception-payment-id-field input { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
+[data-theme='dark'] .reception-payment-create-note { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
 
 [data-theme='dark'] .reception-subscription-actions button.payment { color:var(--theme-gold); background:var(--theme-gold-bg); }
 [data-theme='dark'] :is(.reception-payment-form-grid input,.reception-payment-form-grid select,.reception-payment-confirm) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
