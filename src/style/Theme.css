@@ -324,6 +324,9 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-attendance-heading { background:var(--theme-raised); }
 [data-theme='dark'] .reception-attendance-lookup>div { border-color:var(--theme-border); background:var(--theme-raised); }
 [data-theme='dark'] .reception-attendance-lookup input { color:var(--theme-text); }
+[data-theme='dark'] .reception-payment-status { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] .reception-payment-status.completed { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] :is(.reception-payment-status.cancelled,.reception-payment-status.failed,.reception-payment-status.expired) { color:#ff9eaa; background:#351f25; }
 
 [data-theme='dark'] .reception-subscription-actions button.payment { color:var(--theme-gold); background:var(--theme-gold-bg); }
 [data-theme='dark'] :is(.reception-payment-form-grid input,.reception-payment-form-grid select,.reception-payment-confirm) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }

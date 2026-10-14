@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import { getMembershipPackages } from '../../services/membershipPackageService'
 import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment, createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
+import { getPayments } from '../../services/paymentService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
 import {
   cancelReceptionistRegistration,
@@ -35,8 +36,6 @@ const pageMeta = {
   'Hội viên': ['HỖ TRỢ HỘI VIÊN', 'Tra cứu hội viên', 'Kiểm tra trạng thái tài khoản, gói dịch vụ và thông tin liên hệ.'],
   'Thanh toán': ['GIAO DỊCH TẠI QUẦY', 'Thanh toán', 'Theo dõi giao dịch và hóa đơn phát sinh tại quầy lễ tân.'],
 }
-
-const emptyPayments = []
 
 const emptyMemberForm = {
   fullName: '',
@@ -72,6 +71,7 @@ const formatMemberDate = value => {
 const genderLabel = gender => ({ Male: 'Nam', Female: 'Nữ', Other: 'Khác' })[gender] || gender || 'Chưa cập nhật'
 const attendanceStatusLabel = status => ({ Present: 'Có mặt', Absent: 'Vắng mặt', Excused: 'Có phép' })[status] || status
 const subscriptionStatusLabel = status => ({ Pending: 'Chờ thanh toán', Active: 'Đang hoạt động', Cancelled: 'Đã hủy', Expired: 'Hết hạn' })[status] || status
+const paymentStatusLabel = status => ({ Pending: 'Chờ thanh toán', Completed: 'Thành công', Cancelled: 'Đã hủy', Expired: 'Hết hạn', Failed: 'Thất bại', NeedsReview: 'Cần kiểm tra', Refunded: 'Hoàn tiền' })[status] || status
 
 const sessionDateTimeFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -765,12 +765,45 @@ function MembersView({ query, showNotice }) {
 
 function PaymentsView({ query }) {
   const [status, setStatus] = useState('Tất cả')
+  const [paymentItems, setPaymentItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
-  const payments = useMemo(() => emptyPayments.filter(payment => (status === 'Tất cả' || payment.status === status) && (!normalizedQuery || `${payment.code || ''} ${payment.customerName || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery))), [normalizedQuery, status])
+
+  useEffect(() => {
+    let active = true
+    const loadPayments = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getPayments()
+        if (active) setPaymentItems(result)
+      } catch (requestError) {
+        if (active) {
+          setPaymentItems([])
+          setError(requestErrorMessage(requestError, 'Không thể tải danh sách thanh toán.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadPayments()
+    return () => { active = false }
+  }, [requestKey])
+
+  const payments = useMemo(() => paymentItems.filter(payment => {
+    const matchesStatus = status === 'Tất cả' || paymentStatusLabel(payment.status) === status
+    const matchesQuery = !normalizedQuery || `${payment.id} ${payment.memberId} ${payment.subscriptionId || ''} ${payment.transactionReference || ''} ${payment.payOSOrderCode || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery)
+    return matchesStatus && matchesQuery
+  }), [normalizedQuery, paymentItems, status])
+  const completedPayments = paymentItems.filter(payment => payment.status === 'Completed')
+  const completedTotal = completedPayments.reduce((sum, payment) => sum + Number(payment.amountReceived || payment.amount || 0), 0)
+  const pendingCount = paymentItems.filter(payment => payment.status === 'Pending').length
 
   return <>
-    <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Đã thu hôm nay</small><strong>--</strong><p>Chờ dữ liệu API</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>--</strong><p>Chờ dữ liệu API</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Hóa đơn đã tạo</small><strong>--</strong><p>Chờ dữ liệu API</p></div></article></section>
-    <section className="reception-card reception-table-card"><div className="reception-table-tools"><div><strong>Giao dịch tại quầy</strong><small>{payments.length} kết quả</small></div><div>{['Tất cả', 'Thành công', 'Chờ thanh toán', 'Hoàn tiền'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}</div></div><div className="reception-table-heading"><span>Mã giao dịch</span><span>Khách hàng</span><span>Nội dung</span><span>Số tiền</span><span>Trạng thái</span></div>{payments.length ? <div>{payments.map(payment => <button type="button" className="reception-table-row" key={payment.id}><span>{payment.code}</span><span>{payment.customerName}</span><span>{payment.description}</span><span>{payment.amount}</span><span>{payment.status}</span></button>)}</div> : <EmptyState icon={ReceiptText} title="Chưa có giao dịch" text="Giao dịch và hóa đơn sẽ xuất hiện sau khi kết nối Payment API." />}</section>
+    <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{loading ? '--' : `${completedTotal.toLocaleString('vi-VN')} đ`}</strong><p>{completedPayments.length} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{loading ? '--' : pendingCount}</strong><p>Yêu cầu PayOS đang mở</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{loading ? '--' : paymentItems.length}</strong><p>Dữ liệu từ Payment API</p></div></article></section>
+    <section className="reception-card reception-table-card reception-payments-card"><div className="reception-table-tools"><div><strong>Giao dịch PayOS</strong><small>{payments.length} kết quả</small></div><div>{['Tất cả', 'Thành công', 'Chờ thanh toán', 'Cần kiểm tra', 'Đã hủy'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}</div></div><div className="reception-table-heading"><span>Mã giao dịch</span><span>Hội viên</span><span>Đăng ký gói</span><span>Số tiền</span><span>Trạng thái</span></div>{loading ? <EmptyState icon={ReceiptText} title="Đang tải thanh toán" text="Dữ liệu đang được đồng bộ từ Payment API." /> : error ? <div className="reception-inline-error"><EmptyState icon={ReceiptText} title="Không thể tải thanh toán" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : payments.length ? <div>{payments.map(payment => <button type="button" className="reception-table-row" key={payment.id}><span>#{payment.id}</span><span>#{payment.memberId}</span><span>{payment.subscriptionId ? `#${payment.subscriptionId}` : 'Không có'}</span><span>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ</span><span className={`reception-payment-status ${String(payment.status || '').toLowerCase()}`}>{paymentStatusLabel(payment.status)}</span></button>)}</div> : <EmptyState icon={ReceiptText} title="Chưa có giao dịch" text={query || status !== 'Tất cả' ? 'Không có giao dịch phù hợp bộ lọc.' : 'Payment API chưa có dữ liệu giao dịch.'} />}</section>
   </>
 }
 

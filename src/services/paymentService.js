@@ -8,12 +8,14 @@ function unwrap(body, fallback) {
   return body?.data ?? body
 }
 
-/** GET /api/payments - Member chỉ nhận các giao dịch của chính mình. */
-export async function getMyPayments() {
+/** GET /api/payments - phạm vi dữ liệu phụ thuộc vai trò tài khoản. */
+export async function getPayments() {
   const response = await api.get('/payments')
   const payload = unwrap(response.data, 'Không thể tải lịch sử thanh toán.')
   return Array.isArray(payload) ? payload : []
 }
+
+export const getMyPayments = getPayments
 
 /** POST /api/payments - Tạo hoặc lấy lại link PayOS cho đăng ký đang chờ. */
 export async function createPayment(subscriptionId) {
