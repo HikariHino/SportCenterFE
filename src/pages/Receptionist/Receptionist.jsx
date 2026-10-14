@@ -7,6 +7,7 @@ import {
   Ban, LogIn, Plus, ScanLine, Search, ShieldCheck, Star, Trophy, UserCheck, Users, WalletCards, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { getSports } from '../../services/classCatalogService'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import { getMembershipPackageById, getMembershipPackages } from '../../services/membershipPackageService'
 import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment, createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
@@ -272,6 +273,32 @@ function SessionsView({ showNotice }) {
   const [classesError, setClassesError] = useState('')
   const [classesRequestKey, setClassesRequestKey] = useState(0)
   const [selectedClassId, setSelectedClassId] = useState(null)
+  const [sports, setSports] = useState([])
+  const [sportsLoading, setSportsLoading] = useState(true)
+  const [sportsError, setSportsError] = useState('')
+  const [sportsRequestKey, setSportsRequestKey] = useState(0)
+  const [selectedSportId, setSelectedSportId] = useState('')
+
+  useEffect(() => {
+    let active = true
+    const loadSports = async () => {
+      setSportsLoading(true)
+      setSportsError('')
+      try {
+        const result = await getSports()
+        if (active) setSports(result)
+      } catch (requestError) {
+        if (active) {
+          setSports([])
+          setSportsError(requestErrorMessage(requestError, 'Không thể tải danh mục môn thể thao.'))
+        }
+      } finally {
+        if (active) setSportsLoading(false)
+      }
+    }
+    loadSports()
+    return () => { active = false }
+  }, [sportsRequestKey])
 
   useEffect(() => {
     let active = true
@@ -279,7 +306,7 @@ function SessionsView({ showNotice }) {
       setCatalogLoading(true)
       setCatalogError('')
       try {
-        const result = await getReceptionistClassSessions({ page: 1, pageSize: 20 })
+        const result = await getReceptionistClassSessions({ sportId: selectedSportId ? Number(selectedSportId) : undefined, page: 1, pageSize: 20 })
         if (active) setCatalog(result)
       } catch (requestError) {
         if (active) {
@@ -292,7 +319,7 @@ function SessionsView({ showNotice }) {
     }
     loadCatalog()
     return () => { active = false }
-  }, [catalogRequestKey])
+  }, [catalogRequestKey, selectedSportId])
 
   useEffect(() => {
     let active = true
@@ -300,7 +327,7 @@ function SessionsView({ showNotice }) {
       setClassesLoading(true)
       setClassesError('')
       try {
-        const result = await getReceptionistClasses({ page: 1, pageSize: 20 })
+        const result = await getReceptionistClasses({ sportId: selectedSportId ? Number(selectedSportId) : undefined, page: 1, pageSize: 20 })
         if (active) setClasses(result)
       } catch (requestError) {
         if (active) {
@@ -313,7 +340,7 @@ function SessionsView({ showNotice }) {
     }
     loadClasses()
     return () => { active = false }
-  }, [classesRequestKey])
+  }, [classesRequestKey, selectedSportId])
 
   const selectCatalogSession = session => {
     setSessionId(String(session.id))
@@ -356,6 +383,7 @@ function SessionsView({ showNotice }) {
   }
 
   return <div className="reception-session-page">
+    <section className="reception-card reception-catalog-filters"><div><span><Trophy size={18} /></span><div><small>BỘ LỌC DANH MỤC</small><strong>Môn thể thao</strong></div></div><label><span>Chọn môn</span><select value={selectedSportId} onChange={event => setSelectedSportId(event.target.value)} disabled={sportsLoading}><option value="">Tất cả môn thể thao</option>{sports.map(sport => <option key={sport.id} value={sport.id}>{sport.name}</option>)}</select></label>{sportsError && <div className="reception-filter-error"><span>{sportsError}</span><button type="button" onClick={() => setSportsRequestKey(key => key + 1)}>Thử lại</button></div>}</section>
     <section className="reception-card reception-class-catalog"><div className="reception-card-head"><div><span>DANH MỤC LỚP HỌC</span><h2>Các lớp đang mở</h2></div><strong>{classesLoading ? 'Đang tải...' : `${classes.total} lớp`}</strong></div>{classesLoading ? <EmptyState icon={Trophy} title="Đang tải lớp học" text="Dữ liệu đang được đồng bộ từ Classes API." /> : classesError ? <div className="reception-inline-error"><EmptyState icon={Trophy} title="Không thể tải lớp học" text={classesError} /><button type="button" onClick={() => setClassesRequestKey(key => key + 1)}>Thử lại</button></div> : classes.items.length ? <div className="reception-class-catalog-list">{classes.items.map(item => <article key={item.id}><div><small>Lớp #{item.id}</small><h3>{item.className}</h3><p>{item.sportName} · {item.coachName || 'Chưa phân công HLV'}</p></div><div><span><small>Học phí</small><strong>{Number(item.price || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Sức chứa</small><strong>{item.maxCapacity} học viên</strong></span><b className={item.isActive ? 'active' : 'inactive'}>{item.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><button type="button" className="reception-class-detail-trigger" onClick={() => setSelectedClassId(item.id)}>Xem chi tiết <ArrowRight size={12} /></button></article>)}</div> : <EmptyState icon={Trophy} title="Chưa có lớp học" text="Classes API chưa có dữ liệu lớp học công khai." />}</section>
     <section className="reception-card reception-session-catalog"><div className="reception-card-head"><div><span>DANH MỤC CÔNG KHAI</span><h2>Chọn buổi học</h2></div><strong>{catalogLoading ? 'Đang tải...' : `${catalog.total} buổi`}</strong></div>{catalogLoading ? <EmptyState icon={CalendarDays} title="Đang tải buổi học" text="Dữ liệu đang được đồng bộ từ Class Sessions API." /> : catalogError ? <div className="reception-inline-error"><EmptyState icon={CalendarDays} title="Không thể tải buổi học" text={catalogError} /><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : catalog.items.length ? <div className="reception-session-catalog-list">{catalog.items.map(item => <article key={item.id} className={Number(sessionId) === item.id ? 'selected' : ''}><button type="button" className="reception-session-select" onClick={() => selectCatalogSession(item)}><span><small>Buổi #{item.id}</small><strong>{item.className}</strong><em>{item.coachName}</em></span><span><small>{formatDateTime(item.startsAt)}</small><strong>{item.availableSeats}/{item.capacity} chỗ trống</strong><b className={String(item.status || '').toLowerCase()}>{item.status}</b></span></button><button type="button" className="reception-session-reviews" onClick={() => setReviewSession(item)}><Star size={12} /> Đánh giá</button></article>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có buổi học" text="Class Sessions API chưa có dữ liệu công khai." />}</section>
     <div className="reception-session-layout"><section className="reception-card reception-session-register">
