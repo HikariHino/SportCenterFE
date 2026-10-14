@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowDownToLine,
   Ban,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
   Clock3,
@@ -18,15 +20,35 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   X,
   Zap,
 } from 'lucide-react'
 import {
+  createCancellationPolicy,
   getCancellationPolicies,
   getPolicyErrorMessage,
   updateCancellationPolicy,
 } from '../../services/cancellationPolicyService'
 import '../../style/CenterManager/CancellationPolicyManagement.css'
+
+const PRESET_HOURS = [
+  { label: '2 Giờ (Tối thiểu)', hours: 2 },
+  { label: '4 Giờ (Linh hoạt)', hours: 4 },
+  { label: '6 Giờ', hours: 6 },
+  { label: '12 Giờ (Nửa ngày)', hours: 12 },
+  { label: '24 Giờ (1 ngày)', hours: 24 },
+  { label: '48 Giờ (2 ngày)', hours: 48 },
+  { label: '72 Giờ (3 ngày)', hours: 72 },
+]
+
+const PRESET_POLICY_NAMES = [
+  'Chính sách Tiêu chuẩn (Hủy trước 2 tiếng)',
+  'Chính sách Linh hoạt (Hủy trước 4 tiếng)',
+  'Chính sách Nửa ngày (Hủy trước 12 tiếng)',
+  'Chính sách Nghiêm ngặt (Hủy trước 24 tiếng)',
+  'Chính sách Khóa đặc biệt (Hủy trước 48 tiếng)',
+]
 
 const formatHours = (hours) => {
   if (!hours) return '0 giờ'
@@ -49,10 +71,19 @@ export default function CancellationPolicyManagement() {
   const [timeFilter, setTimeFilter] = useState('ALL') // 'ALL' | 'FLEXIBLE' | 'STANDARD' | 'STRICT'
   const [statusFilter, setStatusFilter] = useState('ALL') // 'ALL' | 'ACTIVE' | 'INACTIVE'
 
-  // Modals placeholder for Commit 1 (expanded in Commit 2)
+  // Modals
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingPolicy, setEditingPolicy] = useState(null)
   const [selectedPolicyForDetail, setSelectedPolicyForDetail] = useState(null)
   const [togglingPolicy, setTogglingPolicy] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // Policy Form State
+  const [policyForm, setPolicyForm] = useState({
+    name: '',
+    minimumHoursBeforeStart: 2,
+    isActive: true,
+  })
 
   // Auto clear success message
   useEffect(() => {
@@ -78,6 +109,13 @@ export default function CancellationPolicyManagement() {
 
   useEffect(() => {
     loadPolicies()
+  }, [])
+
+  // Listen for custom trigger from button
+  useEffect(() => {
+    const handleOpen = () => handleOpenCreate()
+    window.addEventListener('open-create-policy-modal', handleOpen)
+    return () => window.removeEventListener('open-create-policy-modal', handleOpen)
   }, [])
 
   // Filtered policies
@@ -109,6 +147,91 @@ export default function CancellationPolicyManagement() {
   const inactiveCount = policies.length - activeCount
   const minHours = policies.length > 0 ? Math.min(...policies.map((p) => p.minimumHoursBeforeStart)) : 2
   const maxHours = policies.length > 0 ? Math.max(...policies.map((p) => p.minimumHoursBeforeStart)) : 24
+
+  // Open Create Modal
+  const handleOpenCreate = () => {
+    setPolicyForm({
+      name: 'Chính sách Tiêu chuẩn (Hủy trước 2 tiếng)',
+      minimumHoursBeforeStart: 2,
+      isActive: true,
+    })
+    setShowCreateModal(true)
+    setError('')
+  }
+
+  // Open Edit Modal
+  const handleOpenEdit = (policy) => {
+    setEditingPolicy(policy)
+    setPolicyForm({
+      name: policy.name || '',
+      minimumHoursBeforeStart: policy.minimumHoursBeforeStart || 2,
+      isActive: policy.isActive !== false,
+    })
+    setError('')
+  }
+
+  // Submit Create Policy
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault()
+    if (!policyForm.name.trim()) {
+      setError('Vui lòng nhập tên chính sách hủy lịch.')
+      return
+    }
+    const hours = Number(policyForm.minimumHoursBeforeStart)
+    if (hours < 2 || hours > 720) {
+      setError('Thời gian hủy tối thiểu phải từ 2 giờ đến 720 giờ (30 ngày).')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    try {
+      const created = await createCancellationPolicy({
+        name: policyForm.name.trim(),
+        minimumHoursBeforeStart: hours,
+        isActive: Boolean(policyForm.isActive),
+      })
+      await loadPolicies()
+      setShowCreateModal(false)
+      setSuccess(`Đã tạo chính sách hủy "${created.name || policyForm.name}" thành công!`)
+    } catch (err) {
+      setError(getPolicyErrorMessage(err, 'Không thể tạo mới chính sách hủy lịch.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Submit Edit Policy
+  const handleEditSubmit = async (e) => {
+    e.preventDefault()
+    if (!editingPolicy) return
+    if (!policyForm.name.trim()) {
+      setError('Vui lòng nhập tên chính sách hủy lịch.')
+      return
+    }
+    const hours = Number(policyForm.minimumHoursBeforeStart)
+    if (hours < 2 || hours > 720) {
+      setError('Thời gian hủy tối thiểu phải từ 2 giờ đến 720 giờ (30 ngày).')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    try {
+      const updated = await updateCancellationPolicy(editingPolicy.id, {
+        name: policyForm.name.trim(),
+        minimumHoursBeforeStart: hours,
+        isActive: Boolean(policyForm.isActive),
+      })
+      await loadPolicies()
+      setEditingPolicy(null)
+      setSuccess(`Đã cập nhật chính sách hủy "${updated.name || policyForm.name}" thành công!`)
+    } catch (err) {
+      setError(getPolicyErrorMessage(err, 'Không thể cập nhật chính sách hủy.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   // Quick toggle active / inactive
   const handleToggleStatus = async (policy) => {
@@ -194,9 +317,7 @@ export default function CancellationPolicyManagement() {
           <button
             type="button"
             className="policy-btn policy-btn-primary"
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('open-create-policy-modal'))
-            }}
+            onClick={handleOpenCreate}
           >
             <Plus size={16} /> Thêm chính sách mới
           </button>
@@ -348,6 +469,13 @@ export default function CancellationPolicyManagement() {
           <Ban size={40} />
           <strong>Không tìm thấy chính sách hủy nào</strong>
           <p>Thử điều chỉnh bộ lọc hoặc tạo chính sách hủy mới cho trung tâm.</p>
+          <button
+            type="button"
+            className="policy-btn policy-btn-primary"
+            onClick={handleOpenCreate}
+          >
+            <Plus size={16} /> Thêm chính sách ngay
+          </button>
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
@@ -397,10 +525,18 @@ export default function CancellationPolicyManagement() {
                     <button
                       type="button"
                       className="policy-action-btn"
-                      title="Xem chi tiết quy định"
+                      title="Xem chi tiết & Mô phỏng thời gian chốt"
                       onClick={() => setSelectedPolicyForDetail(policy)}
                     >
                       <Info size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className="policy-action-btn"
+                      title="Chỉnh sửa chính sách hủy"
+                      onClick={() => handleOpenEdit(policy)}
+                    >
+                      <Edit2 size={15} />
                     </button>
                     <button
                       type="button"
@@ -468,6 +604,14 @@ export default function CancellationPolicyManagement() {
                         </button>
                         <button
                           type="button"
+                          className="policy-action-btn"
+                          title="Chỉnh sửa"
+                          onClick={() => handleOpenEdit(policy)}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
                           className={`policy-action-btn ${policy.isActive ? 'danger' : 'info'}`}
                           title={policy.isActive ? 'Tạm dừng' : 'Kích hoạt'}
                           onClick={() => setTogglingPolicy(policy)}
@@ -484,7 +628,395 @@ export default function CancellationPolicyManagement() {
         </div>
       )}
 
-      {/* CONFIRM TOGGLE STATUS MODAL */}
+      {/* ======================================================== */}
+      {/* MODAL: CREATE POLICY */}
+      {/* ======================================================== */}
+      {showCreateModal && (
+        <div className="policy-modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="policy-modal-header">
+              <h3>Tạo chính sách hủy lịch mới</h3>
+              <button
+                type="button"
+                className="policy-modal-close"
+                onClick={() => setShowCreateModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateSubmit}>
+              <div className="policy-modal-body">
+                <div className="policy-form-group">
+                  <label>
+                    Tên chính sách hủy <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="policy-form-input"
+                    placeholder="Ví dụ: Chính sách Tiêu chuẩn (2h), Chính sách 24h..."
+                    value={policyForm.name}
+                    onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })}
+                    required
+                    autoFocus
+                  />
+                  <div className="policy-preset-chips">
+                    <span style={{ fontSize: 11, color: 'var(--manager-muted)', alignSelf: 'center' }}>
+                      Gợi ý:
+                    </span>
+                    {PRESET_POLICY_NAMES.slice(0, 3).map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="policy-chip-btn"
+                        onClick={() => setPolicyForm({ ...policyForm, name })}
+                      >
+                        {name.split(' (')[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="policy-form-group">
+                  <label>
+                    Thời hạn hủy tối thiểu trước giờ học (Giờ) <span className="required">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="720"
+                    className="policy-form-input"
+                    value={policyForm.minimumHoursBeforeStart}
+                    onChange={(e) =>
+                      setPolicyForm({
+                        ...policyForm,
+                        minimumHoursBeforeStart: Number(e.target.value),
+                      })
+                    }
+                    required
+                  />
+                  <span className="policy-form-help">
+                    Quy định từ 2 đến 720 giờ (tối đa 30 ngày trước buổi học).
+                  </span>
+                  <div className="policy-preset-chips">
+                    {PRESET_HOURS.map((item) => (
+                      <button
+                        key={item.hours}
+                        type="button"
+                        className="policy-chip-btn"
+                        onClick={() =>
+                          setPolicyForm({
+                            ...policyForm,
+                            minimumHoursBeforeStart: item.hours,
+                          })
+                        }
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timeline Simulation */}
+                <div className="policy-timeline-preview">
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--manager-ink)' }}>
+                    Mô phỏng quy tắc chốt hủy:
+                  </span>
+                  <div className="policy-timeline-bar">
+                    <div className="policy-timeline-point active" title="Học viên đăng ký" />
+                    <div className="policy-timeline-point danger" title="Hạn chót hủy" />
+                    <div className="policy-timeline-point" title="Bắt đầu buổi học" />
+                  </div>
+                  <div className="policy-timeline-labels">
+                    <div>
+                      <span>Đăng ký</span>
+                      <strong>Bất kỳ lúc nào</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#dc2626' }}>Hạn chót hủy</span>
+                      <strong style={{ color: '#b91c1c' }}>
+                        Trước {formatHours(policyForm.minimumHoursBeforeStart)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Buổi học</span>
+                      <strong>Bắt đầu</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="policy-form-group">
+                  <label className="policy-form-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={policyForm.isActive}
+                      onChange={(e) =>
+                        setPolicyForm({ ...policyForm, isActive: e.target.checked })
+                      }
+                    />
+                    <span>Kích hoạt chính sách ngay sau khi tạo</span>
+                  </label>
+                </div>
+              </div>
+              <div className="policy-modal-footer">
+                <button
+                  type="button"
+                  className="policy-btn policy-btn-secondary"
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={submitting}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="policy-btn policy-btn-primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Đang tạo...' : 'Tạo chính sách'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: EDIT POLICY */}
+      {/* ======================================================== */}
+      {editingPolicy && (
+        <div className="policy-modal-overlay" onClick={() => setEditingPolicy(null)}>
+          <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="policy-modal-header">
+              <h3>Chỉnh sửa chính sách: #{editingPolicy.id}</h3>
+              <button
+                type="button"
+                className="policy-modal-close"
+                onClick={() => setEditingPolicy(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit}>
+              <div className="policy-modal-body">
+                <div className="policy-form-group">
+                  <label>
+                    Tên chính sách hủy <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="policy-form-input"
+                    value={policyForm.name}
+                    onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="policy-form-group">
+                  <label>
+                    Thời hạn hủy tối thiểu trước giờ học (Giờ) <span className="required">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="720"
+                    className="policy-form-input"
+                    value={policyForm.minimumHoursBeforeStart}
+                    onChange={(e) =>
+                      setPolicyForm({
+                        ...policyForm,
+                        minimumHoursBeforeStart: Number(e.target.value),
+                      })
+                    }
+                    required
+                  />
+                  <div className="policy-preset-chips">
+                    {PRESET_HOURS.map((item) => (
+                      <button
+                        key={item.hours}
+                        type="button"
+                        className="policy-chip-btn"
+                        onClick={() =>
+                          setPolicyForm({
+                            ...policyForm,
+                            minimumHoursBeforeStart: item.hours,
+                          })
+                        }
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timeline Simulation */}
+                <div className="policy-timeline-preview">
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--manager-ink)' }}>
+                    Mô phỏng quy tắc chốt hủy:
+                  </span>
+                  <div className="policy-timeline-bar">
+                    <div className="policy-timeline-point active" title="Học viên đăng ký" />
+                    <div className="policy-timeline-point danger" title="Hạn chót hủy" />
+                    <div className="policy-timeline-point" title="Bắt đầu buổi học" />
+                  </div>
+                  <div className="policy-timeline-labels">
+                    <div>
+                      <span>Đăng ký</span>
+                      <strong>Bất kỳ lúc nào</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#dc2626' }}>Hạn chót hủy</span>
+                      <strong style={{ color: '#b91c1c' }}>
+                        Trước {formatHours(policyForm.minimumHoursBeforeStart)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Buổi học</span>
+                      <strong>Bắt đầu</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="policy-form-group">
+                  <label className="policy-form-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={policyForm.isActive}
+                      onChange={(e) =>
+                        setPolicyForm({ ...policyForm, isActive: e.target.checked })
+                      }
+                    />
+                    <span>Trạng thái áp dụng (Active)</span>
+                  </label>
+                  <span className="policy-form-help">
+                    * Lưu ý: Các học viên đã đăng ký lịch học trước đó vẫn bảo toàn thời hạn hủy gốc ban đầu.
+                  </span>
+                </div>
+              </div>
+              <div className="policy-modal-footer">
+                <button
+                  type="button"
+                  className="policy-btn policy-btn-secondary"
+                  onClick={() => setEditingPolicy(null)}
+                  disabled={submitting}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="policy-btn policy-btn-primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: DETAIL */}
+      {/* ======================================================== */}
+      {selectedPolicyForDetail && (
+        <div className="policy-modal-overlay" onClick={() => setSelectedPolicyForDetail(null)}>
+          <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="policy-modal-header">
+              <h3>Chi tiết chính sách: {selectedPolicyForDetail.name}</h3>
+              <button
+                type="button"
+                className="policy-modal-close"
+                onClick={() => setSelectedPolicyForDetail(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="policy-modal-body">
+              <div className="policy-rule-box">
+                <div className="policy-rule-info">
+                  <span>Thời gian hủy tối thiểu:</span>
+                  <strong>{formatHours(selectedPolicyForDetail.minimumHoursBeforeStart)}</strong>
+                </div>
+                <Clock size={28} style={{ color: 'var(--manager-blue)' }} />
+              </div>
+
+              {/* Timeline Simulation */}
+              <div className="policy-timeline-preview">
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--manager-ink)' }}>
+                  Sơ đồ mốc thời gian hủy lịch:
+                </span>
+                <div className="policy-timeline-bar">
+                  <div className="policy-timeline-point active" title="Đăng ký" />
+                  <div className="policy-timeline-point danger" title="Hạn chót hủy" />
+                  <div className="policy-timeline-point" title="Bắt đầu ca học" />
+                </div>
+                <div className="policy-timeline-labels">
+                  <div>
+                    <span>Đăng ký</span>
+                    <strong>Hợp lệ</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#dc2626' }}>Hạn chót hủy</span>
+                    <strong style={{ color: '#b91c1c' }}>
+                      Trước {formatHours(selectedPolicyForDetail.minimumHoursBeforeStart)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Ca học</span>
+                    <strong>Bắt đầu</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+                <div>
+                  <span style={{ color: 'var(--manager-muted)' }}>Mã chính sách: </span>
+                  <strong>#{selectedPolicyForDetail.id}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--manager-muted)' }}>Trạng thái áp dụng: </span>
+                  <span
+                    className={`policy-badge ${
+                      selectedPolicyForDetail.isActive ? 'active' : 'inactive'
+                    }`}
+                  >
+                    <i />
+                    {selectedPolicyForDetail.isActive ? 'Đang áp dụng' : 'Tạm dừng áp dụng'}
+                  </span>
+                </div>
+                <div className="policy-rule-example">
+                  <p style={{ margin: 0, lineHeight: 1.6 }}>
+                    Học viên đăng ký buổi học áp dụng chính sách này bắt buộc phải gửi yêu cầu hủy lịch trước giờ bắt đầu buổi học ít nhất{' '}
+                    <strong>{selectedPolicyForDetail.minimumHoursBeforeStart} tiếng</strong>. Sau mốc thời gian này, hệ thống sẽ khóa chức năng hủy và tính là buổi học đã sử dụng.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="policy-modal-footer">
+              <button
+                type="button"
+                className="policy-btn policy-btn-secondary"
+                onClick={() => {
+                  const p = selectedPolicyForDetail
+                  setSelectedPolicyForDetail(null)
+                  handleOpenEdit(p)
+                }}
+              >
+                <Edit2 size={14} /> Chỉnh sửa chính sách
+              </button>
+              <button
+                type="button"
+                className="policy-btn policy-btn-primary"
+                onClick={() => setSelectedPolicyForDetail(null)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: TOGGLE STATUS CONFIRM */}
+      {/* ======================================================== */}
       {togglingPolicy && (
         <div className="policy-modal-overlay" onClick={() => setTogglingPolicy(null)}>
           <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
@@ -537,66 +1069,6 @@ export default function CancellationPolicyManagement() {
                   : togglingPolicy.isActive
                   ? 'Xác nhận tạm dừng'
                   : 'Xác nhận kích hoạt'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DETAIL MODAL */}
-      {selectedPolicyForDetail && (
-        <div className="policy-modal-overlay" onClick={() => setSelectedPolicyForDetail(null)}>
-          <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="policy-modal-header">
-              <h3>Chi tiết chính sách: {selectedPolicyForDetail.name}</h3>
-              <button
-                type="button"
-                className="policy-modal-close"
-                onClick={() => setSelectedPolicyForDetail(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="policy-modal-body">
-              <div className="policy-rule-box">
-                <div className="policy-rule-info">
-                  <span>Thời gian hủy tối thiểu:</span>
-                  <strong>{formatHours(selectedPolicyForDetail.minimumHoursBeforeStart)}</strong>
-                </div>
-                <Clock size={28} style={{ color: 'var(--manager-blue)' }} />
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-                <div>
-                  <span style={{ color: 'var(--manager-muted)' }}>Mã chính sách: </span>
-                  <strong>#{selectedPolicyForDetail.id}</strong>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--manager-muted)' }}>Trạng thái: </span>
-                  <span
-                    className={`policy-badge ${
-                      selectedPolicyForDetail.isActive ? 'active' : 'inactive'
-                    }`}
-                  >
-                    <i />
-                    {selectedPolicyForDetail.isActive ? 'Đang áp dụng' : 'Tạm dừng áp dụng'}
-                  </span>
-                </div>
-                <div className="policy-rule-example">
-                  <p style={{ margin: 0, lineHeight: 1.6 }}>
-                    Học viên đăng ký buổi học áp dụng chính sách này bắt buộc phải gửi yêu cầu hủy lịch trước giờ bắt đầu buổi học ít nhất{' '}
-                    <strong>{selectedPolicyForDetail.minimumHoursBeforeStart} tiếng</strong>. Sau mốc thời gian này, hệ thống sẽ khóa chức năng hủy và tính là buổi học đã sử dụng.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="policy-modal-footer">
-              <button
-                type="button"
-                className="policy-btn policy-btn-secondary"
-                onClick={() => setSelectedPolicyForDetail(null)}
-              >
-                Đóng
               </button>
             </div>
           </div>
