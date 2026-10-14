@@ -13,6 +13,7 @@ import ClassManagement from './ClassManagement'
 import RoomManagement from './RoomManagement'
 import PackageManagement from './PackageManagement'
 import CancellationPolicyManagement from './CancellationPolicyManagement'
+import ReportManagement from './ReportManagement'
 import '../../style/CenterManager/CenterManager.css'
 
 const managerNavSections = [
@@ -203,23 +204,7 @@ export default function CenterManager() {
           {section === 'cancellation' && <CancellationPolicyManagement />}
 
           {/* 6. Báo cáo thống kê & Doanh thu (ReportsController) */}
-          {section === 'reports' && <>
-            <section className="manager-card manager-revenue">
-              <div className="manager-card-heading"><div><h2>Doanh thu trung tâm</h2><p>Theo dõi dòng tiền từ hoạt động thể thao</p></div><select aria-label="Khoảng thời gian doanh thu" value={period} onChange={event => setPeriod(event.target.value)}><option value="week">7 ngày gần nhất</option><option value="three">3 ngày gần nhất</option></select></div>
-              <div className="manager-revenue-total"><strong>{money(totalRevenue)}</strong><span>Tổng trong {chartData.length} ngày</span></div>
-              <div className="manager-chart" role="img" aria-label={`Doanh thu minh họa: ${chartData.map(day => `${day.day}: ${money(day.amount)}`).join('; ')}`}>
-                <div className="manager-chart-axis"><span>10 tr</span><span>5 tr</span><span>0</span></div>
-                <div className="manager-chart-bars">{chartData.map((day, index) => <div className="manager-chart-column" key={day.day}><span className="manager-bar-value">{(day.amount / 1000000).toLocaleString('vi-VN')}</span><div className={`manager-bar ${index === chartData.length - 1 ? 'latest' : ''}`} style={{ height: `${day.amount / 100000}%` }} /><small>{day.day}</small></div>)}</div>
-              </div>
-              <div className="manager-chart-foot"><span><i /> Doanh thu (triệu đồng)</span><small>Đơn vị: VND</small></div>
-            </section>
-            <section className="manager-card manager-section-placeholder" style={{ marginTop: 22 }}>
-              <div className="manager-card-heading"><div><h2>Thống kê nâng cao</h2><p>Báo cáo chi tiết theo dịch vụ, hội viên và nhân sự.</p></div><span className="manager-icon blue"><TrendingUp size={21} /></span></div>
-              <div className="manager-placeholder-body">
-                <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>ReportsController API</strong> để hiển thị báo cáo thống kê đầy đủ.</span></div>
-              </div>
-            </section>
-          </>}
+          {section === 'reports' && <ReportManagement />}
 
           {/* 7. Vận hành dịch vụ khách hàng - FrontDesk */}
           {section === 'frontdesk' && <section className="manager-card manager-section-placeholder">
