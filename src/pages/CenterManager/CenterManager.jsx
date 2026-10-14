@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import StaffManagement from './StaffManagement'
 import ClassManagement from './ClassManagement'
 import RoomManagement from './RoomManagement'
+import PackageManagement from './PackageManagement'
 import '../../style/CenterManager/CenterManager.css'
 
 const managerNavSections = [
@@ -195,17 +196,7 @@ export default function CenterManager() {
           {section === 'rooms' && <RoomManagement />}
 
           {/* 4. Gói thẻ hội viên (MembershipPackagesController) */}
-          {section === 'packages' && <section className="manager-card manager-section-placeholder">
-            <div className="manager-card-heading"><div><h2>Quản lý gói thẻ hội viên</h2><p>Tạo và quản lý các gói thẻ thành viên, giá cả và thời hạn.</p></div><span className="manager-icon amber"><Package size={21} /></span></div>
-            <div className="manager-placeholder-body">
-              <div className="manager-placeholder-features">
-                <article><span className="amber"><Package size={20} /></span><div><strong>Danh sách gói thẻ</strong><small>Gói tháng, quý, năm, VIP...</small></div></article>
-                <article><span className="blue"><CreditCard size={20} /></span><div><strong>Giá & Thời hạn</strong><small>Cấu hình giá tiền và số ngày hiệu lực</small></div></article>
-                <article><span className="green"><Check size={20} /></span><div><strong>Trạng thái gói</strong><small>Kích hoạt, tạm ngừng hoặc hết hạn</small></div></article>
-              </div>
-              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>MembershipPackagesController API</strong>.</span></div>
-            </div>
-          </section>}
+          {section === 'packages' && <PackageManagement />}
 
           {/* 5. Chính sách hủy lịch (CancellationPoliciesController) */}
           {section === 'cancellation' && <section className="manager-card manager-section-placeholder">
