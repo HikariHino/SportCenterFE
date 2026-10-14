@@ -12,6 +12,7 @@ import StaffManagement from './StaffManagement'
 import ClassManagement from './ClassManagement'
 import RoomManagement from './RoomManagement'
 import PackageManagement from './PackageManagement'
+import CancellationPolicyManagement from './CancellationPolicyManagement'
 import '../../style/CenterManager/CenterManager.css'
 
 const managerNavSections = [
@@ -199,17 +200,7 @@ export default function CenterManager() {
           {section === 'packages' && <PackageManagement />}
 
           {/* 5. Chính sách hủy lịch (CancellationPoliciesController) */}
-          {section === 'cancellation' && <section className="manager-card manager-section-placeholder">
-            <div className="manager-card-heading"><div><h2>Quản lý chính sách hủy lịch</h2><p>Thiết lập chính sách hủy đặt lịch, phí phạt và điều kiện hoàn tiền.</p></div><span className="manager-icon red"><Ban size={21} /></span></div>
-            <div className="manager-placeholder-body">
-              <div className="manager-placeholder-features">
-                <article><span className="red"><Ban size={20} /></span><div><strong>Danh sách chính sách</strong><small>Chính sách hủy theo loại dịch vụ</small></div></article>
-                <article><span className="amber"><Clock3 size={20} /></span><div><strong>Thời hạn hủy</strong><small>Số giờ trước buổi học được phép hủy</small></div></article>
-                <article><span className="blue"><CreditCard size={20} /></span><div><strong>Phí hủy & Hoàn tiền</strong><small>Tỷ lệ phí phạt và chính sách hoàn</small></div></article>
-              </div>
-              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>CancellationPoliciesController API</strong>.</span></div>
-            </div>
-          </section>}
+          {section === 'cancellation' && <CancellationPolicyManagement />}
 
           {/* 6. Báo cáo thống kê & Doanh thu (ReportsController) */}
           {section === 'reports' && <>
