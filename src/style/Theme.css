@@ -305,3 +305,6 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-registration-card-actions>button.checkin { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .reception-registration-action-error { border-color:#6d3a41; color:#ff9eaa; background:#351f25; }
 [data-theme='dark'] .reception-registration-checked { color:var(--theme-green); }
+[data-theme='dark'] :is(.reception-checkin-search .reception-attendance-form input,.reception-attendance-form select,.reception-attendance-result small) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
+[data-theme='dark'] .reception-attendance-form>p { border-color:#6d3a41; color:#ff9eaa; background:#351f25; }
+[data-theme='dark'] .reception-attendance-result>span { color:var(--theme-green); background:var(--theme-green-bg); }

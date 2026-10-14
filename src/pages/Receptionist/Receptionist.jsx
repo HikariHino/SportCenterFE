@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
+import { markReceptionistAttendance } from '../../services/receptionistAttendanceService'
 import {
   cancelReceptionistRegistration,
   checkInReceptionistRegistration,
@@ -67,6 +68,7 @@ const formatMemberDate = value => {
 }
 
 const genderLabel = gender => ({ Male: 'Nam', Female: 'Nữ', Other: 'Khác' })[gender] || gender || 'Chưa cập nhật'
+const attendanceStatusLabel = status => ({ Present: 'Có mặt', Absent: 'Vắng mặt', Excused: 'Có phép' })[status] || status
 
 const sessionDateTimeFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -214,19 +216,39 @@ function SessionsView({ showNotice }) {
 }
 
 function CheckInView({ showNotice }) {
-  const [lookup, setLookup] = useState('')
-  const submitLookup = event => {
+  const [form, setForm] = useState({ sessionId: '', memberId: '', status: 'Present' })
+  const [attendance, setAttendance] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const updateField = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }))
+
+  const submitAttendance = async event => {
     event.preventDefault()
-    if (!lookup.trim()) return showNotice('Vui lòng nhập mã đặt sân, số điện thoại hoặc mã hội viên.')
-    showNotice('Tra cứu check-in đang chờ kết nối API.')
+    setSaving(true)
+    setError('')
+    try {
+      const result = await markReceptionistAttendance({
+        sessionId: Number(form.sessionId),
+        memberId: Number(form.memberId),
+        status: form.status,
+      })
+      setAttendance(result)
+      showNotice(`Đã cập nhật điểm danh cho hội viên #${result.memberId}.`)
+    } catch (requestError) {
+      setAttendance(null)
+      setError(requestErrorMessage(requestError, 'Không thể điểm danh hội viên.'))
+    } finally {
+      setSaving(false)
+    }
   }
 
   return <div className="reception-checkin-layout">
     <section className="reception-card reception-checkin-search">
-      <div className="reception-scan-visual"><span><ScanLine size={42} /></span><i /><strong>Quét mã QR tại quầy</strong><p>Đưa mã đặt sân vào vùng quét hoặc nhập thông tin bên dưới.</p></div>
-      <form onSubmit={submitLookup}><label htmlFor="reception-checkin-code">Mã đặt sân / Số điện thoại / Mã hội viên</label><div><Search size={18} /><input id="reception-checkin-code" value={lookup} onChange={event => setLookup(event.target.value)} placeholder="Nhập thông tin tra cứu" /><button type="submit">Tra cứu</button></div></form>
+      <div className="reception-scan-visual"><span><ScanLine size={42} /></span><i /><strong>Điểm danh tại quầy</strong><p>Nhập đúng mã buổi học và hội viên để ghi nhận trạng thái tham gia.</p></div>
+      <form className="reception-attendance-form" onSubmit={submitAttendance}><div><label>Mã buổi học<input name="sessionId" type="number" min="1" value={form.sessionId} onChange={updateField} required /></label><label>Mã hội viên<input name="memberId" type="number" min="1" value={form.memberId} onChange={updateField} required /></label><label>Trạng thái<select name="status" value={form.status} onChange={updateField}><option value="Present">Có mặt</option><option value="Absent">Vắng mặt</option><option value="Excused">Có phép</option></select></label></div>{error && <p role="alert">{error}</p>}<button type="submit" disabled={saving}>{saving ? 'Đang cập nhật...' : 'Cập nhật điểm danh'}</button></form>
     </section>
-    <section className="reception-card reception-checkin-result"><div className="reception-card-head"><div><span>KẾT QUẢ XÁC MINH</span><h2>Thông tin lượt đặt</h2></div><ShieldCheck size={20} /></div><EmptyState icon={QrCode} title="Chưa có lượt đặt được chọn" text="Thông tin khách, sân và thời gian sẽ hiển thị sau khi tra cứu." /></section>
+    <section className="reception-card reception-checkin-result"><div className="reception-card-head"><div><span>KẾT QUẢ ĐIỂM DANH</span><h2>Thông tin hội viên</h2></div><ShieldCheck size={20} /></div>{attendance ? <div className="reception-attendance-result"><span><CheckCircle2 size={26} /></span><h3>{attendance.memberName || `Hội viên #${attendance.memberId}`}</h3><p>Điểm danh đã được ghi nhận trên hệ thống.</p><div><small>Mã điểm danh<strong>#{attendance.id}</strong></small><small>Mã buổi học<strong>#{attendance.sessionId}</strong></small><small>Trạng thái<strong>{attendanceStatusLabel(attendance.status)}</strong></small><small>Thời gian<strong>{sessionDateTimeFormatter.format(new Date(attendance.checkInTime))}</strong></small></div></div> : <EmptyState icon={QrCode} title="Chưa có kết quả điểm danh" text="Kết quả sẽ hiển thị sau khi cập nhật trạng thái hội viên." />}</section>
   </div>
 }
 
