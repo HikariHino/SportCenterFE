@@ -14,6 +14,7 @@ import RoomManagement from './RoomManagement'
 import PackageManagement from './PackageManagement'
 import CancellationPolicyManagement from './CancellationPolicyManagement'
 import ReportManagement from './ReportManagement'
+import FrontDeskOperations from './FrontDeskOperations'
 import '../../style/CenterManager/CenterManager.css'
 
 const managerNavSections = [
@@ -207,18 +208,7 @@ export default function CenterManager() {
           {section === 'reports' && <ReportManagement />}
 
           {/* 7. Vận hành dịch vụ khách hàng - FrontDesk */}
-          {section === 'frontdesk' && <section className="manager-card manager-section-placeholder">
-            <div className="manager-card-heading"><div><h2>Vận hành dịch vụ khách hàng</h2><p>Thừa hưởng quyền FrontDesk/Receptionist — quản lý check-in, đặt sân và hỗ trợ hội viên.</p></div><span className="manager-icon purple"><Headset size={21} /></span></div>
-            <div className="manager-placeholder-body">
-              <div className="manager-placeholder-features">
-                <article><span className="green"><Check size={20} /></span><div><strong>Check-in hội viên</strong><small>Xác minh tài khoản và đặt chỗ</small></div></article>
-                <article><span className="blue"><CalendarDays size={20} /></span><div><strong>Quản lý buổi học</strong><small>Đăng ký, điểm danh và hoàn thành buổi</small></div></article>
-                <article><span className="amber"><CreditCard size={20} /></span><div><strong>Thanh toán tại quầy</strong><small>Đăng ký gói thẻ và xử lý hóa đơn</small></div></article>
-                <article><span className="purple"><Users size={20} /></span><div><strong>Tra cứu hội viên</strong><small>Xem thông tin, gói đăng ký và lịch sử</small></div></article>
-              </div>
-              <div className="manager-placeholder-note"><Headset size={18} /><span>Trang này kế thừa toàn bộ quyền <strong>Receptionist/FrontDesk</strong>. Truy cập <strong>/receptionist</strong> để sử dụng giao diện lễ tân đầy đủ.</span></div>
-            </div>
-          </section>}
+          {section === 'frontdesk' && <FrontDeskOperations />}
 
           {/* Overview: show revenue + courts + bookings + staff */}
           {section === 'overview' && <div className="manager-analytics">

@@ -1,0 +1,587 @@
+/* Vận hành dịch vụ khách hàng (FrontDesk Operations for Manager) */
+.fdesk-mgmt {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+}
+
+/* Header & Controls */
+.fdesk-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--manager-line, #e9edf3);
+}
+
+.fdesk-header h2 {
+  font-size: 19px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--manager-ink, #18263e);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fdesk-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--manager-muted, #748096);
+}
+
+.fdesk-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Action Buttons */
+.fdesk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.fdesk-btn-primary {
+  background: var(--manager-blue, #2463eb);
+  color: #fff;
+  border-color: var(--manager-blue, #2463eb);
+  box-shadow: 0 2px 6px rgba(36, 99, 235, 0.2);
+}
+
+.fdesk-btn-primary:hover {
+  background: #1754d4;
+  border-color: #1754d4;
+}
+
+.fdesk-btn-secondary {
+  background: #fff;
+  color: var(--manager-ink, #18263e);
+  border-color: #d1d9e6;
+}
+
+.fdesk-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #b5c2d6;
+}
+
+.fdesk-btn-danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.fdesk-btn-danger:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+.fdesk-btn-success {
+  background: #10b981;
+  color: #fff;
+  border-color: #10b981;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+.fdesk-btn-success:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+.fdesk-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Tabs */
+.fdesk-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--manager-line, #e9edf3);
+  background: #fafbfd;
+  overflow-x: auto;
+}
+
+.fdesk-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 18px;
+  border: none;
+  background: transparent;
+  color: var(--manager-muted, #748096);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.fdesk-tab-btn:hover {
+  color: var(--manager-ink, #18263e);
+  background: #f1f4f9;
+}
+
+.fdesk-tab-btn.active {
+  color: var(--manager-blue, #2463eb);
+  border-bottom-color: var(--manager-blue, #2463eb);
+  background: #fff;
+}
+
+.fdesk-tab-badge {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 700;
+}
+
+.fdesk-tab-btn.active .fdesk-tab-badge {
+  background: #eff6ff;
+  color: var(--manager-blue, #2463eb);
+}
+
+.fdesk-tab-badge.danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Metrics Grid */
+.fdesk-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.fdesk-metric-card {
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--manager-line, #e9edf3);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fdesk-metric-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fdesk-metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--manager-muted, #748096);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fdesk-metric-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.fdesk-metric-icon.blue { background: #eff6ff; color: #2563eb; }
+.fdesk-metric-icon.green { background: #ecfdf5; color: #059669; }
+.fdesk-metric-icon.purple { background: #f5f3ff; color: #7c3aed; }
+.fdesk-metric-icon.amber { background: #fffbeb; color: #d97706; }
+.fdesk-metric-icon.red { background: #fef2f2; color: #dc2626; }
+
+.fdesk-metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--manager-ink, #18263e);
+  line-height: 1.1;
+}
+
+.fdesk-metric-value small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--manager-muted, #748096);
+  margin-left: 4px;
+}
+
+.fdesk-metric-note {
+  font-size: 12px;
+  color: var(--manager-muted, #748096);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+/* Sections & Cards */
+.fdesk-section {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fdesk-card {
+  background: #fff;
+  border: 1px solid var(--manager-line, #e9edf3);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.fdesk-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--manager-line, #e9edf3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafbfd;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.fdesk-card-header h3, .fdesk-card-header h4 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--manager-ink, #18263e);
+}
+
+/* Filter & Search Toolbar */
+.fdesk-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 14px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--manager-line, #e9edf3);
+}
+
+.fdesk-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 14px;
+  min-width: 260px;
+  flex: 1;
+  max-width: 420px;
+}
+
+.fdesk-search-box input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 13px;
+  outline: none;
+  color: var(--manager-ink, #18263e);
+}
+
+.fdesk-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fdesk-select {
+  padding: 8px 14px;
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--manager-ink, #18263e);
+}
+
+/* Table Styles */
+.fdesk-table-scroll {
+  overflow-x: auto;
+}
+
+.fdesk-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.fdesk-table th {
+  padding: 12px 18px;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--manager-muted, #748096);
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid var(--manager-line, #e9edf3);
+  white-space: nowrap;
+}
+
+.fdesk-table td {
+  padding: 14px 18px;
+  font-size: 13px;
+  color: var(--manager-ink, #18263e);
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.fdesk-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Badges */
+.fdesk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fdesk-badge.active, .fdesk-badge.success { background: #ecfdf5; color: #047857; }
+.fdesk-badge.inactive, .fdesk-badge.danger { background: #fef2f2; color: #b91c1c; }
+.fdesk-badge.warning { background: #fffbeb; color: #b45309; }
+.fdesk-badge.info { background: #eff6ff; color: #1d4ed8; }
+.fdesk-badge.present { background: #ecfdf5; color: #059669; font-weight: 700; }
+.fdesk-badge.absent { background: #fef2f2; color: #dc2626; }
+
+/* Real-time active badge */
+.fdesk-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.fdesk-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+  animation: pulse-live 1.8s infinite;
+}
+
+@keyframes pulse-live {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Check-in Interactive Panel */
+.fdesk-checkin-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+.fdesk-checkin-box {
+  background: #f8fafc;
+  border: 1px solid var(--manager-line, #e9edf3);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fdesk-checkin-box h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--manager-ink, #18263e);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fdesk-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fdesk-input-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--manager-ink, #18263e);
+}
+
+.fdesk-input {
+  padding: 9px 13px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+  color: var(--manager-ink, #18263e);
+}
+
+.fdesk-input:focus {
+  border-color: var(--manager-blue, #2463eb);
+  box-shadow: 0 0 0 3px rgba(36, 99, 235, 0.1);
+}
+
+/* Modal Dialog */
+.fdesk-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.fdesk-dialog {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.fdesk-dialog-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--manager-line, #e9edf3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fdesk-dialog-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--manager-ink, #18263e);
+}
+
+.fdesk-dialog-close {
+  border: none;
+  background: transparent;
+  color: var(--manager-muted, #748096);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+}
+
+.fdesk-dialog-close:hover {
+  background: #f1f5f9;
+  color: var(--manager-ink, #18263e);
+}
+
+.fdesk-dialog-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fdesk-dialog-footer {
+  padding: 16px 22px;
+  border-top: 1px solid var(--manager-line, #e9edf3);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #fafbfd;
+  border-radius: 0 0 14px 14px;
+}
+
+/* Alert Notifications */
+.fdesk-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  margin: 0 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.fdesk-alert-danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.fdesk-alert-success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.fdesk-spin {
+  animation: fdesk-spin 1s linear infinite;
+}
+
+@keyframes fdesk-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1024px) {
+  .fdesk-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .fdesk-checkin-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .fdesk-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  .fdesk-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .fdesk-search-box {
+    max-width: 100%;
+  }
+}

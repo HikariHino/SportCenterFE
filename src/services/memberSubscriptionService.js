@@ -33,3 +33,37 @@ export async function getReceptionistMemberSubscriptions(memberId) {
   const payload = unwrap(response.data, 'Không thể tải các gói của hội viên.')
   return Array.isArray(payload) ? payload : []
 }
+
+/**
+ * Xác nhận thanh toán trực tiếp tại quầy và kích hoạt gói ngay
+ * POST /api/member-subscriptions/{id}/payments
+ * @param {number} subscriptionId
+ * @param {{ amount: number, paymentMethod: 'Cash'|'BankTransfer'|'CreditCard', paymentReceived?: boolean }} data
+ */
+export async function confirmSubscriptionPayment(subscriptionId, { amount, paymentMethod, paymentReceived = true }) {
+  const response = await api.post(`/member-subscriptions/${subscriptionId}/payments`, {
+    amount: Number(amount),
+    paymentMethod,
+    paymentReceived: Boolean(paymentReceived),
+  })
+  return unwrap(response.data, 'Không thể xác nhận thanh toán gói.')
+}
+
+/**
+ * Hủy đăng ký gói đang chờ thanh toán (Pending)
+ * POST /api/member-subscriptions/{id}/cancel
+ * @param {number} subscriptionId
+ */
+export async function cancelPendingSubscription(subscriptionId) {
+  const response = await api.post(`/member-subscriptions/${subscriptionId}/cancel`)
+  return unwrap(response.data, 'Không thể hủy đăng ký gói.')
+}
+
+export default {
+  getMySubscriptions,
+  createMemberSubscription,
+  createReceptionistMemberSubscription,
+  getReceptionistMemberSubscriptions,
+  confirmSubscriptionPayment,
+  cancelPendingSubscription,
+}

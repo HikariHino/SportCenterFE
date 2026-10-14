@@ -102,6 +102,12 @@ export async function deleteMember(id) {
 }
 
 /**
+ * Quản lý vô hiệu hóa tài khoản hội viên vi phạm
+ * DELETE /api/members/{id}
+ */
+export const deactivateMember = deleteMember
+
+/**
  * GET /api/members/me (requires authentication, no parameters).
  * @returns {Promise<Member>}
  * HTTP errors propagate with the backend body at error.response.data.
