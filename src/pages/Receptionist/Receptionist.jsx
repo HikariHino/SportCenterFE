@@ -4,7 +4,7 @@ import ThemeToggle from '../../components/ThemeToggle'
 import {
   ArrowRight, BadgeCheck, Bell, CalendarDays, CheckCircle2, CircleDollarSign,
   ChevronLeft, ChevronRight, Clock3, CreditCard, LayoutDashboard, LogOut, MapPin, QrCode, ReceiptText,
-  Ban, LogIn, Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
+  Ban, LogIn, Plus, ScanLine, Search, ShieldCheck, Star, Trophy, UserCheck, Users, WalletCards, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
@@ -13,7 +13,7 @@ import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment,
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../services/paymentService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
-import { getReceptionistClassSessions } from '../../services/receptionistCatalogService'
+import { getReceptionistClassSessions, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
 import {
   cancelReceptionistRegistration,
   checkInReceptionistRegistration,
@@ -120,6 +120,42 @@ function CompleteSessionDialog({ sessionId, onClose, onCompleted }) {
   </div>
 }
 
+function SessionReviewsDialog({ session, onClose }) {
+  const [reviews, setReviews] = useState({ items: [], total: 0, page: 1, pageSize: 8 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadReviews = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getReceptionistSessionReviews(session.id, { page, pageSize: 8 })
+        if (active) setReviews(result)
+      } catch (requestError) {
+        if (active) setError(requestErrorMessage(requestError, 'Không thể tải đánh giá của buổi học.'))
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadReviews()
+    return () => { active = false }
+  }, [page, requestKey, session.id])
+
+  const pageCount = Math.max(1, Math.ceil(reviews.total / reviews.pageSize))
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="reception-dialog reception-reviews-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-session-reviews-title">
+      <header><div><span>ĐÁNH GIÁ HỌC VIÊN</span><h2 id="reception-session-reviews-title">{session.className} · Buổi #{session.id}</h2><p>{reviews.total} đánh giá từ Class Sessions API.</p></div><button type="button" aria-label="Đóng đánh giá" onClick={onClose}><X size={19} /></button></header>
+      <div className="reception-reviews-body">{loading ? <EmptyState icon={Star} title="Đang tải đánh giá" text="Dữ liệu đánh giá đang được đồng bộ từ API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Star} title="Không thể tải đánh giá" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : reviews.items.length ? <div className="reception-review-list">{reviews.items.map(review => <article key={review.id}><div><span>{Array.from({ length: 5 }, (_, index) => <Star key={index} size={13} fill={index < review.rating ? 'currentColor' : 'none'} />)}</span><small>{formatDateTime(review.createdAt)}</small></div><p>{review.comment || 'Học viên không để lại nhận xét.'}</p><strong>Lượt đăng ký #{review.registrationId}</strong></article>)}</div> : <EmptyState icon={Star} title="Chưa có đánh giá" text="Buổi học này chưa nhận được đánh giá từ học viên." />}</div>
+      {reviews.total > reviews.pageSize && <footer className="reception-review-pagination"><button type="button" disabled={loading || page <= 1} onClick={() => setPage(current => current - 1)}><ChevronLeft size={14} /> Trước</button><span>Trang {page}/{pageCount}</span><button type="button" disabled={loading || page >= pageCount} onClick={() => setPage(current => current + 1)}>Sau <ChevronRight size={14} /></button></footer>}
+    </section>
+  </div>
+}
+
 function Overview({ onNavigate }) {
   const metrics = [
     [CalendarDays, 'Lượt đặt hôm nay', '--', 'blue'],
@@ -173,6 +209,7 @@ function SessionsView({ showNotice }) {
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState('')
   const [catalogRequestKey, setCatalogRequestKey] = useState(0)
+  const [reviewSession, setReviewSession] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -236,7 +273,7 @@ function SessionsView({ showNotice }) {
   }
 
   return <div className="reception-session-page">
-    <section className="reception-card reception-session-catalog"><div className="reception-card-head"><div><span>DANH MỤC CÔNG KHAI</span><h2>Chọn buổi học</h2></div><strong>{catalogLoading ? 'Đang tải...' : `${catalog.total} buổi`}</strong></div>{catalogLoading ? <EmptyState icon={CalendarDays} title="Đang tải buổi học" text="Dữ liệu đang được đồng bộ từ Class Sessions API." /> : catalogError ? <div className="reception-inline-error"><EmptyState icon={CalendarDays} title="Không thể tải buổi học" text={catalogError} /><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : catalog.items.length ? <div className="reception-session-catalog-list">{catalog.items.map(item => <button type="button" key={item.id} className={Number(sessionId) === item.id ? 'selected' : ''} onClick={() => selectCatalogSession(item)}><span><small>Buổi #{item.id}</small><strong>{item.className}</strong><em>{item.coachName}</em></span><span><small>{formatDateTime(item.startsAt)}</small><strong>{item.availableSeats}/{item.capacity} chỗ trống</strong><b className={String(item.status || '').toLowerCase()}>{item.status}</b></span></button>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có buổi học" text="Class Sessions API chưa có dữ liệu công khai." />}</section>
+    <section className="reception-card reception-session-catalog"><div className="reception-card-head"><div><span>DANH MỤC CÔNG KHAI</span><h2>Chọn buổi học</h2></div><strong>{catalogLoading ? 'Đang tải...' : `${catalog.total} buổi`}</strong></div>{catalogLoading ? <EmptyState icon={CalendarDays} title="Đang tải buổi học" text="Dữ liệu đang được đồng bộ từ Class Sessions API." /> : catalogError ? <div className="reception-inline-error"><EmptyState icon={CalendarDays} title="Không thể tải buổi học" text={catalogError} /><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : catalog.items.length ? <div className="reception-session-catalog-list">{catalog.items.map(item => <article key={item.id} className={Number(sessionId) === item.id ? 'selected' : ''}><button type="button" className="reception-session-select" onClick={() => selectCatalogSession(item)}><span><small>Buổi #{item.id}</small><strong>{item.className}</strong><em>{item.coachName}</em></span><span><small>{formatDateTime(item.startsAt)}</small><strong>{item.availableSeats}/{item.capacity} chỗ trống</strong><b className={String(item.status || '').toLowerCase()}>{item.status}</b></span></button><button type="button" className="reception-session-reviews" onClick={() => setReviewSession(item)}><Star size={12} /> Đánh giá</button></article>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có buổi học" text="Class Sessions API chưa có dữ liệu công khai." />}</section>
     <div className="reception-session-layout"><section className="reception-card reception-session-register">
       <div className="reception-card-head"><div><span>ĐĂNG KÝ BUỔI HỌC</span><h2>Thêm hội viên vào buổi học</h2></div><CalendarDays size={20} /></div>
       <form onSubmit={submitRegistration}>
@@ -255,6 +292,7 @@ function SessionsView({ showNotice }) {
       {rosterLoading ? <EmptyState icon={Users} title="Đang tải danh sách" text="Dữ liệu học viên đang được đồng bộ từ API." /> : rosterError ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải danh sách" text={rosterError} /><button type="button" onClick={loadRoster}>Thử lại</button></div> : rosterLoaded ? roster.length ? <div className="reception-roster-table"><div className="reception-roster-heading"><span>Mã đăng ký</span><span>Học viên</span><span>Mã hội viên</span><span>Đăng ký</span><span>Điểm danh</span></div>{roster.map(student => <div className="reception-roster-row" key={student.registrationId}><span>#{student.registrationId}</span><strong>{student.fullName}</strong><span>#{student.memberId}</span><span>{student.registrationStatus}</span><span><b>{student.attendanceStatus || 'Chưa điểm danh'}</b><small>{student.checkInTime ? sessionDateTimeFormatter.format(new Date(student.checkInTime)) : 'Chưa có giờ check-in'}</small></span></div>)}</div> : <EmptyState icon={Users} title="Chưa có học viên" text="Buổi học này chưa có lượt đăng ký." /> : <EmptyState icon={Users} title="Chọn một buổi học" text="Nhập mã buổi học để xem danh sách học viên đã đăng ký." />}
     </section>
     {showCompleteDialog && <CompleteSessionDialog sessionId={Number(rosterSessionId)} onClose={() => setShowCompleteDialog(false)} onCompleted={() => { setCompletedSessionId(Number(rosterSessionId)); showNotice(`Đã hoàn thành buổi học #${rosterSessionId}.`) }} />}
+    {reviewSession && <SessionReviewsDialog session={reviewSession} onClose={() => setReviewSession(null)} />}
   </div>
 }
 

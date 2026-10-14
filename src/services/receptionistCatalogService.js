@@ -22,3 +22,9 @@ export async function getReceptionistClassSessions({ search, sportId, coachId, f
   })
   return pageResult(unwrap(response.data, 'Không thể tải danh sách buổi học.'), page, pageSize)
 }
+
+/** GET /api/class-sessions/{id}/reviews */
+export async function getReceptionistSessionReviews(sessionId, { page = 1, pageSize = 8 } = {}) {
+  const response = await api.get(`/class-sessions/${sessionId}/reviews`, { params: { page, pageSize } })
+  return pageResult(unwrap(response.data, 'Không thể tải đánh giá của buổi học.'), page, pageSize)
+}
