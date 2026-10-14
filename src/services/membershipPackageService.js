@@ -1,6 +1,21 @@
 import api from './api'
 
 /**
+ * Trích xuất thông báo lỗi từ backend
+ */
+export function getPackageErrorMessage(error, fallback = 'Có lỗi xảy ra khi thao tác với gói hội viên.') {
+  const body = error?.response?.data
+  const validationErrors = body?.errors
+  if (validationErrors && typeof validationErrors === 'object') {
+    const firstKey = Object.keys(validationErrors)[0]
+    if (firstKey && Array.isArray(validationErrors[firstKey])) {
+      return validationErrors[firstKey][0]
+    }
+  }
+  return body?.message || error?.message || fallback
+}
+
+/**
  * @typedef {Object} MembershipPackage
  * @property {number} id
  * @property {string} packageName

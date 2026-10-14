@@ -40,18 +40,45 @@ export async function getReceptionistSubscriptionById(id) {
   return unwrap(response.data, 'Không thể tải chi tiết đăng ký gói.')
 }
 
-/** POST /api/member-subscriptions/{id}/cancel */
-export async function cancelReceptionistSubscription(id) {
-  const response = await api.post(`/member-subscriptions/${id}/cancel`)
+/**
+ * Hủy đăng ký gói đang chờ thanh toán (Pending)
+ * POST /api/member-subscriptions/{id}/cancel
+ * @param {number} subscriptionId
+ */
+export async function cancelPendingSubscription(subscriptionId) {
+  const response = await api.post(`/member-subscriptions/${subscriptionId}/cancel`)
   return unwrap(response.data, 'Không thể hủy đăng ký gói.')
 }
 
-/** POST /api/member-subscriptions/{id}/payments */
-export async function confirmReceptionistSubscriptionPayment(id, { amount, paymentMethod, paymentReceived }) {
-  const response = await api.post(`/member-subscriptions/${id}/payments`, {
-    amount,
+/** POST /api/member-subscriptions/{id}/cancel */
+export const cancelReceptionistSubscription = cancelPendingSubscription
+
+/**
+ * Xác nhận thanh toán trực tiếp tại quầy và kích hoạt gói ngay
+ * POST /api/member-subscriptions/{id}/payments
+ * @param {number} subscriptionId
+ * @param {{ amount: number, paymentMethod: 'Cash'|'BankTransfer'|'CreditCard', paymentReceived?: boolean }} data
+ */
+export async function confirmSubscriptionPayment(subscriptionId, { amount, paymentMethod, paymentReceived = true }) {
+  const response = await api.post(`/member-subscriptions/${subscriptionId}/payments`, {
+    amount: Number(amount),
     paymentMethod,
-    paymentReceived,
+    paymentReceived: Boolean(paymentReceived),
   })
-  return unwrap(response.data, 'Không thể xác nhận thanh toán đăng ký gói.')
+  return unwrap(response.data, 'Không thể xác nhận thanh toán gói.')
+}
+
+/** POST /api/member-subscriptions/{id}/payments */
+export const confirmReceptionistSubscriptionPayment = confirmSubscriptionPayment
+
+export default {
+  getMySubscriptions,
+  createMemberSubscription,
+  createReceptionistMemberSubscription,
+  getReceptionistMemberSubscriptions,
+  getReceptionistSubscriptionById,
+  confirmSubscriptionPayment,
+  confirmReceptionistSubscriptionPayment,
+  cancelPendingSubscription,
+  cancelReceptionistSubscription,
 }
