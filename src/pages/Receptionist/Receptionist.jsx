@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
   ArrowRight, BadgeCheck, Bell, CalendarDays, CheckCircle2, CircleDollarSign,
-  Clock3, CreditCard, LayoutDashboard, LogOut, MapPin, QrCode, ReceiptText,
-  Ban, LogIn, Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
+  ChevronLeft, ChevronRight, Clock3, CreditCard, LayoutDashboard, LogOut, MapPin, QrCode, ReceiptText,
+  Ban, LogIn, Plus, ScanLine, Search, ShieldCheck, Star, Trophy, UserCheck, Users, WalletCards, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { getCoaches, getSports } from '../../services/classCatalogService'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
-import { getMembershipPackages } from '../../services/membershipPackageService'
-import { createReceptionistMemberSubscription, getReceptionistMemberSubscriptions } from '../../services/memberSubscriptionService'
+import { getMembershipPackageById, getMembershipPackages } from '../../services/membershipPackageService'
+import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment, createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
+import { getNotifications, markNotificationRead } from '../../services/notificationService'
+import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../services/paymentService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
+import { getReceptionistClassById, getReceptionistClasses, getReceptionistClassSessions, getReceptionistClassSessionsByClass, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
 import {
   cancelReceptionistRegistration,
   checkInReceptionistRegistration,
@@ -35,8 +39,6 @@ const pageMeta = {
   'Hội viên': ['HỖ TRỢ HỘI VIÊN', 'Tra cứu hội viên', 'Kiểm tra trạng thái tài khoản, gói dịch vụ và thông tin liên hệ.'],
   'Thanh toán': ['GIAO DỊCH TẠI QUẦY', 'Thanh toán', 'Theo dõi giao dịch và hóa đơn phát sinh tại quầy lễ tân.'],
 }
-
-const emptyPayments = []
 
 const emptyMemberForm = {
   fullName: '',
@@ -72,6 +74,7 @@ const formatMemberDate = value => {
 const genderLabel = gender => ({ Male: 'Nam', Female: 'Nữ', Other: 'Khác' })[gender] || gender || 'Chưa cập nhật'
 const attendanceStatusLabel = status => ({ Present: 'Có mặt', Absent: 'Vắng mặt', Excused: 'Có phép' })[status] || status
 const subscriptionStatusLabel = status => ({ Pending: 'Chờ thanh toán', Active: 'Đang hoạt động', Cancelled: 'Đã hủy', Expired: 'Hết hạn' })[status] || status
+const paymentStatusLabel = status => ({ Pending: 'Chờ thanh toán', Completed: 'Thành công', Cancelled: 'Đã hủy', Expired: 'Hết hạn', Failed: 'Thất bại', NeedsReview: 'Cần kiểm tra', Refunded: 'Hoàn tiền' })[status] || status
 
 const sessionDateTimeFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -80,6 +83,12 @@ const sessionDateTimeFormatter = new Intl.DateTimeFormat('vi-VN', {
   hour: '2-digit',
   minute: '2-digit',
 })
+
+const formatDateTime = value => {
+  if (!value) return 'Chưa có'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Chưa có' : sessionDateTimeFormatter.format(date)
+}
 
 function EmptyState({ icon: Icon = Search, title, text }) {
   return <div className="reception-empty"><span><Icon size={25} /></span><strong>{title}</strong><p>{text}</p></div>
@@ -108,6 +117,99 @@ function CompleteSessionDialog({ sessionId, onClose, onCompleted }) {
     <section className="reception-dialog reception-complete-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-complete-session-title">
       <header><div><span>XÁC NHẬN TRẠNG THÁI</span><h2 id="reception-complete-session-title">Hoàn thành buổi học #{sessionId}</h2><p>Thao tác này cập nhật trạng thái chính thức trên hệ thống.</p></div><button type="button" aria-label="Đóng xác nhận" onClick={onClose} disabled={saving}><X size={19} /></button></header>
       <form onSubmit={submit}><div className="reception-complete-copy"><span><CheckCircle2 size={25} /></span><strong>Xác nhận buổi học đã kết thúc?</strong><p>BE sẽ kiểm tra thời gian và quyền thao tác trước khi cập nhật.</p></div>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang cập nhật...' : 'Xác nhận hoàn thành'}</button></footer></form>
+    </section>
+  </div>
+}
+
+function SessionReviewsDialog({ session, onClose }) {
+  const [reviews, setReviews] = useState({ items: [], total: 0, page: 1, pageSize: 8 })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadReviews = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getReceptionistSessionReviews(session.id, { page, pageSize: 8 })
+        if (active) setReviews(result)
+      } catch (requestError) {
+        if (active) setError(requestErrorMessage(requestError, 'Không thể tải đánh giá của buổi học.'))
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadReviews()
+    return () => { active = false }
+  }, [page, requestKey, session.id])
+
+  const pageCount = Math.max(1, Math.ceil(reviews.total / reviews.pageSize))
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="reception-dialog reception-reviews-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-session-reviews-title">
+      <header><div><span>ĐÁNH GIÁ HỌC VIÊN</span><h2 id="reception-session-reviews-title">{session.className} · Buổi #{session.id}</h2><p>{reviews.total} đánh giá từ Class Sessions API.</p></div><button type="button" aria-label="Đóng đánh giá" onClick={onClose}><X size={19} /></button></header>
+      <div className="reception-reviews-body">{loading ? <EmptyState icon={Star} title="Đang tải đánh giá" text="Dữ liệu đánh giá đang được đồng bộ từ API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Star} title="Không thể tải đánh giá" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : reviews.items.length ? <div className="reception-review-list">{reviews.items.map(review => <article key={review.id}><div><span>{Array.from({ length: 5 }, (_, index) => <Star key={index} size={13} fill={index < review.rating ? 'currentColor' : 'none'} />)}</span><small>{formatDateTime(review.createdAt)}</small></div><p>{review.comment || 'Học viên không để lại nhận xét.'}</p><strong>Lượt đăng ký #{review.registrationId}</strong></article>)}</div> : <EmptyState icon={Star} title="Chưa có đánh giá" text="Buổi học này chưa nhận được đánh giá từ học viên." />}</div>
+      {reviews.total > reviews.pageSize && <footer className="reception-review-pagination"><button type="button" disabled={loading || page <= 1} onClick={() => setPage(current => current - 1)}><ChevronLeft size={14} /> Trước</button><span>Trang {page}/{pageCount}</span><button type="button" disabled={loading || page >= pageCount} onClick={() => setPage(current => current + 1)}>Sau <ChevronRight size={14} /></button></footer>}
+    </section>
+  </div>
+}
+
+function ClassDetailDialog({ classId, onClose, onSelectSession }) {
+  const [sportClass, setSportClass] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+  const [sessions, setSessions] = useState([])
+  const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [sessionsError, setSessionsError] = useState('')
+  const [sessionsRequestKey, setSessionsRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadClass = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getReceptionistClassById(classId)
+        if (active) setSportClass(result)
+      } catch (requestError) {
+        if (active) setError(requestErrorMessage(requestError, 'Không thể tải chi tiết lớp học.'))
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadClass()
+    return () => { active = false }
+  }, [classId, requestKey])
+
+  useEffect(() => {
+    let active = true
+    const loadSessions = async () => {
+      setSessionsLoading(true)
+      setSessionsError('')
+      try {
+        const result = await getReceptionistClassSessionsByClass(classId, { page: 1, pageSize: 20 })
+        if (active) setSessions(result.items)
+      } catch (requestError) {
+        if (active) {
+          setSessions([])
+          setSessionsError(requestErrorMessage(requestError, 'Không thể tải các buổi học của lớp.'))
+        }
+      } finally {
+        if (active) setSessionsLoading(false)
+      }
+    }
+    loadSessions()
+    return () => { active = false }
+  }, [classId, sessionsRequestKey])
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="reception-dialog reception-class-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-class-detail-title">
+      <header><div><span>CHI TIẾT LỚP HỌC</span><h2 id="reception-class-detail-title">Lớp #{classId}</h2><p>Dữ liệu trực tiếp từ Classes API.</p></div><button type="button" aria-label="Đóng chi tiết lớp" onClick={onClose}><X size={19} /></button></header>
+      <div className="reception-class-detail-body">{loading ? <EmptyState icon={Trophy} title="Đang tải chi tiết" text="Thông tin lớp học đang được đồng bộ từ API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Trophy} title="Không thể tải chi tiết" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : sportClass && <><div className="reception-class-detail-title"><span><Trophy size={22} /></span><div><small>{sportClass.sportName}</small><h3>{sportClass.className}</h3></div><b className={sportClass.isActive ? 'active' : 'inactive'}>{sportClass.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><div className="reception-class-detail-grid"><div><small>Huấn luyện viên</small><strong>{sportClass.coachName || 'Chưa phân công'}</strong></div><div><small>Mã HLV</small><strong>{sportClass.coachId ? `#${sportClass.coachId}` : 'Chưa có'}</strong></div><div><small>Học phí</small><strong>{Number(sportClass.price || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Sức chứa tối đa</small><strong>{sportClass.maxCapacity} học viên</strong></div><div><small>Ngày bắt đầu</small><strong>{formatMemberDate(sportClass.startDate)}</strong></div><div><small>Ngày kết thúc</small><strong>{formatMemberDate(sportClass.endDate)}</strong></div><div className="wide"><small>Lịch học</small><strong>{sportClass.schedule || 'Chưa cập nhật lịch học'}</strong></div></div><div className="reception-class-session-section"><div><span>BUỔI HỌC THUỘC LỚP</span><strong>{sessionsLoading ? 'Đang tải...' : `${sessions.length} buổi`}</strong></div>{sessionsLoading ? <EmptyState icon={CalendarDays} title="Đang tải buổi học" text="Dữ liệu đang được đồng bộ từ API." /> : sessionsError ? <div className="reception-inline-error"><EmptyState icon={CalendarDays} title="Không thể tải buổi học" text={sessionsError} /><button type="button" onClick={() => setSessionsRequestKey(key => key + 1)}>Thử lại</button></div> : sessions.length ? <div className="reception-class-session-list">{sessions.map(session => <button type="button" key={session.id} onClick={() => { onSelectSession(session); onClose() }}><span><small>Buổi #{session.id}</small><strong>{formatDateTime(session.startsAt)}</strong></span><span><small>{session.coachName}</small><strong>{session.availableSeats}/{session.capacity} chỗ trống</strong></span><ArrowRight size={14} /></button>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có buổi học" text="Lớp này chưa có buổi học công khai." />}</div></>}</div>
     </section>
   </div>
 }
@@ -161,6 +263,116 @@ function SessionsView({ showNotice }) {
   const [rosterLoaded, setRosterLoaded] = useState(false)
   const [showCompleteDialog, setShowCompleteDialog] = useState(false)
   const [completedSessionId, setCompletedSessionId] = useState(null)
+  const [catalog, setCatalog] = useState({ items: [], total: 0, page: 1, pageSize: 20 })
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState('')
+  const [catalogRequestKey, setCatalogRequestKey] = useState(0)
+  const [reviewSession, setReviewSession] = useState(null)
+  const [classes, setClasses] = useState({ items: [], total: 0, page: 1, pageSize: 20 })
+  const [classesLoading, setClassesLoading] = useState(true)
+  const [classesError, setClassesError] = useState('')
+  const [classesRequestKey, setClassesRequestKey] = useState(0)
+  const [selectedClassId, setSelectedClassId] = useState(null)
+  const [sports, setSports] = useState([])
+  const [sportsLoading, setSportsLoading] = useState(true)
+  const [sportsError, setSportsError] = useState('')
+  const [sportsRequestKey, setSportsRequestKey] = useState(0)
+  const [selectedSportId, setSelectedSportId] = useState('')
+  const [coaches, setCoaches] = useState([])
+  const [coachesLoading, setCoachesLoading] = useState(true)
+  const [coachesError, setCoachesError] = useState('')
+  const [coachesRequestKey, setCoachesRequestKey] = useState(0)
+  const [selectedCoachId, setSelectedCoachId] = useState('')
+
+  useEffect(() => {
+    let active = true
+    const loadSports = async () => {
+      setSportsLoading(true)
+      setSportsError('')
+      try {
+        const result = await getSports()
+        if (active) setSports(result)
+      } catch (requestError) {
+        if (active) {
+          setSports([])
+          setSportsError(requestErrorMessage(requestError, 'Không thể tải danh mục môn thể thao.'))
+        }
+      } finally {
+        if (active) setSportsLoading(false)
+      }
+    }
+    loadSports()
+    return () => { active = false }
+  }, [sportsRequestKey])
+
+  useEffect(() => {
+    let active = true
+    const loadCoaches = async () => {
+      setCoachesLoading(true)
+      setCoachesError('')
+      try {
+        const result = await getCoaches()
+        if (active) setCoaches(result)
+      } catch (requestError) {
+        if (active) {
+          setCoaches([])
+          setCoachesError(requestErrorMessage(requestError, 'Không thể tải danh sách huấn luyện viên.'))
+        }
+      } finally {
+        if (active) setCoachesLoading(false)
+      }
+    }
+    loadCoaches()
+    return () => { active = false }
+  }, [coachesRequestKey])
+
+  useEffect(() => {
+    let active = true
+    const loadCatalog = async () => {
+      setCatalogLoading(true)
+      setCatalogError('')
+      try {
+        const result = await getReceptionistClassSessions({ sportId: selectedSportId ? Number(selectedSportId) : undefined, coachId: selectedCoachId ? Number(selectedCoachId) : undefined, page: 1, pageSize: 20 })
+        if (active) setCatalog(result)
+      } catch (requestError) {
+        if (active) {
+          setCatalog({ items: [], total: 0, page: 1, pageSize: 20 })
+          setCatalogError(requestErrorMessage(requestError, 'Không thể tải danh mục buổi học.'))
+        }
+      } finally {
+        if (active) setCatalogLoading(false)
+      }
+    }
+    loadCatalog()
+    return () => { active = false }
+  }, [catalogRequestKey, selectedCoachId, selectedSportId])
+
+  useEffect(() => {
+    let active = true
+    const loadClasses = async () => {
+      setClassesLoading(true)
+      setClassesError('')
+      try {
+        const result = await getReceptionistClasses({ sportId: selectedSportId ? Number(selectedSportId) : undefined, coachId: selectedCoachId ? Number(selectedCoachId) : undefined, page: 1, pageSize: 20 })
+        if (active) setClasses(result)
+      } catch (requestError) {
+        if (active) {
+          setClasses({ items: [], total: 0, page: 1, pageSize: 20 })
+          setClassesError(requestErrorMessage(requestError, 'Không thể tải danh mục lớp học.'))
+        }
+      } finally {
+        if (active) setClassesLoading(false)
+      }
+    }
+    loadClasses()
+    return () => { active = false }
+  }, [classesRequestKey, selectedCoachId, selectedSportId])
+
+  const selectCatalogSession = session => {
+    setSessionId(String(session.id))
+    setRosterSessionId(String(session.id))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const submitRegistration = async event => {
     event.preventDefault()
@@ -197,6 +409,9 @@ function SessionsView({ showNotice }) {
   }
 
   return <div className="reception-session-page">
+    <section className="reception-card reception-catalog-filters"><div><span><Trophy size={18} /></span><div><small>BỘ LỌC DANH MỤC</small><strong>Lớp và buổi học</strong></div></div><label><span>Chọn môn</span><select value={selectedSportId} onChange={event => setSelectedSportId(event.target.value)} disabled={sportsLoading}><option value="">Tất cả môn thể thao</option>{sports.map(sport => <option key={sport.id} value={sport.id}>{sport.name}</option>)}</select></label><label><span>Chọn huấn luyện viên</span><select value={selectedCoachId} onChange={event => setSelectedCoachId(event.target.value)} disabled={coachesLoading}><option value="">Tất cả huấn luyện viên</option>{coaches.map(coach => <option key={coach.id} value={coach.id}>{coach.fullName}{coach.specialization ? ` · ${coach.specialization}` : ''}</option>)}</select></label>{sportsError && <div className="reception-filter-error"><span>{sportsError}</span><button type="button" onClick={() => setSportsRequestKey(key => key + 1)}>Thử lại</button></div>}{coachesError && <div className="reception-filter-error"><span>{coachesError}</span><button type="button" onClick={() => setCoachesRequestKey(key => key + 1)}>Thử lại</button></div>}</section>
+    <section className="reception-card reception-class-catalog"><div className="reception-card-head"><div><span>DANH MỤC LỚP HỌC</span><h2>Các lớp đang mở</h2></div><strong>{classesLoading ? 'Đang tải...' : `${classes.total} lớp`}</strong></div>{classesLoading ? <EmptyState icon={Trophy} title="Đang tải lớp học" text="Dữ liệu đang được đồng bộ từ Classes API." /> : classesError ? <div className="reception-inline-error"><EmptyState icon={Trophy} title="Không thể tải lớp học" text={classesError} /><button type="button" onClick={() => setClassesRequestKey(key => key + 1)}>Thử lại</button></div> : classes.items.length ? <div className="reception-class-catalog-list">{classes.items.map(item => <article key={item.id}><div><small>Lớp #{item.id}</small><h3>{item.className}</h3><p>{item.sportName} · {item.coachName || 'Chưa phân công HLV'}</p></div><div><span><small>Học phí</small><strong>{Number(item.price || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Sức chứa</small><strong>{item.maxCapacity} học viên</strong></span><b className={item.isActive ? 'active' : 'inactive'}>{item.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><button type="button" className="reception-class-detail-trigger" onClick={() => setSelectedClassId(item.id)}>Xem chi tiết <ArrowRight size={12} /></button></article>)}</div> : <EmptyState icon={Trophy} title="Chưa có lớp học" text="Classes API chưa có dữ liệu lớp học công khai." />}</section>
+    <section className="reception-card reception-session-catalog"><div className="reception-card-head"><div><span>DANH MỤC CÔNG KHAI</span><h2>Chọn buổi học</h2></div><strong>{catalogLoading ? 'Đang tải...' : `${catalog.total} buổi`}</strong></div>{catalogLoading ? <EmptyState icon={CalendarDays} title="Đang tải buổi học" text="Dữ liệu đang được đồng bộ từ Class Sessions API." /> : catalogError ? <div className="reception-inline-error"><EmptyState icon={CalendarDays} title="Không thể tải buổi học" text={catalogError} /><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : catalog.items.length ? <div className="reception-session-catalog-list">{catalog.items.map(item => <article key={item.id} className={Number(sessionId) === item.id ? 'selected' : ''}><button type="button" className="reception-session-select" onClick={() => selectCatalogSession(item)}><span><small>Buổi #{item.id}</small><strong>{item.className}</strong><em>{item.coachName}</em></span><span><small>{formatDateTime(item.startsAt)}</small><strong>{item.availableSeats}/{item.capacity} chỗ trống</strong><b className={String(item.status || '').toLowerCase()}>{item.status}</b></span></button><button type="button" className="reception-session-reviews" onClick={() => setReviewSession(item)}><Star size={12} /> Đánh giá</button></article>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có buổi học" text="Class Sessions API chưa có dữ liệu công khai." />}</section>
     <div className="reception-session-layout"><section className="reception-card reception-session-register">
       <div className="reception-card-head"><div><span>ĐĂNG KÝ BUỔI HỌC</span><h2>Thêm hội viên vào buổi học</h2></div><CalendarDays size={20} /></div>
       <form onSubmit={submitRegistration}>
@@ -215,6 +430,8 @@ function SessionsView({ showNotice }) {
       {rosterLoading ? <EmptyState icon={Users} title="Đang tải danh sách" text="Dữ liệu học viên đang được đồng bộ từ API." /> : rosterError ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải danh sách" text={rosterError} /><button type="button" onClick={loadRoster}>Thử lại</button></div> : rosterLoaded ? roster.length ? <div className="reception-roster-table"><div className="reception-roster-heading"><span>Mã đăng ký</span><span>Học viên</span><span>Mã hội viên</span><span>Đăng ký</span><span>Điểm danh</span></div>{roster.map(student => <div className="reception-roster-row" key={student.registrationId}><span>#{student.registrationId}</span><strong>{student.fullName}</strong><span>#{student.memberId}</span><span>{student.registrationStatus}</span><span><b>{student.attendanceStatus || 'Chưa điểm danh'}</b><small>{student.checkInTime ? sessionDateTimeFormatter.format(new Date(student.checkInTime)) : 'Chưa có giờ check-in'}</small></span></div>)}</div> : <EmptyState icon={Users} title="Chưa có học viên" text="Buổi học này chưa có lượt đăng ký." /> : <EmptyState icon={Users} title="Chọn một buổi học" text="Nhập mã buổi học để xem danh sách học viên đã đăng ký." />}
     </section>
     {showCompleteDialog && <CompleteSessionDialog sessionId={Number(rosterSessionId)} onClose={() => setShowCompleteDialog(false)} onCompleted={() => { setCompletedSessionId(Number(rosterSessionId)); showNotice(`Đã hoàn thành buổi học #${rosterSessionId}.`) }} />}
+    {reviewSession && <SessionReviewsDialog session={reviewSession} onClose={() => setReviewSession(null)} />}
+    {selectedClassId !== null && <ClassDetailDialog classId={selectedClassId} onClose={() => setSelectedClassId(null)} onSelectSession={selectCatalogSession} />}
   </div>
 }
 
@@ -380,6 +597,9 @@ function MemberDetailDialog({ memberId, onClose, onViewRegistrations, onRegister
 function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
   const [packages, setPackages] = useState([])
   const [packageId, setPackageId] = useState('')
+  const [packageDetail, setPackageDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -406,6 +626,31 @@ function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
     return () => { active = false }
   }, [])
 
+  useEffect(() => {
+    if (!packageId) {
+      setPackageDetail(null)
+      return undefined
+    }
+    let active = true
+    const loadPackageDetail = async () => {
+      setDetailLoading(true)
+      setDetailError('')
+      try {
+        const result = await getMembershipPackageById(Number(packageId))
+        if (active) setPackageDetail(result)
+      } catch (requestError) {
+        if (active) {
+          setPackageDetail(null)
+          setDetailError(requestErrorMessage(requestError, 'Không thể tải chi tiết gói hội viên.'))
+        }
+      } finally {
+        if (active) setDetailLoading(false)
+      }
+    }
+    loadPackageDetail()
+    return () => { active = false }
+  }, [packageId])
+
   const submit = async event => {
     event.preventDefault()
     const normalizedPackageId = Number(packageId)
@@ -426,25 +671,28 @@ function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
     }
   }
 
-  const selectedPackage = packages.find(item => String(item.id) === packageId)
+  const selectedPackage = packageDetail || packages.find(item => String(item.id) === packageId)
 
   return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
     <section className="reception-dialog reception-subscription-create-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-create-subscription-title">
       <header><div><span>ĐĂNG KÝ TẠI QUẦY</span><h2 id="reception-create-subscription-title">Đăng ký gói cho hội viên #{memberId}</h2><p>Đăng ký mới sẽ chờ xác nhận thanh toán trước khi kích hoạt.</p></div><button type="button" aria-label="Đóng biểu mẫu đăng ký gói" onClick={onClose} disabled={saving}><X size={19} /></button></header>
       <form onSubmit={submit}>
-        {loading ? <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Đang tải danh sách gói</strong></div> : packages.length ? <><label className="reception-subscription-package-field">Gói hội viên<select value={packageId} onChange={event => setPackageId(event.target.value)} disabled={saving}>{packages.map(item => <option value={item.id} key={item.id}>{item.packageName}</option>)}</select></label>{selectedPackage && <div className="reception-subscription-package-preview"><span><small>Giá gói</small><strong>{Number(selectedPackage.price || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{selectedPackage.durationInDays} ngày</strong></span><p>{selectedPackage.description || 'Gói hội viên đang hoạt động.'}</p></div>}</> : !error && <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Chưa có gói đang hoạt động</strong></div>}
+        {loading ? <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Đang tải danh sách gói</strong></div> : packages.length ? <><label className="reception-subscription-package-field">Gói hội viên<select value={packageId} onChange={event => setPackageId(event.target.value)} disabled={saving}>{packages.map(item => <option value={item.id} key={item.id}>{item.packageName}</option>)}</select></label>{detailLoading ? <div className="reception-subscription-detail-loading">Đang tải chi tiết gói...</div> : detailError ? <p className="reception-form-error" role="alert">{detailError}</p> : selectedPackage && <div className="reception-subscription-package-preview"><span><small>Giá gói</small><strong>{Number(selectedPackage.price || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{selectedPackage.durationInDays} ngày</strong></span><p>{selectedPackage.description || 'Gói hội viên đang hoạt động.'}</p></div>}</> : !error && <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Chưa có gói đang hoạt động</strong></div>}
         {error && <p className="reception-form-error" role="alert">{error}</p>}
-        <footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={loading || saving || !packages.length}>{saving ? 'Đang đăng ký...' : 'Tạo đăng ký gói'}</button></footer>
+        <footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={loading || detailLoading || saving || !packageDetail}>{saving ? 'Đang đăng ký...' : 'Tạo đăng ký gói'}</button></footer>
       </form>
     </section>
   </div>
 }
 
-function MemberSubscriptionsDialog({ memberId, onClose }) {
+function MemberSubscriptionsDialog({ memberId, onClose, showNotice }) {
   const [subscriptions, setSubscriptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState(null)
+  const [cancelSubscription, setCancelSubscription] = useState(null)
+  const [paymentSubscription, setPaymentSubscription] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -471,7 +719,117 @@ function MemberSubscriptionsDialog({ memberId, onClose }) {
     <section className="reception-dialog reception-subscriptions-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-subscriptions-title">
       <header><div><span>GÓI HỘI VIÊN</span><h2 id="reception-member-subscriptions-title">Các gói của hội viên #{memberId}</h2><p>{subscriptions.length} đăng ký gói được tìm thấy.</p></div><button type="button" aria-label="Đóng danh sách gói" onClick={onClose}><X size={19} /></button></header>
       <div className="reception-subscriptions-body">
-        {loading ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Đang tải các gói hội viên</strong><span>Dữ liệu đang được đồng bộ từ Member Subscriptions API.</span></div> : error ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Không thể tải các gói</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscriptions.length ? <div className="reception-subscription-list">{subscriptions.map(item => <article key={item.id}><header><div><small>Đăng ký #{item.id}</small><strong>{item.packageName}</strong></div><b className={String(item.status || '').toLowerCase()}>{subscriptionStatusLabel(item.status)}</b></header><div><span><small>Giá đăng ký</small><strong>{Number(item.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{item.durationInDays} ngày</strong></span><span><small>Ngày tạo</small><strong>{formatMemberDate(item.createdAt)}</strong></span><span><small>Hiệu lực</small><strong>{item.startDate ? `${formatMemberDate(item.startDate)} – ${formatMemberDate(item.endDate)}` : 'Chờ kích hoạt'}</strong></span></div></article>)}</div> : <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Chưa đăng ký gói</strong><span>Hội viên này chưa có đăng ký gói nào.</span></div>}
+        {loading ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Đang tải các gói hội viên</strong><span>Dữ liệu đang được đồng bộ từ Member Subscriptions API.</span></div> : error ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Không thể tải các gói</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscriptions.length ? <div className="reception-subscription-list">{subscriptions.map(item => <article key={item.id}><header><div><small>Đăng ký #{item.id}</small><strong>{item.packageName}</strong></div><b className={String(item.status || '').toLowerCase()}>{subscriptionStatusLabel(item.status)}</b></header><div><span><small>Giá đăng ký</small><strong>{Number(item.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{item.durationInDays} ngày</strong></span><span><small>Ngày tạo</small><strong>{formatMemberDate(item.createdAt)}</strong></span><span><small>Hiệu lực</small><strong>{item.startDate ? `${formatMemberDate(item.startDate)} – ${formatMemberDate(item.endDate)}` : 'Chờ kích hoạt'}</strong></span></div><footer className="reception-subscription-actions"><button type="button" onClick={() => setSelectedSubscriptionId(item.id)}>Xem chi tiết <ArrowRight size={14} /></button>{item.status === 'Pending' && <><button className="payment" type="button" onClick={() => setPaymentSubscription(item)}><WalletCards size={13} />Thu tiền</button><button className="cancel" type="button" onClick={() => setCancelSubscription(item)}><Ban size={13} />Hủy gói</button></>}</footer></article>)}</div> : <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Chưa đăng ký gói</strong><span>Hội viên này chưa có đăng ký gói nào.</span></div>}
+      </div>
+      {selectedSubscriptionId !== null && <SubscriptionDetailDialog subscriptionId={selectedSubscriptionId} onClose={() => setSelectedSubscriptionId(null)} />}
+      {cancelSubscription && <CancelSubscriptionDialog subscription={cancelSubscription} onClose={() => setCancelSubscription(null)} onCancelled={updated => { setSubscriptions(current => current.map(item => item.id === updated.id ? updated : item)); showNotice(`Đã hủy đăng ký gói #${updated.id}.`) }} />}
+      {paymentSubscription && <ConfirmSubscriptionPaymentDialog subscription={paymentSubscription} onClose={() => setPaymentSubscription(null)} onConfirmed={receipt => { setRequestKey(key => key + 1); showNotice(`Đã xác nhận biên nhận #${receipt.id} và kích hoạt gói.`) }} />}
+    </section>
+  </div>
+}
+
+function ConfirmSubscriptionPaymentDialog({ subscription, onClose, onConfirmed }) {
+  const [amount, setAmount] = useState(String(subscription.agreedPrice || ''))
+  const [paymentMethod, setPaymentMethod] = useState('Cash')
+  const [paymentReceived, setPaymentReceived] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async event => {
+    event.preventDefault()
+    const normalizedAmount = Number(amount)
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      setError('Số tiền phải lớn hơn 0.')
+      return
+    }
+    if (!paymentReceived) {
+      setError('Vui lòng xác nhận đã thực nhận đủ tiền từ hội viên.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const receipt = await confirmReceptionistSubscriptionPayment(subscription.id, {
+        amount: normalizedAmount,
+        paymentMethod,
+        paymentReceived: true,
+      })
+      onConfirmed(receipt)
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể xác nhận thanh toán đăng ký gói.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog reception-subscription-payment-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-confirm-payment-title">
+      <header><div><span>XÁC NHẬN THU TIỀN</span><h2 id="reception-confirm-payment-title">Thanh toán đăng ký #{subscription.id}</h2><p>{subscription.packageName} · {Number(subscription.agreedPrice || 0).toLocaleString('vi-VN')} đ</p></div><button type="button" aria-label="Đóng biểu mẫu thanh toán" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}><div className="reception-payment-form-grid"><label>Số tiền đã nhận<input type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} disabled={saving} required /></label><label>Phương thức<select value={paymentMethod} onChange={event => setPaymentMethod(event.target.value)} disabled={saving}><option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản</option><option value="CreditCard">Thẻ tín dụng</option></select></label></div><label className="reception-payment-confirm"><input type="checkbox" checked={paymentReceived} onChange={event => setPaymentReceived(event.target.checked)} disabled={saving} /><span><strong>Tôi xác nhận đã thực nhận đủ tiền</strong><small>API này ghi nhận khoản tiền đã thu và kích hoạt gói; không tự trừ tiền ngân hàng hoặc thẻ.</small></span></label>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={saving || !paymentReceived}>{saving ? 'Đang xác nhận...' : 'Xác nhận và kích hoạt'}</button></footer></form>
+    </section>
+  </div>
+}
+
+function CancelSubscriptionDialog({ subscription, onClose, onCancelled }) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async event => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const result = await cancelReceptionistSubscription(subscription.id)
+      onCancelled(result)
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể hủy đăng ký gói.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog reception-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-cancel-subscription-title">
+      <header><div><span>HỦY GÓI CHỜ THANH TOÁN</span><h2 id="reception-cancel-subscription-title">Đăng ký #{subscription.id}</h2><p>{subscription.packageName}</p></div><button type="button" aria-label="Đóng xác nhận hủy gói" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}><div className="reception-cancel-subscription-copy"><span><Ban size={24} /></span><strong>Xác nhận hủy đăng ký gói?</strong><p>Chỉ gói đang chờ và chưa thanh toán mới có thể hủy.</p></div>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button className="danger" type="submit" disabled={saving}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
+    </section>
+  </div>
+}
+
+function SubscriptionDetailDialog({ subscriptionId, onClose }) {
+  const [subscription, setSubscription] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadSubscription = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getReceptionistSubscriptionById(subscriptionId)
+        if (active) setSubscription(result)
+      } catch (requestError) {
+        if (active) {
+          setSubscription(null)
+          setError(requestErrorMessage(requestError, 'Không thể tải chi tiết đăng ký gói.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadSubscription()
+    return () => { active = false }
+  }, [subscriptionId, requestKey])
+
+  return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="reception-dialog reception-subscription-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-subscription-detail-title">
+      <header><div><span>CHI TIẾT ĐĂNG KÝ</span><h2 id="reception-subscription-detail-title">Đăng ký gói #{subscriptionId}</h2><p>Dữ liệu chi tiết được tải trực tiếp từ Member Subscriptions API.</p></div><button type="button" aria-label="Đóng chi tiết đăng ký gói" onClick={onClose}><X size={19} /></button></header>
+      <div className="reception-subscription-detail-body">
+        {loading ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Đang tải chi tiết đăng ký</strong></div> : error ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Không thể tải chi tiết</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscription && <><div className="reception-subscription-detail-title"><span><CreditCard size={22} /></span><div><small>Gói hội viên</small><h3>{subscription.packageName}</h3></div><b className={String(subscription.status || '').toLowerCase()}>{subscriptionStatusLabel(subscription.status)}</b></div><div className="reception-subscription-detail-grid"><div><small>Mã hội viên</small><strong>#{subscription.memberId}</strong></div><div><small>Mã gói</small><strong>#{subscription.packageId}</strong></div><div><small>Giá đăng ký</small><strong>{Number(subscription.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Thời hạn</small><strong>{subscription.durationInDays} ngày</strong></div><div><small>Ngày tạo</small><strong>{formatMemberDate(subscription.createdAt)}</strong></div><div><small>Ngày bắt đầu</small><strong>{formatMemberDate(subscription.startDate)}</strong></div><div><small>Ngày kết thúc</small><strong>{formatMemberDate(subscription.endDate)}</strong></div><div><small>Số biên nhận</small><strong>{subscription.payments?.length || 0}</strong></div></div>{subscription.payments?.length > 0 && <div className="reception-subscription-receipts"><h4>Biên nhận thanh toán</h4>{subscription.payments.map(payment => <div key={payment.id}><span><small>Mã #{payment.id}</small><strong>{payment.paymentMethod}</strong></span><span><small>Số tiền</small><strong>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Trạng thái</small><strong>{payment.status}</strong></span></div>)}</div>}</>}
       </div>
     </section>
   </div>
@@ -646,19 +1004,177 @@ function MembersView({ query, showNotice }) {
     {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} onViewRegistrations={() => { setRegistrationsMemberId(selectedMemberId); setSelectedMemberId(null) }} onViewSubscriptions={() => { setSubscriptionsMemberId(selectedMemberId); setSelectedMemberId(null) }} onRegisterSubscription={() => { setSubscriptionMemberId(selectedMemberId); setSelectedMemberId(null) }} />}
     {registrationsMemberId !== null && <MemberRegistrationsDialog memberId={registrationsMemberId} onClose={() => setRegistrationsMemberId(null)} showNotice={showNotice} />}
     {subscriptionMemberId !== null && <CreateSubscriptionDialog memberId={subscriptionMemberId} onClose={() => setSubscriptionMemberId(null)} onCreated={handleSubscriptionCreated} />}
-    {subscriptionsMemberId !== null && <MemberSubscriptionsDialog memberId={subscriptionsMemberId} onClose={() => setSubscriptionsMemberId(null)} />}
+    {subscriptionsMemberId !== null && <MemberSubscriptionsDialog memberId={subscriptionsMemberId} onClose={() => setSubscriptionsMemberId(null)} showNotice={showNotice} />}
   </>
 }
 
-function PaymentsView({ query }) {
+function PaymentsView({ query, showNotice }) {
   const [status, setStatus] = useState('Tất cả')
+  const [paymentItems, setPaymentItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+  const [selectedPaymentId, setSelectedPaymentId] = useState(null)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
-  const payments = useMemo(() => emptyPayments.filter(payment => (status === 'Tất cả' || payment.status === status) && (!normalizedQuery || `${payment.code || ''} ${payment.customerName || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery))), [normalizedQuery, status])
+
+  useEffect(() => {
+    let active = true
+    const loadPayments = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getPayments()
+        if (active) setPaymentItems(result)
+      } catch (requestError) {
+        if (active) {
+          setPaymentItems([])
+          setError(requestErrorMessage(requestError, 'Không thể tải danh sách thanh toán.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadPayments()
+    return () => { active = false }
+  }, [requestKey])
+
+  const payments = useMemo(() => paymentItems.filter(payment => {
+    const matchesStatus = status === 'Tất cả' || paymentStatusLabel(payment.status) === status
+    const matchesQuery = !normalizedQuery || `${payment.id} ${payment.memberId} ${payment.subscriptionId || ''} ${payment.transactionReference || ''} ${payment.payOSOrderCode || ''}`.toLocaleLowerCase('vi').includes(normalizedQuery)
+    return matchesStatus && matchesQuery
+  }), [normalizedQuery, paymentItems, status])
+  const completedPayments = paymentItems.filter(payment => payment.status === 'Completed')
+  const completedTotal = completedPayments.reduce((sum, payment) => sum + Number(payment.amountReceived || payment.amount || 0), 0)
+  const pendingCount = paymentItems.filter(payment => payment.status === 'Pending').length
 
   return <>
-    <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Đã thu hôm nay</small><strong>--</strong><p>Chờ dữ liệu API</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>--</strong><p>Chờ dữ liệu API</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Hóa đơn đã tạo</small><strong>--</strong><p>Chờ dữ liệu API</p></div></article></section>
-    <section className="reception-card reception-table-card"><div className="reception-table-tools"><div><strong>Giao dịch tại quầy</strong><small>{payments.length} kết quả</small></div><div>{['Tất cả', 'Thành công', 'Chờ thanh toán', 'Hoàn tiền'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}</div></div><div className="reception-table-heading"><span>Mã giao dịch</span><span>Khách hàng</span><span>Nội dung</span><span>Số tiền</span><span>Trạng thái</span></div>{payments.length ? <div>{payments.map(payment => <button type="button" className="reception-table-row" key={payment.id}><span>{payment.code}</span><span>{payment.customerName}</span><span>{payment.description}</span><span>{payment.amount}</span><span>{payment.status}</span></button>)}</div> : <EmptyState icon={ReceiptText} title="Chưa có giao dịch" text="Giao dịch và hóa đơn sẽ xuất hiện sau khi kết nối Payment API." />}</section>
+    <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{loading ? '--' : `${completedTotal.toLocaleString('vi-VN')} đ`}</strong><p>{completedPayments.length} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{loading ? '--' : pendingCount}</strong><p>Yêu cầu PayOS đang mở</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{loading ? '--' : paymentItems.length}</strong><p>Dữ liệu từ Payment API</p></div></article></section>
+    <section className="reception-card reception-table-card reception-payments-card"><div className="reception-table-tools"><div><strong>Giao dịch PayOS</strong><small>{payments.length} kết quả</small></div><div>{['Tất cả', 'Thành công', 'Chờ thanh toán', 'Cần kiểm tra', 'Đã hủy'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}<button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Tạo thanh toán</button></div></div><div className="reception-table-heading"><span>Mã giao dịch</span><span>Hội viên</span><span>Đăng ký gói</span><span>Số tiền</span><span>Trạng thái</span></div>{loading ? <EmptyState icon={ReceiptText} title="Đang tải thanh toán" text="Dữ liệu đang được đồng bộ từ Payment API." /> : error ? <div className="reception-inline-error"><EmptyState icon={ReceiptText} title="Không thể tải thanh toán" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : payments.length ? <div>{payments.map(payment => <button type="button" className="reception-table-row" key={payment.id} onClick={() => setSelectedPaymentId(payment.id)} aria-label={`Xem thanh toán ${payment.id}`}><span>#{payment.id}</span><span>#{payment.memberId}</span><span>{payment.subscriptionId ? `#${payment.subscriptionId}` : 'Không có'}</span><span>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ</span><span className={`reception-payment-status ${String(payment.status || '').toLowerCase()}`}>{paymentStatusLabel(payment.status)}</span></button>)}</div> : <EmptyState icon={ReceiptText} title="Chưa có giao dịch" text={query || status !== 'Tất cả' ? 'Không có giao dịch phù hợp bộ lọc.' : 'Payment API chưa có dữ liệu giao dịch.'} />}</section>
+    {selectedPaymentId !== null && <PaymentDetailDialog paymentId={selectedPaymentId} onClose={() => setSelectedPaymentId(null)} onUpdated={() => setRequestKey(key => key + 1)} showNotice={showNotice} />}
+    {showCreateDialog && <CreatePaymentDialog onClose={() => setShowCreateDialog(false)} onCreated={payment => { setRequestKey(key => key + 1); setSelectedPaymentId(payment.id); showNotice(`Đã tạo yêu cầu thanh toán #${payment.id}.`) }} />}
   </>
+}
+
+function CreatePaymentDialog({ onClose, onCreated }) {
+  const [subscriptionId, setSubscriptionId] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async event => {
+    event.preventDefault()
+    const normalizedId = Number(subscriptionId)
+    if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+      setError('Mã đăng ký gói phải là số nguyên lớn hơn 0.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const payment = await createPayment(normalizedId)
+      onCreated(payment)
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể tạo yêu cầu thanh toán PayOS.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog reception-create-payment-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-create-payment-title">
+      <header><div><span>TẠO YÊU CẦU PAYOS</span><h2 id="reception-create-payment-title">Tạo thanh toán đăng ký gói</h2><p>Backend sẽ tạo mới hoặc trả lại link đang chờ của đăng ký này.</p></div><button type="button" aria-label="Đóng biểu mẫu tạo thanh toán" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}><label className="reception-payment-id-field">Mã đăng ký gói<input type="number" min="1" step="1" value={subscriptionId} onChange={event => setSubscriptionId(event.target.value)} placeholder="Ví dụ: 12" disabled={saving} autoFocus required /></label><div className="reception-payment-create-note"><WalletCards size={20} /><span><strong>Thanh toán qua PayOS</strong><small>Chỉ đăng ký gói đang chờ thanh toán mới có thể tạo yêu cầu.</small></span></div>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang tạo...' : 'Tạo yêu cầu thanh toán'}</button></footer></form>
+    </section>
+  </div>
+}
+
+function PaymentDetailDialog({ paymentId, onClose, onUpdated, showNotice }) {
+  const [payment, setPayment] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+  const [syncing, setSyncing] = useState(false)
+  const [actionError, setActionError] = useState('')
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    const loadPayment = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getPaymentById(paymentId)
+        if (active) setPayment(result)
+      } catch (requestError) {
+        if (active) {
+          setPayment(null)
+          setError(requestErrorMessage(requestError, 'Không thể tải chi tiết thanh toán.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadPayment()
+    return () => { active = false }
+  }, [paymentId, requestKey])
+
+  const handleSync = async () => {
+    setSyncing(true)
+    setActionError('')
+    try {
+      const result = await syncPayment(paymentId)
+      setPayment(result)
+      onUpdated(result)
+      showNotice(`Đã đồng bộ thanh toán #${paymentId} từ PayOS.`)
+    } catch (requestError) {
+      setActionError(requestErrorMessage(requestError, 'Không thể đồng bộ trạng thái PayOS.'))
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="reception-dialog reception-payment-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-payment-detail-title">
+      <header><div><span>CHI TIẾT PAYOS</span><h2 id="reception-payment-detail-title">Thanh toán #{paymentId}</h2><p>Dữ liệu được tải trực tiếp từ Payment API.</p></div><button type="button" aria-label="Đóng chi tiết thanh toán" onClick={onClose}><X size={19} /></button></header>
+      <div className="reception-payment-detail-body">{loading ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Đang tải chi tiết thanh toán</strong></div> : error ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Không thể tải chi tiết</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : payment && <><div className="reception-payment-detail-title"><span><WalletCards size={23} /></span><div><small>Mã giao dịch</small><h3>#{payment.id}</h3></div><b className={String(payment.status || '').toLowerCase()}>{paymentStatusLabel(payment.status)}</b></div><div className="reception-payment-detail-grid"><div><small>Hội viên</small><strong>#{payment.memberId}</strong></div><div><small>Đăng ký gói</small><strong>{payment.subscriptionId ? `#${payment.subscriptionId}` : 'Không có'}</strong></div><div><small>Số tiền</small><strong>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Đã nhận</small><strong>{Number(payment.amountReceived || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Phương thức</small><strong>{payment.paymentMethod || 'Chưa có'}</strong></div><div><small>Trạng thái PayOS</small><strong>{payment.gatewayStatus || 'Chưa đồng bộ'}</strong></div><div><small>Mã đơn PayOS</small><strong>{payment.payOSOrderCode || 'Chưa có'}</strong></div><div><small>Mã tham chiếu</small><strong>{payment.transactionReference || 'Chưa có'}</strong></div><div><small>Ngày tạo</small><strong>{formatDateTime(payment.createdAt)}</strong></div><div><small>Ngày thanh toán</small><strong>{formatDateTime(payment.paidAt)}</strong></div><div><small>Hết hạn</small><strong>{formatDateTime(payment.expiresAt)}</strong></div><div><small>Lý do kiểm tra</small><strong>{payment.reviewReason || 'Không có'}</strong></div></div>{actionError && <p className="reception-form-error" role="alert">{actionError}</p>}<div className="reception-payment-detail-actions">{payment.checkoutUrl && <a href={payment.checkoutUrl} target="_blank" rel="noreferrer">Mở trang thanh toán <ArrowRight size={14} /></a>}<button type="button" onClick={handleSync} disabled={syncing}><ScanLine size={14} />{syncing ? 'Đang đồng bộ...' : 'Đồng bộ PayOS'}</button>{payment.status === 'Pending' && <button className="cancel" type="button" onClick={() => setShowCancelDialog(true)} disabled={syncing}><Ban size={14} />Hủy thanh toán</button>}</div></>}
+      </div>
+      {showCancelDialog && payment && <CancelPaymentDialog payment={payment} onClose={() => setShowCancelDialog(false)} onCancelled={result => { setPayment(result); onUpdated(result); showNotice(`Đã hủy thanh toán #${paymentId}.`) }} />}
+    </section>
+  </div>
+}
+
+function CancelPaymentDialog({ payment, onClose, onCancelled }) {
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async event => {
+    event.preventDefault()
+    const normalizedReason = reason.trim()
+    if (!normalizedReason) {
+      setError('Vui lòng nhập lý do hủy thanh toán.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const result = await cancelPayOSPayment(payment.id, normalizedReason)
+      onCancelled(result)
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể hủy yêu cầu thanh toán PayOS.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog reception-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-cancel-payment-title">
+      <header><div><span>HỦY YÊU CẦU PAYOS</span><h2 id="reception-cancel-payment-title">Thanh toán #{payment.id}</h2><p>Chỉ giao dịch đang chờ mới có thể hủy.</p></div><button type="button" aria-label="Đóng xác nhận hủy thanh toán" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}><label className="reception-cancel-reason">Lý do hủy<textarea value={reason} onChange={event => setReason(event.target.value)} rows="4" maxLength="200" placeholder="Nhập lý do gửi tới PayOS..." disabled={saving} required /></label>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button className="danger" type="submit" disabled={saving}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
+    </section>
+  </div>
 }
 
 export default function Receptionist() {
@@ -667,9 +1183,77 @@ export default function Receptionist() {
   const [activeNav, setActiveNav] = useState('Tổng quan')
   const [query, setQuery] = useState('')
   const [notice, setNotice] = useState('')
+  const [notificationOpen, setNotificationOpen] = useState(false)
+  const [notificationPage, setNotificationPage] = useState({ items: [], total: 0, page: 1, pageSize: 6 })
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsError, setNotificationsError] = useState('')
+  const [notificationActionError, setNotificationActionError] = useState('')
+  const [markingNotificationId, setMarkingNotificationId] = useState(null)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const notificationRef = useRef(null)
   const staffName = user?.name || user?.fullName || 'Nhân viên lễ tân'
   const initials = staffName.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase() || 'LT'
   const today = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date())
+  const notificationPageCount = Math.max(1, Math.ceil(notificationPage.total / notificationPage.pageSize))
+
+  useEffect(() => {
+    let active = true
+    getNotifications({ unreadOnly: true, page: 1, pageSize: 1 })
+      .then(result => { if (active) setUnreadCount(result.total) })
+      .catch(() => { if (active) setUnreadCount(0) })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!notificationOpen) return undefined
+    const closeOnOutsideClick = event => {
+      if (!notificationRef.current?.contains(event.target)) setNotificationOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
+  }, [notificationOpen])
+
+  const loadNotifications = async (page = 1) => {
+    setNotificationsLoading(true)
+    setNotificationsError('')
+    setNotificationActionError('')
+    try {
+      const [result, unreadResult] = await Promise.all([
+        getNotifications({ page, pageSize: 6 }),
+        getNotifications({ unreadOnly: true, page: 1, pageSize: 1 }),
+      ])
+      setNotificationPage(result)
+      setUnreadCount(unreadResult.total)
+    } catch (error) {
+      setNotificationsError(requestErrorMessage(error, 'Không thể tải thông báo.'))
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
+  const toggleNotifications = () => {
+    const nextOpen = !notificationOpen
+    setNotificationOpen(nextOpen)
+    if (nextOpen) loadNotifications(1)
+  }
+
+  const handleMarkNotificationRead = async notification => {
+    if (notification.isRead || markingNotificationId) return
+    setMarkingNotificationId(notification.id)
+    setNotificationActionError('')
+    try {
+      await markNotificationRead(notification.id)
+      setNotificationPage(current => ({
+        ...current,
+        items: current.items.map(item => item.id === notification.id ? { ...item, isRead: true } : item),
+      }))
+      setUnreadCount(current => Math.max(0, current - 1))
+    } catch (error) {
+      setNotificationActionError(requestErrorMessage(error, 'Không thể đánh dấu thông báo đã đọc.'))
+    } finally {
+      setMarkingNotificationId(null)
+    }
+  }
 
   const showNotice = text => {
     setNotice(text)
@@ -691,7 +1275,7 @@ export default function Receptionist() {
     if (activeNav === 'Buổi học') return <SessionsView showNotice={showNotice} />
     if (activeNav === 'Check-in') return <CheckInView showNotice={showNotice} />
     if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
-    if (activeNav === 'Thanh toán') return <PaymentsView query={query} />
+    if (activeNav === 'Thanh toán') return <PaymentsView query={query} showNotice={showNotice} />
     return <Overview onNavigate={selectNavigation} />
   }
 
@@ -706,7 +1290,7 @@ export default function Receptionist() {
     </aside>
 
     <section className="reception-workspace">
-      <header className="reception-topbar"><label><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm mã đặt sân, hội viên..." aria-label="Tìm kiếm" /></label><div><ThemeToggle /><button type="button" aria-label="Thông báo" onClick={() => showNotice('Chưa có dữ liệu thông báo từ API.')}><Bell size={20} /></button><span className="reception-avatar">{initials}</span><span><strong>{staffName}</strong><small>Nhân viên lễ tân</small></span></div></header>
+      <header className="reception-topbar"><label><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm mã đặt sân, hội viên..." aria-label="Tìm kiếm" /></label><div><ThemeToggle /><div className="reception-notification-wrap" ref={notificationRef}><button className="reception-notification-button" type="button" aria-label="Thông báo" aria-expanded={notificationOpen} onClick={toggleNotifications}><Bell size={20} />{unreadCount > 0 && <i>{unreadCount > 99 ? '99+' : unreadCount}</i>}</button>{notificationOpen && <section className="reception-notification-panel" aria-label="Thông báo Receptionist"><header><div><span>THÔNG BÁO</span><strong>{unreadCount ? `${unreadCount} chưa đọc` : 'Đã xem tất cả'}</strong></div><button type="button" aria-label="Đóng thông báo" onClick={() => setNotificationOpen(false)}><X size={17} /></button></header>{notificationActionError && <div className="reception-notification-action-error" role="alert">{notificationActionError}</div>}{notificationsLoading ? <div className="reception-notification-state">Đang tải thông báo...</div> : notificationsError ? <div className="reception-notification-state error"><strong>Không thể tải thông báo</strong><span>{notificationsError}</span><button type="button" onClick={() => loadNotifications(notificationPage.page)}>Thử lại</button></div> : notificationPage.items.length ? <><div className="reception-notification-list">{notificationPage.items.map(item => <article className={item.isRead ? '' : 'unread'} key={item.id}><span><Bell size={15} /></span><div><strong>{item.title}</strong><p>{item.content}</p><small>{formatDateTime(item.sentAt)}</small>{!item.isRead && <button type="button" className="reception-notification-read" disabled={Boolean(markingNotificationId)} onClick={() => handleMarkNotificationRead(item)}><CheckCircle2 size={13} />{markingNotificationId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}</button>}</div>{!item.isRead && <i />}</article>)}</div>{notificationPageCount > 1 && <footer><button type="button" disabled={notificationPage.page <= 1} onClick={() => loadNotifications(notificationPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{notificationPage.page}/{notificationPageCount}</span><button type="button" disabled={notificationPage.page >= notificationPageCount} onClick={() => loadNotifications(notificationPage.page + 1)}>Sau<ChevronRight size={14} /></button></footer>}</> : <div className="reception-notification-state"><Bell size={24} /><strong>Chưa có thông báo</strong><span>Thông báo dành cho Receptionist sẽ xuất hiện tại đây.</span></div>}</section>}</div><span className="reception-avatar">{initials}</span><span><strong>{staffName}</strong><small>Nhân viên lễ tân</small></span></div></header>
       <div className="reception-main">
         {activeNav === 'Tổng quan' ? <section className="reception-welcome"><div><p>{today}</p><h1>Chào bạn, {staffName}!</h1><span>Dữ liệu vận hành quầy sẽ hiển thị khi các API được kết nối.</span></div><BadgeCheck size={42} /></section> : <section className="reception-page-heading"><p>{meta[0]}</p><h1>{meta[1]}</h1><span>{meta[2]}</span></section>}
         {notice && <div className="reception-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
