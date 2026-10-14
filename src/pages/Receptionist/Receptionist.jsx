@@ -9,7 +9,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import { getMembershipPackages } from '../../services/membershipPackageService'
-import { createReceptionistMemberSubscription, getReceptionistMemberSubscriptions } from '../../services/memberSubscriptionService'
+import { createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
 import {
   cancelReceptionistRegistration,
@@ -445,6 +445,7 @@ function MemberSubscriptionsDialog({ memberId, onClose }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const [selectedSubscriptionId, setSelectedSubscriptionId] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -471,7 +472,45 @@ function MemberSubscriptionsDialog({ memberId, onClose }) {
     <section className="reception-dialog reception-subscriptions-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-subscriptions-title">
       <header><div><span>GÓI HỘI VIÊN</span><h2 id="reception-member-subscriptions-title">Các gói của hội viên #{memberId}</h2><p>{subscriptions.length} đăng ký gói được tìm thấy.</p></div><button type="button" aria-label="Đóng danh sách gói" onClick={onClose}><X size={19} /></button></header>
       <div className="reception-subscriptions-body">
-        {loading ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Đang tải các gói hội viên</strong><span>Dữ liệu đang được đồng bộ từ Member Subscriptions API.</span></div> : error ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Không thể tải các gói</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscriptions.length ? <div className="reception-subscription-list">{subscriptions.map(item => <article key={item.id}><header><div><small>Đăng ký #{item.id}</small><strong>{item.packageName}</strong></div><b className={String(item.status || '').toLowerCase()}>{subscriptionStatusLabel(item.status)}</b></header><div><span><small>Giá đăng ký</small><strong>{Number(item.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{item.durationInDays} ngày</strong></span><span><small>Ngày tạo</small><strong>{formatMemberDate(item.createdAt)}</strong></span><span><small>Hiệu lực</small><strong>{item.startDate ? `${formatMemberDate(item.startDate)} – ${formatMemberDate(item.endDate)}` : 'Chờ kích hoạt'}</strong></span></div></article>)}</div> : <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Chưa đăng ký gói</strong><span>Hội viên này chưa có đăng ký gói nào.</span></div>}
+        {loading ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Đang tải các gói hội viên</strong><span>Dữ liệu đang được đồng bộ từ Member Subscriptions API.</span></div> : error ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Không thể tải các gói</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscriptions.length ? <div className="reception-subscription-list">{subscriptions.map(item => <article key={item.id}><header><div><small>Đăng ký #{item.id}</small><strong>{item.packageName}</strong></div><b className={String(item.status || '').toLowerCase()}>{subscriptionStatusLabel(item.status)}</b></header><div><span><small>Giá đăng ký</small><strong>{Number(item.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{item.durationInDays} ngày</strong></span><span><small>Ngày tạo</small><strong>{formatMemberDate(item.createdAt)}</strong></span><span><small>Hiệu lực</small><strong>{item.startDate ? `${formatMemberDate(item.startDate)} – ${formatMemberDate(item.endDate)}` : 'Chờ kích hoạt'}</strong></span></div><button className="reception-subscription-detail-button" type="button" onClick={() => setSelectedSubscriptionId(item.id)}>Xem chi tiết <ArrowRight size={14} /></button></article>)}</div> : <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Chưa đăng ký gói</strong><span>Hội viên này chưa có đăng ký gói nào.</span></div>}
+      </div>
+      {selectedSubscriptionId !== null && <SubscriptionDetailDialog subscriptionId={selectedSubscriptionId} onClose={() => setSelectedSubscriptionId(null)} />}
+    </section>
+  </div>
+}
+
+function SubscriptionDetailDialog({ subscriptionId, onClose }) {
+  const [subscription, setSubscription] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadSubscription = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getReceptionistSubscriptionById(subscriptionId)
+        if (active) setSubscription(result)
+      } catch (requestError) {
+        if (active) {
+          setSubscription(null)
+          setError(requestErrorMessage(requestError, 'Không thể tải chi tiết đăng ký gói.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadSubscription()
+    return () => { active = false }
+  }, [subscriptionId, requestKey])
+
+  return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="reception-dialog reception-subscription-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-subscription-detail-title">
+      <header><div><span>CHI TIẾT ĐĂNG KÝ</span><h2 id="reception-subscription-detail-title">Đăng ký gói #{subscriptionId}</h2><p>Dữ liệu chi tiết được tải trực tiếp từ Member Subscriptions API.</p></div><button type="button" aria-label="Đóng chi tiết đăng ký gói" onClick={onClose}><X size={19} /></button></header>
+      <div className="reception-subscription-detail-body">
+        {loading ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Đang tải chi tiết đăng ký</strong></div> : error ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Không thể tải chi tiết</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscription && <><div className="reception-subscription-detail-title"><span><CreditCard size={22} /></span><div><small>Gói hội viên</small><h3>{subscription.packageName}</h3></div><b className={String(subscription.status || '').toLowerCase()}>{subscriptionStatusLabel(subscription.status)}</b></div><div className="reception-subscription-detail-grid"><div><small>Mã hội viên</small><strong>#{subscription.memberId}</strong></div><div><small>Mã gói</small><strong>#{subscription.packageId}</strong></div><div><small>Giá đăng ký</small><strong>{Number(subscription.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Thời hạn</small><strong>{subscription.durationInDays} ngày</strong></div><div><small>Ngày tạo</small><strong>{formatMemberDate(subscription.createdAt)}</strong></div><div><small>Ngày bắt đầu</small><strong>{formatMemberDate(subscription.startDate)}</strong></div><div><small>Ngày kết thúc</small><strong>{formatMemberDate(subscription.endDate)}</strong></div><div><small>Số biên nhận</small><strong>{subscription.payments?.length || 0}</strong></div></div>{subscription.payments?.length > 0 && <div className="reception-subscription-receipts"><h4>Biên nhận thanh toán</h4>{subscription.payments.map(payment => <div key={payment.id}><span><small>Mã #{payment.id}</small><strong>{payment.paymentMethod}</strong></span><span><small>Số tiền</small><strong>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Trạng thái</small><strong>{payment.status}</strong></span></div>)}</div>}</>}
       </div>
     </section>
   </div>

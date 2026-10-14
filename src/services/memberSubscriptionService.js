@@ -33,3 +33,9 @@ export async function getReceptionistMemberSubscriptions(memberId) {
   const payload = unwrap(response.data, 'Không thể tải các gói của hội viên.')
   return Array.isArray(payload) ? payload : []
 }
+
+/** GET /api/member-subscriptions/{id} */
+export async function getReceptionistSubscriptionById(id) {
+  const response = await api.get(`/member-subscriptions/${id}`)
+  return unwrap(response.data, 'Không thể tải chi tiết đăng ký gói.')
+}
