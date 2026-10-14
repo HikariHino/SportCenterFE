@@ -3,9 +3,11 @@ import {
   AlertCircle,
   ArrowDownToLine,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
   CreditCard,
+  Crown,
   Edit2,
   Grid,
   Info,
@@ -25,12 +27,41 @@ import {
   Zap,
 } from 'lucide-react'
 import {
+  createMembershipPackage,
   deleteMembershipPackage,
   getMembershipPackagesForManagement,
   getPackageErrorMessage,
   updateMembershipPackage,
 } from '../../services/membershipPackageService'
 import '../../style/CenterManager/PackageManagement.css'
+
+const PRESET_DURATIONS = [
+  { label: '1 Tháng (30 ngày)', days: 30 },
+  { label: '3 Tháng (90 ngày)', days: 90 },
+  { label: '6 Tháng (180 ngày)', days: 180 },
+  { label: '1 Năm (365 ngày)', days: 365 },
+]
+
+const PRESET_NAMES = [
+  'Gói Hội Viên 1 Tháng (Basic)',
+  'Gói Hội Viên 3 Tháng (Standard)',
+  'Gói Hội Viên 6 Tháng (Pro)',
+  'Gói Hội Viên 1 Năm (Diamond)',
+  'Gói Hội Viên VIP All-Access',
+  'Thẻ Tập Cuối Tuần (Weekend Pass)',
+  'Gói Học Sinh / Sinh Viên (Student Pass)',
+]
+
+const BENEFIT_SUGGESTIONS = [
+  'Không giới hạn giờ tập',
+  'Tham gia toàn bộ lớp Yoga & Gym miễn phí',
+  'Miễn phí sử dụng Bể bơi bốn mùa',
+  'Tủ đồ cá nhân (Locker VIP)',
+  '02 buổi tập cùng HLV cá nhân (PT)',
+  'Đo chỉ số cơ thể InBody định kỳ hàng tháng',
+  'Miễn phí khăn tập và nước uống cao cấp',
+  'Tặng 01 vé mời bạn bè trải nghiệm/tháng',
+]
 
 const formatCurrency = (val) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0)
@@ -60,10 +91,21 @@ export default function PackageManagement() {
   const [durationFilter, setDurationFilter] = useState('ALL') // 'ALL' | '1M' | '3M' | '6M' | '1Y'
   const [statusFilter, setStatusFilter] = useState('ALL') // 'ALL' | 'ACTIVE' | 'INACTIVE'
 
-  // Modals placeholder for Commit 1 (expanded in Commit 2)
+  // Modals
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingPackage, setEditingPackage] = useState(null)
   const [selectedPackageForDetail, setSelectedPackageForDetail] = useState(null)
   const [togglingPackage, setTogglingPackage] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // Package Form State
+  const [packageForm, setPackageForm] = useState({
+    packageName: '',
+    description: '',
+    price: 600000,
+    durationInDays: 30,
+    isActive: true,
+  })
 
   // Auto clear success message
   useEffect(() => {
@@ -89,6 +131,13 @@ export default function PackageManagement() {
 
   useEffect(() => {
     loadPackages()
+  }, [])
+
+  // Listen for custom trigger from button
+  useEffect(() => {
+    const handleOpen = () => handleOpenCreate()
+    window.addEventListener('open-create-package-modal', handleOpen)
+    return () => window.removeEventListener('open-create-package-modal', handleOpen)
   }, [])
 
   // Filtered packages
@@ -125,6 +174,114 @@ export default function PackageManagement() {
   const inactiveCount = packages.length - activeCount
   const maxPrice = packages.reduce((max, p) => Math.max(max, Number(p.price) || 0), 0)
 
+  // Open Create Modal
+  const handleOpenCreate = () => {
+    setPackageForm({
+      packageName: 'Gói Hội Viên 1 Tháng (Basic)',
+      description: 'Không giới hạn giờ tập tại trung tâm. Miễn phí tủ đồ cá nhân và đo chỉ số InBody.',
+      price: 600000,
+      durationInDays: 30,
+      isActive: true,
+    })
+    setShowCreateModal(true)
+    setError('')
+  }
+
+  // Open Edit Modal
+  const handleOpenEdit = (pkg) => {
+    setEditingPackage(pkg)
+    setPackageForm({
+      packageName: pkg.packageName || '',
+      description: pkg.description || '',
+      price: pkg.price || 0,
+      durationInDays: pkg.durationInDays || 30,
+      isActive: pkg.isActive !== false,
+    })
+    setError('')
+  }
+
+  // Append a benefit suggestion into description
+  const handleAddBenefit = (benefit) => {
+    setPackageForm((prev) => {
+      const current = prev.description ? prev.description.trim() : ''
+      if (current.includes(benefit)) return prev
+      const updated = current ? `${current}\n• ${benefit}` : `• ${benefit}`
+      return { ...prev, description: updated }
+    })
+  }
+
+  // Submit Create Package
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault()
+    if (!packageForm.packageName.trim()) {
+      setError('Vui lòng nhập tên gói thẻ hội viên.')
+      return
+    }
+    if (!packageForm.price || Number(packageForm.price) <= 0) {
+      setError('Giá bán gói tập phải lớn hơn 0 VND.')
+      return
+    }
+    if (!packageForm.durationInDays || Number(packageForm.durationInDays) < 1) {
+      setError('Thời hạn gói tập phải từ 1 ngày trở lên.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    try {
+      const created = await createMembershipPackage({
+        packageName: packageForm.packageName.trim(),
+        description: packageForm.description ? packageForm.description.trim() : null,
+        price: Number(packageForm.price),
+        durationInDays: Number(packageForm.durationInDays),
+      })
+      await loadPackages()
+      setShowCreateModal(false)
+      setSuccess(`Đã tạo gói thẻ hội viên "${created.packageName}" thành công!`)
+    } catch (err) {
+      setError(getPackageErrorMessage(err, 'Không thể tạo mới gói hội viên.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Submit Edit Package
+  const handleEditSubmit = async (e) => {
+    e.preventDefault()
+    if (!editingPackage) return
+    if (!packageForm.packageName.trim()) {
+      setError('Vui lòng nhập tên gói thẻ hội viên.')
+      return
+    }
+    if (!packageForm.price || Number(packageForm.price) <= 0) {
+      setError('Giá bán gói tập phải lớn hơn 0 VND.')
+      return
+    }
+    if (!packageForm.durationInDays || Number(packageForm.durationInDays) < 1) {
+      setError('Thời hạn gói tập phải từ 1 ngày trở lên.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    try {
+      const updated = await updateMembershipPackage(editingPackage.id, {
+        packageName: packageForm.packageName.trim(),
+        description: packageForm.description ? packageForm.description.trim() : null,
+        price: Number(packageForm.price),
+        durationInDays: Number(packageForm.durationInDays),
+        isActive: Boolean(packageForm.isActive),
+      })
+      await loadPackages()
+      setEditingPackage(null)
+      setSuccess(`Đã cập nhật gói thẻ "${updated.packageName}" thành công!`)
+    } catch (err) {
+      setError(getPackageErrorMessage(err, 'Không thể cập nhật gói hội viên.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   // Quick toggle active / inactive
   const handleToggleStatus = async (pkg) => {
     setSubmitting(true)
@@ -132,14 +289,12 @@ export default function PackageManagement() {
     try {
       const nextActive = !pkg.isActive
       if (!nextActive) {
-        // Deactivate via DELETE /api/membership-packages/{id}
         await deleteMembershipPackage(pkg.id)
         setPackages((prev) =>
           prev.map((item) => (item.id === pkg.id ? { ...item, isActive: false } : item))
         )
         setSuccess(`Đã tạm dừng bán gói "${pkg.packageName}".`)
       } else {
-        // Activate via PUT /api/membership-packages/{id}
         const updated = await updateMembershipPackage(pkg.id, {
           packageName: pkg.packageName,
           description: pkg.description,
@@ -188,6 +343,12 @@ export default function PackageManagement() {
     setSuccess('Đã xuất danh sách gói hội viên ra file CSV thành công!')
   }
 
+  // Calculated per-day cost in form
+  const formPerDayCost =
+    packageForm.durationInDays > 0
+      ? Math.round(Number(packageForm.price || 0) / Number(packageForm.durationInDays))
+      : 0
+
   return (
     <div className="pkg-mgmt">
       {/* Header */}
@@ -203,7 +364,7 @@ export default function PackageManagement() {
             type="button"
             className="pkg-btn pkg-btn-secondary"
             onClick={handleExportCSV}
-            title="Xuất file CSV"
+            title="Xuất file CSV danh sách gói thẻ"
           >
             <ArrowDownToLine size={15} /> Xuất CSV
           </button>
@@ -219,10 +380,7 @@ export default function PackageManagement() {
           <button
             type="button"
             className="pkg-btn pkg-btn-primary"
-            onClick={() => {
-              // Trigger create event or modal
-              window.dispatchEvent(new CustomEvent('open-create-package-modal'))
-            }}
+            onClick={handleOpenCreate}
           >
             <Plus size={16} /> Tạo gói thẻ mới
           </button>
@@ -375,6 +533,13 @@ export default function PackageManagement() {
           <Package size={40} />
           <strong>Không tìm thấy gói thẻ phù hợp</strong>
           <p>Thử điều chỉnh bộ lọc hoặc tạo gói thẻ hội viên mới cho trung tâm.</p>
+          <button
+            type="button"
+            className="pkg-btn pkg-btn-primary"
+            onClick={handleOpenCreate}
+          >
+            <Plus size={16} /> Tạo gói thẻ ngay
+          </button>
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
@@ -418,10 +583,18 @@ export default function PackageManagement() {
                     <button
                       type="button"
                       className="package-action-btn"
-                      title="Xem chi tiết gói thẻ"
+                      title="Xem chi tiết quyền lợi"
                       onClick={() => setSelectedPackageForDetail(pkg)}
                     >
                       <Info size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className="package-action-btn"
+                      title="Chỉnh sửa giá bán, quyền lợi hoặc thời hạn"
+                      onClick={() => handleOpenEdit(pkg)}
+                    >
+                      <Edit2 size={15} />
                     </button>
                     <button
                       type="button"
@@ -488,6 +661,14 @@ export default function PackageManagement() {
                         </button>
                         <button
                           type="button"
+                          className="package-action-btn"
+                          title="Chỉnh sửa"
+                          onClick={() => handleOpenEdit(pkg)}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
                           className={`package-action-btn ${pkg.isActive ? 'danger' : 'info'}`}
                           title={pkg.isActive ? 'Tạm dừng bán' : 'Mở bán lại'}
                           onClick={() => setTogglingPackage(pkg)}
@@ -504,7 +685,405 @@ export default function PackageManagement() {
         </div>
       )}
 
-      {/* CONFIRM TOGGLE STATUS MODAL */}
+      {/* ======================================================== */}
+      {/* MODAL: CREATE PACKAGE */}
+      {/* ======================================================== */}
+      {showCreateModal && (
+        <div className="pkg-modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="pkg-modal wide" onClick={(e) => e.stopPropagation()}>
+            <div className="pkg-modal-header">
+              <h3>Tạo gói thẻ hội viên mới</h3>
+              <button
+                type="button"
+                className="pkg-modal-close"
+                onClick={() => setShowCreateModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateSubmit}>
+              <div className="pkg-modal-body">
+                <div className="pkg-form-group">
+                  <label>
+                    Tên gói thẻ <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="pkg-form-input"
+                    placeholder="Ví dụ: Gói 1 Tháng, Gói 6 Tháng VIP, Thẻ Tập Sinh Viên..."
+                    value={packageForm.packageName}
+                    onChange={(e) => setPackageForm({ ...packageForm, packageName: e.target.value })}
+                    required
+                    autoFocus
+                  />
+                  <div className="pkg-preset-chips">
+                    <span style={{ fontSize: 11, color: 'var(--manager-muted)', alignSelf: 'center' }}>
+                      Gợi ý tên:
+                    </span>
+                    {PRESET_NAMES.slice(0, 4).map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="pkg-chip-btn"
+                        onClick={() => setPackageForm({ ...packageForm, packageName: name })}
+                      >
+                        {name.split(' (')[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pkg-form-grid-2">
+                  <div className="pkg-form-group">
+                    <label>
+                      Thời hạn sử dụng (ngày) <span className="required">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="36500"
+                      className="pkg-form-input"
+                      value={packageForm.durationInDays}
+                      onChange={(e) =>
+                        setPackageForm({ ...packageForm, durationInDays: Number(e.target.value) })
+                      }
+                      required
+                    />
+                    <div className="pkg-preset-chips">
+                      {PRESET_DURATIONS.map((dur) => (
+                        <button
+                          key={dur.days}
+                          type="button"
+                          className="pkg-chip-btn"
+                          onClick={() => setPackageForm({ ...packageForm, durationInDays: dur.days })}
+                        >
+                          {dur.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pkg-form-group">
+                    <label>
+                      Giá niêm yết (VND) <span className="required">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1000"
+                      step="50000"
+                      className="pkg-form-input"
+                      value={packageForm.price}
+                      onChange={(e) => setPackageForm({ ...packageForm, price: Number(e.target.value) })}
+                      required
+                    />
+                    <span className="pkg-form-help">
+                      Định dạng: <strong>{formatCurrency(packageForm.price)}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Calculation Preview */}
+                <div className="pkg-calc-box">
+                  <div>
+                    <span>Ước tính chi phí trung bình:</span>
+                    <strong> ~ {formatCurrency(formPerDayCost)} / ngày</strong>
+                  </div>
+                  <Sparkles size={18} />
+                </div>
+
+                <div className="pkg-form-group">
+                  <label>Mô tả quyền lợi & Chính sách lớp học</label>
+                  <textarea
+                    className="pkg-form-textarea"
+                    placeholder="Mô tả các tiện ích, quyền lợi lớp học kèm theo, số buổi PT, v.v..."
+                    value={packageForm.description}
+                    onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
+                  />
+                  <div className="pkg-benefits-wrap">
+                    <span style={{ fontSize: 11, color: 'var(--manager-muted)', width: '100%' }}>
+                      Click để thêm nhanh quyền lợi vào mô tả:
+                    </span>
+                    {BENEFIT_SUGGESTIONS.map((ben) => (
+                      <button
+                        key={ben}
+                        type="button"
+                        className="pkg-benefit-chip"
+                        onClick={() => handleAddBenefit(ben)}
+                      >
+                        + {ben}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="pkg-modal-footer">
+                <button
+                  type="button"
+                  className="pkg-btn pkg-btn-secondary"
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={submitting}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="pkg-btn pkg-btn-primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Đang tạo...' : 'Tạo gói thẻ ngay'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: EDIT PACKAGE */}
+      {/* ======================================================== */}
+      {editingPackage && (
+        <div className="pkg-modal-overlay" onClick={() => setEditingPackage(null)}>
+          <div className="pkg-modal wide" onClick={(e) => e.stopPropagation()}>
+            <div className="pkg-modal-header">
+              <h3>Chỉnh sửa gói thẻ: #{editingPackage.id}</h3>
+              <button
+                type="button"
+                className="pkg-modal-close"
+                onClick={() => setEditingPackage(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit}>
+              <div className="pkg-modal-body">
+                <div className="pkg-form-group">
+                  <label>
+                    Tên gói thẻ <span className="required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="pkg-form-input"
+                    value={packageForm.packageName}
+                    onChange={(e) => setPackageForm({ ...packageForm, packageName: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="pkg-form-grid-2">
+                  <div className="pkg-form-group">
+                    <label>
+                      Thời hạn sử dụng (ngày) <span className="required">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="36500"
+                      className="pkg-form-input"
+                      value={packageForm.durationInDays}
+                      onChange={(e) =>
+                        setPackageForm({ ...packageForm, durationInDays: Number(e.target.value) })
+                      }
+                      required
+                    />
+                    <div className="pkg-preset-chips">
+                      {PRESET_DURATIONS.map((dur) => (
+                        <button
+                          key={dur.days}
+                          type="button"
+                          className="pkg-chip-btn"
+                          onClick={() => setPackageForm({ ...packageForm, durationInDays: dur.days })}
+                        >
+                          {dur.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pkg-form-group">
+                    <label>
+                      Giá bán niêm yết (VND) <span className="required">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1000"
+                      step="50000"
+                      className="pkg-form-input"
+                      value={packageForm.price}
+                      onChange={(e) => setPackageForm({ ...packageForm, price: Number(e.target.value) })}
+                      required
+                    />
+                    <span className="pkg-form-help">
+                      Định dạng: <strong>{formatCurrency(packageForm.price)}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Calculation Preview */}
+                <div className="pkg-calc-box">
+                  <div>
+                    <span>Ước tính chi phí trung bình:</span>
+                    <strong> ~ {formatCurrency(formPerDayCost)} / ngày</strong>
+                  </div>
+                  <Sparkles size={18} />
+                </div>
+
+                <div className="pkg-form-group">
+                  <label>Mô tả quyền lợi & Chính sách lớp học</label>
+                  <textarea
+                    className="pkg-form-textarea"
+                    value={packageForm.description}
+                    onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
+                  />
+                  <div className="pkg-benefits-wrap">
+                    <span style={{ fontSize: 11, color: 'var(--manager-muted)', width: '100%' }}>
+                      Click để thêm nhanh quyền lợi vào mô tả:
+                    </span>
+                    {BENEFIT_SUGGESTIONS.map((ben) => (
+                      <button
+                        key={ben}
+                        type="button"
+                        className="pkg-benefit-chip"
+                        onClick={() => handleAddBenefit(ben)}
+                      >
+                        + {ben}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pkg-form-group">
+                  <label className="pkg-form-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={packageForm.isActive}
+                      onChange={(e) => setPackageForm({ ...packageForm, isActive: e.target.checked })}
+                    />
+                    <span>Trạng thái mở bán (Active)</span>
+                  </label>
+                  <span className="pkg-form-help">
+                    Tắt mở bán để tạm dừng không cho hội viên đăng ký hoặc lễ tân bán gói này.
+                  </span>
+                </div>
+              </div>
+              <div className="pkg-modal-footer">
+                <button
+                  type="button"
+                  className="pkg-btn pkg-btn-secondary"
+                  onClick={() => setEditingPackage(null)}
+                  disabled={submitting}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="pkg-btn pkg-btn-primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: DETAIL */}
+      {/* ======================================================== */}
+      {selectedPackageForDetail && (
+        <div className="pkg-modal-overlay" onClick={() => setSelectedPackageForDetail(null)}>
+          <div className="pkg-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pkg-modal-header">
+              <h3>Chi tiết gói thẻ: {selectedPackageForDetail.packageName}</h3>
+              <button
+                type="button"
+                className="pkg-modal-close"
+                onClick={() => setSelectedPackageForDetail(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="pkg-modal-body">
+              <div className="package-pricing">
+                <strong>{formatCurrency(selectedPackageForDetail.price)}</strong>
+                <span>/ {formatDuration(selectedPackageForDetail.durationInDays)}</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+                <div>
+                  <span style={{ color: 'var(--manager-muted)' }}>Mã gói thẻ: </span>
+                  <strong>#{selectedPackageForDetail.id}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--manager-muted)' }}>Chi phí trung bình: </span>
+                  <strong>
+                    ~{' '}
+                    {formatCurrency(
+                      selectedPackageForDetail.durationInDays > 0
+                        ? Math.round(
+                            Number(selectedPackageForDetail.price) /
+                              selectedPackageForDetail.durationInDays
+                          )
+                        : 0
+                    )}{' '}
+                    / ngày
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--manager-muted)' }}>Trạng thái: </span>
+                  <span
+                    className={`package-badge ${selectedPackageForDetail.isActive ? 'active' : 'inactive'}`}
+                  >
+                    <i />
+                    {selectedPackageForDetail.isActive ? 'Đang mở bán' : 'Tạm dừng bán'}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--manager-muted)' }}>Mô tả & Quyền lợi:</span>
+                  <div
+                    style={{
+                      marginTop: 6,
+                      lineHeight: 1.6,
+                      color: '#334155',
+                      background: '#f8fafc',
+                      padding: '12px 14px',
+                      borderRadius: 8,
+                      border: '1px solid var(--manager-line)',
+                      whiteSpace: 'pre-line',
+                    }}
+                  >
+                    {selectedPackageForDetail.description || 'Chưa cập nhật mô tả chi tiết.'}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="pkg-modal-footer">
+              <button
+                type="button"
+                className="pkg-btn pkg-btn-secondary"
+                onClick={() => {
+                  const pkg = selectedPackageForDetail
+                  setSelectedPackageForDetail(null)
+                  handleOpenEdit(pkg)
+                }}
+              >
+                <Edit2 size={14} /> Chỉnh sửa gói
+              </button>
+              <button
+                type="button"
+                className="pkg-btn pkg-btn-primary"
+                onClick={() => setSelectedPackageForDetail(null)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: TOGGLE STATUS CONFIRM */}
+      {/* ======================================================== */}
       {togglingPackage && (
         <div className="pkg-modal-overlay" onClick={() => setTogglingPackage(null)}>
           <div className="pkg-modal" onClick={(e) => e.stopPropagation()}>
@@ -555,61 +1134,6 @@ export default function PackageManagement() {
                   : togglingPackage.isActive
                   ? 'Xác nhận tạm dừng'
                   : 'Xác nhận mở bán'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DETAIL MODAL */}
-      {selectedPackageForDetail && (
-        <div className="pkg-modal-overlay" onClick={() => setSelectedPackageForDetail(null)}>
-          <div className="pkg-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pkg-modal-header">
-              <h3>Chi tiết gói thẻ: {selectedPackageForDetail.packageName}</h3>
-              <button
-                type="button"
-                className="pkg-modal-close"
-                onClick={() => setSelectedPackageForDetail(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="pkg-modal-body">
-              <div className="package-pricing">
-                <strong>{formatCurrency(selectedPackageForDetail.price)}</strong>
-                <span>/ {formatDuration(selectedPackageForDetail.durationInDays)}</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-                <div>
-                  <span style={{ color: 'var(--manager-muted)' }}>Mã gói thẻ: </span>
-                  <strong>#{selectedPackageForDetail.id}</strong>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--manager-muted)' }}>Trạng thái: </span>
-                  <span
-                    className={`package-badge ${selectedPackageForDetail.isActive ? 'active' : 'inactive'}`}
-                  >
-                    <i />
-                    {selectedPackageForDetail.isActive ? 'Đang mở bán' : 'Tạm dừng bán'}
-                  </span>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--manager-muted)' }}>Mô tả & Quyền lợi:</span>
-                  <p style={{ margin: '6px 0 0', lineHeight: 1.6, color: '#334155' }}>
-                    {selectedPackageForDetail.description || 'Chưa cập nhật mô tả chi tiết.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="pkg-modal-footer">
-              <button
-                type="button"
-                className="pkg-btn pkg-btn-secondary"
-                onClick={() => setSelectedPackageForDetail(null)}
-              >
-                Đóng
               </button>
             </div>
           </div>
