@@ -17,6 +17,12 @@ export async function getPayments() {
 
 export const getMyPayments = getPayments
 
+/** GET /api/payments/{id} */
+export async function getPaymentById(id) {
+  const response = await api.get(`/payments/${id}`)
+  return unwrap(response.data, 'Không thể tải chi tiết thanh toán.')
+}
+
 /** POST /api/payments - Tạo hoặc lấy lại link PayOS cho đăng ký đang chờ. */
 export async function createPayment(subscriptionId) {
   const response = await api.post('/payments', { subscriptionId })
