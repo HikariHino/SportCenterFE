@@ -45,3 +45,13 @@ export async function cancelReceptionistSubscription(id) {
   const response = await api.post(`/member-subscriptions/${id}/cancel`)
   return unwrap(response.data, 'Không thể hủy đăng ký gói.')
 }
+
+/** POST /api/member-subscriptions/{id}/payments */
+export async function confirmReceptionistSubscriptionPayment(id, { amount, paymentMethod, paymentReceived }) {
+  const response = await api.post(`/member-subscriptions/${id}/payments`, {
+    amount,
+    paymentMethod,
+    paymentReceived,
+  })
+  return unwrap(response.data, 'Không thể xác nhận thanh toán đăng ký gói.')
+}
