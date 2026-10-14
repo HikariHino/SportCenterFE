@@ -39,3 +39,9 @@ export async function getReceptionistSubscriptionById(id) {
   const response = await api.get(`/member-subscriptions/${id}`)
   return unwrap(response.data, 'Không thể tải chi tiết đăng ký gói.')
 }
+
+/** POST /api/member-subscriptions/{id}/cancel */
+export async function cancelReceptionistSubscription(id) {
+  const response = await api.post(`/member-subscriptions/${id}/cancel`)
+  return unwrap(response.data, 'Không thể hủy đăng ký gói.')
+}

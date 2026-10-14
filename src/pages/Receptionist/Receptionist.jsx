@@ -9,7 +9,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import { getMembershipPackages } from '../../services/membershipPackageService'
-import { createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
+import { cancelReceptionistSubscription, createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
 import {
   cancelReceptionistRegistration,
@@ -440,12 +440,13 @@ function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
   </div>
 }
 
-function MemberSubscriptionsDialog({ memberId, onClose }) {
+function MemberSubscriptionsDialog({ memberId, onClose, showNotice }) {
   const [subscriptions, setSubscriptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState(null)
+  const [cancelSubscription, setCancelSubscription] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -472,9 +473,37 @@ function MemberSubscriptionsDialog({ memberId, onClose }) {
     <section className="reception-dialog reception-subscriptions-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-subscriptions-title">
       <header><div><span>GÓI HỘI VIÊN</span><h2 id="reception-member-subscriptions-title">Các gói của hội viên #{memberId}</h2><p>{subscriptions.length} đăng ký gói được tìm thấy.</p></div><button type="button" aria-label="Đóng danh sách gói" onClick={onClose}><X size={19} /></button></header>
       <div className="reception-subscriptions-body">
-        {loading ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Đang tải các gói hội viên</strong><span>Dữ liệu đang được đồng bộ từ Member Subscriptions API.</span></div> : error ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Không thể tải các gói</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscriptions.length ? <div className="reception-subscription-list">{subscriptions.map(item => <article key={item.id}><header><div><small>Đăng ký #{item.id}</small><strong>{item.packageName}</strong></div><b className={String(item.status || '').toLowerCase()}>{subscriptionStatusLabel(item.status)}</b></header><div><span><small>Giá đăng ký</small><strong>{Number(item.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{item.durationInDays} ngày</strong></span><span><small>Ngày tạo</small><strong>{formatMemberDate(item.createdAt)}</strong></span><span><small>Hiệu lực</small><strong>{item.startDate ? `${formatMemberDate(item.startDate)} – ${formatMemberDate(item.endDate)}` : 'Chờ kích hoạt'}</strong></span></div><button className="reception-subscription-detail-button" type="button" onClick={() => setSelectedSubscriptionId(item.id)}>Xem chi tiết <ArrowRight size={14} /></button></article>)}</div> : <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Chưa đăng ký gói</strong><span>Hội viên này chưa có đăng ký gói nào.</span></div>}
+        {loading ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Đang tải các gói hội viên</strong><span>Dữ liệu đang được đồng bộ từ Member Subscriptions API.</span></div> : error ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Không thể tải các gói</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscriptions.length ? <div className="reception-subscription-list">{subscriptions.map(item => <article key={item.id}><header><div><small>Đăng ký #{item.id}</small><strong>{item.packageName}</strong></div><b className={String(item.status || '').toLowerCase()}>{subscriptionStatusLabel(item.status)}</b></header><div><span><small>Giá đăng ký</small><strong>{Number(item.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{item.durationInDays} ngày</strong></span><span><small>Ngày tạo</small><strong>{formatMemberDate(item.createdAt)}</strong></span><span><small>Hiệu lực</small><strong>{item.startDate ? `${formatMemberDate(item.startDate)} – ${formatMemberDate(item.endDate)}` : 'Chờ kích hoạt'}</strong></span></div><footer className="reception-subscription-actions"><button type="button" onClick={() => setSelectedSubscriptionId(item.id)}>Xem chi tiết <ArrowRight size={14} /></button>{item.status === 'Pending' && <button className="cancel" type="button" onClick={() => setCancelSubscription(item)}><Ban size={13} />Hủy gói</button>}</footer></article>)}</div> : <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Chưa đăng ký gói</strong><span>Hội viên này chưa có đăng ký gói nào.</span></div>}
       </div>
       {selectedSubscriptionId !== null && <SubscriptionDetailDialog subscriptionId={selectedSubscriptionId} onClose={() => setSelectedSubscriptionId(null)} />}
+      {cancelSubscription && <CancelSubscriptionDialog subscription={cancelSubscription} onClose={() => setCancelSubscription(null)} onCancelled={updated => { setSubscriptions(current => current.map(item => item.id === updated.id ? updated : item)); showNotice(`Đã hủy đăng ký gói #${updated.id}.`) }} />}
+    </section>
+  </div>
+}
+
+function CancelSubscriptionDialog({ subscription, onClose, onCancelled }) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async event => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const result = await cancelReceptionistSubscription(subscription.id)
+      onCancelled(result)
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể hủy đăng ký gói.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog reception-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-cancel-subscription-title">
+      <header><div><span>HỦY GÓI CHỜ THANH TOÁN</span><h2 id="reception-cancel-subscription-title">Đăng ký #{subscription.id}</h2><p>{subscription.packageName}</p></div><button type="button" aria-label="Đóng xác nhận hủy gói" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}><div className="reception-cancel-subscription-copy"><span><Ban size={24} /></span><strong>Xác nhận hủy đăng ký gói?</strong><p>Chỉ gói đang chờ và chưa thanh toán mới có thể hủy.</p></div>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button className="danger" type="submit" disabled={saving}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
     </section>
   </div>
 }
@@ -685,7 +714,7 @@ function MembersView({ query, showNotice }) {
     {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} onViewRegistrations={() => { setRegistrationsMemberId(selectedMemberId); setSelectedMemberId(null) }} onViewSubscriptions={() => { setSubscriptionsMemberId(selectedMemberId); setSelectedMemberId(null) }} onRegisterSubscription={() => { setSubscriptionMemberId(selectedMemberId); setSelectedMemberId(null) }} />}
     {registrationsMemberId !== null && <MemberRegistrationsDialog memberId={registrationsMemberId} onClose={() => setRegistrationsMemberId(null)} showNotice={showNotice} />}
     {subscriptionMemberId !== null && <CreateSubscriptionDialog memberId={subscriptionMemberId} onClose={() => setSubscriptionMemberId(null)} onCreated={handleSubscriptionCreated} />}
-    {subscriptionsMemberId !== null && <MemberSubscriptionsDialog memberId={subscriptionsMemberId} onClose={() => setSubscriptionsMemberId(null)} />}
+    {subscriptionsMemberId !== null && <MemberSubscriptionsDialog memberId={subscriptionsMemberId} onClose={() => setSubscriptionsMemberId(null)} showNotice={showNotice} />}
   </>
 }
 
