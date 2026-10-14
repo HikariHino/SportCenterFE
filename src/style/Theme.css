@@ -352,6 +352,8 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-class-catalog-list article { border-color:var(--theme-border); background:var(--theme-raised); }
 [data-theme='dark'] .reception-class-detail-trigger { border-color:var(--theme-border); background:var(--theme-surface); }
 [data-theme='dark'] .reception-class-detail-title,[data-theme='dark'] .reception-class-detail-grid>div { border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] .reception-class-session-section { border-color:var(--theme-border); }
+[data-theme='dark'] .reception-class-session-list>button { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
 
 [data-theme='dark'] .reception-subscription-actions button.payment { color:var(--theme-gold); background:var(--theme-gold-bg); }
 [data-theme='dark'] :is(.reception-payment-form-grid input,.reception-payment-form-grid select,.reception-payment-confirm) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }

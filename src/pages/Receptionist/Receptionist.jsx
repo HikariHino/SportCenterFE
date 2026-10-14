@@ -13,7 +13,7 @@ import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment,
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../services/paymentService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
-import { getReceptionistClassById, getReceptionistClasses, getReceptionistClassSessions, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
+import { getReceptionistClassById, getReceptionistClasses, getReceptionistClassSessions, getReceptionistClassSessionsByClass, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
 import {
   cancelReceptionistRegistration,
   checkInReceptionistRegistration,
@@ -156,11 +156,15 @@ function SessionReviewsDialog({ session, onClose }) {
   </div>
 }
 
-function ClassDetailDialog({ classId, onClose }) {
+function ClassDetailDialog({ classId, onClose, onSelectSession }) {
   const [sportClass, setSportClass] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const [sessions, setSessions] = useState([])
+  const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [sessionsError, setSessionsError] = useState('')
+  const [sessionsRequestKey, setSessionsRequestKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -180,10 +184,31 @@ function ClassDetailDialog({ classId, onClose }) {
     return () => { active = false }
   }, [classId, requestKey])
 
+  useEffect(() => {
+    let active = true
+    const loadSessions = async () => {
+      setSessionsLoading(true)
+      setSessionsError('')
+      try {
+        const result = await getReceptionistClassSessionsByClass(classId, { page: 1, pageSize: 20 })
+        if (active) setSessions(result.items)
+      } catch (requestError) {
+        if (active) {
+          setSessions([])
+          setSessionsError(requestErrorMessage(requestError, 'Không thể tải các buổi học của lớp.'))
+        }
+      } finally {
+        if (active) setSessionsLoading(false)
+      }
+    }
+    loadSessions()
+    return () => { active = false }
+  }, [classId, sessionsRequestKey])
+
   return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="reception-dialog reception-class-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-class-detail-title">
       <header><div><span>CHI TIẾT LỚP HỌC</span><h2 id="reception-class-detail-title">Lớp #{classId}</h2><p>Dữ liệu trực tiếp từ Classes API.</p></div><button type="button" aria-label="Đóng chi tiết lớp" onClick={onClose}><X size={19} /></button></header>
-      <div className="reception-class-detail-body">{loading ? <EmptyState icon={Trophy} title="Đang tải chi tiết" text="Thông tin lớp học đang được đồng bộ từ API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Trophy} title="Không thể tải chi tiết" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : sportClass && <><div className="reception-class-detail-title"><span><Trophy size={22} /></span><div><small>{sportClass.sportName}</small><h3>{sportClass.className}</h3></div><b className={sportClass.isActive ? 'active' : 'inactive'}>{sportClass.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><div className="reception-class-detail-grid"><div><small>Huấn luyện viên</small><strong>{sportClass.coachName || 'Chưa phân công'}</strong></div><div><small>Mã HLV</small><strong>{sportClass.coachId ? `#${sportClass.coachId}` : 'Chưa có'}</strong></div><div><small>Học phí</small><strong>{Number(sportClass.price || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Sức chứa tối đa</small><strong>{sportClass.maxCapacity} học viên</strong></div><div><small>Ngày bắt đầu</small><strong>{formatMemberDate(sportClass.startDate)}</strong></div><div><small>Ngày kết thúc</small><strong>{formatMemberDate(sportClass.endDate)}</strong></div><div className="wide"><small>Lịch học</small><strong>{sportClass.schedule || 'Chưa cập nhật lịch học'}</strong></div></div></>}</div>
+      <div className="reception-class-detail-body">{loading ? <EmptyState icon={Trophy} title="Đang tải chi tiết" text="Thông tin lớp học đang được đồng bộ từ API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Trophy} title="Không thể tải chi tiết" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : sportClass && <><div className="reception-class-detail-title"><span><Trophy size={22} /></span><div><small>{sportClass.sportName}</small><h3>{sportClass.className}</h3></div><b className={sportClass.isActive ? 'active' : 'inactive'}>{sportClass.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><div className="reception-class-detail-grid"><div><small>Huấn luyện viên</small><strong>{sportClass.coachName || 'Chưa phân công'}</strong></div><div><small>Mã HLV</small><strong>{sportClass.coachId ? `#${sportClass.coachId}` : 'Chưa có'}</strong></div><div><small>Học phí</small><strong>{Number(sportClass.price || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Sức chứa tối đa</small><strong>{sportClass.maxCapacity} học viên</strong></div><div><small>Ngày bắt đầu</small><strong>{formatMemberDate(sportClass.startDate)}</strong></div><div><small>Ngày kết thúc</small><strong>{formatMemberDate(sportClass.endDate)}</strong></div><div className="wide"><small>Lịch học</small><strong>{sportClass.schedule || 'Chưa cập nhật lịch học'}</strong></div></div><div className="reception-class-session-section"><div><span>BUỔI HỌC THUỘC LỚP</span><strong>{sessionsLoading ? 'Đang tải...' : `${sessions.length} buổi`}</strong></div>{sessionsLoading ? <EmptyState icon={CalendarDays} title="Đang tải buổi học" text="Dữ liệu đang được đồng bộ từ API." /> : sessionsError ? <div className="reception-inline-error"><EmptyState icon={CalendarDays} title="Không thể tải buổi học" text={sessionsError} /><button type="button" onClick={() => setSessionsRequestKey(key => key + 1)}>Thử lại</button></div> : sessions.length ? <div className="reception-class-session-list">{sessions.map(session => <button type="button" key={session.id} onClick={() => { onSelectSession(session); onClose() }}><span><small>Buổi #{session.id}</small><strong>{formatDateTime(session.startsAt)}</strong></span><span><small>{session.coachName}</small><strong>{session.availableSeats}/{session.capacity} chỗ trống</strong></span><ArrowRight size={14} /></button>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có buổi học" text="Lớp này chưa có buổi học công khai." />}</div></>}</div>
     </section>
   </div>
 }
@@ -352,7 +377,7 @@ function SessionsView({ showNotice }) {
     </section>
     {showCompleteDialog && <CompleteSessionDialog sessionId={Number(rosterSessionId)} onClose={() => setShowCompleteDialog(false)} onCompleted={() => { setCompletedSessionId(Number(rosterSessionId)); showNotice(`Đã hoàn thành buổi học #${rosterSessionId}.`) }} />}
     {reviewSession && <SessionReviewsDialog session={reviewSession} onClose={() => setReviewSession(null)} />}
-    {selectedClassId !== null && <ClassDetailDialog classId={selectedClassId} onClose={() => setSelectedClassId(null)} />}
+    {selectedClassId !== null && <ClassDetailDialog classId={selectedClassId} onClose={() => setSelectedClassId(null)} onSelectSession={selectCatalogSession} />}
   </div>
 }
 
