@@ -23,6 +23,12 @@ export async function getReceptionistClasses({ search, sportId, coachId, from, t
   return pageResult(unwrap(response.data, 'Không thể tải danh sách lớp học.'), page, pageSize)
 }
 
+/** GET /api/classes/{id} */
+export async function getReceptionistClassById(classId) {
+  const response = await api.get(`/classes/${classId}`)
+  return unwrap(response.data, 'Không thể tải chi tiết lớp học.')
+}
+
 /** GET /api/class-sessions */
 export async function getReceptionistClassSessions({ search, sportId, coachId, from, to, onlyAvailable = false, page = 1, pageSize = 20 } = {}) {
   const response = await api.get('/class-sessions', {
