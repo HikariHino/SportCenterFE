@@ -1,17 +1,38 @@
 import ThemeToggle from '../../components/ThemeToggle'
 ﻿import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowDownToLine, ArrowUpRight, CalendarDays, Check, ChevronRight, Clock3, CreditCard, LayoutDashboard, LogOut, MapPin, Menu, Search, ShieldCheck, TrendingUp, Trophy, Users, Volleyball, X } from 'lucide-react'
+import {
+  ArrowDownToLine, ArrowUpRight, Ban, BookOpen, CalendarDays, Check,
+  ChevronRight, ClipboardList, Clock3, CreditCard, DoorOpen, Headset,
+  LayoutDashboard, LogOut, MapPin, Menu, Package, Search, ShieldCheck,
+  TrendingUp, Trophy, Users, Volleyball, X,
+} from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import '../../style/CenterManager/CenterManager.css'
 
-const navigation = [
-  { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
-  { id: 'bookings', label: 'Lịch đặt sân', icon: CalendarDays },
-  { id: 'courts', label: 'Quản lý sân', icon: Volleyball },
-  { id: 'staff', label: 'Nhân sự', icon: Users },
-  { id: 'revenue', label: 'Doanh thu', icon: TrendingUp },
+const managerNavSections = [
+  {
+    title: 'QUẢN LÝ TRUNG TÂM',
+    items: [
+      { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
+      { id: 'users', label: 'Nhân sự & Phân quyền', icon: Users },
+      { id: 'classes', label: 'Danh mục & Lớp học', icon: BookOpen },
+      { id: 'rooms', label: 'Phòng tập / Cơ sở vật chất', icon: DoorOpen },
+      { id: 'packages', label: 'Gói thẻ hội viên', icon: Package },
+      { id: 'cancellation', label: 'Chính sách hủy lịch', icon: Ban },
+      { id: 'reports', label: 'Báo cáo & Doanh thu', icon: TrendingUp },
+    ],
+  },
+  {
+    title: 'VẬN HÀNH DỊCH VỤ',
+    items: [
+      { id: 'frontdesk', label: 'Quầy lễ tân (FrontDesk)', icon: Headset },
+    ],
+  },
 ]
+
+// Flat list for lookup
+const navigation = managerNavSections.flatMap(section => section.items)
 const bookings = [
   { id: 'BK-1028', name: 'Nguyễn Minh Anh', initials: 'MA', court: 'Pickleball P01', time: '17:00 – 18:30', amount: 300000, status: 'confirmed' },
   { id: 'BK-1027', name: 'Trần Hoàng Nam', initials: 'HN', court: 'Cầu lông B02', time: '16:00 – 17:00', amount: 120000, status: 'pending' },
@@ -66,15 +87,20 @@ export default function CenterManager() {
   const totalRevenue = chartData.reduce((sum, day) => sum + day.amount, 0)
   const busyCourts = courts.filter(court => court.status === 'busy').length
   const show = id => section === 'overview' || section === id
-  const pageTitle = navigation.find(item => item.id === section).label
+  const pageTitle = navigation.find(item => item.id === section)?.label || 'Tổng quan'
   const exportActions = {
     overview: { label: 'Xuất báo cáo tổng quan', onClick: exportOverview },
     bookings: { label: 'Xuất lịch đặt sân', onClick: exportBookings },
     courts: { label: 'Xuất danh sách sân', onClick: exportCourts },
-    staff: { label: 'Xuất danh sách nhân sự', onClick: exportStaff },
-    revenue: { label: 'Xuất báo cáo doanh thu', onClick: exportRevenue },
+    users: { label: 'Xuất danh sách nhân sự', onClick: exportStaff },
+    classes: { label: 'Xuất danh mục lớp học', onClick: exportOverview },
+    rooms: { label: 'Xuất danh sách phòng tập', onClick: exportOverview },
+    packages: { label: 'Xuất gói thẻ hội viên', onClick: exportOverview },
+    cancellation: { label: 'Xuất chính sách hủy', onClick: exportOverview },
+    reports: { label: 'Xuất báo cáo doanh thu', onClick: exportRevenue },
+    frontdesk: { label: 'Xuất dữ liệu lễ tân', onClick: exportOverview },
   }
-  const exportAction = exportActions[section]
+  const exportAction = exportActions[section] || exportActions.overview
 
   function selectSection(id) {
     setSection(id)
@@ -125,8 +151,10 @@ export default function CenterManager() {
         <Link to="/" className="manager-brand"><span><Trophy size={24} /></span><div><strong>SportPulse<span>.</span></strong><small>TRUNG TÂM OLYMPUS</small></div></Link>
         <div className="manager-portal"><ShieldCheck size={15} /> Không gian quản lý</div>
         <nav className="manager-nav" aria-label="Điều hướng quản lý">
-          <p>ĐIỀU HÀNH TRUNG TÂM</p>
-          {navigation.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={section === id ? 'active' : ''} aria-current={section === id ? 'page' : undefined} onClick={() => selectSection(id)}><Icon size={19} /><span>{label}</span>{id === 'bookings' && <b>{bookings.length}</b>}{section === id && <ChevronRight size={15} />}</button>)}
+          {managerNavSections.map(group => <div key={group.title} className="manager-nav-group">
+            <p>{group.title}</p>
+            {group.items.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={section === id ? 'active' : ''} aria-current={section === id ? 'page' : undefined} onClick={() => selectSection(id)}><Icon size={19} /><span>{label}</span>{section === id && <ChevronRight size={15} />}</button>)}
+          </div>)}
         </nav>
         <div className="manager-sidebar-bottom">
           <div className="manager-center"><span className="manager-center-icon"><MapPin size={20} /></span><small>TRUNG TÂM CỦA BẠN</small><strong>Olympus · Cầu Giấy</strong><p><i /> Mở cửa 06:00 – 22:00</p></div>
@@ -153,8 +181,75 @@ export default function CenterManager() {
               { icon: Users, label: 'Nhân sự trong ca', value: String(staff.length).padStart(2, '0'), note: 'Huấn luyện · Lễ tân · Kỹ thuật', tone: 'amber' },
             ].map(({ icon: Icon, label, value, suffix, note, tone }) => <article key={label} className="manager-metric"><div><span>{label}</span><span className={`manager-icon ${tone}`}><Icon size={20} /></span></div><strong>{value} <small>{suffix}</small></strong><p>{note}</p></article>)}
           </section>}
-          {(show('revenue') || show('courts')) && <div className={`manager-analytics ${section !== 'overview' ? 'single' : ''}`}>
-            {show('revenue') && <section className="manager-card manager-revenue">
+
+          {/* 1. Nhân sự & Phân quyền (UsersController) */}
+          {section === 'users' && <section className="manager-card manager-section-placeholder">
+            <div className="manager-card-heading"><div><h2>Quản lý nhân sự & Phân quyền</h2><p>Tạo tài khoản, phân vai trò (Coach, Receptionist, Manager) và quản lý quyền truy cập.</p></div><span className="manager-icon blue"><Users size={21} /></span></div>
+            <div className="manager-placeholder-body">
+              <div className="manager-placeholder-features">
+                <article><span className="blue"><Users size={20} /></span><div><strong>Danh sách nhân sự</strong><small>Xem tất cả tài khoản trong hệ thống</small></div></article>
+                <article><span className="green"><ShieldCheck size={20} /></span><div><strong>Phân quyền vai trò</strong><small>Gán vai trò Coach, Receptionist, Manager</small></div></article>
+                <article><span className="amber"><ClipboardList size={20} /></span><div><strong>Lịch sử hoạt động</strong><small>Theo dõi thao tác của từng nhân sự</small></div></article>
+              </div>
+              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>UsersController API</strong> để hiển thị dữ liệu nhân sự.</span></div>
+            </div>
+          </section>}
+
+          {/* 2. Danh mục & Lớp học (SportClassesController, ClassCatalogController) */}
+          {section === 'classes' && <section className="manager-card manager-section-placeholder">
+            <div className="manager-card-heading"><div><h2>Quản lý danh mục & Lớp học</h2><p>Tạo danh mục thể thao, quản lý lớp học và lịch dạy huấn luyện viên.</p></div><span className="manager-icon purple"><BookOpen size={21} /></span></div>
+            <div className="manager-placeholder-body">
+              <div className="manager-placeholder-features">
+                <article><span className="purple"><BookOpen size={20} /></span><div><strong>Danh mục thể thao</strong><small>Yoga, Gym, Boxing, Swimming...</small></div></article>
+                <article><span className="blue"><CalendarDays size={20} /></span><div><strong>Lịch lớp học</strong><small>Quản lý buổi học theo tuần, tháng</small></div></article>
+                <article><span className="green"><Users size={20} /></span><div><strong>Gán huấn luyện viên</strong><small>Phân công Coach cho từng lớp</small></div></article>
+              </div>
+              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>SportClassesController</strong> và <strong>ClassCatalogController API</strong>.</span></div>
+            </div>
+          </section>}
+
+          {/* 3. Phòng tập / Cơ sở vật chất (RoomsController) */}
+          {section === 'rooms' && <section className="manager-card manager-section-placeholder">
+            <div className="manager-card-heading"><div><h2>Quản lý phòng tập / Cơ sở vật chất</h2><p>Quản lý phòng tập, trang thiết bị và trạng thái bảo trì.</p></div><span className="manager-icon green"><DoorOpen size={21} /></span></div>
+            <div className="manager-placeholder-body">
+              <div className="manager-placeholder-features">
+                <article><span className="green"><DoorOpen size={20} /></span><div><strong>Danh sách phòng tập</strong><small>Phòng Yoga, Phòng Gym, Sân cầu lông...</small></div></article>
+                <article><span className="amber"><Clock3 size={20} /></span><div><strong>Trạng thái & Bảo trì</strong><small>Sẵn sàng, Đang sử dụng, Bảo trì</small></div></article>
+                <article><span className="blue"><CalendarDays size={20} /></span><div><strong>Lịch sử dụng phòng</strong><small>Xem lịch đặt phòng theo khung giờ</small></div></article>
+              </div>
+              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>RoomsController API</strong> để hiển thị dữ liệu phòng tập.</span></div>
+            </div>
+          </section>}
+
+          {/* 4. Gói thẻ hội viên (MembershipPackagesController) */}
+          {section === 'packages' && <section className="manager-card manager-section-placeholder">
+            <div className="manager-card-heading"><div><h2>Quản lý gói thẻ hội viên</h2><p>Tạo và quản lý các gói thẻ thành viên, giá cả và thời hạn.</p></div><span className="manager-icon amber"><Package size={21} /></span></div>
+            <div className="manager-placeholder-body">
+              <div className="manager-placeholder-features">
+                <article><span className="amber"><Package size={20} /></span><div><strong>Danh sách gói thẻ</strong><small>Gói tháng, quý, năm, VIP...</small></div></article>
+                <article><span className="blue"><CreditCard size={20} /></span><div><strong>Giá & Thời hạn</strong><small>Cấu hình giá tiền và số ngày hiệu lực</small></div></article>
+                <article><span className="green"><Check size={20} /></span><div><strong>Trạng thái gói</strong><small>Kích hoạt, tạm ngừng hoặc hết hạn</small></div></article>
+              </div>
+              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>MembershipPackagesController API</strong>.</span></div>
+            </div>
+          </section>}
+
+          {/* 5. Chính sách hủy lịch (CancellationPoliciesController) */}
+          {section === 'cancellation' && <section className="manager-card manager-section-placeholder">
+            <div className="manager-card-heading"><div><h2>Quản lý chính sách hủy lịch</h2><p>Thiết lập chính sách hủy đặt lịch, phí phạt và điều kiện hoàn tiền.</p></div><span className="manager-icon red"><Ban size={21} /></span></div>
+            <div className="manager-placeholder-body">
+              <div className="manager-placeholder-features">
+                <article><span className="red"><Ban size={20} /></span><div><strong>Danh sách chính sách</strong><small>Chính sách hủy theo loại dịch vụ</small></div></article>
+                <article><span className="amber"><Clock3 size={20} /></span><div><strong>Thời hạn hủy</strong><small>Số giờ trước buổi học được phép hủy</small></div></article>
+                <article><span className="blue"><CreditCard size={20} /></span><div><strong>Phí hủy & Hoàn tiền</strong><small>Tỷ lệ phí phạt và chính sách hoàn</small></div></article>
+              </div>
+              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>CancellationPoliciesController API</strong>.</span></div>
+            </div>
+          </section>}
+
+          {/* 6. Báo cáo thống kê & Doanh thu (ReportsController) */}
+          {section === 'reports' && <>
+            <section className="manager-card manager-revenue">
               <div className="manager-card-heading"><div><h2>Doanh thu trung tâm</h2><p>Theo dõi dòng tiền từ hoạt động thể thao</p></div><select aria-label="Khoảng thời gian doanh thu" value={period} onChange={event => setPeriod(event.target.value)}><option value="week">7 ngày gần nhất</option><option value="three">3 ngày gần nhất</option></select></div>
               <div className="manager-revenue-total"><strong>{money(totalRevenue)}</strong><span>Tổng trong {chartData.length} ngày</span></div>
               <div className="manager-chart" role="img" aria-label={`Doanh thu minh họa: ${chartData.map(day => `${day.day}: ${money(day.amount)}`).join('; ')}`}>
@@ -162,21 +257,54 @@ export default function CenterManager() {
                 <div className="manager-chart-bars">{chartData.map((day, index) => <div className="manager-chart-column" key={day.day}><span className="manager-bar-value">{(day.amount / 1000000).toLocaleString('vi-VN')}</span><div className={`manager-bar ${index === chartData.length - 1 ? 'latest' : ''}`} style={{ height: `${day.amount / 100000}%` }} /><small>{day.day}</small></div>)}</div>
               </div>
               <div className="manager-chart-foot"><span><i /> Doanh thu (triệu đồng)</span><small>Đơn vị: VND</small></div>
-            </section>}
-            {show('courts') && <section className="manager-card manager-courts">
+            </section>
+            <section className="manager-card manager-section-placeholder" style={{ marginTop: 22 }}>
+              <div className="manager-card-heading"><div><h2>Thống kê nâng cao</h2><p>Báo cáo chi tiết theo dịch vụ, hội viên và nhân sự.</p></div><span className="manager-icon blue"><TrendingUp size={21} /></span></div>
+              <div className="manager-placeholder-body">
+                <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>ReportsController API</strong> để hiển thị báo cáo thống kê đầy đủ.</span></div>
+              </div>
+            </section>
+          </>}
+
+          {/* 7. Vận hành dịch vụ khách hàng - FrontDesk */}
+          {section === 'frontdesk' && <section className="manager-card manager-section-placeholder">
+            <div className="manager-card-heading"><div><h2>Vận hành dịch vụ khách hàng</h2><p>Thừa hưởng quyền FrontDesk/Receptionist — quản lý check-in, đặt sân và hỗ trợ hội viên.</p></div><span className="manager-icon purple"><Headset size={21} /></span></div>
+            <div className="manager-placeholder-body">
+              <div className="manager-placeholder-features">
+                <article><span className="green"><Check size={20} /></span><div><strong>Check-in hội viên</strong><small>Xác minh tài khoản và đặt chỗ</small></div></article>
+                <article><span className="blue"><CalendarDays size={20} /></span><div><strong>Quản lý buổi học</strong><small>Đăng ký, điểm danh và hoàn thành buổi</small></div></article>
+                <article><span className="amber"><CreditCard size={20} /></span><div><strong>Thanh toán tại quầy</strong><small>Đăng ký gói thẻ và xử lý hóa đơn</small></div></article>
+                <article><span className="purple"><Users size={20} /></span><div><strong>Tra cứu hội viên</strong><small>Xem thông tin, gói đăng ký và lịch sử</small></div></article>
+              </div>
+              <div className="manager-placeholder-note"><Headset size={18} /><span>Trang này kế thừa toàn bộ quyền <strong>Receptionist/FrontDesk</strong>. Truy cập <strong>/receptionist</strong> để sử dụng giao diện lễ tân đầy đủ.</span></div>
+            </div>
+          </section>}
+
+          {/* Overview: show revenue + courts + bookings + staff */}
+          {section === 'overview' && <div className="manager-analytics">
+            <section className="manager-card manager-revenue">
+              <div className="manager-card-heading"><div><h2>Doanh thu trung tâm</h2><p>Theo dõi dòng tiền từ hoạt động thể thao</p></div><select aria-label="Khoảng thời gian doanh thu" value={period} onChange={event => setPeriod(event.target.value)}><option value="week">7 ngày gần nhất</option><option value="three">3 ngày gần nhất</option></select></div>
+              <div className="manager-revenue-total"><strong>{money(totalRevenue)}</strong><span>Tổng trong {chartData.length} ngày</span></div>
+              <div className="manager-chart" role="img" aria-label={`Doanh thu minh họa: ${chartData.map(day => `${day.day}: ${money(day.amount)}`).join('; ')}`}>
+                <div className="manager-chart-axis"><span>10 tr</span><span>5 tr</span><span>0</span></div>
+                <div className="manager-chart-bars">{chartData.map((day, index) => <div className="manager-chart-column" key={day.day}><span className="manager-bar-value">{(day.amount / 1000000).toLocaleString('vi-VN')}</span><div className={`manager-bar ${index === chartData.length - 1 ? 'latest' : ''}`} style={{ height: `${day.amount / 100000}%` }} /><small>{day.day}</small></div>)}</div>
+              </div>
+              <div className="manager-chart-foot"><span><i /> Doanh thu (triệu đồng)</span><small>Đơn vị: VND</small></div>
+            </section>
+            <section className="manager-card manager-courts">
               <div className="manager-card-heading"><div><h2>Tình trạng sân</h2><p>{courts.length} sân · 4 bộ môn</p></div><span className="manager-icon green"><Volleyball size={21} /></span></div>
               <div className="manager-court-legend">{Object.entries(courtStatuses).map(([key, label]) => <span key={key}><i className={key} />{label}</span>)}</div>
               <div className="manager-court-grid">{courts.map(court => <div key={court.name} className={`manager-court ${court.status}`} title={`${court.sport} ${court.name}: ${courtStatuses[court.status]}`}><Volleyball size={19} /><strong>{court.name}</strong><small>{court.sport}</small><span className="manager-sr-only">{courtStatuses[court.status]}</span></div>)}</div>
               <div className="manager-court-note"><Clock3 size={16} /><span>Sân B04 đang bảo trì mặt sân.</span></div>
-            </section>}
+            </section>
           </div>}
-          {show('bookings') && <section className="manager-card manager-bookings">
-            <div className="manager-card-heading"><div><h2>Lịch đặt sân <span className="manager-count">{bookings.length}</span></h2><p>Danh sách lịch đặt ngày 30/09/2026</p></div>{section === 'overview' && <button className="manager-text-button" type="button" onClick={() => selectSection('bookings')}>Xem tất cả <ArrowUpRight size={16} /></button>}</div>
+          {section === 'overview' && <section className="manager-card manager-bookings">
+            <div className="manager-card-heading"><div><h2>Lịch đặt sân <span className="manager-count">{bookings.length}</span></h2><p>Danh sách lịch đặt ngày 30/09/2026</p></div></div>
             <div className="manager-table-tools"><label className="manager-search"><Search size={17} /><input type="search" aria-label="Tìm lịch đặt sân" placeholder="Tìm khách hàng, mã đặt hoặc tên sân..." value={query} onChange={event => setQuery(event.target.value)} /></label><select value={status} aria-label="Lọc trạng thái lịch đặt" onChange={event => setStatus(event.target.value)}><option value="all">Tất cả trạng thái</option>{Object.entries(statuses).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}</select></div>
             <div className="manager-table-scroll"><table><thead><tr><th scope="col">KHÁCH HÀNG</th><th scope="col">SÂN ĐẶT</th><th scope="col">KHUNG GIỜ</th><th scope="col">THÀNH TIỀN</th><th scope="col">TRẠNG THÁI</th><th scope="col"><span className="manager-sr-only">Chi tiết</span></th></tr></thead><tbody>{filteredBookings.map(booking => <tr key={booking.id}><td><div className="manager-customer"><span className="manager-avatar">{booking.initials}</span><div><strong>{booking.name}</strong><small>#{booking.id}</small></div></div></td><td>{booking.court}</td><td><span className="manager-time"><Clock3 size={14} />{booking.time}</span></td><td className="manager-amount">{money(booking.amount)}</td><td><Status status={booking.status} /></td><td><button className="manager-detail-button" type="button" aria-label={`Xem chi tiết ${booking.id}`} onClick={() => openBooking(booking)}><ChevronRight size={18} /></button></td></tr>)}</tbody></table>{filteredBookings.length === 0 && <div className="manager-empty"><Search size={26} /><strong>Không tìm thấy lịch đặt phù hợp</strong><p>Thử tên khách hàng, tên sân hoặc trạng thái khác.</p><button className="manager-text-button" type="button" onClick={() => { setQuery(''); setStatus('all') }}>Xóa bộ lọc</button></div>}</div>
             <div className="manager-table-footer" role="status">Hiển thị {filteredBookings.length} / {bookings.length} lịch đặt <span>Dữ liệu minh họa</span></div>
           </section>}
-          {show('staff') && <section className="manager-card manager-staff"><div className="manager-card-heading"><div><h2>Đội ngũ trong ca</h2><p>Nhân sự phụ trách hoạt động tại trung tâm</p></div><span className="manager-badge green"><Check size={13} /> {staff.length} nhân sự</span></div><div className="manager-staff-grid">{staff.map(person => <article key={person.name}><span className={`manager-avatar ${person.tone}`}>{person.initials}</span><div><strong>{person.name}</strong><p>{person.role}</p><small><Clock3 size={13} />{person.shift}</small></div></article>)}</div></section>}
+          {section === 'overview' && <section className="manager-card manager-staff"><div className="manager-card-heading"><div><h2>Đội ngũ trong ca</h2><p>Nhân sự phụ trách hoạt động tại trung tâm</p></div><span className="manager-badge green"><Check size={13} /> {staff.length} nhân sự</span></div><div className="manager-staff-grid">{staff.map(person => <article key={person.name}><span className={`manager-avatar ${person.tone}`}>{person.initials}</span><div><strong>{person.name}</strong><p>{person.role}</p><small><Clock3 size={13} />{person.shift}</small></div></article>)}</div></section>}
           <footer className="manager-footer"><span>© 2026 SportPulse · Olympus</span><span>Không gian quản lý trung tâm thể thao</span></footer>
         </main>
       </div>
