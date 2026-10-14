@@ -15,6 +15,14 @@ function pageResult(payload, page, pageSize) {
   }
 }
 
+/** GET /api/classes */
+export async function getReceptionistClasses({ search, sportId, coachId, from, to, onlyAvailable = false, page = 1, pageSize = 20 } = {}) {
+  const response = await api.get('/classes', {
+    params: { search: search || undefined, sportId, coachId, from, to, onlyAvailable, page, pageSize },
+  })
+  return pageResult(unwrap(response.data, 'Không thể tải danh sách lớp học.'), page, pageSize)
+}
+
 /** GET /api/class-sessions */
 export async function getReceptionistClassSessions({ search, sportId, coachId, from, to, onlyAvailable = false, page = 1, pageSize = 20 } = {}) {
   const response = await api.get('/class-sessions', {

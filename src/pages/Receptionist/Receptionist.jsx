@@ -13,7 +13,7 @@ import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment,
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../services/paymentService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
-import { getReceptionistClassSessions, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
+import { getReceptionistClasses, getReceptionistClassSessions, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
 import {
   cancelReceptionistRegistration,
   checkInReceptionistRegistration,
@@ -210,6 +210,10 @@ function SessionsView({ showNotice }) {
   const [catalogError, setCatalogError] = useState('')
   const [catalogRequestKey, setCatalogRequestKey] = useState(0)
   const [reviewSession, setReviewSession] = useState(null)
+  const [classes, setClasses] = useState({ items: [], total: 0, page: 1, pageSize: 20 })
+  const [classesLoading, setClassesLoading] = useState(true)
+  const [classesError, setClassesError] = useState('')
+  const [classesRequestKey, setClassesRequestKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -231,6 +235,27 @@ function SessionsView({ showNotice }) {
     loadCatalog()
     return () => { active = false }
   }, [catalogRequestKey])
+
+  useEffect(() => {
+    let active = true
+    const loadClasses = async () => {
+      setClassesLoading(true)
+      setClassesError('')
+      try {
+        const result = await getReceptionistClasses({ page: 1, pageSize: 20 })
+        if (active) setClasses(result)
+      } catch (requestError) {
+        if (active) {
+          setClasses({ items: [], total: 0, page: 1, pageSize: 20 })
+          setClassesError(requestErrorMessage(requestError, 'Không thể tải danh mục lớp học.'))
+        }
+      } finally {
+        if (active) setClassesLoading(false)
+      }
+    }
+    loadClasses()
+    return () => { active = false }
+  }, [classesRequestKey])
 
   const selectCatalogSession = session => {
     setSessionId(String(session.id))
@@ -273,6 +298,7 @@ function SessionsView({ showNotice }) {
   }
 
   return <div className="reception-session-page">
+    <section className="reception-card reception-class-catalog"><div className="reception-card-head"><div><span>DANH MỤC LỚP HỌC</span><h2>Các lớp đang mở</h2></div><strong>{classesLoading ? 'Đang tải...' : `${classes.total} lớp`}</strong></div>{classesLoading ? <EmptyState icon={Trophy} title="Đang tải lớp học" text="Dữ liệu đang được đồng bộ từ Classes API." /> : classesError ? <div className="reception-inline-error"><EmptyState icon={Trophy} title="Không thể tải lớp học" text={classesError} /><button type="button" onClick={() => setClassesRequestKey(key => key + 1)}>Thử lại</button></div> : classes.items.length ? <div className="reception-class-catalog-list">{classes.items.map(item => <article key={item.id}><div><small>Lớp #{item.id}</small><h3>{item.className}</h3><p>{item.sportName} · {item.coachName || 'Chưa phân công HLV'}</p></div><div><span><small>Học phí</small><strong>{Number(item.price || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Sức chứa</small><strong>{item.maxCapacity} học viên</strong></span><b className={item.isActive ? 'active' : 'inactive'}>{item.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div></article>)}</div> : <EmptyState icon={Trophy} title="Chưa có lớp học" text="Classes API chưa có dữ liệu lớp học công khai." />}</section>
     <section className="reception-card reception-session-catalog"><div className="reception-card-head"><div><span>DANH MỤC CÔNG KHAI</span><h2>Chọn buổi học</h2></div><strong>{catalogLoading ? 'Đang tải...' : `${catalog.total} buổi`}</strong></div>{catalogLoading ? <EmptyState icon={CalendarDays} title="Đang tải buổi học" text="Dữ liệu đang được đồng bộ từ Class Sessions API." /> : catalogError ? <div className="reception-inline-error"><EmptyState icon={CalendarDays} title="Không thể tải buổi học" text={catalogError} /><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : catalog.items.length ? <div className="reception-session-catalog-list">{catalog.items.map(item => <article key={item.id} className={Number(sessionId) === item.id ? 'selected' : ''}><button type="button" className="reception-session-select" onClick={() => selectCatalogSession(item)}><span><small>Buổi #{item.id}</small><strong>{item.className}</strong><em>{item.coachName}</em></span><span><small>{formatDateTime(item.startsAt)}</small><strong>{item.availableSeats}/{item.capacity} chỗ trống</strong><b className={String(item.status || '').toLowerCase()}>{item.status}</b></span></button><button type="button" className="reception-session-reviews" onClick={() => setReviewSession(item)}><Star size={12} /> Đánh giá</button></article>)}</div> : <EmptyState icon={CalendarDays} title="Chưa có buổi học" text="Class Sessions API chưa có dữ liệu công khai." />}</section>
     <div className="reception-session-layout"><section className="reception-card reception-session-register">
       <div className="reception-card-head"><div><span>ĐĂNG KÝ BUỔI HỌC</span><h2>Thêm hội viên vào buổi học</h2></div><CalendarDays size={20} /></div>
