@@ -8,6 +8,7 @@ import {
   TrendingUp, Trophy, Users, Volleyball, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import StaffManagement from './StaffManagement'
 import '../../style/CenterManager/CenterManager.css'
 
 const managerNavSections = [
@@ -183,17 +184,7 @@ export default function CenterManager() {
           </section>}
 
           {/* 1. Nhân sự & Phân quyền (UsersController) */}
-          {section === 'users' && <section className="manager-card manager-section-placeholder">
-            <div className="manager-card-heading"><div><h2>Quản lý nhân sự & Phân quyền</h2><p>Tạo tài khoản, phân vai trò (Coach, Receptionist, Manager) và quản lý quyền truy cập.</p></div><span className="manager-icon blue"><Users size={21} /></span></div>
-            <div className="manager-placeholder-body">
-              <div className="manager-placeholder-features">
-                <article><span className="blue"><Users size={20} /></span><div><strong>Danh sách nhân sự</strong><small>Xem tất cả tài khoản trong hệ thống</small></div></article>
-                <article><span className="green"><ShieldCheck size={20} /></span><div><strong>Phân quyền vai trò</strong><small>Gán vai trò Coach, Receptionist, Manager</small></div></article>
-                <article><span className="amber"><ClipboardList size={20} /></span><div><strong>Lịch sử hoạt động</strong><small>Theo dõi thao tác của từng nhân sự</small></div></article>
-              </div>
-              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>UsersController API</strong> để hiển thị dữ liệu nhân sự.</span></div>
-            </div>
-          </section>}
+          {section === 'users' && <StaffManagement />}
 
           {/* 2. Danh mục & Lớp học (SportClassesController, ClassCatalogController) */}
           {section === 'classes' && <section className="manager-card manager-section-placeholder">
