@@ -4,12 +4,13 @@ import ThemeToggle from '../../components/ThemeToggle'
 import {
   ArrowRight, BadgeCheck, Bell, CalendarDays, CheckCircle2, CircleDollarSign,
   Clock3, CreditCard, LayoutDashboard, LogOut, MapPin, QrCode, ReceiptText,
-  Ban, Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
+  Ban, LogIn, Plus, ScanLine, Search, ShieldCheck, Trophy, UserCheck, Users, WalletCards, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import {
   cancelReceptionistRegistration,
+  checkInReceptionistRegistration,
   completeReceptionistSession,
   getReceptionistMemberRegistrations,
   getReceptionistSessionRoster,
@@ -369,6 +370,9 @@ function MemberRegistrationsDialog({ memberId, onClose, showNotice }) {
   const [page, setPage] = useState(1)
   const [requestKey, setRequestKey] = useState(0)
   const [cancelRegistration, setCancelRegistration] = useState(null)
+  const [checkingInId, setCheckingInId] = useState(null)
+  const [checkIns, setCheckIns] = useState({})
+  const [actionError, setActionError] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -401,11 +405,28 @@ function MemberRegistrationsDialog({ memberId, onClose, showNotice }) {
     showNotice(`Đã hủy lượt đăng ký #${updatedRegistration.id}.`)
   }
 
+  const handleCheckIn = async registration => {
+    setCheckingInId(registration.id)
+    setActionError(null)
+    try {
+      const attendance = await checkInReceptionistRegistration(registration.id)
+      setCheckIns(current => ({ ...current, [registration.id]: attendance }))
+      showNotice(`Đã check-in hội viên #${attendance.memberId} cho buổi học #${attendance.sessionId}.`)
+    } catch (requestError) {
+      setActionError({
+        id: registration.id,
+        message: requestErrorMessage(requestError, 'Không thể check-in hội viên.'),
+      })
+    } finally {
+      setCheckingInId(null)
+    }
+  }
+
   return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="reception-dialog reception-registrations-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-registrations-title">
       <header><div><span>LỊCH SỬ BUỔI HỌC</span><h2 id="reception-member-registrations-title">Lượt đăng ký của hội viên #{memberId}</h2><p>{registrations.total} lượt đăng ký được tìm thấy.</p></div><button type="button" aria-label="Đóng lịch sử đăng ký" onClick={onClose}><X size={19} /></button></header>
       <div className="reception-registrations-body">
-        {loading ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Đang tải lượt đăng ký</strong><span>Dữ liệu đang được đồng bộ từ Class Registrations API.</span></div> : error ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Không thể tải lượt đăng ký</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : registrations.items.length ? <div className="reception-registration-list">{registrations.items.map(item => <article key={item.id}><header><div><small>Mã đăng ký #{item.id}</small><strong>{item.className}</strong></div><div className="reception-registration-card-actions"><b className={String(item.status || '').toLowerCase()}>{item.status}</b>{item.status === 'Registered' && item.sessionId && <button type="button" onClick={() => setCancelRegistration(item)}><Ban size={13} />Hủy đăng ký</button>}</div></header><div><span><small>Mã buổi học</small><strong>{item.sessionId ? `#${item.sessionId}` : 'Chưa gắn buổi'}</strong></span><span><small>Thời gian bắt đầu</small><strong>{item.startsAt ? sessionDateTimeFormatter.format(new Date(item.startsAt)) : 'Chưa xác định'}</strong></span><span><small>Ngày đăng ký</small><strong>{formatMemberDate(item.registrationDate)}</strong></span></div></article>)}</div> : <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Chưa có lượt đăng ký</strong><span>Hội viên này chưa đăng ký buổi học nào.</span></div>}
+        {loading ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Đang tải lượt đăng ký</strong><span>Dữ liệu đang được đồng bộ từ Class Registrations API.</span></div> : error ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Không thể tải lượt đăng ký</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : registrations.items.length ? <div className="reception-registration-list">{registrations.items.map(item => <article key={item.id}><header><div><small>Mã đăng ký #{item.id}</small><strong>{item.className}</strong></div><div className="reception-registration-card-actions"><b className={String(item.status || '').toLowerCase()}>{item.status}</b>{item.status === 'Registered' && item.sessionId && <>{checkIns[item.id] ? <span className="reception-registration-checked"><CheckCircle2 size={12} />Đã check-in</span> : <button className="checkin" type="button" disabled={checkingInId === item.id} onClick={() => handleCheckIn(item)}><LogIn size={13} />{checkingInId === item.id ? 'Đang check-in...' : 'Check-in'}</button>}{!checkIns[item.id] && <button className="cancel" type="button" disabled={checkingInId === item.id} onClick={() => setCancelRegistration(item)}><Ban size={13} />Hủy đăng ký</button>}</>}</div></header><div><span><small>Mã buổi học</small><strong>{item.sessionId ? `#${item.sessionId}` : 'Chưa gắn buổi'}</strong></span><span><small>Thời gian bắt đầu</small><strong>{item.startsAt ? sessionDateTimeFormatter.format(new Date(item.startsAt)) : 'Chưa xác định'}</strong></span><span><small>Ngày đăng ký</small><strong>{formatMemberDate(item.registrationDate)}</strong></span></div>{actionError?.id === item.id && <p className="reception-registration-action-error" role="alert">{actionError.message}</p>}</article>)}</div> : <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Chưa có lượt đăng ký</strong><span>Hội viên này chưa đăng ký buổi học nào.</span></div>}
       </div>
       {!loading && !error && pageCount > 1 && <footer className="reception-registration-pagination"><button type="button" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Trang trước</button><span>{page}/{pageCount}</span><button type="button" disabled={page >= pageCount} onClick={() => setPage(current => current + 1)}>Trang sau</button></footer>}
       {cancelRegistration && <CancelRegistrationDialog registration={cancelRegistration} onClose={() => setCancelRegistration(null)} onCancelled={handleCancelled} />}

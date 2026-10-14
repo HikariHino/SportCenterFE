@@ -63,3 +63,14 @@ export async function cancelReceptionistRegistration(registrationId, reason) {
 
   return body?.data ?? body
 }
+
+export async function checkInReceptionistRegistration(registrationId) {
+  const response = await api.post(`/class-registrations/${registrationId}/check-in`)
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể check-in hội viên.')
+  }
+
+  return body?.data ?? body
+}
