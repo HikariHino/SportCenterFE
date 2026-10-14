@@ -20,3 +20,9 @@ export async function createMemberSubscription(packageId) {
   const response = await api.post('/member-subscriptions', { packageId })
   return unwrap(response.data, 'Không thể đăng ký gói hội viên.')
 }
+
+/** POST /api/member-subscriptions/members/{memberId} */
+export async function createReceptionistMemberSubscription(memberId, packageId) {
+  const response = await api.post(`/member-subscriptions/members/${memberId}`, { packageId })
+  return unwrap(response.data, 'Không thể đăng ký gói cho hội viên.')
+}

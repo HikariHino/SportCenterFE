@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
+import { getMembershipPackages } from '../../services/membershipPackageService'
+import { createReceptionistMemberSubscription } from '../../services/memberSubscriptionService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
 import {
   cancelReceptionistRegistration,
@@ -324,7 +326,7 @@ function CreateMemberDialog({ onClose, onCreated }) {
   </div>
 }
 
-function MemberDetailDialog({ memberId, onClose, onViewRegistrations }) {
+function MemberDetailDialog({ memberId, onClose, onViewRegistrations, onRegisterSubscription }) {
   const [member, setMember] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -367,9 +369,72 @@ function MemberDetailDialog({ memberId, onClose, onViewRegistrations }) {
             <div className="wide"><small>Địa chỉ</small><strong>{member.address || 'Chưa cập nhật'}</strong></div>
             <div className="wide"><small>Mục tiêu tập luyện</small><strong>{member.fitnessGoal || 'Chưa cập nhật'}</strong></div>
           </div>
-          <button className="reception-member-registrations-button" type="button" onClick={onViewRegistrations}><CalendarDays size={15} />Xem các lượt đăng ký</button>
+          <div className="reception-member-detail-actions"><button type="button" onClick={onViewRegistrations}><CalendarDays size={15} />Xem các lượt đăng ký</button><button type="button" onClick={onRegisterSubscription}><CreditCard size={15} />Đăng ký gói</button></div>
         </>}
       </div>
+    </section>
+  </div>
+}
+
+function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
+  const [packages, setPackages] = useState([])
+  const [packageId, setPackageId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    const loadPackages = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getMembershipPackages()
+        const activePackages = result.filter(item => item.isActive !== false)
+        if (active) {
+          setPackages(activePackages)
+          setPackageId(activePackages[0]?.id ? String(activePackages[0].id) : '')
+        }
+      } catch (requestError) {
+        if (active) setError(requestErrorMessage(requestError, 'Không thể tải danh sách gói hội viên.'))
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadPackages()
+    return () => { active = false }
+  }, [])
+
+  const submit = async event => {
+    event.preventDefault()
+    const normalizedPackageId = Number(packageId)
+    if (!Number.isInteger(normalizedPackageId) || normalizedPackageId <= 0) {
+      setError('Vui lòng chọn một gói hội viên hợp lệ.')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const subscription = await createReceptionistMemberSubscription(memberId, normalizedPackageId)
+      onCreated(subscription)
+      onClose()
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError, 'Không thể đăng ký gói cho hội viên.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const selectedPackage = packages.find(item => String(item.id) === packageId)
+
+  return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    <section className="reception-dialog reception-subscription-create-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-create-subscription-title">
+      <header><div><span>ĐĂNG KÝ TẠI QUẦY</span><h2 id="reception-create-subscription-title">Đăng ký gói cho hội viên #{memberId}</h2><p>Đăng ký mới sẽ chờ xác nhận thanh toán trước khi kích hoạt.</p></div><button type="button" aria-label="Đóng biểu mẫu đăng ký gói" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}>
+        {loading ? <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Đang tải danh sách gói</strong></div> : packages.length ? <><label className="reception-subscription-package-field">Gói hội viên<select value={packageId} onChange={event => setPackageId(event.target.value)} disabled={saving}>{packages.map(item => <option value={item.id} key={item.id}>{item.packageName}</option>)}</select></label>{selectedPackage && <div className="reception-subscription-package-preview"><span><small>Giá gói</small><strong>{Number(selectedPackage.price || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{selectedPackage.durationInDays} ngày</strong></span><p>{selectedPackage.description || 'Gói hội viên đang hoạt động.'}</p></div>}</> : !error && <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Chưa có gói đang hoạt động</strong></div>}
+        {error && <p className="reception-form-error" role="alert">{error}</p>}
+        <footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={loading || saving || !packages.length}>{saving ? 'Đang đăng ký...' : 'Tạo đăng ký gói'}</button></footer>
+      </form>
     </section>
   </div>
 }
@@ -483,6 +548,7 @@ function MembersView({ query, showNotice }) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState(null)
   const [registrationsMemberId, setRegistrationsMemberId] = useState(null)
+  const [subscriptionMemberId, setSubscriptionMemberId] = useState(null)
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -526,6 +592,10 @@ function MembersView({ query, showNotice }) {
     setRequestKey(key => key + 1)
   }
 
+  const handleSubscriptionCreated = subscription => {
+    showNotice(`Đã đăng ký gói ${subscription.packageName} cho hội viên #${subscription.memberId}.`)
+  }
+
   return <>
     <section className="reception-member-metrics"><article><span><Users size={20} /></span><div><small>Tổng hội viên</small><strong>{loading ? '--' : members.length}</strong><p>Dữ liệu tài khoản</p></div></article><article><span><BadgeCheck size={20} /></span><div><small>Đang hoạt động</small><strong>{loading ? '--' : activeCount}</strong><p>Có thể sử dụng dịch vụ</p></div></article><article><span><Clock3 size={20} /></span><div><small>Ngừng hoạt động</small><strong>{loading ? '--' : members.length - activeCount}</strong><p>Tài khoản đã khóa</p></div></article></section>
     <section className="reception-card reception-table-card reception-members-card">
@@ -534,8 +604,9 @@ function MembersView({ query, showNotice }) {
       {loading ? <EmptyState icon={Users} title="Đang tải hội viên" text="Dữ liệu đang được đồng bộ từ Member API." /> : error ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải hội viên" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filteredMembers.length ? <div>{filteredMembers.map(member => <button type="button" className="reception-table-row" key={member.memberId} onClick={() => setSelectedMemberId(member.memberId)} aria-label={`Xem chi tiết ${member.fullName}`}><span>#{member.memberId}</span><span>{member.fullName}</span><span>{member.email}</span><span>{member.phone || 'Chưa cập nhật'}</span><span className={member.isActive ? 'reception-member-active' : 'reception-member-inactive'}>{member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}</span></button>)}</div> : <EmptyState icon={Users} title="Không có hội viên phù hợp" text={query || status !== 'Tất cả' ? 'Thử thay đổi từ khóa hoặc bộ lọc trạng thái.' : 'Hệ thống chưa có tài khoản hội viên.'} />}
     </section>
     {showCreateDialog && <CreateMemberDialog onClose={() => setShowCreateDialog(false)} onCreated={handleCreated} />}
-    {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} onViewRegistrations={() => { setRegistrationsMemberId(selectedMemberId); setSelectedMemberId(null) }} />}
+    {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} onViewRegistrations={() => { setRegistrationsMemberId(selectedMemberId); setSelectedMemberId(null) }} onRegisterSubscription={() => { setSubscriptionMemberId(selectedMemberId); setSelectedMemberId(null) }} />}
     {registrationsMemberId !== null && <MemberRegistrationsDialog memberId={registrationsMemberId} onClose={() => setRegistrationsMemberId(null)} showNotice={showNotice} />}
+    {subscriptionMemberId !== null && <CreateSubscriptionDialog memberId={subscriptionMemberId} onClose={() => setSubscriptionMemberId(null)} onCreated={handleSubscriptionCreated} />}
   </>
 }
 
