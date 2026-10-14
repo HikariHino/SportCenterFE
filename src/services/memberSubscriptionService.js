@@ -26,3 +26,10 @@ export async function createReceptionistMemberSubscription(memberId, packageId) 
   const response = await api.post(`/member-subscriptions/members/${memberId}`, { packageId })
   return unwrap(response.data, 'Không thể đăng ký gói cho hội viên.')
 }
+
+/** GET /api/member-subscriptions/members/{memberId} */
+export async function getReceptionistMemberSubscriptions(memberId) {
+  const response = await api.get(`/member-subscriptions/members/${memberId}`)
+  const payload = unwrap(response.data, 'Không thể tải các gói của hội viên.')
+  return Array.isArray(payload) ? payload : []
+}
