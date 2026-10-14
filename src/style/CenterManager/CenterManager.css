@@ -151,3 +151,12 @@
 .manager-placeholder-note strong { color: var(--manager-blue); }
 @media (max-width: 480px) { .manager-placeholder-features { grid-template-columns: 1fr; gap: 10px; }.manager-placeholder-features article { padding: 12px; }.manager-placeholder-note { flex-direction: column; text-align: center; gap: 8px; } }
 @media (prefers-reduced-motion: reduce) { .manager-dashboard *, .manager-dashboard *::before, .manager-dashboard *::after { transition: none !important; } }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
