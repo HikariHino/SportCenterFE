@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import StaffManagement from './StaffManagement'
 import ClassManagement from './ClassManagement'
+import RoomManagement from './RoomManagement'
 import '../../style/CenterManager/CenterManager.css'
 
 const managerNavSections = [
@@ -191,17 +192,7 @@ export default function CenterManager() {
           {section === 'classes' && <ClassManagement />}
 
           {/* 3. Phòng tập / Cơ sở vật chất (RoomsController) */}
-          {section === 'rooms' && <section className="manager-card manager-section-placeholder">
-            <div className="manager-card-heading"><div><h2>Quản lý phòng tập / Cơ sở vật chất</h2><p>Quản lý phòng tập, trang thiết bị và trạng thái bảo trì.</p></div><span className="manager-icon green"><DoorOpen size={21} /></span></div>
-            <div className="manager-placeholder-body">
-              <div className="manager-placeholder-features">
-                <article><span className="green"><DoorOpen size={20} /></span><div><strong>Danh sách phòng tập</strong><small>Phòng Yoga, Phòng Gym, Sân cầu lông...</small></div></article>
-                <article><span className="amber"><Clock3 size={20} /></span><div><strong>Trạng thái & Bảo trì</strong><small>Sẵn sàng, Đang sử dụng, Bảo trì</small></div></article>
-                <article><span className="blue"><CalendarDays size={20} /></span><div><strong>Lịch sử dụng phòng</strong><small>Xem lịch đặt phòng theo khung giờ</small></div></article>
-              </div>
-              <div className="manager-placeholder-note"><ShieldCheck size={18} /><span>Chờ kết nối <strong>RoomsController API</strong> để hiển thị dữ liệu phòng tập.</span></div>
-            </div>
-          </section>}
+          {section === 'rooms' && <RoomManagement />}
 
           {/* 4. Gói thẻ hội viên (MembershipPackagesController) */}
           {section === 'packages' && <section className="manager-card manager-section-placeholder">
