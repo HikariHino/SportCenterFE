@@ -1,12 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, DoorOpen, MapPin, RefreshCw, SlidersHorizontal, UsersRound, X } from 'lucide-react'
-import { getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
+import { AlertCircle, ArrowRight, CalendarClock, CheckCircle2, DoorOpen, MapPin, RefreshCw, SlidersHorizontal, UsersRound, X } from 'lucide-react'
+import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
+
+const toLocalInputValue = date => {
+  const offset = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+}
 
 function RoomDetailDialog({ roomId, onClose }) {
   const [room, setRoom] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const initialStart = new Date(Date.now() + 60 * 60_000)
+  const [availabilityForm, setAvailabilityForm] = useState({ startsAt: toLocalInputValue(initialStart), endsAt: toLocalInputValue(new Date(initialStart.getTime() + 60 * 60_000)) })
+  const [availability, setAvailability] = useState(null)
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
+  const [availabilityError, setAvailabilityError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -26,6 +36,27 @@ function RoomDetailDialog({ roomId, onClose }) {
     return () => { active = false }
   }, [requestKey, roomId])
 
+  const handleAvailability = async event => {
+    event.preventDefault()
+    const startsAt = new Date(availabilityForm.startsAt)
+    const endsAt = new Date(availabilityForm.endsAt)
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) {
+      setAvailabilityError('Thời gian kết thúc phải sau thời gian bắt đầu.')
+      setAvailability(null)
+      return
+    }
+    setAvailabilityLoading(true)
+    setAvailabilityError('')
+    setAvailability(null)
+    try {
+      setAvailability(await checkRoomAvailability(roomId, startsAt.toISOString(), endsAt.toISOString()))
+    } catch (requestError) {
+      setAvailabilityError(getRoomErrorMessage(requestError, 'Không thể kiểm tra lịch phòng.'))
+    } finally {
+      setAvailabilityLoading(false)
+    }
+  }
+
   return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="reception-dialog reception-room-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-room-detail-title">
       <header><div><span>CHI TIẾT PHÒNG</span><h2 id="reception-room-detail-title">Phòng #{roomId}</h2><p>Dữ liệu được tải trực tiếp từ Rooms API.</p></div><button type="button" aria-label="Đóng chi tiết phòng" onClick={onClose}><X size={19} /></button></header>
@@ -33,6 +64,14 @@ function RoomDetailDialog({ roomId, onClose }) {
         {loading ? <div className="reception-member-detail-state"><DoorOpen size={26} /><strong>Đang tải chi tiết phòng</strong><span>Vui lòng chờ dữ liệu được đồng bộ.</span></div> : error ? <div className="reception-member-detail-state"><DoorOpen size={26} /><strong>Không thể tải chi tiết</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : room && <>
           <div className="reception-room-detail-title"><span><DoorOpen size={23} /></span><div><small>{room.roomType || 'General'}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang hoạt động' : 'Tạm ngưng'}</b></div>
           <div className="reception-room-detail-grid"><div><small>Mã phòng</small><strong>#{room.id}</strong></div><div><small>Sức chứa</small><strong>{room.capacity} người</strong></div><div className="wide"><small>Vị trí</small><strong>{room.location || 'Chưa cập nhật vị trí'}</strong></div></div>
+          <form className="reception-room-availability" onSubmit={handleAvailability}>
+            <div className="reception-room-availability-heading"><span><CalendarClock size={18} /></span><div><small>KIỂM TRA LỊCH</small><strong>Khung giờ sử dụng phòng</strong></div></div>
+            <label>Bắt đầu<input type="datetime-local" value={availabilityForm.startsAt} onChange={event => setAvailabilityForm(current => ({ ...current, startsAt: event.target.value }))} required /></label>
+            <label>Kết thúc<input type="datetime-local" value={availabilityForm.endsAt} onChange={event => setAvailabilityForm(current => ({ ...current, endsAt: event.target.value }))} required /></label>
+            <button type="submit" disabled={availabilityLoading}>{availabilityLoading ? 'Đang kiểm tra...' : 'Kiểm tra phòng'}</button>
+            {availabilityError && <p className="error" role="alert"><AlertCircle size={15} />{availabilityError}</p>}
+            {availability && <p className={availability.isAvailable ? 'available' : 'unavailable'}>{availability.isAvailable ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}<span><strong>{availability.isAvailable ? 'Phòng còn trống' : 'Phòng đã có lịch'}</strong><small>{availability.message}</small></span></p>}
+          </form>
         </>}
       </div>
     </section>
