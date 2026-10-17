@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  Clock3, MapPin, PencilLine, Plus, SearchX, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
+  Clock3, DoorOpen, IdCard, Mail, MapPin, PencilLine, Phone, Plus, SearchX, ShieldCheck, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
 import {
   completeCoachSession,
@@ -16,6 +16,8 @@ import {
   getMemberTrainingPlans,
   updateTrainingPlanExerciseResult,
 } from '../../services/trainingPlanService'
+import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
+import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -26,6 +28,183 @@ const metricSlots = [
 
 function EmptyState({ title = 'Chưa có dữ liệu', text }) {
   return <div className="coach-empty"><SearchX size={28} /><strong>{title}</strong><p>{text}</p></div>
+}
+
+const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+export function CoachProfileView({ showNotice }) {
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [actionError, setActionError] = useState('')
+  const [form, setForm] = useState({ fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' })
+
+  useEffect(() => {
+    let active = true
+    const loadProfile = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getProfile()
+        if (active) {
+          setProfile(result)
+          setForm({ fullName: result.fullName || '', email: result.email || '', phoneNumber: result.phoneNumber || '', currentPassword: '', password: '' })
+        }
+      } catch (requestError) {
+        if (active) setError(getProfileErrorMessage(requestError, 'Không thể tải hồ sơ Coach.'))
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadProfile()
+    return () => { active = false }
+  }, [requestKey])
+
+  const updateField = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }))
+
+  const cancelEdit = () => {
+    setEditing(false)
+    setActionError('')
+    setForm({ fullName: profile.fullName || '', email: profile.email || '', phoneNumber: profile.phoneNumber || '', currentPassword: '', password: '' })
+  }
+
+  const submitProfile = async event => {
+    event.preventDefault()
+    setSaving(true)
+    setActionError('')
+    try {
+      const payload = {
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        phoneNumber: form.phoneNumber.trim(),
+      }
+      if (form.currentPassword) payload.currentPassword = form.currentPassword
+      if (form.password) payload.password = form.password
+      const result = await updateProfile(payload)
+      setProfile(result)
+      setForm({ fullName: result.fullName || '', email: result.email || '', phoneNumber: result.phoneNumber || '', currentPassword: '', password: '' })
+      setEditing(false)
+      showNotice?.('Đã cập nhật hồ sơ Coach.')
+    } catch (requestError) {
+      setActionError(getProfileErrorMessage(requestError, 'Không thể cập nhật hồ sơ Coach.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <section className="coach-card coach-profile-api-state"><UserRound size={28} /><strong>Đang tải hồ sơ Coach</strong><p>Dữ liệu đang được đồng bộ từ Profile API.</p></section>
+  if (error) return <section className="coach-card coach-profile-api-state error"><UserRound size={28} /><strong>Không thể tải hồ sơ</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></section>
+  if (!profile) return <section className="coach-card coach-profile-api-state"><UserRound size={28} /><strong>Chưa có hồ sơ</strong><p>Profile API chưa trả về dữ liệu tài khoản.</p></section>
+
+  const initials = profile.fullName?.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase() || 'HLV'
+  const createdAt = profile.createdAt ? profileDateFormatter.format(new Date(profile.createdAt)) : 'Chưa xác định'
+  const updatedAt = profile.updatedAt ? profileDateFormatter.format(new Date(profile.updatedAt)) : 'Chưa cập nhật'
+
+  return <div className="coach-account-profile-layout">
+    <section className="coach-card coach-account-profile-summary"><div className="coach-account-profile-cover"><span>{initials}</span></div><div className="coach-account-profile-main"><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><div><span><strong>#{profile.userId}</strong><small>Mã tài khoản</small></span><span><strong>{profile.roleName}</strong><small>Vai trò</small></span></div></div></section>
+    <section className="coach-card coach-account-profile-details"><div className="coach-card-head"><div><span>PROFILE API</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>{editing ? <button type="button" onClick={cancelEdit} disabled={saving}><X size={15} />Hủy</button> : <button type="button" onClick={() => setEditing(true)}><PencilLine size={15} />Chỉnh sửa</button>}</div>{editing ? <form className="coach-account-profile-form" onSubmit={submitProfile}><div><label>Họ và tên<input name="fullName" value={form.fullName} onChange={updateField} minLength="1" maxLength="200" required /></label><label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="254" required /></label><label>Số điện thoại<input name="phoneNumber" value={form.phoneNumber} onChange={updateField} maxLength="30" required /></label><label>Mật khẩu hiện tại<input name="currentPassword" type="password" value={form.currentPassword} onChange={updateField} placeholder="Bắt buộc khi đổi email/mật khẩu" /></label><label className="wide">Mật khẩu mới (không bắt buộc)<input name="password" type="password" value={form.password} onChange={updateField} minLength={form.password ? 8 : undefined} maxLength="72" placeholder="Để trống nếu không đổi mật khẩu" /></label></div>{actionError && <p role="alert">{actionError}</p>}<footer><button type="button" onClick={cancelEdit} disabled={saving}>Hủy thay đổi</button><button type="submit" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button></footer></form> : <div className="coach-account-profile-grid"><article><span><Mail size={18} /></span><div><small>Email</small><strong>{profile.email}</strong></div></article><article><span><Phone size={18} /></span><div><small>Số điện thoại</small><strong>{profile.phoneNumber || 'Chưa cập nhật'}</strong></div></article><article><span><IdCard size={18} /></span><div><small>Ngày tạo tài khoản</small><strong>{createdAt}</strong></div></article><article><span><CheckCircle2 size={18} /></span><div><small>Cập nhật gần nhất</small><strong>{updatedAt}</strong></div></article></div>}</section>
+  </div>
+}
+
+function CoachRoomDetailDialog({ roomId, onClose }) {
+  const [room, setRoom] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+  const [availabilityForm, setAvailabilityForm] = useState({ startsAt: '', endsAt: '' })
+  const [availability, setAvailability] = useState(null)
+  const [availabilityError, setAvailabilityError] = useState('')
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    const loadRoom = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getRoomById(roomId)
+        if (active) setRoom(result)
+      } catch (requestError) {
+        if (active) setError(getRoomErrorMessage(requestError, 'Không thể tải chi tiết phòng tập.'))
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadRoom()
+    return () => { active = false }
+  }, [requestKey, roomId])
+
+  const submitAvailability = async event => {
+    event.preventDefault()
+    setAvailability(null)
+    setAvailabilityError('')
+    const start = new Date(availabilityForm.startsAt)
+    const end = new Date(availabilityForm.endsAt)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      setAvailabilityError('Thời gian kết thúc phải sau thời gian bắt đầu.')
+      return
+    }
+    setCheckingAvailability(true)
+    try {
+      const result = await checkRoomAvailability(roomId, start.toISOString(), end.toISOString())
+      setAvailability(result)
+    } catch (requestError) {
+      setAvailabilityError(getRoomErrorMessage(requestError, 'Không thể kiểm tra tình trạng phòng.'))
+    } finally {
+      setCheckingAvailability(false)
+    }
+  }
+
+  return <div className="coach-room-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="coach-room-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-room-detail-title">
+      <header><div><span>ROOM DETAIL API</span><h2 id="coach-room-detail-title">Chi tiết phòng #{roomId}</h2><p>Thông tin được tải trực tiếp theo mã phòng.</p></div><button type="button" onClick={onClose} aria-label="Đóng chi tiết phòng"><X size={18} /></button></header>
+      <div className="coach-room-dialog-body">{loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải chi tiết phòng</strong><p>Dữ liệu đang được đồng bộ từ Rooms API.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải chi tiết</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : room && <><div className="coach-room-detail-title"><span><DoorOpen size={22} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><div className="coach-room-detail-grid"><article><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></article><article><small>Sức chứa</small><strong>{room.capacity} người</strong></article><article className="wide"><small>Vị trí</small><strong><MapPin size={14} />{room.location || 'Chưa cập nhật'}</strong></article></div><form className="coach-room-availability" onSubmit={submitAvailability}><header><div><span>KIỂM TRA LỊCH PHÒNG</span><strong>Phòng có trống không?</strong></div><Clock3 size={19} /></header><div><label>Bắt đầu<input type="datetime-local" value={availabilityForm.startsAt} onChange={event => setAvailabilityForm(current => ({ ...current, startsAt: event.target.value }))} required /></label><label>Kết thúc<input type="datetime-local" value={availabilityForm.endsAt} onChange={event => setAvailabilityForm(current => ({ ...current, endsAt: event.target.value }))} required /></label><button type="submit" disabled={checkingAvailability}>{checkingAvailability ? 'Đang kiểm tra...' : 'Kiểm tra phòng'}</button></div>{availabilityError && <p className="error" role="alert">{availabilityError}</p>}{availability && <p className={availability.isAvailable ? 'available' : 'occupied'}><CheckCircle2 size={16} /><span><strong>{availability.isAvailable ? 'Phòng đang trống' : 'Phòng đã có lịch'}</strong><small>{availability.message}</small></span></p>}</form></>}</div>
+    </section>
+  </div>
+}
+
+export function CoachRoomsView() {
+  const [rooms, setRooms] = useState([])
+  const [filter, setFilter] = useState('active')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+  const [selectedRoomId, setSelectedRoomId] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    const loadRooms = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const isActive = filter === 'all' ? null : filter === 'active'
+        const result = await getRooms(isActive)
+        if (active) setRooms(result)
+      } catch (requestError) {
+        if (active) {
+          setRooms([])
+          setError(getRoomErrorMessage(requestError, 'Không thể tải danh sách phòng tập.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadRooms()
+    return () => { active = false }
+  }, [filter, requestKey])
+
+  return <section className="coach-card coach-rooms-catalog">
+    <div className="coach-card-head"><div><span>ROOMS API</span><h2>Danh sách phòng tập</h2></div><div className="coach-room-filters">{[['all', 'Tất cả'], ['active', 'Đang mở'], ['inactive', 'Tạm ngừng']].map(([value, label]) => <button type="button" key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{label}</button>)}</div></div>
+    {loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải phòng tập</strong><p>Dữ liệu đang được đồng bộ từ Rooms API.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải phòng tập</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : rooms.length ? <div className="coach-room-list">{rooms.map(room => <article key={room.id}><header><span><DoorOpen size={19} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></header><div><span><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></span><span><small>Sức chứa</small><strong>{room.capacity} người</strong></span><span className="wide"><small>Vị trí</small><strong><MapPin size={13} />{room.location || 'Chưa cập nhật'}</strong></span></div><button type="button" className="coach-room-detail-trigger" onClick={() => setSelectedRoomId(room.id)}>Xem chi tiết <ChevronRight size={13} /></button></article>)}</div> : <div className="coach-room-state"><DoorOpen size={28} /><strong>Chưa có phòng phù hợp</strong><p>Rooms API chưa có dữ liệu theo bộ lọc đã chọn.</p></div>}
+    {selectedRoomId !== null && <CoachRoomDetailDialog roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />}
+  </section>
 }
 
 function SessionRow({ session }) {
