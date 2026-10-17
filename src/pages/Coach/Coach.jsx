@@ -2,17 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
-  Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Dumbbell,
+  Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen, Dumbbell,
   ClipboardCheck, LayoutDashboard, LogOut, Search, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
-import { AttendanceView, CoachProfileView, OverviewView, ScheduleView, StudentsView } from './CoachViews'
+import { AttendanceView, CoachProfileView, CoachRoomsView, OverviewView, ScheduleView, StudentsView } from './CoachViews'
 import '../../style/Coach/Coach.css'
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
   [CalendarDays, 'Lịch huấn luyện'],
+  [DoorOpen, 'Phòng tập'],
   [Users, 'Học viên'],
   [ClipboardCheck, 'Điểm danh'],
   [UserRound, 'Hồ sơ'],
@@ -20,6 +21,7 @@ const navigation = [
 
 const pageMeta = {
   'Lịch huấn luyện': { eyebrow: 'QUẢN LÝ THỜI GIAN', title: 'Lịch huấn luyện', description: 'Theo dõi và sắp xếp toàn bộ buổi huấn luyện trong tuần.' },
+  'Phòng tập': { eyebrow: 'CƠ SỞ VẬT CHẤT', title: 'Phòng tập', description: 'Xem danh sách phòng và tình trạng phục vụ huấn luyện.' },
   'Học viên': { eyebrow: 'HỌC VIÊN THEO BUỔI', title: 'Danh sách học viên', description: 'Chọn một buổi huấn luyện để xem đăng ký và trạng thái điểm danh.' },
   'Điểm danh': { eyebrow: 'CHUYÊN CẦN THEO BUỔI', title: 'Điểm danh học viên', description: 'Chọn buổi huấn luyện và cập nhật trạng thái chuyên cần của từng học viên.' },
   'Hồ sơ': { eyebrow: 'TÀI KHOẢN HUẤN LUYỆN VIÊN', title: 'Hồ sơ cá nhân', description: 'Kiểm tra thông tin tài khoản Coach đang đăng nhập.' },
@@ -129,6 +131,7 @@ export default function Coach() {
 
   const renderActiveView = () => {
     if (activeNav === 'Lịch huấn luyện') return <ScheduleView showNotice={showNotice} />
+    if (activeNav === 'Phòng tập') return <CoachRoomsView />
     if (activeNav === 'Học viên') return <StudentsView query={query} showNotice={showNotice} />
     if (activeNav === 'Điểm danh') return <AttendanceView query={query} showNotice={showNotice} />
     if (activeNav === 'Hồ sơ') return <CoachProfileView showNotice={showNotice} />

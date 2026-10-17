@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  Clock3, IdCard, Mail, MapPin, PencilLine, Phone, Plus, SearchX, ShieldCheck, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
+  Clock3, DoorOpen, IdCard, Mail, MapPin, PencilLine, Phone, Plus, SearchX, ShieldCheck, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
 import {
   completeCoachSession,
@@ -17,6 +17,7 @@ import {
   updateTrainingPlanExerciseResult,
 } from '../../services/trainingPlanService'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
+import { getRoomErrorMessage, getRooms } from '../../services/roomService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -110,6 +111,41 @@ export function CoachProfileView({ showNotice }) {
     <section className="coach-card coach-account-profile-summary"><div className="coach-account-profile-cover"><span>{initials}</span></div><div className="coach-account-profile-main"><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><div><span><strong>#{profile.userId}</strong><small>Mã tài khoản</small></span><span><strong>{profile.roleName}</strong><small>Vai trò</small></span></div></div></section>
     <section className="coach-card coach-account-profile-details"><div className="coach-card-head"><div><span>PROFILE API</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>{editing ? <button type="button" onClick={cancelEdit} disabled={saving}><X size={15} />Hủy</button> : <button type="button" onClick={() => setEditing(true)}><PencilLine size={15} />Chỉnh sửa</button>}</div>{editing ? <form className="coach-account-profile-form" onSubmit={submitProfile}><div><label>Họ và tên<input name="fullName" value={form.fullName} onChange={updateField} minLength="1" maxLength="200" required /></label><label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="254" required /></label><label>Số điện thoại<input name="phoneNumber" value={form.phoneNumber} onChange={updateField} maxLength="30" required /></label><label>Mật khẩu hiện tại<input name="currentPassword" type="password" value={form.currentPassword} onChange={updateField} placeholder="Bắt buộc khi đổi email/mật khẩu" /></label><label className="wide">Mật khẩu mới (không bắt buộc)<input name="password" type="password" value={form.password} onChange={updateField} minLength={form.password ? 8 : undefined} maxLength="72" placeholder="Để trống nếu không đổi mật khẩu" /></label></div>{actionError && <p role="alert">{actionError}</p>}<footer><button type="button" onClick={cancelEdit} disabled={saving}>Hủy thay đổi</button><button type="submit" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button></footer></form> : <div className="coach-account-profile-grid"><article><span><Mail size={18} /></span><div><small>Email</small><strong>{profile.email}</strong></div></article><article><span><Phone size={18} /></span><div><small>Số điện thoại</small><strong>{profile.phoneNumber || 'Chưa cập nhật'}</strong></div></article><article><span><IdCard size={18} /></span><div><small>Ngày tạo tài khoản</small><strong>{createdAt}</strong></div></article><article><span><CheckCircle2 size={18} /></span><div><small>Cập nhật gần nhất</small><strong>{updatedAt}</strong></div></article></div>}</section>
   </div>
+}
+
+export function CoachRoomsView() {
+  const [rooms, setRooms] = useState([])
+  const [filter, setFilter] = useState('active')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadRooms = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const isActive = filter === 'all' ? null : filter === 'active'
+        const result = await getRooms(isActive)
+        if (active) setRooms(result)
+      } catch (requestError) {
+        if (active) {
+          setRooms([])
+          setError(getRoomErrorMessage(requestError, 'Không thể tải danh sách phòng tập.'))
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadRooms()
+    return () => { active = false }
+  }, [filter, requestKey])
+
+  return <section className="coach-card coach-rooms-catalog">
+    <div className="coach-card-head"><div><span>ROOMS API</span><h2>Danh sách phòng tập</h2></div><div className="coach-room-filters">{[['all', 'Tất cả'], ['active', 'Đang mở'], ['inactive', 'Tạm ngừng']].map(([value, label]) => <button type="button" key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{label}</button>)}</div></div>
+    {loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải phòng tập</strong><p>Dữ liệu đang được đồng bộ từ Rooms API.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải phòng tập</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : rooms.length ? <div className="coach-room-list">{rooms.map(room => <article key={room.id}><header><span><DoorOpen size={19} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></header><div><span><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></span><span><small>Sức chứa</small><strong>{room.capacity} người</strong></span><span className="wide"><small>Vị trí</small><strong><MapPin size={13} />{room.location || 'Chưa cập nhật'}</strong></span></div></article>)}</div> : <div className="coach-room-state"><DoorOpen size={28} /><strong>Chưa có phòng phù hợp</strong><p>Rooms API chưa có dữ liệu theo bộ lọc đã chọn.</p></div>}
+  </section>
 }
 
 function SessionRow({ session }) {
