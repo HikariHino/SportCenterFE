@@ -347,11 +347,11 @@ export function PaymentsView({ showNotice }) {
                               {/* Thanh toán qua PayOS */}
                               <button
                                 type="button"
-                                className="member-button member-button--primary"
+                                className="member-btn-checkout member-btn-checkout--sm"
                                 disabled={actionId === item.id}
                                 onClick={() => handlePayOSCheckout(item)}
                               >
-                                <ExternalLink size={14} /> Thanh toán
+                                <ExternalLink size={13} /> Thanh toán ngay
                               </button>
                               {/* Đồng bộ trạng thái */}
                               <button
@@ -504,10 +504,10 @@ export function PaymentsView({ showNotice }) {
                       <p className="pay-detail-qr-amount">{formatCurrency(viewing.amount)}</p>
                       <button
                         type="button"
-                        className="member-button member-button--primary"
+                        className="member-btn-checkout member-btn-checkout--lg"
                         onClick={() => handlePayOSCheckout(viewing)}
                       >
-                        <ExternalLink size={14} /> Mở trang thanh toán PayOS
+                        <ExternalLink size={15} /> Thanh toán qua PayOS ngay
                       </button>
                     </div>
                   </div>
