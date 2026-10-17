@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Clock3, ReceiptText, Ban, Plus, ScanLine, WalletCards, X } from 'lucide-react'
+import { ArrowRight, Clock3, Download, ReceiptText, Ban, Plus, ScanLine, WalletCards, X } from 'lucide-react'
 import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../services/paymentService'
+import { exportInvoicePdf, getReportErrorMessage, triggerBlobDownload } from '../../services/reportService'
 import { EmptyState, formatDateTime, paymentStatusLabel, requestErrorMessage } from './ReceptionistViewShared'
 
 export function PaymentsView({ query, showNotice }) {
@@ -90,6 +91,7 @@ function PaymentDetailDialog({ paymentId, onClose, onUpdated, showNotice }) {
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [syncing, setSyncing] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [actionError, setActionError] = useState('')
   const [showCancelDialog, setShowCancelDialog] = useState(false)
 
@@ -129,10 +131,24 @@ function PaymentDetailDialog({ paymentId, onClose, onUpdated, showNotice }) {
     }
   }
 
+  const handleExport = async () => {
+    setExporting(true)
+    setActionError('')
+    try {
+      const invoice = await exportInvoicePdf(paymentId)
+      triggerBlobDownload(invoice, `hoa-don-${paymentId}.pdf`)
+      showNotice(`Đã tải hóa đơn thanh toán #${paymentId}.`)
+    } catch (requestError) {
+      setActionError(getReportErrorMessage(requestError, 'Không thể xuất hóa đơn PDF.'))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="reception-dialog reception-payment-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-payment-detail-title">
       <header><div><span>CHI TIẾT PAYOS</span><h2 id="reception-payment-detail-title">Thanh toán #{paymentId}</h2><p>Dữ liệu được tải trực tiếp từ Payment API.</p></div><button type="button" aria-label="Đóng chi tiết thanh toán" onClick={onClose}><X size={19} /></button></header>
-      <div className="reception-payment-detail-body">{loading ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Đang tải chi tiết thanh toán</strong></div> : error ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Không thể tải chi tiết</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : payment && <><div className="reception-payment-detail-title"><span><WalletCards size={23} /></span><div><small>Mã giao dịch</small><h3>#{payment.id}</h3></div><b className={String(payment.status || '').toLowerCase()}>{paymentStatusLabel(payment.status)}</b></div><div className="reception-payment-detail-grid"><div><small>Hội viên</small><strong>#{payment.memberId}</strong></div><div><small>Đăng ký gói</small><strong>{payment.subscriptionId ? `#${payment.subscriptionId}` : 'Không có'}</strong></div><div><small>Số tiền</small><strong>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Đã nhận</small><strong>{Number(payment.amountReceived || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Phương thức</small><strong>{payment.paymentMethod || 'Chưa có'}</strong></div><div><small>Trạng thái PayOS</small><strong>{payment.gatewayStatus || 'Chưa đồng bộ'}</strong></div><div><small>Mã đơn PayOS</small><strong>{payment.payOSOrderCode || 'Chưa có'}</strong></div><div><small>Mã tham chiếu</small><strong>{payment.transactionReference || 'Chưa có'}</strong></div><div><small>Ngày tạo</small><strong>{formatDateTime(payment.createdAt)}</strong></div><div><small>Ngày thanh toán</small><strong>{formatDateTime(payment.paidAt)}</strong></div><div><small>Hết hạn</small><strong>{formatDateTime(payment.expiresAt)}</strong></div><div><small>Lý do kiểm tra</small><strong>{payment.reviewReason || 'Không có'}</strong></div></div>{actionError && <p className="reception-form-error" role="alert">{actionError}</p>}<div className="reception-payment-detail-actions">{payment.checkoutUrl && <a href={payment.checkoutUrl} target="_blank" rel="noreferrer">Mở trang thanh toán <ArrowRight size={14} /></a>}<button type="button" onClick={handleSync} disabled={syncing}><ScanLine size={14} />{syncing ? 'Đang đồng bộ...' : 'Đồng bộ PayOS'}</button>{payment.status === 'Pending' && <button className="cancel" type="button" onClick={() => setShowCancelDialog(true)} disabled={syncing}><Ban size={14} />Hủy thanh toán</button>}</div></>}
+      <div className="reception-payment-detail-body">{loading ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Đang tải chi tiết thanh toán</strong></div> : error ? <div className="reception-member-detail-state"><ReceiptText size={26} /><strong>Không thể tải chi tiết</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : payment && <><div className="reception-payment-detail-title"><span><WalletCards size={23} /></span><div><small>Mã giao dịch</small><h3>#{payment.id}</h3></div><b className={String(payment.status || '').toLowerCase()}>{paymentStatusLabel(payment.status)}</b></div><div className="reception-payment-detail-grid"><div><small>Hội viên</small><strong>#{payment.memberId}</strong></div><div><small>Đăng ký gói</small><strong>{payment.subscriptionId ? `#${payment.subscriptionId}` : 'Không có'}</strong></div><div><small>Số tiền</small><strong>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Đã nhận</small><strong>{Number(payment.amountReceived || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Phương thức</small><strong>{payment.paymentMethod || 'Chưa có'}</strong></div><div><small>Trạng thái PayOS</small><strong>{payment.gatewayStatus || 'Chưa đồng bộ'}</strong></div><div><small>Mã đơn PayOS</small><strong>{payment.payOSOrderCode || 'Chưa có'}</strong></div><div><small>Mã tham chiếu</small><strong>{payment.transactionReference || 'Chưa có'}</strong></div><div><small>Ngày tạo</small><strong>{formatDateTime(payment.createdAt)}</strong></div><div><small>Ngày thanh toán</small><strong>{formatDateTime(payment.paidAt)}</strong></div><div><small>Hết hạn</small><strong>{formatDateTime(payment.expiresAt)}</strong></div><div><small>Lý do kiểm tra</small><strong>{payment.reviewReason || 'Không có'}</strong></div></div>{actionError && <p className="reception-form-error" role="alert">{actionError}</p>}<div className="reception-payment-detail-actions">{payment.status === 'Completed' && <button className="export" type="button" onClick={handleExport} disabled={exporting || syncing}><Download size={14} />{exporting ? 'Đang xuất PDF...' : 'Tải hóa đơn PDF'}</button>}{payment.checkoutUrl && <a href={payment.checkoutUrl} target="_blank" rel="noreferrer">Mở trang thanh toán <ArrowRight size={14} /></a>}<button type="button" onClick={handleSync} disabled={syncing || exporting}><ScanLine size={14} />{syncing ? 'Đang đồng bộ...' : 'Đồng bộ PayOS'}</button>{payment.status === 'Pending' && <button className="cancel" type="button" onClick={() => setShowCancelDialog(true)} disabled={syncing || exporting}><Ban size={14} />Hủy thanh toán</button>}</div></>}
       </div>
       {showCancelDialog && payment && <CancelPaymentDialog payment={payment} onClose={() => setShowCancelDialog(false)} onCancelled={result => { setPayment(result); onUpdated(result); showNotice(`Đã hủy thanh toán #${paymentId}.`) }} />}
     </section>
