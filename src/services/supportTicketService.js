@@ -49,8 +49,44 @@ export async function resolveSupportTicket(ticketId, { status, resolutionNote })
   return body?.data ?? body
 }
 
+/**
+ * Hội viên gửi phiếu khiếu nại / yêu cầu hỗ trợ mới
+ * POST /api/SupportTickets
+ * @param {{ title: string, description: string, priority?: string }} payload
+ */
+export async function createSupportTicket({ title, description, priority = 'Normal' }) {
+  const response = await api.post('/SupportTickets', {
+    title: title.trim(),
+    description: description.trim(),
+    priority: priority || 'Normal',
+  })
+  const body = response.data
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tạo phiếu hỗ trợ.')
+  }
+  return body?.data ?? body
+}
+
+/**
+ * Hội viên xem danh sách phiếu hỗ trợ của mình
+ * GET /api/SupportTickets/my-tickets
+ * @returns {Promise<Array<{ id: number, title: string, description: string, status: string, priority: string, memberName: string, handledByUserName?: string, resolutionNote?: string, createdAt: string, resolvedAt?: string }>>}
+ */
+export async function getMySupportTickets() {
+  const response = await api.get('/SupportTickets/my-tickets')
+  const body = response.data
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải danh sách phiếu hỗ trợ.')
+  }
+  const payload = body?.data ?? body
+  return Array.isArray(payload) ? payload : []
+}
+
 export default {
   getTicketErrorMessage,
   getAllSupportTickets,
   resolveSupportTicket,
+  createSupportTicket,
+  getMySupportTickets,
 }
+

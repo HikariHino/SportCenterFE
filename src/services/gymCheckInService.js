@@ -79,10 +79,42 @@ export async function getTodayCheckIns() {
   return Array.isArray(payload) ? payload : []
 }
 
+/**
+ * Hội viên lấy mã thẻ QR của chính mình
+ * GET /api/GymCheckIns/my-qr
+ * @returns {Promise<{ memberId: number, memberCode: string, qrData: string, fullName: string, phoneNumber: string, packageName?: string, packageStatus: string, expireDate?: string }>}
+ */
+export async function getMyQrCode() {
+  const response = await api.get('/GymCheckIns/my-qr')
+  const body = response.data
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể lấy mã QR hội viên.')
+  }
+  return body?.data ?? body
+}
+
+/**
+ * Hội viên xem lịch sử ra/vào phòng gym của mình
+ * GET /api/GymCheckIns/my-history
+ * @returns {Promise<Array<{ id: number, memberId: number, memberCode: string, memberName: string, phoneNumber: string, packageName: string, checkInTime: string, checkOutTime: string|null, checkedByStaffName: string|null, notes: string|null }>>}
+ */
+export async function getMyGymCheckInHistory() {
+  const response = await api.get('/GymCheckIns/my-history')
+  const body = response.data
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải lịch sử check-in.')
+  }
+  const payload = body?.data ?? body
+  return Array.isArray(payload) ? payload : []
+}
+
 export default {
   getCheckInErrorMessage,
   scanQrCheckIn,
   manualCheckIn,
   checkOutGymMember,
   getTodayCheckIns,
+  getMyQrCode,
+  getMyGymCheckInHistory,
 }
+
