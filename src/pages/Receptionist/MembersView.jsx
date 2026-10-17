@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Clock3, CreditCard, ReceiptText, Ban, LogIn, Plus, UserCheck, Users, WalletCards, X } from 'lucide-react'
-import { createMember, getMemberById, getMembers } from '../../../services/memberService'
-import { getMembershipPackageById, getMembershipPackages } from '../../../services/membershipPackageService'
-import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment, createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../../services/memberSubscriptionService'
-import { cancelReceptionistRegistration, checkInReceptionistRegistration, getReceptionistMemberRegistrations } from '../../../services/receptionistClassService'
+import { createMember, getMemberById, getMembers } from '../../services/memberService'
+import { getMembershipPackageById, getMembershipPackages } from '../../services/membershipPackageService'
+import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment, createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
+import { cancelReceptionistRegistration, checkInReceptionistRegistration, getReceptionistMemberRegistrations } from '../../services/receptionistClassService'
 import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, subscriptionStatusLabel } from './ReceptionistViewShared'
 
 function CreateMemberDialog({ onClose, onCreated }) {

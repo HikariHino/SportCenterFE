@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Plus, Star, Trophy, UserCheck, Users, X } from 'lucide-react'
-import { getCoaches, getSports } from '../../../services/classCatalogService'
-import { getReceptionistClassById, getReceptionistClasses, getReceptionistClassSessions, getReceptionistClassSessionsByClass, getReceptionistSessionReviews } from '../../../services/receptionistCatalogService'
-import { completeReceptionistSession, getReceptionistSessionRoster, registerMemberForSession } from '../../../services/receptionistClassService'
+import { getCoaches, getSports } from '../../services/classCatalogService'
+import { getReceptionistClassById, getReceptionistClasses, getReceptionistClassSessions, getReceptionistClassSessionsByClass, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
+import { completeReceptionistSession, getReceptionistSessionRoster, registerMemberForSession } from '../../services/receptionistClassService'
 import { EmptyState, formatDateTime, formatMemberDate, requestErrorMessage } from './ReceptionistViewShared'
 
 function CompleteSessionDialog({ sessionId, onClose, onCompleted }) {

@@ -7,12 +7,12 @@ import {
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
-import { CheckInView } from './views/CheckInView'
-import { MembersView } from './views/MembersView'
-import { Overview } from './views/OverviewView'
-import { PaymentsView } from './views/PaymentsView'
-import { SessionsView } from './views/SessionsView'
-import { formatDateTime, requestErrorMessage } from './views/ReceptionistViewShared'
+import { CheckInView } from './CheckInView'
+import { MembersView } from './MembersView'
+import { Overview } from './OverviewView'
+import { PaymentsView } from './PaymentsView'
+import { SessionsView } from './SessionsView'
+import { formatDateTime, requestErrorMessage } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
 
 const navigation = [

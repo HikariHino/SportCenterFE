@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CalendarDays, CheckCircle2, QrCode, ScanLine, Search, ShieldCheck, UserCheck } from 'lucide-react'
-import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../../services/receptionistAttendanceService'
+import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
 import { attendanceStatusLabel, EmptyState, requestErrorMessage } from './ReceptionistViewShared'
 
 export function CheckInView({ showNotice }) {
