@@ -264,6 +264,22 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-goal::before, [data-theme='dark'] .coach-student-progress > span { background: var(--theme-border); }
 [data-theme='dark'] .coach-welcome > button { background: #2563eb; color: #fff; }
 [data-theme='dark'] .coach-welcome > button:hover { background: #1d4ed8; }
+[data-theme='dark'] .coach-filter-pills button,
+[data-theme='dark'] .coach-calendar-strip > button {
+  border-color: var(--theme-border);
+  color: var(--theme-muted);
+  background: var(--theme-raised);
+}
+[data-theme='dark'] :is(.coach-filter-pills button:hover, .coach-filter-pills button.active) {
+  border-color: #3c5f9f;
+  color: var(--theme-accent);
+  background: var(--theme-blue-bg);
+}
+[data-theme='dark'] .coach-calendar-strip > button:hover {
+  border-color: #3c5f9f;
+  color: var(--theme-accent);
+  background: var(--theme-blue-bg);
+}
 [data-theme='dark'] .coach-session-picker-main > span { background: var(--theme-blue-bg); color: var(--theme-accent); }
 [data-theme='dark'] .coach-roster-table > button { border-color: var(--theme-border); color: var(--theme-text); }
 [data-theme='dark'] :is(.coach-roster-table > button:hover, .coach-roster-table > button.selected) { background: var(--theme-raised); }
