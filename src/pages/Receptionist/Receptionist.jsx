@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   BadgeCheck, Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
@@ -7,16 +7,17 @@ import {
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
-import { CheckInView } from './CheckInView'
-import { MembersView } from './MembersView'
-import { Overview } from './OverviewView'
-import { PaymentsView } from './PaymentsView'
-import { ReceptionistProfileView } from './ProfileView'
-import { RoomsView } from './RoomsView'
-import { SessionsView } from './SessionsView'
-import { SupportTicketsView } from './SupportTicketsView'
 import { formatDateTime, requestErrorMessage } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
+
+const CheckInView = lazy(() => import('./CheckInView').then(module => ({ default: module.CheckInView })))
+const MembersView = lazy(() => import('./MembersView').then(module => ({ default: module.MembersView })))
+const Overview = lazy(() => import('./OverviewView').then(module => ({ default: module.Overview })))
+const PaymentsView = lazy(() => import('./PaymentsView').then(module => ({ default: module.PaymentsView })))
+const ReceptionistProfileView = lazy(() => import('./ProfileView').then(module => ({ default: module.ReceptionistProfileView })))
+const RoomsView = lazy(() => import('./RoomsView').then(module => ({ default: module.RoomsView })))
+const SessionsView = lazy(() => import('./SessionsView').then(module => ({ default: module.SessionsView })))
+const SupportTicketsView = lazy(() => import('./SupportTicketsView').then(module => ({ default: module.SupportTicketsView })))
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
@@ -159,7 +160,7 @@ export default function Receptionist() {
       <div className="reception-main">
         {activeNav === 'Tổng quan' ? <section className="reception-welcome"><div><p>{today}</p><h1>Chào bạn, {staffName}!</h1><span>Dữ liệu vận hành quầy được đồng bộ trực tiếp từ hệ thống.</span></div><BadgeCheck size={42} /></section> : <section className="reception-page-heading"><p>{meta[0]}</p><h1>{meta[1]}</h1><span>{meta[2]}</span></section>}
         {notice && <div className="reception-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
-        <div className="reception-view" key={activeNav}>{renderView()}</div>
+        <div className="reception-view" key={activeNav}><Suspense fallback={<section className="reception-card reception-empty"><strong>Đang tải màn hình</strong><p>Vui lòng chờ trong giây lát.</p></section>}>{renderView()}</Suspense></div>
       </div>
     </section>
   </main>
