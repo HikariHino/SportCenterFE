@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   BadgeCheck, Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
@@ -7,16 +7,17 @@ import {
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
-import { CheckInView } from './CheckInView'
-import { MembersView } from './MembersView'
-import { Overview } from './OverviewView'
-import { PaymentsView } from './PaymentsView'
-import { ReceptionistProfileView } from './ProfileView'
-import { RoomsView } from './RoomsView'
-import { SessionsView } from './SessionsView'
-import { SupportTicketsView } from './SupportTicketsView'
 import { formatDateTime, requestErrorMessage } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
+
+const CheckInView = lazy(() => import('./CheckInView').then(module => ({ default: module.CheckInView })))
+const MembersView = lazy(() => import('./MembersView').then(module => ({ default: module.MembersView })))
+const Overview = lazy(() => import('./OverviewView').then(module => ({ default: module.Overview })))
+const PaymentsView = lazy(() => import('./PaymentsView').then(module => ({ default: module.PaymentsView })))
+const ReceptionistProfileView = lazy(() => import('./ProfileView').then(module => ({ default: module.ReceptionistProfileView })))
+const RoomsView = lazy(() => import('./RoomsView').then(module => ({ default: module.RoomsView })))
+const SessionsView = lazy(() => import('./SessionsView').then(module => ({ default: module.SessionsView })))
+const SupportTicketsView = lazy(() => import('./SupportTicketsView').then(module => ({ default: module.SupportTicketsView })))
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
@@ -150,16 +151,16 @@ export default function Receptionist() {
     <aside className="reception-sidebar">
       <Link to="/" className="reception-brand"><span><Trophy size={23} /></span><div><strong>SportPulse <em>Olympus</em></strong><small>RECEPTION PORTAL</small></div></Link>
       <nav className="reception-nav" aria-label="Điều hướng lễ tân"><p>VẬN HÀNH QUẦY LỄ TÂN</p>{navigation.map(([Icon, label]) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onClick={() => selectNavigation(label)}><Icon size={19} /><span>{label}</span></button>)}</nav>
-      <div className="reception-source"><span><ShieldCheck size={20} /></span><p>Nguồn dữ liệu</p><strong>Reception API</strong><small>Chờ kết nối dữ liệu</small></div>
+      <div className="reception-source"><span><ShieldCheck size={20} /></span><p>Nguồn dữ liệu</p><strong>Reception API</strong><small>Đang đồng bộ trực tiếp</small></div>
       <div className="reception-user"><span className="reception-avatar">{initials}</span><div><strong>{staffName}</strong><small>Nhân viên lễ tân</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div>
     </aside>
 
     <section className="reception-workspace">
       <header className="reception-topbar"><label><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm mã đặt sân, hội viên..." aria-label="Tìm kiếm" /></label><div><ThemeToggle /><div className="reception-notification-wrap" ref={notificationRef}><button className="reception-notification-button" type="button" aria-label="Thông báo" aria-expanded={notificationOpen} onClick={toggleNotifications}><Bell size={20} />{unreadCount > 0 && <i>{unreadCount > 99 ? '99+' : unreadCount}</i>}</button>{notificationOpen && <section className="reception-notification-panel" aria-label="Thông báo Receptionist"><header><div><span>THÔNG BÁO</span><strong>{unreadCount ? `${unreadCount} chưa đọc` : 'Đã xem tất cả'}</strong></div><button type="button" aria-label="Đóng thông báo" onClick={() => setNotificationOpen(false)}><X size={17} /></button></header>{notificationActionError && <div className="reception-notification-action-error" role="alert">{notificationActionError}</div>}{notificationsLoading ? <div className="reception-notification-state">Đang tải thông báo...</div> : notificationsError ? <div className="reception-notification-state error"><strong>Không thể tải thông báo</strong><span>{notificationsError}</span><button type="button" onClick={() => loadNotifications(notificationPage.page)}>Thử lại</button></div> : notificationPage.items.length ? <><div className="reception-notification-list">{notificationPage.items.map(item => <article className={item.isRead ? '' : 'unread'} key={item.id}><span><Bell size={15} /></span><div><strong>{item.title}</strong><p>{item.content}</p><small>{formatDateTime(item.sentAt)}</small>{!item.isRead && <button type="button" className="reception-notification-read" disabled={Boolean(markingNotificationId)} onClick={() => handleMarkNotificationRead(item)}><CheckCircle2 size={13} />{markingNotificationId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}</button>}</div>{!item.isRead && <i />}</article>)}</div>{notificationPageCount > 1 && <footer><button type="button" disabled={notificationPage.page <= 1} onClick={() => loadNotifications(notificationPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{notificationPage.page}/{notificationPageCount}</span><button type="button" disabled={notificationPage.page >= notificationPageCount} onClick={() => loadNotifications(notificationPage.page + 1)}>Sau<ChevronRight size={14} /></button></footer>}</> : <div className="reception-notification-state"><Bell size={24} /><strong>Chưa có thông báo</strong><span>Thông báo dành cho Receptionist sẽ xuất hiện tại đây.</span></div>}</section>}</div><span className="reception-avatar">{initials}</span><span><strong>{staffName}</strong><small>Nhân viên lễ tân</small></span></div></header>
       <div className="reception-main">
-        {activeNav === 'Tổng quan' ? <section className="reception-welcome"><div><p>{today}</p><h1>Chào bạn, {staffName}!</h1><span>Dữ liệu vận hành quầy sẽ hiển thị khi các API được kết nối.</span></div><BadgeCheck size={42} /></section> : <section className="reception-page-heading"><p>{meta[0]}</p><h1>{meta[1]}</h1><span>{meta[2]}</span></section>}
+        {activeNav === 'Tổng quan' ? <section className="reception-welcome"><div><p>{today}</p><h1>Chào bạn, {staffName}!</h1><span>Dữ liệu vận hành quầy được đồng bộ trực tiếp từ hệ thống.</span></div><BadgeCheck size={42} /></section> : <section className="reception-page-heading"><p>{meta[0]}</p><h1>{meta[1]}</h1><span>{meta[2]}</span></section>}
         {notice && <div className="reception-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
-        <div className="reception-view" key={activeNav}>{renderView()}</div>
+        <div className="reception-view" key={activeNav}><Suspense fallback={<section className="reception-card reception-empty"><strong>Đang tải màn hình</strong><p>Vui lòng chờ trong giây lát.</p></section>}>{renderView()}</Suspense></div>
       </div>
     </section>
   </main>
