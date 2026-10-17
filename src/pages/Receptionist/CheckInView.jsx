@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CalendarDays, CheckCircle2, QrCode, ScanLine, Search, ShieldCheck, UserCheck } from 'lucide-react'
-import { getCheckInErrorMessage, manualCheckIn, scanQrCheckIn } from '../../services/gymCheckInService'
+import { checkOutGymMember, getCheckInErrorMessage, manualCheckIn, scanQrCheckIn } from '../../services/gymCheckInService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
 import { attendanceStatusLabel, EmptyState, formatDateTime, requestErrorMessage } from './ReceptionistViewShared'
 
@@ -12,6 +12,8 @@ export function CheckInView({ showNotice }) {
   const [manualForm, setManualForm] = useState({ memberId: '', phoneNumber: '', notes: '' })
   const [manualSaving, setManualSaving] = useState(false)
   const [manualError, setManualError] = useState('')
+  const [checkOutSaving, setCheckOutSaving] = useState(false)
+  const [checkOutError, setCheckOutError] = useState('')
   const [form, setForm] = useState({ sessionId: '', memberId: '', status: 'Present' })
   const [attendance, setAttendance] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -61,6 +63,21 @@ export function CheckInView({ showNotice }) {
     }
   }
 
+  const handleCheckOut = async () => {
+    if (!qrResult?.id || qrResult.checkOutTime || checkOutSaving) return
+    setCheckOutSaving(true)
+    setCheckOutError('')
+    try {
+      const result = await checkOutGymMember(qrResult.id)
+      setQrResult(result)
+      showNotice?.(`Đã check-out ${result.memberName || `hội viên #${result.memberId}`}.`)
+    } catch (requestError) {
+      setCheckOutError(getCheckInErrorMessage(requestError, 'Không thể check-out hội viên.'))
+    } finally {
+      setCheckOutSaving(false)
+    }
+  }
+
   const submitAttendance = async event => {
     event.preventDefault()
     setSaving(true)
@@ -100,7 +117,7 @@ export function CheckInView({ showNotice }) {
 
   return <div className="reception-attendance-page"><div className="reception-gym-checkin-layout">
     <section className="reception-card reception-gym-checkin-card"><div className="reception-card-head"><div><span>GYM CHECK-IN API</span><h2>Quét mã QR hội viên</h2></div><QrCode size={20} /></div><form onSubmit={submitQrCheckIn}><label>Mã QR<input value={qrForm.qrCode} onChange={event => setQrForm(current => ({ ...current, qrCode: event.target.value }))} placeholder="Dán hoặc quét nội dung QR" required /></label><label>Ghi chú<input value={qrForm.notes} onChange={event => setQrForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label>{qrError && <p role="alert">{qrError}</p>}<button type="submit" disabled={qrSaving}><ScanLine size={16} />{qrSaving ? 'Đang xác minh...' : 'Check-in bằng QR'}</button></form></section>
-    <section className="reception-card reception-gym-result"><div className="reception-card-head"><div><span>KẾT QUẢ CHECK-IN</span><h2>Thông tin lượt vào phòng gym</h2></div><ShieldCheck size={20} /></div>{qrResult ? <div className="reception-gym-result-body"><span><CheckCircle2 size={24} /></span><div><h3>{qrResult.memberName}</h3><p>{qrResult.memberCode} · {qrResult.packageName || 'Chưa có gói'}</p></div><dl><div><dt>Mã lượt</dt><dd>#{qrResult.id}</dd></div><div><dt>Thời gian vào</dt><dd>{formatDateTime(qrResult.checkInTime)}</dd></div><div><dt>Điện thoại</dt><dd>{qrResult.phoneNumber || 'Chưa cập nhật'}</dd></div><div><dt>Nhân viên</dt><dd>{qrResult.checkedByStaffName || 'Receptionist'}</dd></div></dl></div> : <EmptyState icon={QrCode} title="Chưa quét mã QR" text="Thông tin check-in phòng gym sẽ hiển thị tại đây." />}</section>
+    <section className="reception-card reception-gym-result"><div className="reception-card-head"><div><span>KẾT QUẢ CHECK-IN</span><h2>Thông tin lượt vào phòng gym</h2></div><ShieldCheck size={20} /></div>{qrResult ? <div className="reception-gym-result-body"><span><CheckCircle2 size={24} /></span><div><h3>{qrResult.memberName}</h3><p>{qrResult.memberCode} · {qrResult.packageName || 'Chưa có gói'}</p></div><dl><div><dt>Mã lượt</dt><dd>#{qrResult.id}</dd></div><div><dt>Thời gian vào</dt><dd>{formatDateTime(qrResult.checkInTime)}</dd></div><div><dt>Thời gian ra</dt><dd>{qrResult.checkOutTime ? formatDateTime(qrResult.checkOutTime) : 'Chưa check-out'}</dd></div><div><dt>Nhân viên</dt><dd>{qrResult.checkedByStaffName || 'Receptionist'}</dd></div></dl>{checkOutError && <p className="reception-gym-checkout-error" role="alert">{checkOutError}</p>}<button className="reception-gym-checkout-button" type="button" disabled={Boolean(qrResult.checkOutTime) || checkOutSaving} onClick={handleCheckOut}>{checkOutSaving ? 'Đang check-out...' : qrResult.checkOutTime ? 'Đã check-out' : 'Check-out hội viên'}</button></div> : <EmptyState icon={QrCode} title="Chưa quét mã QR" text="Thông tin check-in phòng gym sẽ hiển thị tại đây." />}</section>
     <section className="reception-card reception-gym-manual-card"><div className="reception-card-head"><div><span>PHƯƠNG ÁN DỰ PHÒNG</span><h2>Check-in thủ công</h2></div><UserCheck size={20} /></div><form onSubmit={submitManualCheckIn}><label>Mã hội viên<input type="number" min="1" value={manualForm.memberId} onChange={event => setManualForm(current => ({ ...current, memberId: event.target.value }))} placeholder="Ví dụ: 12" /></label><span>hoặc</span><label>Số điện thoại<input value={manualForm.phoneNumber} onChange={event => setManualForm(current => ({ ...current, phoneNumber: event.target.value }))} placeholder="0912 345 678" /></label><label>Ghi chú<input value={manualForm.notes} onChange={event => setManualForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label>{manualError && <p role="alert">{manualError}</p>}<button type="submit" disabled={manualSaving}><UserCheck size={16} />{manualSaving ? 'Đang check-in...' : 'Xác nhận check-in'}</button></form></section>
   </div><div className="reception-checkin-layout">
     <section className="reception-card reception-checkin-search">
