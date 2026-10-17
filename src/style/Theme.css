@@ -265,6 +265,9 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-complete-session { border-color: #2c6554; color: var(--theme-green); background: var(--theme-green-bg); }
 [data-theme='dark'] .coach-session-reviews { border-color: #705b2f; color: var(--theme-gold); background: var(--theme-gold-bg); }
 [data-theme='dark'] :is(.coach-review-head, .coach-session-review-list article, .coach-review-pagination) { border-color: var(--theme-border); }
+[data-theme='dark'] .coach-account-profile-cover>span { border-color:var(--theme-surface); }
+[data-theme='dark'] .coach-account-profile-main>div,[data-theme='dark'] .coach-account-profile-main>div>span+span { border-color:var(--theme-border); }
+[data-theme='dark'] .coach-account-profile-grid article { border-color:var(--theme-border); background:var(--theme-raised); }
 [data-theme='dark'] .coach-review-pagination button { border-color: var(--theme-border); color: var(--theme-text); background: var(--theme-raised); }
 
 /* Receptionist page (also ready for when its route is connected). */

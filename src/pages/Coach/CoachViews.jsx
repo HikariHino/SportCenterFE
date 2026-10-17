@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  Clock3, MapPin, PencilLine, Plus, SearchX, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
+  Clock3, IdCard, Mail, MapPin, PencilLine, Phone, Plus, SearchX, ShieldCheck, Star, Trash2, TrendingUp, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
 import {
   completeCoachSession,
@@ -16,6 +16,7 @@ import {
   getMemberTrainingPlans,
   updateTrainingPlanExerciseResult,
 } from '../../services/trainingPlanService'
+import { getProfile, getProfileErrorMessage } from '../../services/profileService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -26,6 +27,50 @@ const metricSlots = [
 
 function EmptyState({ title = 'Chưa có dữ liệu', text }) {
   return <div className="coach-empty"><SearchX size={28} /><strong>{title}</strong><p>{text}</p></div>
+}
+
+const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+export function CoachProfileView() {
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadProfile = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getProfile()
+        if (active) setProfile(result)
+      } catch (requestError) {
+        if (active) setError(getProfileErrorMessage(requestError, 'Không thể tải hồ sơ Coach.'))
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadProfile()
+    return () => { active = false }
+  }, [requestKey])
+
+  if (loading) return <section className="coach-card coach-profile-api-state"><UserRound size={28} /><strong>Đang tải hồ sơ Coach</strong><p>Dữ liệu đang được đồng bộ từ Profile API.</p></section>
+  if (error) return <section className="coach-card coach-profile-api-state error"><UserRound size={28} /><strong>Không thể tải hồ sơ</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></section>
+  if (!profile) return <section className="coach-card coach-profile-api-state"><UserRound size={28} /><strong>Chưa có hồ sơ</strong><p>Profile API chưa trả về dữ liệu tài khoản.</p></section>
+
+  const initials = profile.fullName?.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase() || 'HLV'
+  const createdAt = profile.createdAt ? profileDateFormatter.format(new Date(profile.createdAt)) : 'Chưa xác định'
+  const updatedAt = profile.updatedAt ? profileDateFormatter.format(new Date(profile.updatedAt)) : 'Chưa cập nhật'
+
+  return <div className="coach-account-profile-layout">
+    <section className="coach-card coach-account-profile-summary"><div className="coach-account-profile-cover"><span>{initials}</span></div><div className="coach-account-profile-main"><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><div><span><strong>#{profile.userId}</strong><small>Mã tài khoản</small></span><span><strong>{profile.roleName}</strong><small>Vai trò</small></span></div></div></section>
+    <section className="coach-card coach-account-profile-details"><div className="coach-card-head"><div><span>PROFILE API</span><h2>Thông tin tài khoản</h2></div><ShieldCheck size={20} /></div><div className="coach-account-profile-grid"><article><span><Mail size={18} /></span><div><small>Email</small><strong>{profile.email}</strong></div></article><article><span><Phone size={18} /></span><div><small>Số điện thoại</small><strong>{profile.phoneNumber || 'Chưa cập nhật'}</strong></div></article><article><span><IdCard size={18} /></span><div><small>Ngày tạo tài khoản</small><strong>{createdAt}</strong></div></article><article><span><CheckCircle2 size={18} /></span><div><small>Cập nhật gần nhất</small><strong>{updatedAt}</strong></div></article></div></section>
+  </div>
 }
 
 function SessionRow({ session }) {
