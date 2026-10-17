@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, Clock3, PencilLine, Plus, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
-import { getCoachSessionRoster, getMyCoachSessions } from '../../../services/coachService'
-import { createTrainingPlan, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../../services/trainingPlanService'
+import { getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
+import { createTrainingPlan, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent } from './CoachViewShared'
 
 const toDateInput = date => {

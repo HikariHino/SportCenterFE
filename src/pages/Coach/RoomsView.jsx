@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, ChevronRight, Clock3, DoorOpen, MapPin, X } from 'lucide-react'
-import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../../services/roomService'
+import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
 
 function CoachRoomDetailDialog({ roomId, onClose }) {
   const [room, setRoom] = useState(null)
