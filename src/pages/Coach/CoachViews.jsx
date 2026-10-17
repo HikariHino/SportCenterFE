@@ -17,7 +17,7 @@ import {
   updateTrainingPlanExerciseResult,
 } from '../../services/trainingPlanService'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
-import { getRoomErrorMessage, getRooms } from '../../services/roomService'
+import { getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -113,12 +113,45 @@ export function CoachProfileView({ showNotice }) {
   </div>
 }
 
+function CoachRoomDetailDialog({ roomId, onClose }) {
+  const [room, setRoom] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    const loadRoom = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const result = await getRoomById(roomId)
+        if (active) setRoom(result)
+      } catch (requestError) {
+        if (active) setError(getRoomErrorMessage(requestError, 'Không thể tải chi tiết phòng tập.'))
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadRoom()
+    return () => { active = false }
+  }, [requestKey, roomId])
+
+  return <div className="coach-room-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="coach-room-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-room-detail-title">
+      <header><div><span>ROOM DETAIL API</span><h2 id="coach-room-detail-title">Chi tiết phòng #{roomId}</h2><p>Thông tin được tải trực tiếp theo mã phòng.</p></div><button type="button" onClick={onClose} aria-label="Đóng chi tiết phòng"><X size={18} /></button></header>
+      <div className="coach-room-dialog-body">{loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải chi tiết phòng</strong><p>Dữ liệu đang được đồng bộ từ Rooms API.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải chi tiết</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : room && <><div className="coach-room-detail-title"><span><DoorOpen size={22} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><div className="coach-room-detail-grid"><article><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></article><article><small>Sức chứa</small><strong>{room.capacity} người</strong></article><article className="wide"><small>Vị trí</small><strong><MapPin size={14} />{room.location || 'Chưa cập nhật'}</strong></article></div></>}</div>
+    </section>
+  </div>
+}
+
 export function CoachRoomsView() {
   const [rooms, setRooms] = useState([])
   const [filter, setFilter] = useState('active')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const [selectedRoomId, setSelectedRoomId] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -144,7 +177,8 @@ export function CoachRoomsView() {
 
   return <section className="coach-card coach-rooms-catalog">
     <div className="coach-card-head"><div><span>ROOMS API</span><h2>Danh sách phòng tập</h2></div><div className="coach-room-filters">{[['all', 'Tất cả'], ['active', 'Đang mở'], ['inactive', 'Tạm ngừng']].map(([value, label]) => <button type="button" key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{label}</button>)}</div></div>
-    {loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải phòng tập</strong><p>Dữ liệu đang được đồng bộ từ Rooms API.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải phòng tập</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : rooms.length ? <div className="coach-room-list">{rooms.map(room => <article key={room.id}><header><span><DoorOpen size={19} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></header><div><span><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></span><span><small>Sức chứa</small><strong>{room.capacity} người</strong></span><span className="wide"><small>Vị trí</small><strong><MapPin size={13} />{room.location || 'Chưa cập nhật'}</strong></span></div></article>)}</div> : <div className="coach-room-state"><DoorOpen size={28} /><strong>Chưa có phòng phù hợp</strong><p>Rooms API chưa có dữ liệu theo bộ lọc đã chọn.</p></div>}
+    {loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải phòng tập</strong><p>Dữ liệu đang được đồng bộ từ Rooms API.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải phòng tập</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : rooms.length ? <div className="coach-room-list">{rooms.map(room => <article key={room.id}><header><span><DoorOpen size={19} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></header><div><span><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></span><span><small>Sức chứa</small><strong>{room.capacity} người</strong></span><span className="wide"><small>Vị trí</small><strong><MapPin size={13} />{room.location || 'Chưa cập nhật'}</strong></span></div><button type="button" className="coach-room-detail-trigger" onClick={() => setSelectedRoomId(room.id)}>Xem chi tiết <ChevronRight size={13} /></button></article>)}</div> : <div className="coach-room-state"><DoorOpen size={28} /><strong>Chưa có phòng phù hợp</strong><p>Rooms API chưa có dữ liệu theo bộ lọc đã chọn.</p></div>}
+    {selectedRoomId !== null && <CoachRoomDetailDialog roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />}
   </section>
 }
 
