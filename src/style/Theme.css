@@ -74,6 +74,17 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 #root .theme-toggle:hover { background: var(--theme-raised); border-color: var(--theme-accent); }
 #root .theme-toggle:focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
 #root .theme-toggle svg { flex-shrink: 0; color: var(--theme-accent); }
+#root .theme-toggle.theme-toggle--icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  gap: 0;
+}
+#root .theme-toggle.theme-toggle--icon:hover svg { transform: rotate(12deg) scale(1.08); }
+#root .theme-toggle.theme-toggle--icon:active { transform: scale(.94); }
+#root .theme-toggle.theme-toggle--icon svg { transition: transform 180ms ease; }
 .login-topbar { flex-wrap: wrap; gap: 12px; }
 .login-topbar > .theme-toggle { margin-right: auto; }
 .register-topbar > .theme-toggle { margin-left: auto; order: 1; }

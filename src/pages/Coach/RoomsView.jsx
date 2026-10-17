@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, ChevronRight, Clock3, DoorOpen, MapPin, X } from 'lucide-react'
 import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
+import { ViewLoader } from './CoachViewShared'
 
 function CoachRoomDetailDialog({ roomId, onClose }) {
   const [room, setRoom] = useState(null)
@@ -88,6 +89,8 @@ export function CoachRoomsView() {
     loadRooms()
     return () => { active = false }
   }, [filter, requestKey])
+
+  if (loading) return <ViewLoader />
 
   return <section className="coach-card coach-rooms-catalog">
     <div className="coach-card-head"><div><span>ROOMS API</span><h2>Danh sách phòng tập</h2></div><div className="coach-room-filters">{[['all', 'Tất cả'], ['active', 'Đang mở'], ['inactive', 'Tạm ngừng']].map(([value, label]) => <button type="button" key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{label}</button>)}</div></div>

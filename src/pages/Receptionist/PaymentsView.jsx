@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Clock3, Download, ReceiptText, Ban, Plus, ScanLine, WalletCards, X } from 'lucide-react'
 import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../services/paymentService'
 import { exportInvoicePdf, getReportErrorMessage, triggerBlobDownload } from '../../services/reportService'
-import { EmptyState, formatDateTime, paymentStatusLabel, requestErrorMessage } from './ReceptionistViewShared'
+import { EmptyState, formatDateTime, paymentStatusLabel, requestErrorMessage, ViewLoader } from './ReceptionistViewShared'
 
 export function PaymentsView({ query, showNotice }) {
   const [status, setStatus] = useState('Tất cả')
@@ -43,6 +43,8 @@ export function PaymentsView({ query, showNotice }) {
   const completedPayments = paymentItems.filter(payment => payment.status === 'Completed')
   const completedTotal = completedPayments.reduce((sum, payment) => sum + Number(payment.amountReceived || payment.amount || 0), 0)
   const pendingCount = paymentItems.filter(payment => payment.status === 'Pending').length
+
+  if (loading) return <ViewLoader />
 
   return <>
     <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{loading ? '--' : `${completedTotal.toLocaleString('vi-VN')} đ`}</strong><p>{completedPayments.length} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{loading ? '--' : pendingCount}</strong><p>Yêu cầu PayOS đang mở</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{loading ? '--' : paymentItems.length}</strong><p>Dữ liệu từ Payment API</p></div></article></section>

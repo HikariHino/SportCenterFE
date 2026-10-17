@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, LifeBuoy, MessageSquareText, RefreshCw, X } from 'lucide-react'
 import { getAllSupportTickets, getTicketErrorMessage, resolveSupportTicket } from '../../services/supportTicketService'
-import { EmptyState, formatDateTime } from './ReceptionistViewShared'
+import { EmptyState, formatDateTime, ViewLoader } from './ReceptionistViewShared'
 
 const statusLabel = status => ({ Open: 'Đang mở', InProgress: 'Đang xử lý', Resolved: 'Đã giải quyết', Closed: 'Đã đóng' })[status] || status
 const priorityLabel = priority => ({ Low: 'Thấp', Normal: 'Bình thường', High: 'Cao', Urgent: 'Khẩn cấp' })[priority] || priority
@@ -62,6 +62,8 @@ export function SupportTicketsView({ query, showNotice }) {
       setSaving(false)
     }
   }
+
+  if (loading) return <ViewLoader />
 
   return <section className="reception-card reception-support-card">
     <div className="reception-card-head"><div><span>SUPPORT TICKETS API</span><h2>Phiếu hỗ trợ hội viên</h2></div><button type="button" onClick={() => setRequestKey(key => key + 1)} disabled={loading}><RefreshCw size={14} />{loading ? 'Đang tải...' : 'Làm mới'}</button></div>

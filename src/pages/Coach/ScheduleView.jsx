@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Star, Users } from 'lucide-react'
 import { completeCoachSession, getCoachSessionReviews, getMyCoachSessions } from '../../services/coachService'
-import { EmptyState, timeFormatter } from './CoachViewShared'
+import { EmptyState, timeFormatter, ViewLoader } from './CoachViewShared'
 
 const toDateKey = date => {
   const year = date.getFullYear()
@@ -172,6 +172,8 @@ export function ScheduleView({ showNotice }) {
   }
 
   const reviewPageCount = Math.max(1, Math.ceil(reviewPage.total / reviewPage.pageSize))
+
+  if (loading) return <ViewLoader />
 
   return <div className="coach-section-view">
     <section className="coach-calendar-strip coach-card">

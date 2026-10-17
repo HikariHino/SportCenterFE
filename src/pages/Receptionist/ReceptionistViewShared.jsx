@@ -53,3 +53,12 @@ export const formatDateTime = value => {
 export function EmptyState({ icon: Icon = Search, title, text }) {
   return <div className="reception-empty"><span><Icon size={25} /></span><strong>{title}</strong><p>{text}</p></div>
 }
+
+export function ViewLoader() {
+  return <section className="reception-card reception-view-loader" role="status" aria-live="polite" aria-label="Đang tải nội dung">
+    <svg className="reception-loader-orbit" viewBox="0 0 80 80" aria-hidden="true">
+      <circle className="reception-loader-track" cx="40" cy="40" r="32" pathLength="100" />
+      <circle className="reception-loader-arc" cx="40" cy="40" r="32" pathLength="100" />
+    </svg>
+  </section>
+}

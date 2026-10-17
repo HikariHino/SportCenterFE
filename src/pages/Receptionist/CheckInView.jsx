@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, QrCode, ScanLine, ShieldCheck, UserCheck } from 'lucide-react'
 import { checkOutGymMember, getCheckInErrorMessage, getTodayCheckIns, manualCheckIn, scanQrCheckIn } from '../../services/gymCheckInService'
-import { EmptyState, formatDateTime } from './ReceptionistViewShared'
+import { EmptyState, formatDateTime, ViewLoader } from './ReceptionistViewShared'
 
 export function CheckInView({ showNotice }) {
   const [qrForm, setQrForm] = useState({ qrCode: '', notes: '' })
@@ -93,6 +93,8 @@ export function CheckInView({ showNotice }) {
       setCheckOutSavingId(null)
     }
   }
+
+  if (todayLoading) return <ViewLoader />
 
   return <div className="reception-attendance-page">
     <div className="reception-gym-checkin-layout">

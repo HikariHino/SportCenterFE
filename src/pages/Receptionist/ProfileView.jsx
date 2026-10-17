@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, Edit3, IdCard, LoaderCircle, Mail, Phone, RefreshCw, Save, UserRound, X } from 'lucide-react'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
+import { ViewLoader } from './ReceptionistViewShared'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' }
@@ -78,7 +79,7 @@ export function ReceptionistProfileView({ showNotice }) {
     }
   }
 
-  if (loading) return <section className="reception-card reception-profile-state"><UserRound size={28} /><strong>Đang tải hồ sơ</strong><p>Dữ liệu đang được đồng bộ từ Profile API.</p></section>
+  if (loading) return <ViewLoader />
   if (error) return <section className="reception-card reception-profile-state error"><UserRound size={28} /><strong>Không thể tải hồ sơ</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={14} />Thử lại</button></section>
 
   const initials = profile?.fullName?.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toLocaleUpperCase('vi-VN') || 'LT'

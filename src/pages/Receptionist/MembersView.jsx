@@ -4,7 +4,7 @@ import { createMember, getMemberById, getMembers } from '../../services/memberSe
 import { getMembershipPackageById, getMembershipPackages } from '../../services/membershipPackageService'
 import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment, createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
 import { cancelReceptionistRegistration, checkInReceptionistRegistration, getReceptionistMemberRegistrations } from '../../services/receptionistClassService'
-import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, subscriptionStatusLabel } from './ReceptionistViewShared'
+import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, subscriptionStatusLabel, ViewLoader } from './ReceptionistViewShared'
 
 function CreateMemberDialog({ onClose, onCreated }) {
   const [form, setForm] = useState(emptyMemberForm)
@@ -504,6 +504,8 @@ export function MembersView({ query, showNotice }) {
   const handleSubscriptionCreated = subscription => {
     showNotice(`Đã đăng ký gói ${subscription.packageName} cho hội viên #${subscription.memberId}.`)
   }
+
+  if (loading) return <ViewLoader />
 
   return <>
     <section className="reception-member-metrics"><article><span><Users size={20} /></span><div><small>Tổng hội viên</small><strong>{loading ? '--' : members.length}</strong><p>Dữ liệu tài khoản</p></div></article><article><span><BadgeCheck size={20} /></span><div><small>Đang hoạt động</small><strong>{loading ? '--' : activeCount}</strong><p>Có thể sử dụng dịch vụ</p></div></article><article><span><Clock3 size={20} /></span><div><small>Ngừng hoạt động</small><strong>{loading ? '--' : members.length - activeCount}</strong><p>Tài khoản đã khóa</p></div></article></section>
