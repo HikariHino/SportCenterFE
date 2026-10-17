@@ -229,7 +229,8 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-notification-list article.unread { background: var(--theme-raised); }
 [data-theme='dark'] .coach-notification-list article > span { color: var(--theme-accent); background: var(--theme-blue-bg); }
 [data-theme='dark'] :is(.coach-notification-list p, .coach-notification-list small, .coach-notification-state) { color: var(--theme-muted); }
-[data-theme='dark'] .coach-notification-read { border-color: #3c5f9f; color: var(--theme-accent); background: var(--theme-blue-bg); }
+[data-theme='dark'] .coach-dashboard .coach-notification-read { border-color: #3c5f9f; color: var(--theme-accent); background: var(--theme-blue-bg); }
+[data-theme='dark'] .coach-dashboard .coach-notification-read:hover:not(:disabled) { border-color: #5175ad; background: #29466f; }
 [data-theme='dark'] .coach-notification-action-error { border-color: #6d3a41; color: #ff9eaa; background: #351f25; }
 [data-theme='dark'] .coach-notification-panel > footer button { border-color: var(--theme-border); color: var(--theme-text); background: var(--theme-raised); }
 [data-theme='dark'] :is(.coach-plan-dialog, .coach-plan-dialog > header) { border-color: var(--theme-border); background: var(--theme-surface); }
@@ -264,6 +265,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-goal::before, [data-theme='dark'] .coach-student-progress > span { background: var(--theme-border); }
 [data-theme='dark'] .coach-welcome > button { background: #2563eb; color: #fff; }
 [data-theme='dark'] .coach-welcome > button:hover { background: #1d4ed8; }
+[data-theme='dark'] .coach-topbar-profile:hover { background: var(--theme-raised); }
 [data-theme='dark'] .coach-filter-pills button,
 [data-theme='dark'] .coach-calendar-strip > button {
   border-color: var(--theme-border);
