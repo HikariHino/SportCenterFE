@@ -17,7 +17,7 @@ import {
   updateTrainingPlanExerciseResult,
 } from '../../services/trainingPlanService'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
-import { getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
+import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -118,6 +118,10 @@ function CoachRoomDetailDialog({ roomId, onClose }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const [availabilityForm, setAvailabilityForm] = useState({ startsAt: '', endsAt: '' })
+  const [availability, setAvailability] = useState(null)
+  const [availabilityError, setAvailabilityError] = useState('')
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -137,10 +141,31 @@ function CoachRoomDetailDialog({ roomId, onClose }) {
     return () => { active = false }
   }, [requestKey, roomId])
 
+  const submitAvailability = async event => {
+    event.preventDefault()
+    setAvailability(null)
+    setAvailabilityError('')
+    const start = new Date(availabilityForm.startsAt)
+    const end = new Date(availabilityForm.endsAt)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      setAvailabilityError('Thời gian kết thúc phải sau thời gian bắt đầu.')
+      return
+    }
+    setCheckingAvailability(true)
+    try {
+      const result = await checkRoomAvailability(roomId, start.toISOString(), end.toISOString())
+      setAvailability(result)
+    } catch (requestError) {
+      setAvailabilityError(getRoomErrorMessage(requestError, 'Không thể kiểm tra tình trạng phòng.'))
+    } finally {
+      setCheckingAvailability(false)
+    }
+  }
+
   return <div className="coach-room-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="coach-room-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-room-detail-title">
       <header><div><span>ROOM DETAIL API</span><h2 id="coach-room-detail-title">Chi tiết phòng #{roomId}</h2><p>Thông tin được tải trực tiếp theo mã phòng.</p></div><button type="button" onClick={onClose} aria-label="Đóng chi tiết phòng"><X size={18} /></button></header>
-      <div className="coach-room-dialog-body">{loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải chi tiết phòng</strong><p>Dữ liệu đang được đồng bộ từ Rooms API.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải chi tiết</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : room && <><div className="coach-room-detail-title"><span><DoorOpen size={22} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><div className="coach-room-detail-grid"><article><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></article><article><small>Sức chứa</small><strong>{room.capacity} người</strong></article><article className="wide"><small>Vị trí</small><strong><MapPin size={14} />{room.location || 'Chưa cập nhật'}</strong></article></div></>}</div>
+      <div className="coach-room-dialog-body">{loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải chi tiết phòng</strong><p>Dữ liệu đang được đồng bộ từ Rooms API.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải chi tiết</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : room && <><div className="coach-room-detail-title"><span><DoorOpen size={22} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></div><div className="coach-room-detail-grid"><article><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></article><article><small>Sức chứa</small><strong>{room.capacity} người</strong></article><article className="wide"><small>Vị trí</small><strong><MapPin size={14} />{room.location || 'Chưa cập nhật'}</strong></article></div><form className="coach-room-availability" onSubmit={submitAvailability}><header><div><span>KIỂM TRA LỊCH PHÒNG</span><strong>Phòng có trống không?</strong></div><Clock3 size={19} /></header><div><label>Bắt đầu<input type="datetime-local" value={availabilityForm.startsAt} onChange={event => setAvailabilityForm(current => ({ ...current, startsAt: event.target.value }))} required /></label><label>Kết thúc<input type="datetime-local" value={availabilityForm.endsAt} onChange={event => setAvailabilityForm(current => ({ ...current, endsAt: event.target.value }))} required /></label><button type="submit" disabled={checkingAvailability}>{checkingAvailability ? 'Đang kiểm tra...' : 'Kiểm tra phòng'}</button></div>{availabilityError && <p className="error" role="alert">{availabilityError}</p>}{availability && <p className={availability.isAvailable ? 'available' : 'occupied'}><CheckCircle2 size={16} /><span><strong>{availability.isAvailable ? 'Phòng đang trống' : 'Phòng đã có lịch'}</strong><small>{availability.message}</small></span></p>}</form></>}</div>
     </section>
   </div>
 }

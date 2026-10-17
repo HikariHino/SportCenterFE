@@ -280,6 +280,9 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] :is(.coach-room-dialog,.coach-room-dialog>header) { border-color:var(--theme-border); background:var(--theme-surface); }
 [data-theme='dark'] .coach-room-dialog>header button { color:var(--theme-muted); background:var(--theme-raised); }
 [data-theme='dark'] :is(.coach-room-detail-title,.coach-room-detail-grid article) { border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] .coach-room-availability { border-color:var(--theme-border); }
+[data-theme='dark'] .coach-room-availability input { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); color-scheme:dark; }
+[data-theme='dark'] .coach-room-availability>p.available { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .coach-review-pagination button { border-color: var(--theme-border); color: var(--theme-text); background: var(--theme-raised); }
 
 /* Receptionist page (also ready for when its route is connected). */
