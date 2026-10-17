@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   BadgeCheck, Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  LayoutDashboard, LogOut, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, Users, X,
+  LayoutDashboard, LifeBuoy, LogOut, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, Users, X,
 } from 'lucide-react'
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
@@ -12,6 +12,7 @@ import { MembersView } from './MembersView'
 import { Overview } from './OverviewView'
 import { PaymentsView } from './PaymentsView'
 import { SessionsView } from './SessionsView'
+import { SupportTicketsView } from './SupportTicketsView'
 import { formatDateTime, requestErrorMessage } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
 
@@ -21,6 +22,7 @@ const navigation = [
   [ScanLine, 'Check-in'],
   [Users, 'Hội viên'],
   [ReceiptText, 'Thanh toán'],
+  [LifeBuoy, 'Hỗ trợ'],
 ]
 
 const pageMeta = {
@@ -28,6 +30,7 @@ const pageMeta = {
   'Check-in': ['TIẾP NHẬN KHÁCH', 'Check-in tại quầy', 'Xác minh mã đặt sân hoặc tài khoản hội viên trước khi sử dụng dịch vụ.'],
   'Hội viên': ['HỖ TRỢ HỘI VIÊN', 'Tra cứu hội viên', 'Kiểm tra trạng thái tài khoản, gói dịch vụ và thông tin liên hệ.'],
   'Thanh toán': ['GIAO DỊCH TẠI QUẦY', 'Thanh toán', 'Theo dõi giao dịch và hóa đơn phát sinh tại quầy lễ tân.'],
+  'Hỗ trợ': ['CHĂM SÓC HỘI VIÊN', 'Phiếu hỗ trợ', 'Theo dõi yêu cầu, phản hồi và tình trạng xử lý của hội viên.'],
 }
 
 export default function Receptionist() {
@@ -129,6 +132,7 @@ export default function Receptionist() {
     if (activeNav === 'Check-in') return <CheckInView showNotice={showNotice} />
     if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
     if (activeNav === 'Thanh toán') return <PaymentsView query={query} showNotice={showNotice} />
+    if (activeNav === 'Hỗ trợ') return <SupportTicketsView query={query} />
     return <Overview onNavigate={selectNavigation} />
   }
 
