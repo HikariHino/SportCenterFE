@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CalendarDays, CheckCircle2, QrCode, ScanLine, Search, ShieldCheck, UserCheck } from 'lucide-react'
-import { getCheckInErrorMessage, scanQrCheckIn } from '../../services/gymCheckInService'
+import { getCheckInErrorMessage, manualCheckIn, scanQrCheckIn } from '../../services/gymCheckInService'
 import { getReceptionistSessionAttendances, markReceptionistAttendance } from '../../services/receptionistAttendanceService'
 import { attendanceStatusLabel, EmptyState, formatDateTime, requestErrorMessage } from './ReceptionistViewShared'
 
@@ -9,6 +9,9 @@ export function CheckInView({ showNotice }) {
   const [qrResult, setQrResult] = useState(null)
   const [qrSaving, setQrSaving] = useState(false)
   const [qrError, setQrError] = useState('')
+  const [manualForm, setManualForm] = useState({ memberId: '', phoneNumber: '', notes: '' })
+  const [manualSaving, setManualSaving] = useState(false)
+  const [manualError, setManualError] = useState('')
   const [form, setForm] = useState({ sessionId: '', memberId: '', status: 'Present' })
   const [attendance, setAttendance] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -35,6 +38,26 @@ export function CheckInView({ showNotice }) {
       setQrError(getCheckInErrorMessage(requestError, 'Không thể check-in bằng mã QR.'))
     } finally {
       setQrSaving(false)
+    }
+  }
+
+  const submitManualCheckIn = async event => {
+    event.preventDefault()
+    setManualError('')
+    if (!manualForm.memberId && !manualForm.phoneNumber.trim()) {
+      setManualError('Vui lòng nhập mã hội viên hoặc số điện thoại.')
+      return
+    }
+    setManualSaving(true)
+    try {
+      const result = await manualCheckIn(manualForm)
+      setQrResult(result)
+      setManualForm({ memberId: '', phoneNumber: '', notes: '' })
+      showNotice?.(`Đã check-in ${result.memberName || `hội viên #${result.memberId}`} tại quầy.`)
+    } catch (requestError) {
+      setManualError(getCheckInErrorMessage(requestError, 'Không thể check-in thủ công.'))
+    } finally {
+      setManualSaving(false)
     }
   }
 
@@ -78,6 +101,7 @@ export function CheckInView({ showNotice }) {
   return <div className="reception-attendance-page"><div className="reception-gym-checkin-layout">
     <section className="reception-card reception-gym-checkin-card"><div className="reception-card-head"><div><span>GYM CHECK-IN API</span><h2>Quét mã QR hội viên</h2></div><QrCode size={20} /></div><form onSubmit={submitQrCheckIn}><label>Mã QR<input value={qrForm.qrCode} onChange={event => setQrForm(current => ({ ...current, qrCode: event.target.value }))} placeholder="Dán hoặc quét nội dung QR" required /></label><label>Ghi chú<input value={qrForm.notes} onChange={event => setQrForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label>{qrError && <p role="alert">{qrError}</p>}<button type="submit" disabled={qrSaving}><ScanLine size={16} />{qrSaving ? 'Đang xác minh...' : 'Check-in bằng QR'}</button></form></section>
     <section className="reception-card reception-gym-result"><div className="reception-card-head"><div><span>KẾT QUẢ CHECK-IN</span><h2>Thông tin lượt vào phòng gym</h2></div><ShieldCheck size={20} /></div>{qrResult ? <div className="reception-gym-result-body"><span><CheckCircle2 size={24} /></span><div><h3>{qrResult.memberName}</h3><p>{qrResult.memberCode} · {qrResult.packageName || 'Chưa có gói'}</p></div><dl><div><dt>Mã lượt</dt><dd>#{qrResult.id}</dd></div><div><dt>Thời gian vào</dt><dd>{formatDateTime(qrResult.checkInTime)}</dd></div><div><dt>Điện thoại</dt><dd>{qrResult.phoneNumber || 'Chưa cập nhật'}</dd></div><div><dt>Nhân viên</dt><dd>{qrResult.checkedByStaffName || 'Receptionist'}</dd></div></dl></div> : <EmptyState icon={QrCode} title="Chưa quét mã QR" text="Thông tin check-in phòng gym sẽ hiển thị tại đây." />}</section>
+    <section className="reception-card reception-gym-manual-card"><div className="reception-card-head"><div><span>PHƯƠNG ÁN DỰ PHÒNG</span><h2>Check-in thủ công</h2></div><UserCheck size={20} /></div><form onSubmit={submitManualCheckIn}><label>Mã hội viên<input type="number" min="1" value={manualForm.memberId} onChange={event => setManualForm(current => ({ ...current, memberId: event.target.value }))} placeholder="Ví dụ: 12" /></label><span>hoặc</span><label>Số điện thoại<input value={manualForm.phoneNumber} onChange={event => setManualForm(current => ({ ...current, phoneNumber: event.target.value }))} placeholder="0912 345 678" /></label><label>Ghi chú<input value={manualForm.notes} onChange={event => setManualForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label>{manualError && <p role="alert">{manualError}</p>}<button type="submit" disabled={manualSaving}><UserCheck size={16} />{manualSaving ? 'Đang check-in...' : 'Xác nhận check-in'}</button></form></section>
   </div><div className="reception-checkin-layout">
     <section className="reception-card reception-checkin-search">
       <div className="reception-scan-visual"><span><ScanLine size={42} /></span><i /><strong>Điểm danh tại quầy</strong><p>Nhập đúng mã buổi học và hội viên để ghi nhận trạng thái tham gia.</p></div>
