@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  BadgeCheck, Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
+  BadgeCheck, Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
   LayoutDashboard, LifeBuoy, LogOut, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import ThemeToggle from '../../components/ThemeToggle'
@@ -12,6 +12,7 @@ import { MembersView } from './MembersView'
 import { Overview } from './OverviewView'
 import { PaymentsView } from './PaymentsView'
 import { ReceptionistProfileView } from './ProfileView'
+import { RoomsView } from './RoomsView'
 import { SessionsView } from './SessionsView'
 import { SupportTicketsView } from './SupportTicketsView'
 import { formatDateTime, requestErrorMessage } from './ReceptionistViewShared'
@@ -24,6 +25,7 @@ const navigation = [
   [Users, 'Hội viên'],
   [ReceiptText, 'Thanh toán'],
   [LifeBuoy, 'Hỗ trợ'],
+  [DoorOpen, 'Phòng tập'],
   [UserRound, 'Hồ sơ'],
 ]
 
@@ -33,6 +35,7 @@ const pageMeta = {
   'Hội viên': ['HỖ TRỢ HỘI VIÊN', 'Tra cứu hội viên', 'Kiểm tra trạng thái tài khoản, gói dịch vụ và thông tin liên hệ.'],
   'Thanh toán': ['GIAO DỊCH TẠI QUẦY', 'Thanh toán', 'Theo dõi giao dịch và hóa đơn phát sinh tại quầy lễ tân.'],
   'Hỗ trợ': ['CHĂM SÓC HỘI VIÊN', 'Phiếu hỗ trợ', 'Theo dõi yêu cầu, phản hồi và tình trạng xử lý của hội viên.'],
+  'Phòng tập': ['CƠ SỞ VẬT CHẤT', 'Phòng tập', 'Tra cứu phòng tập, khu chức năng và sức chứa phục vụ hội viên.'],
   'Hồ sơ': ['TÀI KHOẢN NHÂN VIÊN', 'Hồ sơ Receptionist', 'Xem thông tin tài khoản đang đăng nhập tại quầy lễ tân.'],
 }
 
@@ -136,6 +139,7 @@ export default function Receptionist() {
     if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
     if (activeNav === 'Thanh toán') return <PaymentsView query={query} showNotice={showNotice} />
     if (activeNav === 'Hỗ trợ') return <SupportTicketsView query={query} showNotice={showNotice} />
+    if (activeNav === 'Phòng tập') return <RoomsView query={query} />
     if (activeNav === 'Hồ sơ') return <ReceptionistProfileView showNotice={showNotice} />
     return <Overview onNavigate={selectNavigation} />
   }
