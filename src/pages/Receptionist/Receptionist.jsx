@@ -136,7 +136,7 @@ export default function Receptionist() {
     if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
     if (activeNav === 'Thanh toán') return <PaymentsView query={query} showNotice={showNotice} />
     if (activeNav === 'Hỗ trợ') return <SupportTicketsView query={query} showNotice={showNotice} />
-    if (activeNav === 'Hồ sơ') return <ReceptionistProfileView />
+    if (activeNav === 'Hồ sơ') return <ReceptionistProfileView showNotice={showNotice} />
     return <Overview onNavigate={selectNavigation} />
   }
 
