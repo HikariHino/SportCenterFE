@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
+import { ViewLoader } from './CoachViewShared'
 import '../../style/Coach/Coach.css'
 
 const AttendanceView = lazy(() => import('./AttendanceView').then(module => ({ default: module.AttendanceView })))
@@ -172,7 +173,7 @@ export default function Coach() {
         {activeNav === 'Tổng quan' ? <section className="coach-welcome"><div><p>{today}</p><h1>Chào bạn, {coachName}! <span>👋</span></h1><small>Lịch huấn luyện và học viên theo buổi được đồng bộ từ Coach API.</small></div></section> : <section className="coach-page-heading"><div><p>{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div></section>}
 
         {notice && <div className="coach-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
-        <div className="coach-view-content" key={activeNav}><Suspense fallback={<section className="coach-card coach-roster-state"><div className="coach-empty"><strong>Đang tải màn hình</strong><p>Vui lòng chờ trong giây lát.</p></div></section>}>{renderActiveView()}</Suspense></div>
+        <div className="coach-view-content" key={activeNav}><Suspense fallback={<ViewLoader />}>{renderActiveView()}</Suspense></div>
       </div>
     </section>
   </main>

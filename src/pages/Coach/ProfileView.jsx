@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, IdCard, Mail, PencilLine, Phone, UserRound, X } from 'lucide-react'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
+import { ViewLoader } from './CoachViewShared'
 
 const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -71,7 +72,7 @@ export function CoachProfileView({ showNotice }) {
     }
   }
 
-  if (loading) return <section className="coach-card coach-profile-api-state"><UserRound size={28} /><strong>Đang tải hồ sơ Coach</strong><p>Dữ liệu đang được đồng bộ từ Profile API.</p></section>
+  if (loading) return <ViewLoader />
   if (error) return <section className="coach-card coach-profile-api-state error"><UserRound size={28} /><strong>Không thể tải hồ sơ</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></section>
   if (!profile) return <section className="coach-card coach-profile-api-state"><UserRound size={28} /><strong>Chưa có hồ sơ</strong><p>Profile API chưa trả về dữ liệu tài khoản.</p></section>
 

@@ -4,7 +4,7 @@ import { getTodayCheckIns } from '../../services/gymCheckInService'
 import { getMembers } from '../../services/memberService'
 import { getPayments } from '../../services/paymentService'
 import { getRooms } from '../../services/roomService'
-import { EmptyState, formatDateTime } from './ReceptionistViewShared'
+import { EmptyState, formatDateTime, ViewLoader } from './ReceptionistViewShared'
 
 export function Overview({ onNavigate }) {
   const [data, setData] = useState({ checkIns: [], members: [], payments: [], rooms: [] })
@@ -38,6 +38,8 @@ export function Overview({ onNavigate }) {
     [MapPin, 'Phòng hoạt động', data.rooms.length, 'purple', 'Phòng đang sẵn sàng'],
     [CircleDollarSign, 'Tổng đã thu', `${revenue.toLocaleString('vi-VN')} đ`, 'amber', `${completedPayments.length} giao dịch hoàn tất`],
   ]
+
+  if (loading) return <ViewLoader />
 
   return <>
     {error && <div className="reception-overview-warning" role="alert"><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={13} />Thử lại</button></div>}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, ArrowRight, CalendarClock, CheckCircle2, DoorOpen, MapPin, RefreshCw, SlidersHorizontal, UsersRound, X } from 'lucide-react'
 import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
+import { ViewLoader } from './ReceptionistViewShared'
 
 const toLocalInputValue = date => {
   const offset = date.getTimezoneOffset() * 60_000
@@ -110,6 +111,8 @@ export function RoomsView({ query }) {
     if (!keyword) return rooms
     return rooms.filter(room => [room.name, room.roomType, room.location, room.id].some(value => String(value ?? '').toLocaleLowerCase('vi-VN').includes(keyword)))
   }, [query, rooms])
+
+  if (loading) return <ViewLoader />
 
   return <>
     <section className="reception-card reception-room-toolbar">

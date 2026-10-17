@@ -3,7 +3,7 @@ import { ArrowRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Plus
 import { getCoaches, getSports } from '../../services/classCatalogService'
 import { getReceptionistClassById, getReceptionistClasses, getReceptionistClassSessions, getReceptionistClassSessionsByClass, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
 import { completeReceptionistSession, getReceptionistSessionRoster, registerMemberForSession } from '../../services/receptionistClassService'
-import { EmptyState, formatDateTime, formatMemberDate, requestErrorMessage } from './ReceptionistViewShared'
+import { EmptyState, formatDateTime, formatMemberDate, requestErrorMessage, ViewLoader } from './ReceptionistViewShared'
 
 function CompleteSessionDialog({ sessionId, onClose, onCompleted }) {
   const [saving, setSaving] = useState(false)
@@ -283,6 +283,8 @@ export function SessionsView({ showNotice }) {
       setRosterLoading(false)
     }
   }
+
+  if (sportsLoading || coachesLoading || catalogLoading || classesLoading) return <ViewLoader />
 
   return <div className="reception-session-page">
     <section className="reception-card reception-catalog-filters"><div><span><Trophy size={18} /></span><div><small>BỘ LỌC DANH MỤC</small><strong>Lớp và buổi học</strong></div></div><label><span>Chọn môn</span><select value={selectedSportId} onChange={event => setSelectedSportId(event.target.value)} disabled={sportsLoading}><option value="">Tất cả môn thể thao</option>{sports.map(sport => <option key={sport.id} value={sport.id}>{sport.name}</option>)}</select></label><label><span>Chọn huấn luyện viên</span><select value={selectedCoachId} onChange={event => setSelectedCoachId(event.target.value)} disabled={coachesLoading}><option value="">Tất cả huấn luyện viên</option>{coaches.map(coach => <option key={coach.id} value={coach.id}>{coach.fullName}{coach.specialization ? ` · ${coach.specialization}` : ''}</option>)}</select></label>{sportsError && <div className="reception-filter-error"><span>{sportsError}</span><button type="button" onClick={() => setSportsRequestKey(key => key + 1)}>Thử lại</button></div>}{coachesError && <div className="reception-filter-error"><span>{coachesError}</span><button type="button" onClick={() => setCoachesRequestKey(key => key + 1)}>Thử lại</button></div>}</section>

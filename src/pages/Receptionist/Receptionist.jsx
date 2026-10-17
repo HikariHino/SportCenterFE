@@ -7,7 +7,7 @@ import {
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
-import { formatDateTime, requestErrorMessage } from './ReceptionistViewShared'
+import { formatDateTime, requestErrorMessage, ViewLoader } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
 
 const CheckInView = lazy(() => import('./CheckInView').then(module => ({ default: module.CheckInView })))
@@ -160,7 +160,7 @@ export default function Receptionist() {
       <div className="reception-main">
         {activeNav === 'Tổng quan' ? <section className="reception-welcome"><div><p>{today}</p><h1>Chào bạn, {staffName}!</h1><span>Dữ liệu vận hành quầy được đồng bộ trực tiếp từ hệ thống.</span></div><BadgeCheck size={42} /></section> : <section className="reception-page-heading"><p>{meta[0]}</p><h1>{meta[1]}</h1><span>{meta[2]}</span></section>}
         {notice && <div className="reception-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
-        <div className="reception-view" key={activeNav}><Suspense fallback={<section className="reception-card reception-empty"><strong>Đang tải màn hình</strong><p>Vui lòng chờ trong giây lát.</p></section>}>{renderView()}</Suspense></div>
+        <div className="reception-view" key={activeNav}><Suspense fallback={<ViewLoader />}>{renderView()}</Suspense></div>
       </div>
     </section>
   </main>

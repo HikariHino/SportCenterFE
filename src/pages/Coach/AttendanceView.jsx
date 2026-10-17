@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, Clock3, UserCheck, Users } from 'lucide-react'
 import { getCoachSessionAttendances, getCoachSessionRoster, getMyCoachSessions, markCoachAttendance } from '../../services/coachService'
-import { attendanceOptions, EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent } from './CoachViewShared'
+import { attendanceOptions, EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, ViewLoader } from './CoachViewShared'
 
 const getAttendanceAvailability = session => {
   if (!session) return { open: false, message: 'Chưa chọn buổi huấn luyện' }
@@ -129,7 +129,7 @@ export function AttendanceView({ query, showNotice }) {
     }
   }
 
-  if (loading && !sessions.length) return <section className="coach-card coach-roster-state"><EmptyState title="Đang tải dữ liệu điểm danh" text="Coach API đang đồng bộ các buổi huấn luyện." /></section>
+  if (loading && !sessions.length) return <ViewLoader />
   if (!sessions.length) return <section className="coach-card coach-roster-state"><EmptyState title={error ? 'Không thể tải dữ liệu điểm danh' : 'Chưa có buổi để điểm danh'} text={error || 'Huấn luyện viên chưa được phân công buổi học nào.'} />{error && <button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button>}</section>
 
   return <div className="coach-section-view">

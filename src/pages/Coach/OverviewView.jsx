@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowUpRight, CalendarDays, ChevronRight, Clock3, MapPin, RefreshCw, SearchX, TrendingUp, Users } from 'lucide-react'
 import { getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
-import { initials, timeFormatter } from './CoachViewShared'
+import { initials, timeFormatter, ViewLoader } from './CoachViewShared'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
@@ -116,6 +116,8 @@ export function OverviewView({ onNavigate }) {
     loadOverview()
     return () => { active = false }
   }, [requestKey])
+
+  if (loading) return <ViewLoader />
 
   return <>
     {error && <div className="coach-attendance-error" role="alert">{error}<button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={13} />Thử lại</button></div>}

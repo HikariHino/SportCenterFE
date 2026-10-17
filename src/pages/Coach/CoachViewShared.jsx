@@ -4,6 +4,15 @@ export function EmptyState({ title = 'Chưa có dữ liệu', text }) {
   return <div className="coach-empty"><SearchX size={28} /><strong>{title}</strong><p>{text}</p></div>
 }
 
+export function ViewLoader() {
+  return <section className="coach-card coach-view-loader" role="status" aria-live="polite" aria-label="Đang tải nội dung">
+    <svg className="coach-loader-orbit" viewBox="0 0 80 80" aria-hidden="true">
+      <circle className="coach-loader-track" cx="40" cy="40" r="32" pathLength="100" />
+      <circle className="coach-loader-arc" cx="40" cy="40" r="32" pathLength="100" />
+    </svg>
+  </section>
+}
+
 export const timeFormatter = new Intl.DateTimeFormat('vi-VN', {
   hour: '2-digit',
   minute: '2-digit',
