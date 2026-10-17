@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, IdCard, Mail, PencilLine, Phone, UserRound, X } from 'lucide-react'
-import { getProfile, getProfileErrorMessage, updateProfile } from '../../../services/profileService'
+import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
 
 const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',

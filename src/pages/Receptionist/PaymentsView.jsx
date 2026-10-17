@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Clock3, ReceiptText, Ban, Plus, ScanLine, WalletCards, X } from 'lucide-react'
-import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../../services/paymentService'
+import { cancelPayment as cancelPayOSPayment, createPayment, getPaymentById, getPayments, syncPayment } from '../../services/paymentService'
 import { EmptyState, formatDateTime, paymentStatusLabel, requestErrorMessage } from './ReceptionistViewShared'
 
 export function PaymentsView({ query, showNotice }) {

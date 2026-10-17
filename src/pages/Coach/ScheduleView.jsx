@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Star, Users } from 'lucide-react'
-import { completeCoachSession, getCoachSessionReviews, getMyCoachSessions } from '../../../services/coachService'
+import { completeCoachSession, getCoachSessionReviews, getMyCoachSessions } from '../../services/coachService'
 import { EmptyState, timeFormatter } from './CoachViewShared'
 
 const toDateKey = date => {
