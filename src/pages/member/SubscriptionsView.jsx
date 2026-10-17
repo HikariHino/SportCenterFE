@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react'
 import {
   CreditCard, Award, CheckCircle2, AlertCircle, LoaderCircle,
   Coins, Trophy, Info, Search, Eye, Sparkles, X, Check,
-  ExternalLink, CalendarDays, ShieldCheck, Tag, ArrowRight,
+  CalendarDays, Tag, ArrowRight, Trash2, Ban, ReceiptText,
+  Clock, ShieldAlert, RefreshCw,
 } from 'lucide-react'
 import { getMembershipPackages, getMembershipPackageById } from '../../services/membershipPackageService'
 import {
   getMySubscriptions,
+  getSubscriptionById,
   createMemberSubscription,
+  cancelSubscription,
 } from '../../services/memberSubscriptionService'
 import { createPayment } from '../../services/paymentService'
 
@@ -21,6 +24,12 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('vi-VN')
 }
 
+function formatDateTime(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+}
+
 export function SubscriptionsView({ showNotice }) {
   const [packages, setPackages] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
@@ -28,15 +37,27 @@ export function SubscriptionsView({ showNotice }) {
   const [error, setError] = useState('')
   const [subscribingId, setSubscribingId] = useState(null)
 
-  // Bộ lọc & tìm kiếm gói tập mở bán
+  // Bộ lọc & tìm kiếm danh mục gói tập mở bán
   const [packageSearch, setPackageSearch] = useState('')
   const [packageFilter, setPackageFilter] = useState('all')
+
+  // Bộ lọc & tìm kiếm danh sách gói cá nhân
+  const [subSearch, setSubSearch] = useState('')
+  const [subFilter, setSubFilter] = useState('all')
 
   // Modals
   const [viewingPackage, setViewingPackage] = useState(null)
   const [packageDetailLoading, setPackageDetailLoading] = useState(false)
   const [registrationSuccessSub, setRegistrationSuccessSub] = useState(null)
   const [payingSubId, setPayingSubId] = useState(null)
+
+  // Modal xem chi tiết đăng ký cá nhân (GET /api/member-subscriptions/{id})
+  const [viewingSub, setViewingSub] = useState(null)
+  const [subDetailLoading, setSubDetailLoading] = useState(false)
+
+  // Modal xác nhận hủy gói tập Pending (POST /api/member-subscriptions/{id}/cancel)
+  const [cancellingSub, setCancellingSub] = useState(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
 
   const loadData = async () => {
     setLoading(true)
@@ -59,7 +80,7 @@ export function SubscriptionsView({ showNotice }) {
     loadData()
   }, [])
 
-  // Mở modal xem chi tiết gói tập (GET /api/membership-packages/{id})
+  // Mở modal xem chi tiết gói tập mở bán (GET /api/membership-packages/{id})
   const handleOpenPackageDetail = async (pkg) => {
     setPackageDetailLoading(true)
     setViewingPackage(pkg)
@@ -69,7 +90,6 @@ export function SubscriptionsView({ showNotice }) {
         setViewingPackage(detail)
       }
     } catch (err) {
-      // Dùng dữ liệu sẵn có nếu không gọi được API chi tiết
       console.warn('Lỗi khi tải chi tiết gói:', err)
     } finally {
       setPackageDetailLoading(false)
@@ -88,13 +108,57 @@ export function SubscriptionsView({ showNotice }) {
       if (showNotice) {
         showNotice(`Đăng ký gói "${pkg.packageName}" thành công! Trạng thái: Chờ thanh toán.`)
       }
-      // Tải lại danh sách gói cá nhân để cập nhật gói mới tạo
       const updatedSubs = await getMySubscriptions()
       setSubscriptions(Array.isArray(updatedSubs) ? updatedSubs : [])
     } catch (err) {
       alert('Không thể tạo đơn đăng ký: ' + (err.message || 'Lỗi không xác định.'))
     } finally {
       setSubscribingId(null)
+    }
+  }
+
+  // Mở modal xem chi tiết đơn đăng ký cá nhân (GET /api/member-subscriptions/{id})
+  const handleOpenSubDetail = async (sub) => {
+    setSubDetailLoading(true)
+    setViewingSub(sub)
+    try {
+      const detail = await getSubscriptionById(sub.id)
+      if (detail) {
+        setViewingSub(detail)
+      }
+    } catch (err) {
+      console.warn('Lỗi khi tải chi tiết đơn đăng ký:', err)
+    } finally {
+      setSubDetailLoading(false)
+    }
+  }
+
+  // Khởi tạo modal xác nhận hủy gói
+  const handlePromptCancelSub = (sub) => {
+    setCancellingSub(sub)
+  }
+
+  // Thực thi hủy gói Pending (POST /api/member-subscriptions/{id}/cancel)
+  const handleConfirmCancelSub = async () => {
+    if (!cancellingSub) return
+    setCancelLoading(true)
+    try {
+      await cancelSubscription(cancellingSub.id)
+      if (showNotice) {
+        showNotice(`Đã hủy đơn đăng ký gói #${cancellingSub.id} thành công!`)
+      }
+      // Đóng modal chi tiết nếu đang xem đúng đơn đó
+      if (viewingSub?.id === cancellingSub.id) {
+        setViewingSub(null)
+      }
+      setCancellingSub(null)
+      // Tải lại danh sách đăng ký
+      const updatedSubs = await getMySubscriptions()
+      setSubscriptions(Array.isArray(updatedSubs) ? updatedSubs : [])
+    } catch (err) {
+      alert('Không thể hủy đơn đăng ký: ' + (err.message || 'Lỗi hệ thống.'))
+    } finally {
+      setCancelLoading(false)
     }
   }
 
@@ -117,7 +181,6 @@ export function SubscriptionsView({ showNotice }) {
 
   // Lọc danh sách gói tập mở bán
   const filteredPackages = packages.filter(pkg => {
-    // Tìm kiếm theo tên hoặc mô tả
     const matchesSearch = !packageSearch.trim() ||
       pkg.packageName?.toLowerCase().includes(packageSearch.toLowerCase()) ||
       pkg.description?.toLowerCase().includes(packageSearch.toLowerCase())
@@ -128,26 +191,37 @@ export function SubscriptionsView({ showNotice }) {
     const nameLower = (pkg.packageName || '').toLowerCase()
     const isVip = nameLower.includes('vip') || nameLower.includes('diamond') || nameLower.includes('platinum')
 
-    if (packageFilter === '1m') {
-      return days <= 35
-    }
-    if (packageFilter === '3m') {
-      return days > 35 && days <= 100
-    }
-    if (packageFilter === '6m') {
-      return days > 100 && days <= 200
-    }
-    if (packageFilter === '1y') {
-      return days > 200
-    }
-    if (packageFilter === 'vip') {
-      return isVip
-    }
+    if (packageFilter === '1m') return days <= 35
+    if (packageFilter === '3m') return days > 35 && days <= 100
+    if (packageFilter === '6m') return days > 100 && days <= 200
+    if (packageFilter === '1y') return days > 200
+    if (packageFilter === 'vip') return isVip
+
+    return true
+  })
+
+  // Lọc danh sách gói cá nhân
+  const filteredSubscriptions = subscriptions.filter(sub => {
+    const matchesSearch = !subSearch.trim() ||
+      String(sub.id).includes(subSearch.trim()) ||
+      sub.packageName?.toLowerCase().includes(subSearch.toLowerCase())
+
+    if (!matchesSearch) return false
+
+    const status = String(sub.status || '').toLowerCase()
+    if (subFilter === 'active') return status === 'active'
+    if (subFilter === 'pending') return status === 'pending'
+    if (subFilter === 'expired') return status === 'expired'
+    if (subFilter === 'cancelled') return status === 'cancelled'
 
     return true
   })
 
   const activeSub = subscriptions.find(s => String(s.status).toLowerCase() === 'active')
+  const totalSubsCount = subscriptions.length
+  const activeSubsCount = subscriptions.filter(s => String(s.status).toLowerCase() === 'active').length
+  const pendingSubsCount = subscriptions.filter(s => String(s.status).toLowerCase() === 'pending').length
+  const closedSubsCount = subscriptions.filter(s => ['expired', 'cancelled'].includes(String(s.status).toLowerCase())).length
 
   if (loading) {
     return (
@@ -166,9 +240,17 @@ export function SubscriptionsView({ showNotice }) {
           <p className="member-eyebrow"><CreditCard size={16} /> MEMBER SUBSCRIPTIONS CONTROLLER</p>
           <h2>Gói tập & Thẻ hội viên</h2>
           <p className="member-muted">
-            Tra cứu các gói tập mở bán, tự đăng ký gói mới và theo dõi các gói thẻ hội viên cá nhân của bạn.
+            Tra cứu các gói tập mở bán, tự đăng ký gói mới, kiểm tra chi tiết từng đơn đăng ký và hủy đơn chưa thanh toán.
           </p>
         </div>
+        <button
+          type="button"
+          className="member-button"
+          onClick={loadData}
+          title="Tải lại toàn bộ dữ liệu"
+        >
+          <RefreshCw size={14} /> Làm mới
+        </button>
       </div>
 
       {error && (
@@ -214,6 +296,18 @@ export function SubscriptionsView({ showNotice }) {
               <small>Bắt đầu từ: {formatDate(activeSub.startDate)}</small>
             </div>
           </div>
+          <div className="member-pass-footer">
+            <p>
+              <CheckCircle2 size={14} /> Thẻ hội viên số hóa tích hợp mã QR cá nhân cho phép check-in và mở tủ đồ tự động.
+            </p>
+            <button
+              type="button"
+              className="member-button member-button--soft"
+              onClick={() => handleOpenSubDetail(activeSub)}
+            >
+              <Eye size={14} /> Xem chi tiết gói hiện hành
+            </button>
+          </div>
         </article>
       ) : (
         <article className="member-card" style={{ padding: 20, marginBottom: 28, background: '#fffbeb', borderColor: '#fde68a' }}>
@@ -231,14 +325,262 @@ export function SubscriptionsView({ showNotice }) {
         </article>
       )}
 
-      {/* KHÁM PHÁ & TRA CỨU CÁC GÓI TẬP ĐANG MỞ BÁN */}
-      <div className="member-section-heading" style={{ marginBottom: 16 }}>
+      {/* =========================================================================
+          PHẦN 1: QUẢN LÝ GÓI TẬP CÁ NHÂN (GET /api/member-subscriptions/mine)
+          ========================================================================= */}
+      <div className="member-section-heading" style={{ marginBottom: 14 }}>
         <div>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Sparkles size={18} style={{ color: '#f59e0b' }} /> Tra cứu gói tập đang mở bán
+            <CreditCard size={18} style={{ color: 'var(--member-blue)' }} /> Quản lý gói tập cá nhân
           </h3>
           <p className="member-muted">
-            Xem chi tiết thông tin, quyền lợi và chọn mua gói tập phù hợp với nhu cầu rèn luyện của bạn.
+            Danh sách tất cả các gói tập bạn đã và đang sử dụng, bao gồm các đơn đang chờ thanh toán.
+          </p>
+        </div>
+      </div>
+
+      {/* Thẻ thống kê nhanh */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 14,
+          marginBottom: 18,
+        }}
+      >
+        <div className="member-card" style={{ padding: '14px 18px' }}>
+          <small style={{ color: '#64748b', fontSize: 11, display: 'block' }}>Tổng số gói đã đăng ký</small>
+          <strong style={{ fontSize: 22, color: 'var(--member-ink)' }}>{totalSubsCount}</strong>
+        </div>
+        <div className="member-card" style={{ padding: '14px 18px', borderLeft: '4px solid #16a34a' }}>
+          <small style={{ color: '#16a34a', fontSize: 11, display: 'block', fontWeight: 600 }}>Đang kích hoạt</small>
+          <strong style={{ fontSize: 22, color: '#16a34a' }}>{activeSubsCount}</strong>
+        </div>
+        <div className="member-card" style={{ padding: '14px 18px', borderLeft: '4px solid #d97706' }}>
+          <small style={{ color: '#d97706', fontSize: 11, display: 'block', fontWeight: 600 }}>Chờ thanh toán (Pending)</small>
+          <strong style={{ fontSize: 22, color: '#d97706' }}>{pendingSubsCount}</strong>
+        </div>
+        <div className="member-card" style={{ padding: '14px 18px', borderLeft: '4px solid #64748b' }}>
+          <small style={{ color: '#64748b', fontSize: 11, display: 'block' }}>Hết hạn / Đã hủy</small>
+          <strong style={{ fontSize: 22, color: '#64748b' }}>{closedSubsCount}</strong>
+        </div>
+      </div>
+
+      {/* Bộ lọc và tìm kiếm lịch sử đăng ký cá nhân */}
+      <div className="member-card" style={{ padding: '14px 18px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: 360 }}>
+            <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="Tìm theo mã (#SUB-...) hoặc tên gói..."
+              value={subSearch}
+              onChange={e => setSubSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px 8px 34px',
+                border: '1px solid #cbd5e1',
+                borderRadius: 7,
+                fontSize: 12,
+                outline: 'none',
+              }}
+            />
+            {subSearch && (
+              <button
+                type="button"
+                onClick={() => setSubSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: 2,
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="member-filters">
+            <button
+              type="button"
+              aria-pressed={subFilter === 'all'}
+              onClick={() => setSubFilter('all')}
+            >
+              Tất cả ({subscriptions.length})
+            </button>
+            <button
+              type="button"
+              aria-pressed={subFilter === 'active'}
+              onClick={() => setSubFilter('active')}
+            >
+              Đang hoạt động ({activeSubsCount})
+            </button>
+            <button
+              type="button"
+              aria-pressed={subFilter === 'pending'}
+              onClick={() => setSubFilter('pending')}
+            >
+              Chờ thanh toán ({pendingSubsCount})
+            </button>
+            <button
+              type="button"
+              aria-pressed={subFilter === 'expired'}
+              onClick={() => setSubFilter('expired')}
+            >
+              Hết hạn
+            </button>
+            <button
+              type="button"
+              aria-pressed={subFilter === 'cancelled'}
+              onClick={() => setSubFilter('cancelled')}
+            >
+              Đã hủy
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Bảng danh sách đăng ký cá nhân */}
+      <div className="member-card member-table-card" style={{ marginBottom: 40 }}>
+        <div className="member-table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>MÃ ĐĂNG KÝ</th>
+                <th>TÊN GÓI TẬP</th>
+                <th>GIÁ THỎA THUẬN</th>
+                <th>THỜI HẠN</th>
+                <th>HIỆU LỰC (BẮT ĐẦU → KẾT THÚC)</th>
+                <th>TRẠNG THÁI</th>
+                <th style={{ textAlign: 'right' }}>THAO TÁC</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSubscriptions.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="member-empty">
+                    Không tìm thấy đơn đăng ký gói nào phù hợp với bộ lọc hiện tại.
+                  </td>
+                </tr>
+              ) : (
+                filteredSubscriptions.map(sub => {
+                  const statusLower = String(sub.status || '').toLowerCase()
+                  const isAct = statusLower === 'active'
+                  const isPend = statusLower === 'pending'
+                  const isCan = statusLower === 'cancelled'
+                  const isExp = statusLower === 'expired'
+
+                  return (
+                    <tr key={sub.id}>
+                      <td>
+                        <strong>#SUB-{sub.id}</strong>
+                      </td>
+                      <td>
+                        <strong>{sub.packageName}</strong>
+                      </td>
+                      <td className="member-amount">
+                        {formatCurrency(sub.agreedPrice || sub.price)}
+                      </td>
+                      <td>{sub.durationInDays} ngày</td>
+                      <td>
+                        <span style={{ fontSize: 11, color: '#475569' }}>
+                          {formatDate(sub.startDate)} → {formatDate(sub.endDate)}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={`member-status ${
+                            isAct
+                              ? ''
+                              : isPend
+                              ? 'member-status--pending'
+                              : isCan
+                              ? 'member-status--danger'
+                              : 'member-status--muted'
+                          }`}
+                        >
+                          <span />
+                          {isPend
+                            ? 'Chờ thanh toán (Pending)'
+                            : isAct
+                            ? 'Đang hoạt động'
+                            : isCan
+                            ? 'Đã hủy'
+                            : isExp
+                            ? 'Đã hết hạn'
+                            : sub.status}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {/* Nút Xem chi tiết (GET /api/member-subscriptions/{id}) */}
+                          <button
+                            type="button"
+                            className="member-button member-button--soft"
+                            onClick={() => handleOpenSubDetail(sub)}
+                            title="Xem chi tiết gói và lịch sử thanh toán"
+                            style={{ padding: '6px 9px', fontSize: 11 }}
+                          >
+                            <Eye size={13} /> Chi tiết
+                          </button>
+
+                          {/* Nếu gói ở trạng thái Pending: Cho phép thanh toán ngay */}
+                          {isPend && (
+                            <button
+                              type="button"
+                              className="member-button member-button--primary"
+                              onClick={() => handlePayOSCheckout(sub.id)}
+                              disabled={payingSubId === sub.id}
+                              title="Thanh toán ngay bằng PayOS"
+                              style={{ padding: '6px 9px', fontSize: 11 }}
+                            >
+                              {payingSubId === sub.id ? (
+                                <LoaderCircle className="member-spin" size={13} />
+                              ) : (
+                                <><CreditCard size={13} /> Thanh toán</>
+                              )}
+                            </button>
+                          )}
+
+                          {/* Nếu gói ở trạng thái Pending: Cho phép hủy đơn (POST /api/member-subscriptions/{id}/cancel) */}
+                          {isPend && (
+                            <button
+                              type="button"
+                              className="member-button member-button--danger"
+                              onClick={() => handlePromptCancelSub(sub)}
+                              title="Hủy đơn đăng ký chưa thanh toán"
+                              style={{ padding: '6px 9px', fontSize: 11 }}
+                            >
+                              <Trash2 size={13} /> Hủy
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          PHẦN 2: TRA CỨU & ĐĂNG KÝ GÓI MỞ BÁN (GET /api/membership-packages)
+          ========================================================================= */}
+      <div className="member-section-heading" style={{ marginBottom: 14 }}>
+        <div>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Sparkles size={18} style={{ color: '#f59e0b' }} /> Khám phá các gói tập mới
+          </h3>
+          <p className="member-muted">
+            Xem chi tiết thông tin, quyền lợi và tự đăng ký mua gói tập mới phù hợp với bạn.
           </p>
         </div>
       </div>
@@ -457,65 +799,9 @@ export function SubscriptionsView({ showNotice }) {
         </div>
       )}
 
-      {/* LỊCH SỬ ĐĂNG KÝ GÓI CỦA BẠN */}
-      <div className="member-section-heading" style={{ marginBottom: 12 }}>
-        <div>
-          <h3>Lịch sử đăng ký gói của bạn</h3>
-          <p className="member-muted">Danh sách các gói tập bạn đã và đang sử dụng.</p>
-        </div>
-      </div>
-
-      <div className="member-card member-table-card" style={{ marginBottom: 32 }}>
-        <div className="member-table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>MÃ ĐĂNG KÝ</th>
-                <th>TÊN GÓI TẬP</th>
-                <th>GIÁ NIÊM YẾT</th>
-                <th>THỜI HẠN</th>
-                <th>NGÀY BẮT ĐẦU</th>
-                <th>NGÀY HẾT HẠN</th>
-                <th>TRẠNG THÁI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subscriptions.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="member-empty">
-                    Bạn chưa có lịch sử đăng ký gói nào. Hãy đăng ký một gói ở danh mục trên!
-                  </td>
-                </tr>
-              ) : (
-                subscriptions.map(sub => {
-                  const statusLower = String(sub.status || '').toLowerCase()
-                  const isAct = statusLower === 'active'
-                  const isPend = statusLower === 'pending'
-                  const isCan = statusLower === 'cancelled'
-                  return (
-                    <tr key={sub.id}>
-                      <td><strong>#SUB-{sub.id}</strong></td>
-                      <td><strong>{sub.packageName}</strong></td>
-                      <td className="member-amount">{formatCurrency(sub.agreedPrice || sub.price)}</td>
-                      <td>{sub.durationInDays} ngày</td>
-                      <td>{formatDate(sub.startDate)}</td>
-                      <td>{formatDate(sub.endDate)}</td>
-                      <td>
-                        <span className={`member-status ${isAct ? '' : isPend ? 'member-status--pending' : isCan ? 'member-status--danger' : 'member-status--muted'}`}>
-                          <span />
-                          {isPend ? 'Chờ thanh toán (Pending)' : isAct ? 'Đang hoạt động' : isCan ? 'Đã hủy' : sub.status}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* MODAL 1: XEM CHI TIẾT GÓI TẬP (GET /api/membership-packages/{id}) */}
+      {/* =========================================================================
+          MODAL 1: XEM CHI TIẾT GÓI TẬP MỞ BÁN (GET /api/membership-packages/{id})
+          ========================================================================= */}
       {viewingPackage && (
         <div className="member-modal-overlay" onClick={() => setViewingPackage(null)}>
           <div className="member-modal" onClick={e => e.stopPropagation()}>
@@ -637,7 +923,9 @@ export function SubscriptionsView({ showNotice }) {
         </div>
       )}
 
-      {/* MODAL 2: THÔNG BÁO TỰ ĐĂNG KÝ GÓI THÀNH CÔNG (Trạng thái Pending) */}
+      {/* =========================================================================
+          MODAL 2: THÔNG BÁO TỰ ĐĂNG KÝ GÓI THÀNH CÔNG (Trạng thái Pending)
+          ========================================================================= */}
       {registrationSuccessSub && (
         <div className="member-modal-overlay" onClick={() => setRegistrationSuccessSub(null)}>
           <div className="member-modal" onClick={e => e.stopPropagation()}>
@@ -741,6 +1029,302 @@ export function SubscriptionsView({ showNotice }) {
                   <><LoaderCircle className="member-spin" size={15} /> Đang mở cổng...</>
                 ) : (
                   <><CreditCard size={15} /> Thanh toán PayOS ngay <ArrowRight size={14} /></>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 3: XEM CHI TIẾT ĐĂNG KÝ GÓI CÁ NHÂN (GET /api/member-subscriptions/{id})
+          ========================================================================= */}
+      {viewingSub && (
+        <div className="member-modal-overlay" onClick={() => setViewingSub(null)}>
+          <div className="member-modal member-modal--lg" onClick={e => e.stopPropagation()}>
+            <div className="member-modal-header">
+              <h3>
+                <ReceiptText size={18} style={{ color: 'var(--member-blue)' }} />
+                Chi tiết đơn đăng ký #SUB-{viewingSub.id}
+              </h3>
+              <button
+                type="button"
+                className="member-modal-close"
+                onClick={() => setViewingSub(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="member-modal-body">
+              {subDetailLoading ? (
+                <div style={{ padding: 32, textAlign: 'center' }}>
+                  <LoaderCircle className="member-spin" size={26} style={{ margin: '0 auto 10px' }} />
+                  <p style={{ fontSize: 12, color: '#64748b' }}>Đang tải chi tiết đơn đăng ký gói...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Banner trạng thái */}
+                  {String(viewingSub.status).toLowerCase() === 'pending' && (
+                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: 14, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <Clock size={20} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
+                      <div>
+                        <strong style={{ color: '#92400e', fontSize: 13 }}>Đơn đăng ký đang chờ thanh toán</strong>
+                        <p style={{ color: '#b45309', fontSize: 11, margin: '2px 0 0' }}>
+                          Gói tập chưa được kích hoạt. Bạn có thể thanh toán trực tuyến ngay qua cổng PayOS hoặc hủy đơn nếu không còn nhu cầu.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {String(viewingSub.status).toLowerCase() === 'active' && (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <CheckCircle2 size={20} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <div>
+                        <strong style={{ color: '#15803d', fontSize: 13 }}>Gói tập đang có hiệu lực sử dụng</strong>
+                        <p style={{ color: '#166534', fontSize: 11, margin: '2px 0 0' }}>
+                          Bạn có thể thoải mái check-in và tận hưởng các tiện ích của trung tâm Olympus Sports Center.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {String(viewingSub.status).toLowerCase() === 'cancelled' && (
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <Ban size={20} style={{ color: '#dc2626', flexShrink: 0 }} />
+                      <div>
+                        <strong style={{ color: '#b91c1c', fontSize: 13 }}>Đơn đăng ký đã bị hủy</strong>
+                        <p style={{ color: '#991b1b', fontSize: 11, margin: '2px 0 0' }}>
+                          Đơn đăng ký này đã được hủy bỏ và không còn hiệu lực thanh toán hay kích hoạt.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Thông tin đăng ký chi tiết */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: 14,
+                      background: '#f8fafc',
+                      padding: 16,
+                      borderRadius: 10,
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <div>
+                      <small style={{ color: '#64748b', fontSize: 11 }}>Mã đơn đăng ký</small>
+                      <strong style={{ display: 'block', fontSize: 14, color: '#1e293b', marginTop: 2 }}>
+                        #SUB-{viewingSub.id}
+                      </strong>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b', fontSize: 11 }}>Tên gói tập</small>
+                      <strong style={{ display: 'block', fontSize: 14, color: 'var(--member-blue)', marginTop: 2 }}>
+                        {viewingSub.packageName}
+                      </strong>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b', fontSize: 11 }}>Giá niêm yết / cam kết</small>
+                      <strong style={{ display: 'block', fontSize: 15, color: '#0f766e', marginTop: 2 }}>
+                        {formatCurrency(viewingSub.agreedPrice || viewingSub.price)}
+                      </strong>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b', fontSize: 11 }}>Thời hạn sử dụng</small>
+                      <strong style={{ display: 'block', fontSize: 14, color: '#1e293b', marginTop: 2 }}>
+                        {viewingSub.durationInDays} ngày
+                      </strong>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b', fontSize: 11 }}>Thời gian đăng ký</small>
+                      <span style={{ display: 'block', fontSize: 12, color: '#334155', marginTop: 2 }}>
+                        {formatDateTime(viewingSub.createdAt)}
+                      </span>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b', fontSize: 11 }}>Ngày bắt đầu hiệu lực</small>
+                      <span style={{ display: 'block', fontSize: 12, color: '#334155', marginTop: 2 }}>
+                        {formatDate(viewingSub.startDate)}
+                      </span>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b', fontSize: 11 }}>Ngày kết thúc thẻ</small>
+                      <span style={{ display: 'block', fontSize: 12, color: '#334155', marginTop: 2 }}>
+                        {formatDate(viewingSub.endDate)}
+                      </span>
+                    </div>
+                    <div>
+                      <small style={{ color: '#64748b', fontSize: 11 }}>Trạng thái hiện tại</small>
+                      <div style={{ marginTop: 4 }}>
+                        <span
+                          className={`member-status ${
+                            String(viewingSub.status).toLowerCase() === 'active'
+                              ? ''
+                              : String(viewingSub.status).toLowerCase() === 'pending'
+                              ? 'member-status--pending'
+                              : String(viewingSub.status).toLowerCase() === 'cancelled'
+                              ? 'member-status--danger'
+                              : 'member-status--muted'
+                          }`}
+                        >
+                          <span />
+                          {String(viewingSub.status).toLowerCase() === 'pending'
+                            ? 'Chờ thanh toán (Pending)'
+                            : String(viewingSub.status).toLowerCase() === 'active'
+                            ? 'Đang hoạt động'
+                            : String(viewingSub.status).toLowerCase() === 'cancelled'
+                            ? 'Đã hủy'
+                            : viewingSub.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lịch sử giao dịch thanh toán (Payments) */}
+                  <div>
+                    <h4 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 10px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Coins size={16} style={{ color: '#0284c7' }} /> Lịch sử thanh toán đính kèm
+                    </h4>
+
+                    {Array.isArray(viewingSub.payments) && viewingSub.payments.length > 0 ? (
+                      <div className="member-table-scroll" style={{ border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                        <table>
+                          <thead>
+                            <tr style={{ background: '#f8fafc' }}>
+                              <th>MÃ GIAO DỊCH</th>
+                              <th>SỐ TIỀN</th>
+                              <th>PHƯƠNG THỨC</th>
+                              <th>TRẠNG THÁI</th>
+                              <th>THỜI GIAN</th>
+                              <th>MÃ ĐỐI SOÁT</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {viewingSub.payments.map((p, idx) => (
+                              <tr key={p.id || idx}>
+                                <td><strong>#PAY-{p.id}</strong></td>
+                                <td className="member-amount">{formatCurrency(p.amount)}</td>
+                                <td>
+                                  <span className="member-tag" style={{ textTransform: 'uppercase' }}>
+                                    {p.paymentMethod || 'PayOS'}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="member-status">
+                                    <span /> {p.status || 'Thành công'}
+                                  </span>
+                                </td>
+                                <td>{formatDateTime(p.paymentDate)}</td>
+                                <td>
+                                  <code style={{ fontSize: 10, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>
+                                    {p.transactionReference || 'N/A'}
+                                  </code>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 18, textAlign: 'center', color: '#64748b' }}>
+                        <Coins size={24} style={{ margin: '0 auto 6px', opacity: 0.4 }} />
+                        <p style={{ margin: 0, fontSize: 12 }}>Chưa có bản ghi thanh toán nào cho đơn đăng ký này.</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="member-modal-footer">
+              {String(viewingSub.status).toLowerCase() === 'pending' && (
+                <>
+                  <button
+                    type="button"
+                    className="member-button member-button--danger"
+                    onClick={() => handlePromptCancelSub(viewingSub)}
+                  >
+                    <Trash2 size={14} /> Hủy đơn đăng ký này
+                  </button>
+                  <button
+                    type="button"
+                    disabled={payingSubId === viewingSub.id}
+                    className="member-button member-button--primary"
+                    onClick={() => handlePayOSCheckout(viewingSub.id)}
+                  >
+                    {payingSubId === viewingSub.id ? (
+                      <><LoaderCircle className="member-spin" size={14} /> Đang mở cổng...</>
+                    ) : (
+                      <><CreditCard size={14} /> Thanh toán PayOS ngay</>
+                    )}
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className="member-button"
+                onClick={() => setViewingSub(null)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 4: XÁC NHẬN HỦY GÓI TẬP CHƯA THANH TOÁN (POST /api/member-subscriptions/{id}/cancel)
+          ========================================================================= */}
+      {cancellingSub && (
+        <div className="member-modal-overlay" onClick={() => setCancellingSub(null)}>
+          <div className="member-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+            <div className="member-modal-header" style={{ background: '#fef2f2', borderBottom: '1px solid #fecaca' }}>
+              <h3 style={{ color: '#b91c1c' }}>
+                <ShieldAlert size={19} style={{ color: '#dc2626' }} />
+                Xác nhận hủy đơn đăng ký gói
+              </h3>
+              <button
+                type="button"
+                className="member-modal-close"
+                onClick={() => setCancellingSub(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="member-modal-body">
+              <p style={{ fontSize: 13, color: '#1e293b', margin: 0, lineHeight: 1.6 }}>
+                Bạn có chắc chắn muốn hủy đơn đăng ký gói <strong>{cancellingSub.packageName}</strong> (Mã đơn: <strong>#SUB-{cancellingSub.id}</strong>) không?
+              </p>
+
+              <div style={{ background: '#fff1f2', border: '1px solid #ffe4e6', borderRadius: 8, padding: 12 }}>
+                <p style={{ margin: 0, fontSize: 11, color: '#be123c', lineHeight: 1.5 }}>
+                  ⚠️ <strong>Lưu ý:</strong> Thao tác này chỉ áp dụng đối với đơn đang ở trạng thái <strong>Chờ thanh toán (Pending)</strong>. Sau khi hủy, đơn đăng ký này sẽ bị đóng vĩnh viễn và không thể khôi phục.
+                </p>
+              </div>
+            </div>
+
+            <div className="member-modal-footer">
+              <button
+                type="button"
+                disabled={cancelLoading}
+                className="member-button"
+                onClick={() => setCancellingSub(null)}
+              >
+                Quay lại
+              </button>
+              <button
+                type="button"
+                disabled={cancelLoading}
+                className="member-button member-button--danger"
+                onClick={handleConfirmCancelSub}
+              >
+                {cancelLoading ? (
+                  <><LoaderCircle className="member-spin" size={14} /> Đang xử lý hủy...</>
+                ) : (
+                  <><Trash2 size={14} /> Xác nhận hủy đơn</>
                 )}
               </button>
             </div>
