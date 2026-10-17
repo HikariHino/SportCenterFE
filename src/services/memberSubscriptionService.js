@@ -53,6 +53,12 @@ export async function cancelPendingSubscription(subscriptionId) {
 /** POST /api/member-subscriptions/{id}/cancel */
 export const cancelReceptionistSubscription = cancelPendingSubscription
 
+/** GET /api/member-subscriptions/{id} */
+export const getSubscriptionById = getReceptionistSubscriptionById
+
+/** POST /api/member-subscriptions/{id}/cancel */
+export const cancelSubscription = cancelPendingSubscription
+
 /**
  * Xác nhận thanh toán trực tiếp tại quầy và kích hoạt gói ngay
  * POST /api/member-subscriptions/{id}/payments
@@ -77,8 +83,11 @@ export default {
   createReceptionistMemberSubscription,
   getReceptionistMemberSubscriptions,
   getReceptionistSubscriptionById,
+  getSubscriptionById,
   confirmSubscriptionPayment,
   confirmReceptionistSubscriptionPayment,
   cancelPendingSubscription,
+  cancelSubscription,
   cancelReceptionistSubscription,
 }
+
