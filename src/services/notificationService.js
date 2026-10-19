@@ -37,3 +37,35 @@ export async function markNotificationRead(notificationId) {
     throw new Error(body.message || 'Không thể đánh dấu thông báo đã đọc.')
   }
 }
+
+export async function markAllNotificationsRead() {
+  // Load the unread IDs before writing: marking a page changes the unread list
+  // and would otherwise cause later pages to skip notifications.
+  const ids = new Set()
+  let loaded = 0
+  for (let page = 1; ; page += 1) {
+    const result = await getNotifications({ unreadOnly: true, page, pageSize: 100 })
+    if (result.page !== page || !Number.isInteger(result.total) || result.total < 0
+      || (result.items.length === 0 && loaded < result.total)) {
+      throw new Error('Chưa tải đủ thông báo chưa đọc. Vui lòng thử lại.')
+    }
+    for (const item of result.items) {
+      if (item.id == null || ids.has(String(item.id))) throw new Error('Danh sách thông báo đã thay đổi. Vui lòng thử lại.')
+      ids.add(String(item.id))
+    }
+    loaded += result.items.length
+    if (loaded >= result.total) break
+  }
+
+  const pending = [...ids]
+  const result = { total: pending.length, read: 0, failed: [] }
+  for (let offset = 0; offset < pending.length; offset += 4) {
+    const batch = pending.slice(offset, offset + 4)
+    const responses = await Promise.allSettled(batch.map(markNotificationRead))
+    responses.forEach((response, index) => {
+      if (response.status === 'fulfilled') result.read += 1
+      else result.failed.push({ id: batch[index], message: getNotificationErrorMessage(response.reason) })
+    })
+  }
+  return result
+}

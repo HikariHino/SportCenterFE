@@ -27,11 +27,13 @@ export async function rescheduleRoomSession({ room, rooms, session, draft }) {
   const group = groups.find(item => String(item.sportClass.id) === String(session.classId))
   const current = group?.items.find(item => String(item.id) === String(session.id))
   if (!current || !roomSessionForTimetable(current, group.sportClass, rooms, room)) throw new Error('Buổi học không còn thuộc phòng này. Vui lòng tải lại lịch.')
-  if (Date.parse(current.startsAt) !== Date.parse(session.startsAt) || Date.parse(current.endsAt) !== Date.parse(session.endsAt)) {
+  if (Date.parse(current.startsAt) !== Date.parse(session.startsAt) || Date.parse(current.endsAt) !== Date.parse(session.endsAt)
+    || String(current.coachId) !== String(session.coachId)) {
     throw new Error('Buổi học đã được thay đổi. Hãy đóng biểu mẫu và làm mới lịch trước khi đổi tiếp.')
   }
   const payload = buildSessionReschedule(current, draft, { sportClass: group.sportClass })
-  if (Date.parse(payload.startsAt) === Date.parse(current.startsAt) && Date.parse(payload.endsAt) === Date.parse(current.endsAt)) throw new Error('Hãy chọn ngày hoặc khung giờ khác lịch hiện tại.')
+  if (Date.parse(payload.startsAt) === Date.parse(current.startsAt) && Date.parse(payload.endsAt) === Date.parse(current.endsAt)
+    && payload.coachId === Number(current.coachId)) throw new Error('Hãy chọn ngày, khung giờ hoặc huấn luyện viên khác hiện tại.')
   // The room availability endpoint has no excludeSessionId. Check a fresh full
   // catalog and exclude this session, including overlapping moves on the same day.
   for (const { sportClass, items } of groups) {
@@ -42,8 +44,9 @@ export async function rescheduleRoomSession({ room, rooms, session, draft }) {
       if (String(item.coachId ?? sportClass.coachId) === String(payload.coachId)) throw new Error('Huấn luyện viên đã có buổi học khác trong khung giờ này.')
     }
   }
-  await updateClassSession(group.sportClass.id, current.id, { ...payload, roomId: room.id })
-  return { ...roomSessionForTimetable(current, group.sportClass, rooms, room), ...payload }
+  const updated = await updateClassSession(group.sportClass.id, current.id, { ...payload, roomId: room.id })
+  return { ...roomSessionForTimetable(current, group.sportClass, rooms, room), ...payload,
+    ...(updated?.id != null && String(updated.id) === String(current.id) ? updated : {}) }
 }
 
 function assertClassRoom(sportClass, room, rooms) {

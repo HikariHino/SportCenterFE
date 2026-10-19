@@ -53,9 +53,13 @@ test('invalid intervals, out-of-course dates and inactive rooms or classes are r
   assert.throws(() => check({ sportClass: { ...sportClass, isActive: false } }))
 })
 
-test('registered sessions lock both start and end instants while metadata-only edits stay valid', () => {
+test('registered sessions permit time and coach changes while retaining capacity validation', () => {
   const current = { id: 100, ...data, status: 'Scheduled', currentEnrollment: 1 }
-  for (const proposed of [{ ...data, startsAt: '2099-10-21T11:30:00Z' }, { ...data, endsAt: '2099-10-21T13:00:00Z' }, { ...data, startsAt: '2099-10-22T11:00:00Z', endsAt: '2099-10-22T12:30:00Z' }]) assert.throws(() => check({ current, data: proposed }), /đã có học viên đăng ký/)
+  for (const proposed of [{ ...data, startsAt: '2099-10-21T11:30:00Z' }, { ...data, endsAt: '2099-10-21T13:00:00Z' }, { ...data, startsAt: '2099-10-22T11:00:00Z', endsAt: '2099-10-22T12:30:00Z' }]) check({ current, data: proposed })
   check({ current, data: { ...data, coachId: 9, capacity: 19 } })
   check({ current, data: { ...data, startsAt: '2099-10-21T18:00:00+07:00', endsAt: '2099-10-21T19:30:00+07:00' } })
+})
+
+test('capacity never drops below another supported counter when currentEnrollment is stale', () => {
+  assert.throws(() => check({ data: { ...data, capacity: 5 }, current: { id: 100, ...data, status: 'Scheduled', currentEnrollment: 0, registeredCount: 6 } }), /6 học viên/)
 })

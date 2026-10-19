@@ -389,27 +389,47 @@ test('assigning a room cannot introduce overlapping orphan sessions from the sam
   assert.equal(state.puts.length, 0)
 })
 
-test('a new registration after opening the drag confirmation blocks the update using fresh data', async () => {
+test('a new registration after opening drag confirmation stays enrolled when the session moves', async () => {
   const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: 1 } })
-  await assert.rejects(rescheduleRoomSession(moveOptions), /đã có học viên đăng ký/)
-  assert.equal(state.puts.length, 0)
-  assert.equal(state.sessions[10][0].startsAt, movable.startsAt)
-})
-
-test('raw PUT cannot bypass registration locks, but unchanged times permit coach and capacity edits', async () => {
-  const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: 3 } })
-  await assert.rejects(classService.updateClassSession(10, 100, { ...movable, startsAt: '2099-10-26T11:30:00Z' }), /đã có học viên đăng ký/)
-  await assert.rejects(classService.updateClassSession(10, 100, { ...movable, endsAt: '2099-10-26T13:00:00Z' }), /đã có học viên đăng ký/)
-  assert.equal(state.puts.length, 0)
-  await classService.updateClassSession(10, 100, { ...movable, capacity: 19, coachId: 9 })
+  await rescheduleRoomSession(moveOptions)
   assert.equal(state.puts.length, 1)
-  assert.equal(state.sessions[10][0].startsAt, movable.startsAt)
+  assert.equal(state.sessions[10][0].startsAt, '2099-10-26T11:30:00.000Z')
+  assert.equal(state.sessions[10][0].currentEnrollment, 1)
+  assert.equal(state.sessions[10][0].status, 'Scheduled')
+  assert.equal(state.sessions[10].length, 1)
 })
 
-test('unknown latest enrolment blocks time changes instead of assuming an empty session', async () => {
+test('PUT edits an enrolled session in place without cancellation or new registrations', async () => {
+  const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: 3 } })
+  await classService.updateClassSession(10, 100, { ...movable, startsAt: '2099-10-26T11:30:00Z', endsAt: '2099-10-26T13:00:00Z', capacity: 19, coachId: 9 })
+  assert.equal(state.puts.length, 1)
+  assert.equal(state.sessions[10][0].currentEnrollment, 3)
+  assert.equal(state.sessions[10][0].status, 'Scheduled')
+  assert.equal(state.sessions[10][0].coachId, 9)
+})
+
+test('unknown latest enrolment does not block the backend update that manages registrations', async () => {
   const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: undefined } })
-  await assert.rejects(classService.updateClassSession(10, 100, { ...movable, startsAt: '2099-10-26T11:30:00Z' }), /Chưa xác nhận/)
-  assert.equal(state.puts.length, 0)
+  await classService.updateClassSession(10, 100, { ...movable, startsAt: '2099-10-26T11:30:00Z' })
+  assert.equal(state.puts.length, 1)
+})
+
+test('room details allow replacing the coach without moving an enrolled session', async () => {
+  const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: 3 } })
+  await rescheduleRoomSession({ ...moveOptions, draft: { ...changedTime, startTime: '18:00', endTime: '19:30', coachId: '9' } })
+  assert.equal(state.puts.length, 1)
+  assert.equal(state.sessions[10][0].coachId, 9)
+  assert.equal(Date.parse(state.sessions[10][0].startsAt), Date.parse(movable.startsAt))
+  assert.equal(state.sessions[10][0].currentEnrollment, 3)
+})
+
+test('a stale coach and conflicts for a substitute coach block the update', async () => {
+  const stale = mockRescheduleApi({ current: { ...movable, coachId: 9 } })
+  await assert.rejects(rescheduleRoomSession(moveOptions), /đã được thay đổi/)
+  assert.equal(stale.puts.length, 0)
+  const conflict = mockRescheduleApi({ otherClasses: [{ ...sportClass, id: 20, roomId: 2, coachId: 9 }], otherSessions: { 20: [{ ...movable, id: 200, coachId: 9 }] } })
+  await assert.rejects(rescheduleRoomSession({ ...moveOptions, draft: { ...changedTime, coachId: 9 } }), /Huấn luyện viên/)
+  assert.equal(conflict.puts.length, 0)
 })
 
 test('class creation sends the course dates and fee required by the backend', async () => {

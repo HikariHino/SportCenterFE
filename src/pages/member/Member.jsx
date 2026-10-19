@@ -8,7 +8,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getUserDisplayName, getUserInitials } from '../../utils/auth'
-import { getNotifications, markNotificationRead, getNotificationErrorMessage } from '../../services/notificationService'
+import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
+import { isSessionUpdateNotification, sessionNotificationId } from '../../utils/sessionNotifications'
 import {
   ProfileView,
   SubscriptionsView,
@@ -98,13 +99,29 @@ export default function Member() {
   const [notifLoading, setNotifLoading] = useState(false)
   const [notifError, setNotifError] = useState('')
   const [quickMarkingId, setQuickMarkingId] = useState(null)
+  const [quickMarkingAll, setQuickMarkingAll] = useState(false)
+  const [quickReadNotice, setQuickReadNotice] = useState('')
+  const [quickReadError, setQuickReadError] = useState('')
   const [notificationRevision, setNotificationRevision] = useState(0)
+  const [scheduleRequest, setScheduleRequest] = useState(null)
   const notificationRef = useRef(null)
   const quickReadLock = useRef(false)
   const mounted = useRef(true)
   const refreshNotifications = useCallback(() => {
     if (mounted.current) setNotificationRevision(value => value + 1)
   }, [])
+
+  useEffect(() => {
+    const refreshVisible = () => { if (document.visibilityState === 'visible') refreshNotifications() }
+    const timer = window.setInterval(refreshVisible, 30000)
+    window.addEventListener('focus', refreshVisible)
+    document.addEventListener('visibilitychange', refreshVisible)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshVisible)
+      document.removeEventListener('visibilitychange', refreshVisible)
+    }
+  }, [refreshNotifications])
 
   useEffect(() => {
     mounted.current = true
@@ -175,6 +192,8 @@ export default function Member() {
     quickReadLock.current = true
     setQuickMarkingId(id)
     setNotifError('')
+    setQuickReadNotice('')
+    setQuickReadError('')
     try {
       await markNotificationRead(id)
       if (!mounted.current) return
@@ -188,10 +207,35 @@ export default function Member() {
     }
   }
 
+  const handleQuickMarkAllRead = async () => {
+    if (quickReadLock.current) return
+    quickReadLock.current = true
+    setQuickMarkingAll(true)
+    setQuickReadNotice('')
+    setQuickReadError('')
+    try {
+      const outcome = await markAllNotificationsRead()
+      if (!mounted.current) return
+      setQuickReadNotice(outcome.total ? `Đã đọc ${outcome.read}/${outcome.total} thông báo.` : 'Bạn đã đọc hết thông báo.')
+      if (outcome.failed.length) setQuickReadError(`Còn ${outcome.failed.length} thông báo chưa cập nhật được. Vui lòng thử lại.`)
+    } catch (error) {
+      if (mounted.current) setQuickReadError(getNotificationErrorMessage(error))
+    } finally {
+      quickReadLock.current = false
+      if (mounted.current) { setQuickMarkingAll(false); refreshNotifications() }
+    }
+  }
+
   const selectNav = (id) => {
     setActiveNav(id)
     setSidebarOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const viewUpdatedSchedule = item => {
+    setScheduleRequest({ sessionId: sessionNotificationId(item), revision: Date.now() })
+    setNotificationOpen(false)
+    selectNav('classes')
   }
 
   const renderActiveView = () => {
@@ -205,13 +249,13 @@ export default function Member() {
       case 'checkin':
         return <GymCheckInView showNotice={showNotice} />
       case 'classes':
-        return <ClassesView showNotice={showNotice} onNavigateTab={selectNav} />
+        return <ClassesView key={scheduleRequest?.revision || 'classes'} showNotice={showNotice} onNavigateTab={selectNav} initialTab={scheduleRequest ? 'mine' : 'browse'} notificationSessionId={scheduleRequest?.sessionId} />
       case 'training-plans':
         return <TrainingPlansView user={user} showNotice={showNotice} />
       case 'support':
         return <SupportTicketsView showNotice={showNotice} />
       case 'notifications':
-        return <NotificationsView refreshKey={notificationRevision} onNotificationsChange={refreshNotifications} />
+        return <NotificationsView refreshKey={notificationRevision} onNotificationsChange={refreshNotifications} onViewSchedule={viewUpdatedSchedule} unreadCount={unreadCount} />
       default:
         return <ProfileView user={user} showNotice={showNotice} />
     }
@@ -315,6 +359,9 @@ export default function Member() {
                       Xem tất cả
                     </button>
                   </header>
+                  <button type="button" className="member-notifications-read-all" disabled={notifLoading || quickMarkingAll || quickMarkingId !== null || unreadCount === 0} onClick={handleQuickMarkAllRead}><CheckCircle2 size={15} />{quickMarkingAll ? 'Đang đọc...' : 'Đọc tất cả'}</button>
+                  {quickReadNotice && <p role="status" className="member-notifications-notice">{quickReadNotice}</p>}
+                  {quickReadError && <p role="alert" className="member-notifications-error">{quickReadError}</p>}
 
                   {notifError && <div className="member-notifications-error" role="alert"><p>{notifError}</p><button type="button" disabled={notifLoading} onClick={refreshNotifications}>Thử lại</button></div>}
 
@@ -331,10 +378,11 @@ export default function Member() {
                         >
                             <h4>{item.title}</h4>
                             <p>{item.content}</p>
+                            {isSessionUpdateNotification(item) && <div className="member-session-update-notice"><p>Kiểm tra lịch mới và HLV. Đăng ký được giữ nguyên; bạn có thể tự hủy theo hạn hủy nếu không tham gia được.</p><button type="button" onClick={() => viewUpdatedSchedule(item)}>Xem lịch đã đặt</button></div>}
                             {!item.isRead && (
                               <button
                                 type="button"
-                                disabled={quickMarkingId !== null}
+                                disabled={quickMarkingId !== null || quickMarkingAll}
                                 onClick={() => handleQuickMarkRead(item.id)}
                               >
                                 {quickMarkingId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}

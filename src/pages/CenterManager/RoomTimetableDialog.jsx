@@ -9,7 +9,6 @@ import '../../style/CenterManager/RoomTimetable.css'
 import RecurringRoomSessionsForm from './RecurringRoomSessionsForm'
 import RescheduleRoomSessionDialog from './RescheduleRoomSessionDialog'
 import { canRescheduleSession } from '../../utils/sessionReschedule'
-import { sessionTimeLockReason } from '../../utils/sessionEnrollment'
 
 const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật'
 
@@ -60,7 +59,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
     setReschedule(null)
     setSelectedId(session.id)
     setWeekStart(timetableWeekStart(session.startsAt))
-    setNotice(`Đã đổi lịch buổi học ${session.className} sang ${formatDateTime(session.startsAt)} – ${formatDateTime(session.endsAt)}.`)
+    setNotice(`Đã cập nhật buổi học ${session.className}: ${formatDateTime(session.startsAt)} – ${formatDateTime(session.endsAt)}. Học viên đã đăng ký được giữ chỗ và nhận thông báo kiểm tra lại lịch học.`)
     setRevision(value => value + 1)
   }
   const assignRoom = async sportClass => {
@@ -103,8 +102,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
         {selected && <section ref={detailRef} className="room-timetable-detail" aria-labelledby="room-session-title" aria-live="polite">
           <header><div><small>BUỔI HỌC #{selected.id}</small><h3 id="room-session-title">{selected.className}</h3></div><button type="button" aria-label="Đóng chi tiết buổi học" onClick={() => setSelectedId(null)}><X size={18} /></button></header>
           <dl><div><dt>Bộ môn</dt><dd>{selected.sportName || 'Chưa cập nhật'}</dd></div><div><dt>Huấn luyện viên</dt><dd>{selected.coachName || 'Chưa phân công'}</dd></div><div><dt>Bắt đầu</dt><dd>{formatDateTime(selected.startsAt)}</dd></div><div><dt>Kết thúc</dt><dd>{formatDateTime(selected.endsAt)}</dd></div><div><dt>Sĩ số / Sức chứa</dt><dd>{selected.currentEnrollment ?? selected.enrolledCount ?? selected.registeredCount ?? '—'} / {selected.capacity ?? '—'}</dd></div><div><dt>Trạng thái</dt><dd>{classStatusLabel(selected.status)}</dd></div></dl>
-          {canRescheduleSession(selected) && room.isActive !== false && <button type="button" className="room-session-reschedule" disabled={creating || showCreate} onClick={() => openReschedule(selected)}><CalendarClock size={16} />Đổi lịch buổi học</button>}
-          {sessionTimeLockReason(selected) && <p className="room-session-time-locked" role="status">{sessionTimeLockReason(selected)}</p>}
+          {canRescheduleSession(selected) && room.isActive !== false && <><button type="button" className="room-session-reschedule" disabled={creating || showCreate} onClick={() => openReschedule(selected)}><CalendarClock size={16} />Đổi lịch / Thay HLV</button><p className="room-timetable-note">Học viên đã đăng ký sẽ nhận thông báo khi đổi lịch hoặc HLV. Đăng ký được giữ nguyên; học viên tự hủy nếu không thể tham gia, theo hạn hủy của buổi học.</p></>}
           {selected.cancellationReason && <p>Lý do hủy: {selected.cancellationReason}</p>}
         </section>}
       </>}

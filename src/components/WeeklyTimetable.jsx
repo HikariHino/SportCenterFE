@@ -79,7 +79,7 @@ export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSele
                 <span><User size={14} />{item.coachName || 'Chưa phân công HLV'}</span>
                 <small>{isCancelled ? 'Đã hủy' : classStatusLabel(item.status)}</small>
                 {movable && <small className="member-timetable-drag-hint">Kéo để đổi lịch</small>}
-                {onReschedule && !isCancelled && sessionEnrollmentCount(item) > 0 && <small>Đã có học viên đăng ký · Không thể đổi lịch</small>}
+                {onReschedule && !isCancelled && sessionEnrollmentCount(item) > 0 && <small>{sessionEnrollmentCount(item)} học viên đã đăng ký</small>}
               </button>
             }) : <span className="member-timetable-empty" aria-label="Không có buổi học">—</span>}
           </td>)}

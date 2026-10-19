@@ -1,7 +1,7 @@
 import { getSessionRoom, roomSessionForTimetable } from './roomTimetable.js'
 import { sessionsOverlap } from './sessionReschedule.js'
 import { getClassDateRange } from './recurringSessions.js'
-import { assertSessionTimeChangeAllowed } from './sessionEnrollment.js'
+import { sessionEnrollmentCount } from './sessionEnrollment.js'
 
 export const isCancelledSession = item => ['cancelled', 'canceled'].includes(String(item.status || item.Status || '').trim().toLowerCase())
 
@@ -12,7 +12,7 @@ export function assertSessionCapacity(capacity, room, sportClass, current) {
   if (!Number.isInteger(Number(capacity)) || Number(capacity) < 1 || Number(capacity) > limit) {
     throw new Error(`Sức chứa buổi học phải từ 1 đến ${limit} học viên (phòng: ${room.capacity}, lớp: ${sportClass.maxCapacity}).`)
   }
-  const enrolled = Number(current?.currentEnrollment ?? current?.enrolledCount ?? current?.registeredCount ?? 0)
+  const enrolled = sessionEnrollmentCount(current)
   if (Number(capacity) < enrolled) throw new Error(`Sức chứa không được nhỏ hơn ${enrolled} học viên đã đăng ký.`)
 }
 
@@ -22,7 +22,6 @@ export function assertSessionSchedule({ data, sportClass, room, rooms, groups, c
   assertSessionCapacity(data.capacity, room, sportClass, current)
   const start = Date.parse(data.startsAt), end = Date.parse(data.endsAt)
   if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) throw new Error('Thời gian bắt đầu và kết thúc buổi học không hợp lệ.')
-  if (current) assertSessionTimeChangeAllowed(current, data)
   if (start <= now) throw new Error('Buổi học phải bắt đầu sau thời điểm hiện tại.')
   if (current && (isCancelledSession(current) || String(current.status || current.Status).toLowerCase() === 'completed' || Date.parse(current.startsAt) <= now)) throw new Error('Không thể chỉnh buổi học đã bắt đầu, đã hủy hoặc đã hoàn thành.')
   const range = getClassDateRange(sportClass)
