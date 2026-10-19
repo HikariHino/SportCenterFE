@@ -1,4 +1,4 @@
-.room-timetable-dialog { width: min(1500px, calc(100% - 40px)); max-width: none; max-height: calc(100dvh - 40px); box-sizing: border-box; padding: 0; border: 1px solid var(--theme-border); border-radius: 18px; background: var(--theme-surface); color: var(--theme-text); font: 13px/1.6 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
+.room-timetable-dialog { position: fixed; inset: 0; margin: auto; width: min(1500px, calc(100% - 40px)); max-width: none; max-height: calc(100dvh - 40px); overflow-y: auto; box-sizing: border-box; padding: 0; border: 1px solid var(--theme-border); border-radius: 18px; background: var(--theme-surface); color: var(--theme-text); font: 13px/1.6 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
 .room-timetable-dialog::backdrop { background: #0f172a80; backdrop-filter: blur(3px); }
 .room-timetable-dialog button { cursor: pointer; font-family: inherit; }
 .room-timetable-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
