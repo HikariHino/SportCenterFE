@@ -1,0 +1,69 @@
+import { useEffect, useId, useRef, useState } from 'react'
+import { CalendarClock, X } from 'lucide-react'
+import { rescheduleRoomSession } from '../../services/roomTimetableService'
+import { getClassErrorMessage } from '../../services/sportClassService'
+import { timetableDateKey } from '../../utils/memberTimetable'
+import { buildSessionReschedule, sessionRescheduleDraft } from '../../utils/sessionReschedule'
+
+const dateLabel = value => value.split('-').reverse().join('/')
+const dateTimeLabel = value => new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })
+
+export default function RescheduleRoomSessionDialog({ room, rooms, request, onClose, onBusyChange, onSaved }) {
+  const id = useId()
+  const dialogRef = useRef(null)
+  const actionLock = useRef(false)
+  const { session, target } = request
+  const sameDayDrop = target?.date === timetableDateKey(session.startsAt)
+  const [draft, setDraft] = useState(() => sessionRescheduleDraft(session, target))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  let preview
+  let validation = ''
+  try { preview = buildSessionReschedule(session, draft) } catch (validationError) { validation = validationError.message }
+  const changed = preview && (Date.parse(preview.startsAt) !== Date.parse(session.startsAt) || Date.parse(preview.endsAt) !== Date.parse(session.endsAt))
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    dialog.showModal()
+    return () => dialog.close()
+  }, [])
+
+  const change = (field, value) => { setDraft(previous => ({ ...previous, [field]: value })); setError('') }
+  const close = () => { if (!actionLock.current) onClose() }
+  const submit = async event => {
+    event.preventDefault()
+    if (actionLock.current || !changed || validation) return
+    actionLock.current = true
+    setBusy(true)
+    setError('')
+    onBusyChange(true)
+    try {
+      const updated = await rescheduleRoomSession({ room, rooms, session, draft })
+      onSaved(updated)
+    } catch (requestError) { setError(getClassErrorMessage(requestError, 'Không thể đổi lịch. Vui lòng thử lại.')) }
+    finally { actionLock.current = false; setBusy(false); onBusyChange(false) }
+  }
+
+  return <dialog ref={dialogRef} className="room-reschedule-dialog" aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); event.stopPropagation(); close() }} onClick={event => {
+    if (event.target !== event.currentTarget) return
+    const bounds = event.currentTarget.getBoundingClientRect()
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) close()
+  }}>
+    <form onSubmit={submit} aria-busy={busy}>
+      <header><div><h3 id={`${id}-title`}><CalendarClock size={20} />{sameDayDrop ? 'Đổi giờ buổi học' : 'Xác nhận đổi ngày và giờ'}</h3><p>{session.className} · {room.name}</p></div><button type="button" aria-label="Đóng đổi lịch" disabled={busy} onClick={close}><X size={19} /></button></header>
+      <p className="room-reschedule-original">Lịch hiện tại: <strong>{dateTimeLabel(session.startsAt)} – {dateTimeLabel(session.endsAt)}</strong></p>
+      <fieldset disabled={busy}>
+        {sameDayDrop ? <p className="room-reschedule-date">Ngày học: <strong>{dateLabel(draft.date)}</strong></p> : <label>Ngày học mới<input name="rescheduleDate" type="date" required autoFocus min={timetableDateKey()} value={draft.date} onChange={event => change('date', event.target.value)} /></label>}
+        <div className="room-reschedule-times">
+          <label>Giờ bắt đầu<input name="rescheduleStartTime" type="time" required autoFocus={sameDayDrop} value={draft.startTime} onChange={event => change('startTime', event.target.value)} /></label>
+          <label>Giờ kết thúc<input name="rescheduleEndTime" type="time" required value={draft.endTime} onChange={event => change('endTime', event.target.value)} /></label>
+        </div>
+        <label className="room-reschedule-overnight"><input name="rescheduleNextDay" type="checkbox" checked={draft.endsNextDay} onChange={event => change('endsNextDay', event.target.checked)} />Kết thúc vào ngày hôm sau</label>
+      </fieldset>
+      {preview && <p className="room-reschedule-preview">Lịch mới: <strong>{dateTimeLabel(preview.startsAt)} – {dateTimeLabel(preview.endsAt)}</strong></p>}
+      <p className="room-reschedule-help">Chỉ thay đổi buổi học này. Thời gian hiển thị theo giờ Việt Nam.</p>
+      {(error || validation) && <p className="room-recurring-error" role="alert">{error || validation}</p>}
+      <footer><button type="button" disabled={busy} onClick={close}>Hủy</button><button className="room-reschedule-save" type="submit" disabled={busy || !changed || Boolean(validation)}>{busy ? 'Đang kiểm tra và lưu...' : 'Xác nhận đổi lịch'}</button></footer>
+    </form>
+  </dialog>
+}

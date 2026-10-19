@@ -42,7 +42,7 @@
 .member-classes-notice { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 16px; border-radius: 8px; color: var(--theme-green, #096445); background: var(--theme-green-bg, #e1f6ee); }
 .member-classes-pagination, .member-classes-pagination > div { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .member-classes-pagination { margin-top: 20px; color: var(--theme-muted); font-size: 12px; }
-.member-classes-dialog { width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: auto; padding: 24px; border: 1px solid var(--theme-border); border-radius: 16px; color: var(--theme-text); background: var(--theme-surface); font: 400 13px/1.65 'Be Vietnam Pro', sans-serif; }
+.member-classes-dialog { position: fixed; inset: 0; margin: auto; box-sizing: border-box; width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: auto; padding: 24px; border: 1px solid var(--theme-border); border-radius: 16px; color: var(--theme-text); background: var(--theme-surface); font: 400 13px/1.65 'Be Vietnam Pro', sans-serif; }
 .member-classes-dialog::backdrop { background: #0d1422a8; }
 .member-classes-dialog form { display: grid; gap: 14px; }
 .member-classes-dialog header, .member-classes-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -60,6 +60,24 @@
 .member-classes-layout-toggle button[aria-pressed='true'] { color: var(--theme-accent); border-color: var(--theme-accent); background: var(--theme-raised); }
 .member-registration-dialog-content { display: grid; gap: 16px; }
 .member-registration-dialog-content > .member-classes-badge { justify-self: start; }
+.member-course-browser, .member-course-sessions { display: grid; gap: 20px; min-width: 0; }
+.member-classes-view .member-course-card { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 22px; min-width: 0; border-radius: 14px; text-align: left; background: var(--theme-surface); font-weight: 400; }
+.member-course-card > strong { color: var(--theme-text); font-size: 18px; overflow-wrap: anywhere; }
+.member-course-card > span { display: flex; align-items: center; gap: 8px; color: var(--theme-muted); text-align: left; }
+.member-course-card > span.member-classes-badge { color: var(--theme-accent); }
+.member-course-card svg { flex-shrink: 0; }
+.member-course-card > .member-course-view-sessions { margin-top: auto; color: var(--theme-accent); font-weight: 600; }
+.member-course-heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+.member-course-heading h3 { margin: 14px 0 6px; font-size: 23px; }
+.member-course-heading p { margin: 0; }
+.member-classes-view .member-course-back { padding: 0; border: 0; background: transparent; color: var(--theme-accent); }
+.member-course-book-all { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-raised); }
+.member-course-book-all > div { flex: 1; min-width: min(100%, 240px); }
+.member-course-book-all p { margin: 6px 0 0; color: var(--theme-muted); font-size: 12px; }
+.member-course-book-all button { flex-shrink: 0; }
+.member-course-sessions h4 { margin: 0; font-size: 16px; }
+.member-class-booking-preview { max-height: 220px; overflow-y: auto; margin: 0; padding: 12px 12px 12px 32px; border-radius: 8px; background: var(--theme-bg); }
+.member-class-booking-preview li + li { margin-top: 8px; }
 @media (max-width: 1100px) {
   .member-classes-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .member-classes-grid { grid-template-columns: minmax(0, 1fr); }

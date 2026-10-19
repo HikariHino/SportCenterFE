@@ -2,7 +2,7 @@ import { getRoomForClass } from './memberClasses.js'
 
 const normalizedName = value => String(value || '').trim().toLocaleLowerCase('vi-VN')
 
-export function roomSessionForTimetable(session, sportClass, rooms, selectedRoom) {
+export function getSessionRoom(session, sportClass, rooms) {
   let assignedRoom
   // An explicit session assignment always takes precedence over the class default.
   if (session.roomId != null && session.roomId !== '') {
@@ -14,6 +14,11 @@ export function roomSessionForTimetable(session, sportClass, rooms, selectedRoom
   } else {
     assignedRoom = getRoomForClass(sportClass, rooms)
   }
+  return assignedRoom || null
+}
+
+export function roomSessionForTimetable(session, sportClass, rooms, selectedRoom) {
+  const assignedRoom = getSessionRoom(session, sportClass, rooms)
   if (!assignedRoom) return null
   const matches = assignedRoom.id != null
     ? String(assignedRoom.id) === String(selectedRoom.id)
@@ -24,6 +29,9 @@ export function roomSessionForTimetable(session, sportClass, rooms, selectedRoom
   return {
     ...session,
     classId: sportClass.id,
+    classStartDate: sportClass.startDate,
+    classEndDate: sportClass.endDate,
+    coachId: session.coachId ?? sportClass.coachId,
     className: session.className || sportClass.className,
     sportName: session.sportName || sportClass.sportName,
     coachName: session.coachName || (inheritsCoach ? sportClass.coachName : undefined),

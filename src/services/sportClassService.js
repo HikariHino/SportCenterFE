@@ -1,4 +1,7 @@
 import api from './api'
+import { getClassSessionDateRange } from '../utils/classSessionDates.js'
+import { buildClassPayload } from '../utils/classForm.js'
+import { validateSessionWrite, withSessionWriteLock } from './sessionSchedulingService'
 
 export function getClassErrorMessage(error, fallback = 'Có lỗi xảy ra khi thao tác với lớp học.') {
   const body = error?.response?.data
@@ -33,6 +36,23 @@ export async function getManagedClasses(params = {}) {
     page: Number(payload?.page || 1),
     pageSize: Number(payload?.pageSize || 20),
   }
+}
+
+export async function getManagedClassesWithSessionDates(params = {}) {
+  const result = await getManagedClasses(params)
+  const items = []
+  for (let offset = 0; offset < result.items.length; offset += 4) {
+    const batch = await Promise.all(result.items.slice(offset, offset + 4).map(async sportClass => {
+      try {
+        const sessions = await getAllClassSessions(sportClass.id)
+        return { ...sportClass, sessionDateRange: getClassSessionDateRange(sessions), sessionDatesError: '' }
+      } catch (error) {
+        return { ...sportClass, sessionDateRange: null, sessionDatesError: getClassErrorMessage(error, 'Không thể tải ngày học của lớp.') }
+      }
+    }))
+    items.push(...batch)
+  }
+  return { ...result, items }
 }
 
 /**
@@ -74,23 +94,7 @@ export async function getClassById(id) {
  * Quản lý tạo lớp học mới
  */
 export async function createSportClass(data) {
-  const payload = {
-    className: data.className.trim(),
-    sportId: Number(data.sportId),
-    coachId: Number(data.coachId),
-    price: Number(data.price),
-    maxCapacity: Number(data.maxCapacity),
-    schedule: data.schedule ? data.schedule.trim() : null,
-    startDate: data.startDate,
-    endDate: data.endDate,
-    isActive: data.isActive !== false,
-  }
-  if (data.roomId) {
-    payload.roomId = Number(data.roomId)
-  }
-  if (data.roomName) {
-    payload.roomName = data.roomName
-  }
+  const payload = buildClassPayload(data)
   const response = await api.post('/classes', payload)
   const body = response.data
   if (body?.success === false) {
@@ -104,23 +108,7 @@ export async function createSportClass(data) {
  * Quản lý cập nhật thông tin lớp học (đổi HLV, đổi lịch định kỳ, cập nhật sĩ số, v.v.)
  */
 export async function updateSportClass(id, data) {
-  const payload = {
-    className: data.className.trim(),
-    sportId: Number(data.sportId),
-    coachId: Number(data.coachId),
-    price: Number(data.price),
-    maxCapacity: Number(data.maxCapacity),
-    schedule: data.schedule ? data.schedule.trim() : null,
-    startDate: data.startDate,
-    endDate: data.endDate,
-    isActive: data.isActive !== false,
-  }
-  if (data.roomId) {
-    payload.roomId = Number(data.roomId)
-  }
-  if (data.roomName) {
-    payload.roomName = data.roomName
-  }
+  const payload = buildClassPayload(data)
   const response = await api.put(`/classes/${id}`, payload)
   const body = response.data
   if (body?.success === false) {
@@ -150,16 +138,36 @@ export async function deactivateSportClass(id) {
  * GET /api/classes/{id}/sessions
  * Xem danh sách các buổi học của một lớp
  */
-export async function getClassSessions(classId, params = {}) {
-  const response = await api.get(`/classes/${classId}/sessions`, { params })
+export async function getClassSessions(classId, params = {}, { signal } = {}) {
+  const response = await api.get(`/classes/${classId}/sessions`, { params, signal })
   const body = response.data
   if (body?.success === false) {
     throw new Error(body.message || 'Không thể tải danh sách buổi học.')
   }
   const payload = body?.data ?? body
+  const items = Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : null
+  if (!items) throw new Error('Dữ liệu buổi học không hợp lệ. Vui lòng thử lại.')
+  const total = Number(payload?.total ?? payload?.totalCount ?? items.length)
+  if (!Number.isFinite(total) || total < 0) throw new Error('Tổng số buổi học không hợp lệ. Vui lòng thử lại.')
   return {
-    items: Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : [],
-    total: Number(payload?.total || (Array.isArray(payload) ? payload.length : 0)),
+    items,
+    total,
+    page: Number(payload?.page || params.page || 1),
+  }
+}
+
+export async function getAllClassSessions(classId, { signal } = {}) {
+  const items = []
+  const seen = new Set()
+  for (let page = 1; ; page += 1) {
+    const result = await getClassSessions(classId, { page, pageSize: 100 }, { signal })
+    if (result.page !== page || (!result.items.length && items.length < result.total)) throw new Error('Chưa tải đủ các buổi học của lớp. Vui lòng thử lại.')
+    for (const item of result.items) {
+      if (seen.has(String(item.id))) throw new Error('Dữ liệu buổi học bị trùng trang. Vui lòng thử lại.')
+      seen.add(String(item.id))
+      items.push(item)
+    }
+    if (items.length >= result.total) return items
   }
 }
 
@@ -168,22 +176,25 @@ export async function getClassSessions(classId, params = {}) {
  * Thêm buổi học mới vào lớp
  */
 export async function createClassSession(classId, data) {
-  const payload = {
-    coachId: Number(data.coachId),
-    cancellationPolicyId: Number(data.cancellationPolicyId || 1),
-    startsAt: data.startsAt,
-    endsAt: data.endsAt,
-    capacity: Number(data.capacity),
-  }
-  if (data.roomId) {
-    payload.roomId = Number(data.roomId)
-  }
-  const response = await api.post(`/classes/${classId}/sessions`, payload)
-  const body = response.data
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể tạo buổi học.')
-  }
-  return body?.data ?? body
+  return withSessionWriteLock(async () => {
+    const payload = {
+      coachId: Number(data.coachId),
+      cancellationPolicyId: Number(data.cancellationPolicyId || 1),
+      startsAt: data.startsAt,
+      endsAt: data.endsAt,
+      capacity: Number(data.capacity),
+    }
+    if (data.roomId) {
+      payload.roomId = Number(data.roomId)
+    }
+    await validateSessionWrite(classId, payload)
+    const response = await api.post(`/classes/${classId}/sessions`, payload)
+    const body = response.data
+    if (body?.success === false) {
+      throw new Error(body.message || 'Không thể tạo buổi học.')
+    }
+    return body?.data ?? body
+  })
 }
 
 /**
@@ -191,22 +202,25 @@ export async function createClassSession(classId, data) {
  * Dời lịch buổi học (Reschedule), đổi HLV, cập nhật sức chứa buổi học
  */
 export async function updateClassSession(classId, sessionId, data) {
-  const payload = {
-    coachId: Number(data.coachId),
-    cancellationPolicyId: Number(data.cancellationPolicyId || 1),
-    startsAt: data.startsAt,
-    endsAt: data.endsAt,
-    capacity: Number(data.capacity),
-  }
-  if (data.roomId) {
-    payload.roomId = Number(data.roomId)
-  }
-  const response = await api.put(`/classes/${classId}/sessions/${sessionId}`, payload)
-  const body = response.data
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể cập nhật buổi học.')
-  }
-  return body?.data ?? body
+  return withSessionWriteLock(async () => {
+    const payload = {
+      coachId: Number(data.coachId),
+      cancellationPolicyId: Number(data.cancellationPolicyId || 1),
+      startsAt: data.startsAt,
+      endsAt: data.endsAt,
+      capacity: Number(data.capacity),
+    }
+    if (data.roomId) {
+      payload.roomId = Number(data.roomId)
+    }
+    await validateSessionWrite(classId, payload, sessionId)
+    const response = await api.put(`/classes/${classId}/sessions/${sessionId}`, payload)
+    const body = response.data
+    if (body?.success === false) {
+      throw new Error(body.message || 'Không thể cập nhật buổi học.')
+    }
+    return body?.data ?? body
+  })
 }
 
 /**
@@ -274,11 +288,13 @@ export async function getRooms(isActive) {
 export default {
   getClassErrorMessage,
   getManagedClasses,
+  getManagedClassesWithSessionDates,
   getClassById,
   createSportClass,
   updateSportClass,
   deactivateSportClass,
   getClassSessions,
+  getAllClassSessions,
   createClassSession,
   updateClassSession,
   cancelClassSession,

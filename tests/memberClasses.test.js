@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bookingUnavailableReason, cancellationDeadline, registrationActions } from '../src/utils/memberClasses.js'
+import { bookingUnavailableReason, cancellationDeadline, hasActiveMembership, registeredSessionIds, registrationActions } from '../src/utils/memberClasses.js'
 
 const now = Date.parse('2026-10-19T10:00:00+07:00')
 const upcoming = { id: 1, status: 'Confirmed', startsAt: '2026-10-19T14:00:00+07:00', endsAt: '2026-10-19T15:00:00+07:00' }
@@ -48,4 +48,19 @@ test('missing or invalid end time does not permit an early review', () => {
   assert.equal(registrationActions({ ...upcoming, endsAt: undefined }, now).review, false)
   assert.equal(registrationActions({ ...upcoming, endsAt: 'invalid' }, now).review, false)
   assert.equal(registrationActions({ ...upcoming, sessionStatus: 'Completed' }, now).review, true)
+})
+
+test('actual session DTO capacity fields and invalid start times cannot offer registration', () => {
+  const session = { ...upcoming, status: 'Scheduled', capacity: 20 }
+  assert.equal(bookingUnavailableReason({ ...session, currentEnrollment: 20 }, false, now), 'Đã hết chỗ')
+  assert.equal(bookingUnavailableReason({ ...session, availableSeats: 0 }, false, now), 'Đã hết chỗ')
+  assert.equal(bookingUnavailableReason({ ...session, startsAt: 'invalid' }, false, now), 'Đã đóng đăng ký')
+  assert.deepEqual([...registeredSessionIds([{ sessionId: 1, status: 'Registered' }, { sessionId: 2, status: 'Cancelled' }, { status: 'Confirmed' }])], ['1'])
+})
+
+test('membership must be active now rather than pending, not started or expired', () => {
+  const sub = { status: 'Active', startDate: new Date(now - 1).toISOString(), endDate: new Date(now + 1).toISOString() }
+  assert.equal(hasActiveMembership([sub], now), true)
+  for (const item of [{ ...sub, status: 'Pending' }, { ...sub, startDate: new Date(now + 1).toISOString() }, { ...sub, endDate: new Date(now - 1).toISOString() }]) assert.equal(hasActiveMembership([item], now), false)
+  assert.equal(hasActiveMembership([], now), false)
 })

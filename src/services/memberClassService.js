@@ -1,4 +1,6 @@
 import api from './api'
+import { bookingUnavailableReason, hasActiveMembership, registeredSessionIds } from '../utils/memberClasses.js'
+import { getMySubscriptions } from './memberSubscriptionService'
 
 function readPage(body, page, pageSize, fallback) {
   if (body?.success === false) throw new Error(body.message || fallback)
@@ -7,12 +9,44 @@ function readPage(body, page, pageSize, fallback) {
     return { items: payload.slice((page - 1) * pageSize, page * pageSize), total: payload.length, page, pageSize }
   }
   if (!Array.isArray(payload?.items)) throw new Error('Dữ liệu danh sách lớp học không hợp lệ. Vui lòng thử lại.')
+  const total = Number(payload.total ?? payload.totalCount ?? payload.items.length)
+  if (!Number.isFinite(total) || total < 0) throw new Error('Tổng số kết quả không hợp lệ. Vui lòng thử lại.')
   return {
     items: payload.items,
-    total: Number(payload.total ?? payload.totalCount ?? payload.items.length),
+    total,
     page: Number(payload.page || page),
     pageSize: Number(payload.pageSize || pageSize),
   }
+}
+
+async function allPages(loader) {
+  const items = []
+  const seen = new Set()
+  for (let page = 1; ; page += 1) {
+    const result = await loader({ page, pageSize: 100 })
+    if (result.page !== page || (!result.items.length && items.length < result.total)) throw new Error('Chưa tải đủ danh sách. Vui lòng thử lại.')
+    for (const item of result.items) {
+      if (item.id == null || seen.has(String(item.id))) throw new Error('Dữ liệu bị trùng trang hoặc thiếu mã. Vui lòng tải lại.')
+      seen.add(String(item.id))
+      items.push(item)
+    }
+    if (items.length >= result.total) return { items, total: items.length, page: 1, pageSize: 100 }
+  }
+}
+
+export async function getMemberClasses(params = {}) {
+  const response = await api.get('/classes', { params })
+  return readPage(response.data, params.page || 1, params.pageSize || 12, 'Không thể tải danh sách lớp học.')
+}
+
+export const getAllMemberClasses = () => allPages(getMemberClasses)
+export const getAllAvailableSessions = () => allPages(getAvailableSessions)
+
+export async function getMemberClassSessions(classId) {
+  return allPages(async params => {
+    const response = await api.get(`/classes/${classId}/sessions`, { params })
+    return readPage(response.data, params.page, params.pageSize, 'Không thể tải các buổi học của lớp.')
+  })
 }
 
 /**
@@ -94,18 +128,40 @@ export async function getMyRegistrations({ page = 1, pageSize = 20 } = {}) {
 
 // The weekly timetable must include registrations beyond the first API page.
 export async function getAllMyRegistrations() {
-  const items = []
-  let page = 1
-  let result
-  do {
-    result = await getMyRegistrations({ page, pageSize: 100 })
-    if (result.page !== page || (!result.items.length && items.length < result.total)) {
-      throw new Error('Chưa tải đủ lịch học của bạn. Vui lòng thử lại.')
+  return allPages(getMyRegistrations)
+}
+
+export async function bookClassSessions({ classId, sessionIds }, onProgress = () => {}) {
+  const ids = [...new Set(sessionIds.map(String))]
+  if (!ids.length) throw new Error('Không có buổi học nào được chọn để đăng ký.')
+  const [catalog, mine, subscriptions] = await Promise.all([getMemberClassSessions(classId), getAllMyRegistrations(), getMySubscriptions()])
+  if (!hasActiveMembership(subscriptions)) throw new Error('Bạn cần có gói hội viên đang còn hiệu lực để đăng ký buổi học.')
+  const registered = registeredSessionIds(mine.items)
+  const result = { registered: [], existing: [], skipped: [], remaining: [], error: '' }
+  for (let index = 0; index < ids.length; index += 1) {
+    const id = ids[index]
+    const session = catalog.items.find(item => String(item.id) === id && (item.classId == null || String(item.classId) === String(classId)))
+    if (registered.has(id)) { result.existing.push(id); continue }
+    const reason = session ? bookingUnavailableReason(session) : 'Buổi học không còn tồn tại trong lớp.'
+    if (reason) { result.skipped.push({ id, reason }); continue }
+    onProgress({ completed: index, total: ids.length })
+    try {
+      await bookSession(id)
+      result.registered.push(id)
+      registered.add(id)
+    } catch (error) {
+      // A response may be lost after a successful POST. Reconcile before offering
+      // retry, so the member is never asked to book a confirmed session twice.
+      let recovered = false
+      try { recovered = registeredSessionIds((await getAllMyRegistrations()).items).has(id) } catch { /* Retry will reload registrations before any further POST. */ }
+      if (recovered) { result.registered.push(id); registered.add(id); continue }
+      result.remaining = ids.slice(index)
+      result.error = error?.response?.data?.message || getMemberClassErrorMessage(error)
+      return result
     }
-    items.push(...result.items)
-    page += 1
-  } while (items.length < result.total)
-  return { items, total: items.length, page: 1, pageSize: 100 }
+  }
+  onProgress({ completed: ids.length, total: ids.length })
+  return result
 }
 
 /**
@@ -155,7 +211,12 @@ export async function reviewRegistration(registrationId, { rating, comment = '' 
 
 export default {
   getMemberClassErrorMessage,
+  getMemberClasses,
+  getAllMemberClasses,
+  getMemberClassSessions,
   getAvailableSessions,
+  getAllAvailableSessions,
+  bookClassSessions,
   bookSession,
   getMyRegistrations,
   getAllMyRegistrations,

@@ -41,12 +41,22 @@ export function registrationActions(item, now = Date.now()) {
 
 export function bookingUnavailableReason(session, registered = false, now = Date.now()) {
   if (cancelled(session.status)) return 'Buổi học đã hủy'
-  if (normalized(session.status) === 'completed' || Date.parse(session.startsAt) <= now) return 'Đã đóng đăng ký'
+  if (normalized(session.status) === 'completed' || !Number.isFinite(Date.parse(session.startsAt)) || Date.parse(session.startsAt) <= now) return 'Đã đóng đăng ký'
   if (registered || session.isRegistered) return 'Đã đăng ký'
-  const count = session.enrolledCount ?? session.registeredCount
-  if (session.availableSlots === 0 || (session.capacity != null && count != null && Number(count) >= Number(session.capacity))) return 'Đã hết chỗ'
+  const count = session.currentEnrollment ?? session.enrolledCount ?? session.registeredCount
+  if (Number(session.availableSlots ?? session.availableSeats ?? NaN) === 0 || (session.capacity != null && count != null && Number(count) >= Number(session.capacity))) return 'Đã hết chỗ'
   if (session.canRegister === false) return 'Chưa thể đăng ký'
   return ''
+}
+
+export function registeredSessionIds(registrations) {
+  return new Set(registrations.filter(item => !cancelled(item.status)).map(item => String(item.sessionId)).filter(id => id !== 'undefined' && id !== 'null'))
+}
+
+export function hasActiveMembership(subscriptions, now = Date.now()) {
+  return subscriptions.some(item => normalized(item.status) === 'active'
+    && (!item.startDate || Date.parse(item.startDate) <= now)
+    && (!item.endDate || Date.parse(item.endDate) >= now))
 }
 
 /**
