@@ -47,6 +47,7 @@
 .room-recurring-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--theme-red, #b42318); font-size: 12px; overflow-wrap: anywhere; }
 .room-recurring-error p, .room-recurring-class-range { margin: 0; }
 .room-recurring-error ul { flex-basis: 100%; max-height: 180px; overflow: auto; margin: 0; padding-left: 20px; }
+.room-recurring-form > footer, .room-reschedule-dialog footer { margin: 0; padding: 16px 0 0; border-top: 1px solid var(--theme-border); background: transparent; color: inherit; }
 .room-recurring-form > footer { justify-content: flex-end; align-items: center; }
 .room-recurring-form .room-recurring-submit { color: #fff; background: #1557d5; border-color: #1557d5; }
 .room-recurring-form .room-recurring-submit:hover:not(:disabled) { background: #1044a8; }
@@ -94,4 +95,5 @@
   .room-recurring-form { padding: 16px; }
   .room-recurring-fields { grid-template-columns: minmax(0, 1fr); }
   .room-recurring-form > footer { flex-wrap: wrap; }
+  .room-recurring-form > footer > button { flex: 1 1 140px; }
 }
