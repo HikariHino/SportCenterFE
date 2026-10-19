@@ -1,0 +1,97 @@
+.room-timetable-dialog { position: fixed; inset: 0; margin: auto; width: min(1500px, calc(100% - 40px)); max-width: none; max-height: calc(100dvh - 40px); overflow-y: auto; box-sizing: border-box; padding: 0; border: 1px solid var(--theme-border); border-radius: 18px; background: var(--theme-surface); color: var(--theme-text); font: 13px/1.6 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
+.room-timetable-dialog::backdrop { background: #0f172a80; backdrop-filter: blur(3px); }
+.room-timetable-dialog button { cursor: pointer; font-family: inherit; }
+.room-timetable-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+.room-timetable-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 24px; border-bottom: 1px solid var(--theme-border); }
+.room-timetable-header > div:first-child { min-width: 0; }
+.room-timetable-header h2 { margin: 7px 0; font-size: 23px; overflow-wrap: anywhere; }
+.room-timetable-header > div > span { display: flex; align-items: center; gap: 7px; color: var(--theme-accent); font-size: 11px; font-weight: 700; letter-spacing: .6px; }
+.room-timetable-header p { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin: 0; color: var(--theme-muted); font-size: 12px; }
+.room-timetable-header svg { flex-shrink: 0; }
+.room-timetable-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.room-timetable-header-actions button, .room-timetable-state button, .room-timetable-detail button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); }
+.room-timetable-dialog button:disabled { opacity: .55; cursor: not-allowed; }
+.room-timetable-header-actions button:hover:not(:disabled), .room-timetable-state button:hover, .room-timetable-detail button:hover { background: var(--theme-raised); }
+.room-timetable-body { padding: 24px; }
+.room-timetable-header-actions .room-timetable-add { color: #fff; background: #1557d5; border-color: #1557d5; }
+.room-timetable-header-actions .room-timetable-add:hover:not(:disabled) { background: #1044a8; }
+.room-timetable-notice, .room-recurring-saved { margin: 0 0 16px; padding: 12px 16px; border-radius: 8px; color: var(--theme-green, #096445); background: var(--theme-green-bg, #e1f6ee); }
+.room-timetable-unassigned { margin-bottom: 18px; padding: 16px; border: 1px solid var(--theme-border); border-radius: 10px; background: var(--theme-bg); }
+.room-timetable-unassigned > p { margin: 6px 0 12px; color: var(--theme-muted); }
+.room-timetable-unassigned ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.room-timetable-unassigned li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.room-timetable-unassigned button { padding: 8px 12px; border: 1px solid var(--theme-accent); border-radius: 8px; background: var(--theme-surface); color: var(--theme-accent); font: inherit; }
+.room-recurring-form { display: grid; gap: 18px; margin-bottom: 24px; padding: 22px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-bg); }
+.room-recurring-form > header, .room-recurring-form > footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.room-recurring-form h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; }
+.room-recurring-form header p { margin: 6px 0 0; color: var(--theme-muted); font-size: 12px; }
+.room-recurring-form fieldset { display: grid; gap: 18px; min-width: 0; padding: 0; margin: 0; border: 0; }
+.room-recurring-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.room-recurring-form label { display: grid; align-content: start; gap: 7px; font-size: 12px; font-weight: 600; }
+.room-recurring-form input, .room-recurring-form select { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.room-recurring-form small, .room-recurring-class-range { color: var(--theme-muted); font-size: 11px; font-weight: 400; }
+.room-recurring-skip { margin: 0; color: var(--theme-muted); font-size: 12px; }
+.room-recurring-form button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-text); background: var(--theme-surface); font: inherit; font-size: 12px; }
+.room-recurring-form button:hover:not(:disabled) { border-color: var(--theme-accent); background: var(--theme-raised); }
+.room-recurring-weekdays { display: grid; gap: 10px; }
+.room-recurring-weekdays > label { max-width: 400px; }
+.room-recurring-weekdays > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.room-recurring-weekdays button[aria-pressed='true'] { border-color: var(--theme-accent); color: var(--theme-accent); background: var(--theme-raised); font-weight: 700; }
+.room-recurring-preview { padding: 14px; border: 1px solid var(--theme-border); border-radius: 10px; background: var(--theme-surface); }
+.room-recurring-preview summary { cursor: pointer; font-size: 12px; }
+.room-recurring-preview summary strong { color: var(--theme-accent); }
+.room-recurring-preview > div { max-height: 240px; overflow: auto; margin-top: 12px; }
+.room-recurring-preview table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.room-recurring-preview th, .room-recurring-preview td { padding: 8px 10px; border: 1px solid var(--theme-border); text-align: left; }
+.room-recurring-preview th { background: var(--theme-bg); }
+.room-recurring-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--theme-red, #b42318); font-size: 12px; overflow-wrap: anywhere; }
+.room-recurring-error p, .room-recurring-class-range { margin: 0; }
+.room-recurring-error ul { flex-basis: 100%; max-height: 180px; overflow: auto; margin: 0; padding-left: 20px; }
+.room-recurring-form > footer { justify-content: flex-end; align-items: center; }
+.room-recurring-form .room-recurring-submit { color: #fff; background: #1557d5; border-color: #1557d5; }
+.room-recurring-form .room-recurring-submit:hover:not(:disabled) { background: #1044a8; }
+@media (max-width: 1000px) {
+  .room-recurring-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.room-timetable-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 300px; color: var(--theme-muted); text-align: center; }
+.room-timetable-state[role='alert'] { color: var(--theme-red, #b42318); }
+.room-timetable-note { margin: 14px 0 0; color: var(--theme-muted); font-size: 12px; }
+.room-timetable-detail { margin-top: 20px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-bg); }
+.room-timetable-detail header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.room-timetable-detail h3 { margin: 4px 0 0; font-size: 17px; }
+.room-timetable-detail small { color: var(--theme-accent); font-size: 11px; }
+.room-timetable-detail dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 18px 0 0; }
+.room-timetable-detail dt { color: var(--theme-muted); font-size: 12px; }
+.room-timetable-detail dd { margin: 4px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.room-reschedule-dialog { position: fixed; inset: 0; margin: auto; width: min(580px, calc(100% - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; padding: 24px; border: 1px solid var(--theme-border); border-radius: 16px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.room-reschedule-dialog::backdrop { background: #0f172a70; backdrop-filter: blur(3px); }
+.room-reschedule-dialog form { display: grid; gap: 18px; }
+.room-reschedule-dialog header, .room-reschedule-dialog footer { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.room-reschedule-dialog h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 18px; }
+.room-reschedule-dialog header p { margin: 6px 0 0; color: var(--theme-muted); }
+.room-reschedule-dialog p { margin: 0; }
+.room-reschedule-dialog fieldset { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.room-reschedule-dialog label { display: grid; gap: 7px; font-weight: 600; }
+.room-reschedule-dialog input { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.room-reschedule-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.room-reschedule-dialog .room-reschedule-overnight { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 400; }
+.room-reschedule-overnight input { width: 16px; height: 16px; padding: 0; }
+.room-reschedule-original { padding: 12px; border-radius: 8px; background: var(--theme-bg); color: var(--theme-muted); }
+.room-reschedule-preview { padding: 12px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-accent); background: var(--theme-raised); }
+.room-reschedule-help { color: var(--theme-muted); font-size: 12px; }
+.room-reschedule-dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 13px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.room-reschedule-dialog footer { justify-content: flex-end; }
+.room-reschedule-dialog .room-reschedule-save { background: #1557d5; color: #fff; border-color: #1557d5; }
+.room-reschedule-dialog button:disabled { opacity: .55; cursor: not-allowed; }
+.room-reschedule-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 2px; }
+@media (max-width: 650px) {
+  .room-timetable-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); }
+  .room-timetable-header { flex-wrap: wrap; padding: 16px; }
+  .room-timetable-header-actions { width: 100%; flex-wrap: wrap; justify-content: flex-end; }
+  .room-timetable-body { padding: 12px; }
+  .room-timetable-detail { padding: 16px; }
+  .room-timetable-detail dl { grid-template-columns: 1fr 1fr; }
+  .room-recurring-form { padding: 16px; }
+  .room-recurring-fields { grid-template-columns: minmax(0, 1fr); }
+  .room-recurring-form > footer { flex-wrap: wrap; }
+}

@@ -205,7 +205,7 @@ export default function Member() {
       case 'checkin':
         return <GymCheckInView showNotice={showNotice} />
       case 'classes':
-        return <ClassesView showNotice={showNotice} />
+        return <ClassesView showNotice={showNotice} onNavigateTab={selectNav} />
       case 'training-plans':
         return <TrainingPlansView user={user} showNotice={showNotice} />
       case 'support':

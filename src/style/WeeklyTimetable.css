@@ -1,0 +1,58 @@
+.member-timetable { color: var(--theme-text); }
+.member-timetable button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 14px; border: 1px solid var(--theme-border); border-radius: 9px; color: var(--theme-text); background: var(--theme-surface); font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1.5; cursor: pointer; }
+.member-timetable button:hover:not(:disabled) { border-color: var(--theme-accent); background: var(--theme-raised); }
+.member-timetable button:disabled { opacity: .55; cursor: not-allowed; }
+.member-timetable :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+.member-timetable-count { padding: 4px 9px; border-radius: 6px; background: var(--theme-raised); color: var(--theme-accent); font-size: 11px; font-weight: 600; }
+.member-timetable { min-width: 0; overflow: hidden; border: 1px solid var(--theme-border); border-radius: 18px; background: var(--theme-surface); box-shadow: 0 8px 28px #17243c08; }
+.member-timetable-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 24px; border-bottom: 1px solid var(--theme-border); background: linear-gradient(180deg, var(--theme-bg), var(--theme-surface)); }
+.member-timetable-heading h3 { margin: 0; color: var(--theme-text); font-size: 18px; }
+.member-timetable-heading p { margin: 5px 0 0; color: var(--theme-muted); font-size: 12px; }
+.member-timetable-heading > span { flex-shrink: 0; }
+.member-timetable-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding: 20px 24px; }
+.member-timetable-toolbar > strong { font-size: 14px; }
+.member-timetable-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.member-timetable-navigation label { display: flex; align-items: center; gap: 8px; color: var(--theme-muted); font-size: 12px; }
+.member-timetable-navigation input { min-width: 0; padding: 8px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.member-timetable-navigation button { min-height: 38px; }
+.member-timetable-scroll { margin: 0 24px 24px; overflow-x: auto; scrollbar-width: thin; }
+.member-timetable-table { width: 100%; min-width: 1180px; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
+.member-timetable-table th, .member-timetable-table td { border: 1px solid var(--theme-border); }
+.member-timetable-table thead th { padding: 15px 8px; background: var(--theme-bg); text-align: center; font-size: 13px; font-weight: 700; }
+.member-timetable-table thead th:first-child { width: 94px; }
+.member-timetable-table thead th > span { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; }
+.member-timetable-table thead th.is-today { color: var(--theme-green, #087e70); background: var(--theme-green-bg, #d5ece4); }
+.member-timetable-table tbody th { padding: 20px 8px; background: var(--theme-surface); color: var(--theme-muted); text-align: center; vertical-align: middle; }
+.member-timetable-table tbody th > span { display: block; margin-top: 5px; color: var(--theme-text); font-size: 13px; }
+.member-timetable-table tbody th > small { display: block; margin-top: 2px; font-size: 11px; font-weight: 500; }
+.member-timetable-table td { padding: 10px; height: 145px; vertical-align: top; }
+.member-timetable-table td.is-today { background: color-mix(in srgb, var(--theme-green-bg, #d5ece4) 20%, var(--theme-surface)); }
+.member-timetable .member-timetable-session { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 6px; width: 100%; padding: 7px 3px; border: 1px solid transparent; border-radius: 6px; background: transparent; text-align: left; font-size: 11px; font-weight: 400; }
+.member-timetable .member-timetable-session:hover:not(:disabled) { background: var(--theme-raised); }
+.member-timetable .member-timetable-session.is-movable { cursor: grab; }
+.member-timetable .member-timetable-session.is-movable:active { cursor: grabbing; }
+.member-timetable-session.is-dragging { opacity: .4; }
+.member-timetable .member-timetable-drag-hint { color: var(--theme-accent); }
+.member-timetable-table .is-drop-target { background: var(--theme-raised); outline: 2px dashed var(--theme-accent); outline-offset: -3px; }
+.member-timetable-session + .member-timetable-session { margin-top: 10px; border-top-color: var(--theme-border); }
+.member-timetable-session strong, .member-timetable-session > span { display: flex; align-items: flex-start; gap: 5px; overflow-wrap: anywhere; }
+.member-timetable-session svg { flex-shrink: 0; margin-top: 2px; }
+.member-timetable-session strong { color: var(--theme-accent); font-size: 13px; line-height: 1.5; }
+.member-timetable-session > span { color: var(--theme-muted); }
+.member-timetable-session > .member-timetable-session-time { color: var(--theme-gold, #a46d00); font-weight: 700; }
+.member-timetable-session-time svg { color: var(--theme-muted); }
+.member-timetable-session > small { align-self: flex-start; color: var(--theme-muted); font-size: 10px; }
+.member-timetable-session.is-cancelled strong { color: var(--theme-muted); text-decoration: line-through; }
+.member-timetable-session.is-cancelled > small { color: var(--theme-red, #b42318); }
+.member-timetable-empty { display: block; padding: 44px 3px; color: var(--theme-muted); }
+.member-timetable-table .member-timetable-no-sessions { height: 145px; padding: 40px 24px; color: var(--theme-muted); text-align: center; vertical-align: middle; }
+.member-timetable-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .member-timetable-heading, .member-timetable-toolbar { padding: 16px; }
+  .member-timetable-heading { align-items: flex-start; }
+  .member-timetable-heading h3 { font-size: 16px; }
+  .member-timetable-scroll { margin: 0 16px 16px; }
+  .member-timetable-navigation { width: 100%; }
+  .member-timetable-navigation label { width: 100%; }
+}

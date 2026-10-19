@@ -41,10 +41,68 @@ export function registrationActions(item, now = Date.now()) {
 
 export function bookingUnavailableReason(session, registered = false, now = Date.now()) {
   if (cancelled(session.status)) return 'Buổi học đã hủy'
-  if (normalized(session.status) === 'completed' || Date.parse(session.startsAt) <= now) return 'Đã đóng đăng ký'
+  if (normalized(session.status) === 'completed' || !Number.isFinite(Date.parse(session.startsAt)) || Date.parse(session.startsAt) <= now) return 'Đã đóng đăng ký'
   if (registered || session.isRegistered) return 'Đã đăng ký'
-  const count = session.enrolledCount ?? session.registeredCount
-  if (session.availableSlots === 0 || (session.capacity != null && count != null && Number(count) >= Number(session.capacity))) return 'Đã hết chỗ'
+  const count = session.currentEnrollment ?? session.enrolledCount ?? session.registeredCount
+  if (Number(session.availableSlots ?? session.availableSeats ?? NaN) === 0 || (session.capacity != null && count != null && Number(count) >= Number(session.capacity))) return 'Đã hết chỗ'
   if (session.canRegister === false) return 'Chưa thể đăng ký'
   return ''
+}
+
+export function registeredSessionIds(registrations) {
+  return new Set(registrations.filter(item => !cancelled(item.status)).map(item => String(item.sessionId)).filter(id => id !== 'undefined' && id !== 'null'))
+}
+
+export function hasActiveMembership(subscriptions, now = Date.now()) {
+  return subscriptions.some(item => normalized(item.status) === 'active'
+    && (!item.startDate || Date.parse(item.startDate) <= now)
+    && (!item.endDate || Date.parse(item.endDate) >= now))
+}
+
+/**
+ * Trích xuất phòng tập từ thông tin lớp học (schedule, roomId, roomName)
+ */
+export function getRoomForClass(cls, roomsList = []) {
+  if (!cls) return null
+  if (cls.roomId) {
+    const found = roomsList.find((r) => r.id === Number(cls.roomId))
+    if (found) return found
+  }
+  if (cls.roomName) {
+    const found = roomsList.find((r) => r.name?.toLowerCase() === cls.roomName?.toLowerCase())
+    if (found) return found
+  }
+  if (cls.schedule) {
+    // Kiểm tra định dạng [Phòng: ...] hoặc [...]
+    const match = cls.schedule.match(/\[Phòng:\s*([^\]]+)\]/i) || cls.schedule.match(/\[([^\]]+)\]/)
+    if (match) {
+      const candidate = match[1].trim()
+      const found = roomsList.find(
+        (r) =>
+          r.name?.toLowerCase() === candidate.toLowerCase() ||
+          candidate.toLowerCase().includes(r.name?.toLowerCase())
+      )
+      if (found) return found
+      return { id: null, name: candidate }
+    }
+    // Kiểm tra dạng phân cách bằng ký tự |
+    if (cls.schedule.includes('|')) {
+      const parts = cls.schedule.split('|').map((p) => p.trim())
+      for (const part of parts) {
+        const found = roomsList.find(
+          (r) =>
+            r.name?.toLowerCase() === part.toLowerCase() ||
+            part.toLowerCase().includes(r.name?.toLowerCase())
+        )
+        if (found) return found
+      }
+    }
+    // Kiểm tra trực tiếp tên phòng trong chuỗi schedule
+    for (const r of roomsList) {
+      if (r.name && cls.schedule.toLowerCase().includes(r.name.toLowerCase())) {
+        return r
+      }
+    }
+  }
+  return null
 }

@@ -37,6 +37,7 @@ import {
   updateRoom,
 } from '../../services/roomService'
 import '../../style/CenterManager/RoomManagement.css'
+import RoomTimetableDialog from './RoomTimetableDialog'
 
 const ROOM_TYPE_OPTIONS = [
   { value: 'Yoga', label: 'Phòng Yoga / Pilates', icon: Zap, iconClass: 'yoga' },
@@ -117,6 +118,7 @@ export default function RoomManagement() {
   const [editingRoom, setEditingRoom] = useState(null)
   const [deletingRoom, setDeletingRoom] = useState(null)
   const [checkingRoom, setCheckingRoom] = useState(null)
+  const [timetableRoom, setTimetableRoom] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
   // Room Form State
@@ -598,8 +600,8 @@ export default function RoomManagement() {
                     {getRoomTypeIcon(room.roomType)}
                   </div>
                   <div className="room-card-title">
-                    <h3>{room.name}</h3>
-                    <small>Mã phòng: #{room.id}</small>
+                    <h3><button type="button" className="room-name-button room-card-schedule-trigger" title={`Xem thời khóa biểu ${room.name}`} onClick={() => setTimetableRoom(room)}>{room.name}</button></h3>
+                    <small>Mã phòng: #{room.id} · Xem lịch tuần</small>
                   </div>
                   <span className={`room-badge ${isActive ? 'active' : 'inactive'}`}>
                     <i />
@@ -633,13 +635,14 @@ export default function RoomManagement() {
                     type="button"
                     className="room-btn room-btn-secondary"
                     style={{ padding: '6px 12px', fontSize: 11 }}
-                    title="Kiểm tra lịch trống phòng"
-                    onClick={() => handleOpenCheck(room)}
+                    title={`Xem thời khóa biểu ${room.name}`}
+                    onClick={() => setTimetableRoom(room)}
                   >
-                    <Clock size={13} /> Kiểm tra trống
+                    <Calendar size={13} /> Xem lịch tuần
                   </button>
 
                   <div className="room-actions">
+                    <button type="button" className="room-action-btn" title="Kiểm tra lịch trống phòng" onClick={() => handleOpenCheck(room)}><Clock size={15} /></button>
                     <button
                       type="button"
                       className="room-action-btn"
@@ -695,9 +698,7 @@ export default function RoomManagement() {
                   <tr key={room.id}>
                     <td><strong>#{room.id}</strong></td>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--manager-ink)' }}>
-                        {room.name}
-                      </div>
+                      <button type="button" className="room-name-button" title={`Xem thời khóa biểu ${room.name}`} onClick={() => setTimetableRoom(room)}>{room.name}</button>
                     </td>
                     <td>
                       <span className="room-type-tag">{room.roomType || 'Đa năng'}</span>
@@ -714,6 +715,7 @@ export default function RoomManagement() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button type="button" className="room-action-btn" title={`Xem thời khóa biểu ${room.name}`} onClick={() => setTimetableRoom(room)}><Calendar size={14} /></button>
                         <button
                           type="button"
                           className="room-action-btn"
@@ -758,6 +760,8 @@ export default function RoomManagement() {
           </table>
         </div>
       )}
+
+      {timetableRoom && <RoomTimetableDialog room={timetableRoom} rooms={rooms} onClose={() => setTimetableRoom(null)} />}
 
       {/* ======================================================== */}
       {/* MODAL: CREATE ROOM */}

@@ -1,0 +1,484 @@
+import assert from 'node:assert/strict'
+import { after, before, test } from 'node:test'
+import { fileURLToPath } from 'node:url'
+import { createServer } from 'vite'
+
+let server
+let api
+let createRecurringRoomSessions
+let getRoomTimetable
+let assignClassToRoom
+let rescheduleRoomSession
+let classService
+const storageDescriptors = new Map()
+before(async () => {
+  for (const key of ['localStorage', 'sessionStorage']) {
+    storageDescriptors.set(key, Object.getOwnPropertyDescriptor(globalThis, key))
+    Object.defineProperty(globalThis, key, { configurable: true, value: { getItem: () => null } })
+  }
+  server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), configFile: false, server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' })
+  api = (await server.ssrLoadModule('/src/services/api.js')).default
+  const service = await server.ssrLoadModule('/src/services/roomTimetableService.js')
+  createRecurringRoomSessions = service.createRecurringRoomSessions
+  getRoomTimetable = service.getRoomTimetable
+  assignClassToRoom = service.assignClassToRoom
+  rescheduleRoomSession = service.rescheduleRoomSession
+  classService = await server.ssrLoadModule('/src/services/sportClassService.js')
+})
+after(async () => {
+  await server?.close()
+  for (const [key, descriptor] of storageDescriptors) {
+    if (descriptor) Object.defineProperty(globalThis, key, descriptor)
+    else delete globalThis[key]
+  }
+})
+
+const room = { id: 1, name: 'Studio Yoga 01', capacity: 25, isActive: true }
+const sportClass = { id: 10, roomId: 1, coachId: 5, className: 'Yoga', sportId: 1, price: 0, maxCapacity: 20, startDate: '2099-10-19', endDate: '2099-11-19', isActive: true }
+const sessions = ['2099-10-26', '2099-10-28', '2099-10-30'].map(date => ({ date, startsAt: `${date}T11:00:00.000Z`, endsAt: `${date}T12:30:00.000Z` }))
+const options = { room, rooms: [room], sportClass, coachId: 5, cancellationPolicyId: 1, capacity: 20, sessions }
+
+function mockApi({ conflictAt, unavailableResponse, availabilityError, failAt, loseResponseAt, saved = [], course = sportClass, failAssignment, ignoreAssignment, serverRoom = room, otherClasses = [], otherSaved = {}, roomReadError = false } = {}) {
+  const state = { course: { ...course }, serverRoom: { ...serverRoom }, saved: [...saved], posts: [], puts: [], reads: [], availability: [] }
+  api.defaults.adapter = async config => {
+    let data
+    if (config.url === '/Rooms') {
+      if (roomReadError) throw new Error('Room API unavailable')
+      data = [state.serverRoom, { id: 2, name: 'Gym', capacity: 25, isActive: true }]
+    } else if (config.url === '/classes/manage') data = { items: [{ ...state.course }, ...otherClasses], total: 1 + otherClasses.length }
+    else if (config.url === '/classes/10' && config.method === 'put') {
+      state.puts.push(JSON.parse(config.data))
+      if (failAssignment) throw new Error('Class update failed')
+      if (!ignoreAssignment) state.course = { ...state.course, ...JSON.parse(config.data) }
+      data = { ...state.course }
+    } else if (config.url === '/classes/10') data = { ...state.course }
+    else if (config.url.endsWith('/check-availability')) {
+      state.availability.push(config.params.startsAt)
+      if (availabilityError) throw new Error('Availability API unavailable')
+      data = unavailableResponse ? {} : { isAvailable: config.params.startsAt !== conflictAt }
+    } else if (config.method === 'post') {
+      const payload = JSON.parse(config.data)
+      state.posts.push(payload)
+      if (state.posts.length === failAt) throw new Error('Create request failed')
+      // Match the real API: SessionRequest silently ignores roomId.
+      const { roomId: ignoredRoomId, ...stored } = payload
+      data = { id: state.saved.length + 100, ...stored, status: 'Scheduled' }
+      state.saved.push(data)
+      if (state.posts.length === loseResponseAt) throw new Error('Response lost after saving')
+    } else {
+      const page = Number(config.params.page)
+      state.reads.push(page)
+      // Force multiple pages when reconciling already-created sessions.
+      const classId = Number(config.url.match(/classes\/(\d+)/)?.[1])
+      const source = classId === 10 ? state.saved : otherSaved[classId] || []
+      data = { items: source.slice(page - 1, page), total: source.length, page, pageSize: 1 }
+    }
+    return { data, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  return state
+}
+
+test('a conflict anywhere blocks every create request for the series', async () => {
+  const state = mockApi({ conflictAt: sessions[1].startsAt })
+  const result = await createRecurringRoomSessions(options)
+  assert.equal(state.posts.length, 0)
+  assert.equal(state.availability.length, 3)
+  assert.equal(result.conflicts.length, 1)
+  assert.equal(result.conflicts[0].date, sessions[1].date)
+  assert.equal(result.phase, 'checking')
+})
+
+test('unavailable or malformed availability responses never permit writes', async () => {
+  for (const failure of [{ availabilityError: true }, { unavailableResponse: true }]) {
+    const state = mockApi(failure)
+    const result = await createRecurringRoomSessions(options)
+    assert.equal(state.posts.length, 0)
+    assert.equal(result.conflicts.length, 3)
+  }
+})
+
+test('creation stops at the first failure and retry processes only the remaining dates', async () => {
+  const first = mockApi({ failAt: 2 })
+  const result = await createRecurringRoomSessions(options)
+  assert.equal(result.created.length, 1)
+  assert.equal(first.posts.length, 2)
+  assert.deepEqual(result.remaining.map(item => item.date), sessions.slice(1).map(item => item.date))
+  const retry = mockApi({ saved: first.saved })
+  const completed = await createRecurringRoomSessions({ ...options, sessions: result.remaining })
+  assert.equal(completed.remaining.length, 0)
+  assert.equal(retry.posts.length, 2)
+  assert.equal(retry.saved.length, 3)
+  assert.ok(retry.posts.every(item => item.roomId === 1 && item.coachId === 5 && item.capacity === 20 && item.cancellationPolicyId === 1))
+})
+
+test('a saved session with a lost response is reconciled before retry', async () => {
+  const first = mockApi({ loseResponseAt: 2 })
+  const result = await createRecurringRoomSessions(options)
+  assert.equal(result.created.length, 1)
+  assert.equal(first.saved.length, 2)
+  const retry = mockApi({ saved: first.saved })
+  const completed = await createRecurringRoomSessions({ ...options, sessions: result.remaining })
+  assert.equal(completed.existing.length, 1)
+  assert.equal(retry.posts.length, 1)
+  assert.equal(retry.saved.length, 3)
+  assert.equal(new Set(retry.saved.map(item => item.startsAt)).size, 3)
+})
+
+test('existing sessions are read across all pages and are not created twice', async () => {
+  const saved = sessions.map((item, index) => ({ id: index + 100, ...item, coachId: 5, roomId: 1, status: 'Scheduled' }))
+  const state = mockApi({ saved })
+  const result = await createRecurringRoomSessions(options)
+  assert.ok(state.reads.includes(3), 'Reconciliation includes the final session page')
+  assert.equal(result.existing.length, 3)
+  assert.equal(result.remaining.length, 0)
+  assert.equal(state.posts.length, 0)
+  assert.equal(state.availability.length, 0)
+})
+
+test('cancelled sessions do not block creating a replacement', async () => {
+  const state = mockApi({ saved: [{ id: 100, ...sessions[0], roomId: 1, coachId: 5, status: 'Cancelled' }] })
+  const result = await createRecurringRoomSessions({ ...options, sessions: sessions.slice(0, 1) })
+  assert.equal(result.existing.length, 0)
+  assert.equal(result.created.length, 1)
+  assert.equal(state.posts.length, 1)
+})
+
+test('new schedules persist room metadata when the session API ignores roomId', async () => {
+  const course = { ...sportClass, roomId: undefined, schedule: 'Lịch cũ' }
+  const state = mockApi({ course })
+  const result = await createRecurringRoomSessions({ ...options, sportClass: course })
+  assert.equal(result.created.length, 3)
+  assert.equal(state.puts.length, 1)
+  assert.equal(state.course.schedule, '[Phòng: Studio Yoga 01] Lịch cũ')
+  for (const key of ['className', 'sportId', 'coachId', 'maxCapacity', 'price', 'isActive']) assert.equal(state.puts[0][key], course[key])
+  assert.ok(state.saved.every(item => item.roomId == null))
+  const reloaded = await getRoomTimetable(room, [room])
+  assert.equal(reloaded.items.length, 3)
+  assert.equal(reloaded.unassignedClasses.length, 0)
+  assert.ok(reloaded.items.every(item => item.roomId === room.id))
+  assert.equal((await getRoomTimetable({ id: 2, name: 'Gym' }, [room])).items.length, 0)
+})
+
+test('old sessions without room metadata are reported for explicit assignment, without guessing by sport', async () => {
+  const course = { ...sportClass, roomId: undefined, schedule: null, sportName: 'Yoga' }
+  const saved = sessions.map((item, index) => ({ id: index + 100, ...item, capacity: 20 }))
+  const state = mockApi({ course, saved })
+  const before = await getRoomTimetable(room, [room])
+  assert.equal(before.items.length, 0)
+  assert.equal(before.unassignedClasses[0].unassignedCount, 3)
+  await assignClassToRoom({ classId: course.id, room, rooms: [room] })
+  const after = await getRoomTimetable(room, [room])
+  assert.equal(after.items.length, 3)
+  assert.equal(after.unassignedClasses.length, 0)
+  assert.equal(state.posts.length, 0, 'Repair does not recreate existing sessions')
+})
+
+test('retry reconciles roomless API responses using the room metadata saved during the first attempt', async () => {
+  const course = { ...sportClass, roomId: undefined, schedule: null }
+  const state = mockApi({ course, loseResponseAt: 2 })
+  const first = await createRecurringRoomSessions({ ...options, sportClass: course })
+  const completed = await createRecurringRoomSessions({ ...options, sportClass: course, sessions: first.remaining })
+  assert.equal(completed.existing.length, 1)
+  assert.equal(state.saved.length, 3)
+  assert.equal(state.puts.length, 1)
+})
+
+test('room linking failures stop creation instead of saving sessions that disappear from the room', async () => {
+  const course = { ...sportClass, roomId: undefined, schedule: null }
+  for (const failure of [{ failAssignment: true }, { ignoreAssignment: true }]) {
+    const state = mockApi({ course, ...failure })
+    await assert.rejects(createRecurringRoomSessions({ ...options, sportClass: course }))
+    assert.equal(state.posts.length, 0)
+  }
+})
+
+test('creating in another room cannot silently move all existing class sessions', async () => {
+  const state = mockApi()
+  await assert.rejects(createRecurringRoomSessions({ ...options, room: { id: 2, name: 'Gym' } }), /đã được gán/)
+  assert.equal(state.posts.length, 0)
+  assert.equal(state.puts.length, 0)
+})
+
+test('repair refuses room assignment when existing sessions exceed the room capacity', async () => {
+  const state = mockApi({ course: { ...sportClass, roomId: undefined }, saved: [{ id: 100, ...sessions[0], capacity: 20 }], serverRoom: { ...room, capacity: 10 } })
+  await assert.rejects(assignClassToRoom({ classId: 10, room: { ...room, capacity: 10 }, rooms: [room] }), /Sức chứa/)
+  assert.equal(state.puts.length, 0)
+})
+
+test('repair refuses to place unassigned sessions over another class in the target room', async () => {
+  let writes = 0
+  const course = { ...sportClass, roomId: undefined }
+  api.defaults.adapter = async config => {
+    let data
+    if (config.method === 'put') { writes += 1; throw new Error('Unexpected room assignment') }
+    if (config.url === '/classes/10') data = course
+    else if (config.url === '/Rooms') data = [room]
+    else if (config.url === '/classes/manage') data = { items: [course, { ...sportClass, id: 20 }], total: 2 }
+    else data = { items: [{ id: config.url.includes('/20/') ? 200 : 100, ...sessions[0], capacity: 20, status: 'Scheduled' }], total: 1 }
+    return { data, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  await assert.rejects(assignClassToRoom({ classId: 10, room, rooms: [room] }), /trùng/)
+  assert.equal(writes, 0)
+})
+
+const movable = { id: 100, classId: 10, startsAt: '2099-10-26T11:00:00Z', endsAt: '2099-10-26T12:30:00Z', coachId: 5, cancellationPolicyId: 7, capacity: 18, status: 'Scheduled', currentEnrollment: 0 }
+const changedTime = { date: '2099-10-26', startTime: '18:30', endTime: '20:00' }
+function mockRescheduleApi({ current = movable, otherClasses = [], otherSessions = {}, failUpdate = false } = {}) {
+  const state = { puts: [], classes: [sportClass, ...otherClasses], sessions: { 10: current ? [{ ...current }] : [], ...otherSessions } }
+  api.defaults.adapter = async config => {
+    let data
+    if (config.url === '/Rooms') data = [room, { id: 2, name: 'Gym', capacity: 25, isActive: true }]
+    else if (config.url === '/classes/10') data = state.classes[0]
+    else if (config.url === '/classes/manage') data = { items: state.classes, total: state.classes.length }
+    else {
+      const match = config.url.match(/^\/classes\/(\d+)\/sessions(?:\/(\d+))?$/)
+      assert.ok(match, `Unexpected request: ${config.url}`)
+      if (config.method === 'put') {
+        state.puts.push({ url: config.url, payload: JSON.parse(config.data) })
+        if (failUpdate) throw new Error('Backend refused update')
+        const item = state.sessions[match[1]].find(item => String(item.id) === match[2])
+        const { roomId: ignoredRoomId, ...stored } = JSON.parse(config.data)
+        Object.assign(item, stored)
+        data = item
+      } else data = { items: state.sessions[match[1]] || [], total: (state.sessions[match[1]] || []).length }
+    }
+    return { data, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  return state
+}
+const moveOptions = { room, rooms: [room, { id: 2, name: 'Gym' }], session: movable, draft: changedTime }
+
+test('drag rescheduling updates only the selected session and permits overlap with its own old interval', async () => {
+  const state = mockRescheduleApi()
+  const result = await rescheduleRoomSession(moveOptions)
+  assert.equal(state.puts.length, 1)
+  assert.equal(state.puts[0].url, '/classes/10/sessions/100')
+  assert.equal(result.startsAt, '2099-10-26T11:30:00.000Z')
+  assert.equal(result.endsAt, '2099-10-26T13:00:00.000Z')
+  for (const key of ['coachId', 'cancellationPolicyId', 'capacity']) assert.equal(state.puts[0].payload[key], movable[key])
+  assert.equal(state.classes[0].endDate, sportClass.endDate)
+})
+
+test('a conflicting room session prevents PUT, while cancelled sessions and adjacent times do not', async () => {
+  const otherClass = { ...sportClass, id: 20, className: 'Other class', coachId: 8 }
+  const other = { ...movable, id: 200, classId: 20, coachId: 8, startsAt: '2099-10-26T12:00:00Z', endsAt: '2099-10-26T14:00:00Z' }
+  const blocked = mockRescheduleApi({ otherClasses: [otherClass], otherSessions: { 20: [other] } })
+  await assert.rejects(rescheduleRoomSession(moveOptions), /Phòng đã có/)
+  assert.equal(blocked.puts.length, 0)
+  for (const overrides of [{ status: 'Cancelled' }, { startsAt: '2099-10-26T13:00:00Z' }]) {
+    const allowed = mockRescheduleApi({ otherClasses: [otherClass], otherSessions: { 20: [{ ...other, ...overrides }] } })
+    await rescheduleRoomSession(moveOptions)
+    assert.equal(allowed.puts.length, 1)
+  }
+})
+
+test('coach conflicts in another room are checked even when the coach overrides the class default', async () => {
+  const state = mockRescheduleApi({ otherClasses: [{ ...sportClass, id: 20, roomId: 2, coachId: 8 }], otherSessions: { 20: [{ ...movable, id: 200, classId: 20 }] } })
+  await assert.rejects(rescheduleRoomSession(moveOptions), /Huấn luyện viên/)
+  assert.equal(state.puts.length, 0)
+})
+
+test('stale, cancelled and missing sessions, unchanged times and out-of-course dates cannot be saved', async () => {
+  for (const current of [null, { ...movable, startsAt: '2099-10-26T10:00:00Z' }, { ...movable, status: 'Cancelled' }, { ...movable, roomId: 2 }]) {
+    const state = mockRescheduleApi({ current })
+    await assert.rejects(rescheduleRoomSession(moveOptions))
+    assert.equal(state.puts.length, 0)
+  }
+  for (const draft of [{ ...changedTime, startTime: '18:00', endTime: '19:30' }, { ...changedTime, date: '2099-12-01' }]) {
+    const state = mockRescheduleApi()
+    await assert.rejects(rescheduleRoomSession({ ...moveOptions, draft }))
+    assert.equal(state.puts.length, 0)
+  }
+})
+
+test('backend update failure is propagated and never changes the displayed session optimistically', async () => {
+  const state = mockRescheduleApi({ failUpdate: true })
+  await assert.rejects(rescheduleRoomSession(moveOptions), /Backend refused/)
+  assert.equal(state.sessions[10][0].startsAt, movable.startsAt)
+})
+
+test('batch creation catches room overlap from another class even if the availability API always returns true', async () => {
+  const state = mockApi({ otherClasses: [{ ...sportClass, id: 20, coachId: 9 }], otherSaved: { 20: [
+    { id: 200, ...sessions[1], coachId: 9, capacity: 20 },
+    { id: 201, ...sessions[0], startsAt: '2099-10-26T12:00:00Z', coachId: 9, capacity: 20 },
+  ] } })
+  const result = await createRecurringRoomSessions(options)
+  assert.equal(result.phase, 'checking')
+  assert.equal(result.conflicts.length, 2)
+  assert.equal(state.posts.length, 0)
+  assert.equal(state.puts.length, 0)
+})
+
+test('raw single-session creation cannot bypass room and class capacity limits or missing room data', async () => {
+  for (const config of [{ serverRoom: { ...room, capacity: 10 } }, { course: { ...sportClass, maxCapacity: 10 } }, { serverRoom: { ...room, capacity: undefined } }, { serverRoom: { ...room, isActive: false } }, { roomReadError: true }]) {
+    const state = mockApi(config)
+    await assert.rejects(classService.createClassSession(10, { ...sessions[0], coachId: 5, cancellationPolicyId: 1, capacity: 20, roomId: 1 }))
+    assert.equal(state.posts.length, 0)
+  }
+})
+
+test('batch capacity uses the latest server room and class rather than stale form objects', async () => {
+  for (const config of [{ serverRoom: { ...room, capacity: 10 } }, { course: { ...sportClass, maxCapacity: 10 } }]) {
+    const state = mockApi(config)
+    await assert.rejects(createRecurringRoomSessions(options), /1 đến 10/)
+    assert.equal(state.posts.length, 0)
+    assert.equal(state.puts.length, 0)
+  }
+})
+
+test('single creation blocks overlaps and coach conflicts using all class session pages', async () => {
+  for (const otherClass of [{ ...sportClass, id: 20, coachId: 9 }, { ...sportClass, id: 20, roomId: 2, coachId: 5 }]) {
+    const state = mockApi({ otherClasses: [otherClass], otherSaved: { 20: [{ id: 200, ...sessions[0], coachId: otherClass.coachId, capacity: 20 }] } })
+    await assert.rejects(classService.createClassSession(10, { ...sessions[0], coachId: 5, cancellationPolicyId: 1, capacity: 20, roomId: 1 }))
+    assert.equal(state.posts.length, 0)
+  }
+})
+
+test('a changed coach cannot bypass an existing session at the same room and time', async () => {
+  const state = mockApi({ saved: [{ id: 100, ...sessions[0], coachId: 6, capacity: 20, status: 'Scheduled' }] })
+  const result = await createRecurringRoomSessions({ ...options, sessions: [sessions[0]] })
+  assert.equal(result.conflicts.length, 1)
+  assert.equal(state.posts.length, 0)
+})
+
+test('overlapping planned intervals block the entire batch and repeated identical input is deduplicated', async () => {
+  const blocked = mockApi()
+  const result = await createRecurringRoomSessions({ ...options, sessions: [sessions[0], { ...sessions[0], startsAt: '2099-10-26T11:30:00Z' }] })
+  assert.equal(result.conflicts.length, 1)
+  assert.equal(blocked.posts.length, 0)
+  const repeated = mockApi()
+  const valid = await createRecurringRoomSessions({ ...options, sessions: [sessions[0], { ...sessions[0] }] })
+  assert.equal(valid.created.length, 1)
+  assert.equal(repeated.posts.length, 1)
+})
+
+test('each batch write rechecks capacity and stops when the room shrinks during creation', async () => {
+  const state = mockApi()
+  const result = await createRecurringRoomSessions(options, progress => {
+    if (progress.phase === 'creating' && progress.completed === 1) state.serverRoom.capacity = 10
+  })
+  assert.equal(result.created.length, 1)
+  assert.equal(result.remaining.length, 2)
+  assert.equal(state.posts.length, 1)
+  assert.match(result.conflicts[0].message, /1 đến 10/)
+})
+
+test('concurrent submits in one client are serialized and cannot create duplicate active sessions', async () => {
+  const state = mockApi()
+  const payload = { ...sessions[0], coachId: 5, cancellationPolicyId: 1, capacity: 20, roomId: 1 }
+  const result = await Promise.allSettled([classService.createClassSession(10, payload), classService.createClassSession(10, payload)])
+  assert.equal(result.filter(item => item.status === 'fulfilled').length, 1)
+  assert.equal(result.filter(item => item.status === 'rejected').length, 1)
+  assert.equal(state.posts.length, 1)
+})
+
+test('updates cannot reduce capacity below enrolled members or exceed the room limit', async () => {
+  for (const capacity of [26, 21, 2]) {
+    const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: 3 } })
+    await assert.rejects(classService.updateClassSession(10, 100, { ...movable, capacity, roomId: 1 }))
+    assert.equal(state.puts.length, 0)
+  }
+})
+
+test('assigning a room cannot introduce overlapping orphan sessions from the same class', async () => {
+  const state = mockApi({ course: { ...sportClass, roomId: undefined, schedule: null }, saved: [
+    { id: 100, ...sessions[0], capacity: 20, status: 'Scheduled' },
+    { id: 101, ...sessions[0], startsAt: '2099-10-26T11:30:00Z', capacity: 20, status: 'Scheduled' },
+  ] })
+  await assert.rejects(assignClassToRoom({ classId: 10, room, rooms: [room] }), /trùng giờ/)
+  assert.equal(state.puts.length, 0)
+})
+
+test('a new registration after opening the drag confirmation blocks the update using fresh data', async () => {
+  const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: 1 } })
+  await assert.rejects(rescheduleRoomSession(moveOptions), /đã có học viên đăng ký/)
+  assert.equal(state.puts.length, 0)
+  assert.equal(state.sessions[10][0].startsAt, movable.startsAt)
+})
+
+test('raw PUT cannot bypass registration locks, but unchanged times permit coach and capacity edits', async () => {
+  const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: 3 } })
+  await assert.rejects(classService.updateClassSession(10, 100, { ...movable, startsAt: '2099-10-26T11:30:00Z' }), /đã có học viên đăng ký/)
+  await assert.rejects(classService.updateClassSession(10, 100, { ...movable, endsAt: '2099-10-26T13:00:00Z' }), /đã có học viên đăng ký/)
+  assert.equal(state.puts.length, 0)
+  await classService.updateClassSession(10, 100, { ...movable, capacity: 19, coachId: 9 })
+  assert.equal(state.puts.length, 1)
+  assert.equal(state.sessions[10][0].startsAt, movable.startsAt)
+})
+
+test('unknown latest enrolment blocks time changes instead of assuming an empty session', async () => {
+  const state = mockRescheduleApi({ current: { ...movable, currentEnrollment: undefined } })
+  await assert.rejects(classService.updateClassSession(10, 100, { ...movable, startsAt: '2099-10-26T11:30:00Z' }), /Chưa xác nhận/)
+  assert.equal(state.puts.length, 0)
+})
+
+test('class creation sends the course dates and fee required by the backend', async () => {
+  let payload
+  api.defaults.adapter = async config => {
+    payload = JSON.parse(config.data)
+    return { data: { id: 10, ...payload }, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  await classService.createSportClass({ className: ' Yoga ', sportId: 1, coachId: 5, maxCapacity: 20, isActive: true, price: '500000.25', startDate: '2099-10-19', endDate: '2099-11-19' })
+  assert.equal(payload.className, 'Yoga')
+  assert.equal(payload.price, 500000.25)
+  assert.equal(payload.startDate, '2099-10-19T00:00:00+07:00')
+  assert.equal(payload.endDate, '2099-11-19T23:59:59.999+07:00')
+})
+
+test('class updates preserve provided fees, dates and legacy scheduling data', async () => {
+  let payload
+  api.defaults.adapter = async config => {
+    payload = JSON.parse(config.data)
+    return { data: { id: 10, ...payload }, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const original = { className: 'Yoga', sportId: 1, coachId: 5, maxCapacity: 20, isActive: true, price: 0, startDate: '2099-10-19T00:00:00Z', endDate: '2099-11-19T00:00:00Z', schedule: '[Phòng: Studio Yoga 01] Thứ 2, 4, 6' }
+  await classService.updateSportClass(10, { ...original, className: 'Updated Yoga' })
+  for (const key of ['price', 'startDate', 'endDate', 'schedule']) assert.equal(payload[key], original[key])
+})
+
+test('missing or invalid class dates and fees are rejected before POST or PUT', async () => {
+  let requests = 0
+  api.defaults.adapter = async () => { requests += 1; throw new Error('Unexpected API call') }
+  const valid = { className: 'Yoga', sportId: 1, coachId: 5, maxCapacity: 20, price: 0, startDate: '2099-10-19', endDate: '2099-11-19' }
+  for (const overrides of [{ startDate: '' }, { endDate: '' }, { startDate: '2099-12-01' }, { endDate: '2001-01-01' }, { price: '' }, { price: '100.123' }]) {
+    await assert.rejects(classService.createSportClass({ ...valid, ...overrides }))
+    await assert.rejects(classService.updateSportClass(10, { ...valid, ...overrides }))
+  }
+  assert.equal(requests, 0)
+})
+
+test('class table dates use all session pages and ignore stored course dates', async () => {
+  const pages = []
+  const saved = [
+    { id: 1, startsAt: '2026-11-20T11:00:00Z', endsAt: '2026-11-20T12:30:00Z' },
+    { id: 2, startsAt: '2026-10-26T11:00:00Z', endsAt: '2026-10-26T12:30:00Z' },
+    { id: 3, startsAt: '2026-12-01T11:00:00Z', endsAt: '2026-12-01T12:30:00Z', status: 'Cancelled' },
+  ]
+  api.defaults.adapter = async config => {
+    let data
+    if (config.url === '/classes/manage') data = { items: [{ id: 10, startDate: '2000-01-01', endDate: '2000-12-31' }], total: 1 }
+    else {
+      const page = Number(config.params.page)
+      pages.push(page)
+      data = { items: saved.slice(page - 1, page), totalCount: saved.length, page, pageSize: 1 }
+    }
+    return { data, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const result = await classService.getManagedClassesWithSessionDates()
+  assert.deepEqual(pages, [1, 2, 3])
+  assert.deepEqual(result.items[0].sessionDateRange, { startDate: '2026-10-26T11:00:00.000Z', endDate: '2026-11-20T12:30:00.000Z' })
+  assert.equal(result.items[0].startDate, '2000-01-01')
+})
+
+test('one failed session API is reported per class and does not hide other class rows', async () => {
+  api.defaults.adapter = async config => {
+    if (config.url === '/classes/10/sessions') throw new Error('Session API unavailable')
+    const data = config.url === '/classes/manage' ? { items: [{ id: 10 }, { id: 20 }], total: 2 } : { items: [], total: 0 }
+    return { data, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const result = await classService.getManagedClassesWithSessionDates()
+  assert.equal(result.items.length, 2)
+  assert.equal(result.items[0].sessionDatesError, 'Session API unavailable')
+  assert.deepEqual(result.items[1].sessionDateRange, { startDate: null, endDate: null })
+  assert.equal(result.items[1].sessionDatesError, '')
+})
