@@ -1,0 +1,33 @@
+.room-timetable-dialog { width: min(1500px, calc(100% - 40px)); max-width: none; max-height: calc(100dvh - 40px); box-sizing: border-box; padding: 0; border: 1px solid var(--theme-border); border-radius: 18px; background: var(--theme-surface); color: var(--theme-text); font: 13px/1.6 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
+.room-timetable-dialog::backdrop { background: #0f172a80; backdrop-filter: blur(3px); }
+.room-timetable-dialog button { cursor: pointer; font-family: inherit; }
+.room-timetable-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+.room-timetable-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 24px; border-bottom: 1px solid var(--theme-border); }
+.room-timetable-header > div:first-child { min-width: 0; }
+.room-timetable-header h2 { margin: 7px 0; font-size: 23px; overflow-wrap: anywhere; }
+.room-timetable-header > div > span { display: flex; align-items: center; gap: 7px; color: var(--theme-accent); font-size: 11px; font-weight: 700; letter-spacing: .6px; }
+.room-timetable-header p { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin: 0; color: var(--theme-muted); font-size: 12px; }
+.room-timetable-header svg { flex-shrink: 0; }
+.room-timetable-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.room-timetable-header-actions button, .room-timetable-state button, .room-timetable-detail button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); }
+.room-timetable-dialog button:disabled { opacity: .55; cursor: not-allowed; }
+.room-timetable-header-actions button:hover:not(:disabled), .room-timetable-state button:hover, .room-timetable-detail button:hover { background: var(--theme-raised); }
+.room-timetable-body { padding: 24px; }
+.room-timetable-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 300px; color: var(--theme-muted); text-align: center; }
+.room-timetable-state[role='alert'] { color: var(--theme-red, #b42318); }
+.room-timetable-note { margin: 14px 0 0; color: var(--theme-muted); font-size: 12px; }
+.room-timetable-detail { margin-top: 20px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-bg); }
+.room-timetable-detail header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.room-timetable-detail h3 { margin: 4px 0 0; font-size: 17px; }
+.room-timetable-detail small { color: var(--theme-accent); font-size: 11px; }
+.room-timetable-detail dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 18px 0 0; }
+.room-timetable-detail dt { color: var(--theme-muted); font-size: 12px; }
+.room-timetable-detail dd { margin: 4px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+@media (max-width: 650px) {
+  .room-timetable-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); }
+  .room-timetable-header { flex-wrap: wrap; padding: 16px; }
+  .room-timetable-header-actions { width: 100%; justify-content: flex-end; }
+  .room-timetable-body { padding: 12px; }
+  .room-timetable-detail { padding: 16px; }
+  .room-timetable-detail dl { grid-template-columns: 1fr 1fr; }
+}

@@ -295,6 +295,7 @@
 }
 
 .room-card {
+  position: relative;
   border: 1px solid var(--manager-line);
   border-radius: 12px;
   background: #fff;
@@ -368,6 +369,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.room-name-button { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.room-name-button:hover { color: var(--manager-blue); }
+.room-card-title .room-name-button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-card-schedule-trigger::after { content: ''; position: absolute; inset: 0; border-radius: 12px; cursor: pointer; }
+.room-card-schedule-trigger:focus-visible { outline: none; }
+.room-card-schedule-trigger:focus-visible::after { outline: 3px solid var(--manager-blue); outline-offset: 3px; }
+.room-card-footer { position: relative; z-index: 1; }
 
 .room-card-title small {
   display: block;

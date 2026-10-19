@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, CreditCard, LoaderCircle, MapPin, RefreshCw, Search, ShieldAlert, Star, User, Users, X } from 'lucide-react'
 import { getSports, getCoaches } from '../../services/classCatalogService'
-import { getAvailableSessions, getMyRegistrations, bookSession, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
+import { getAvailableSessions, getAllMyRegistrations, bookSession, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
 import { getMySubscriptions } from '../../services/memberSubscriptionService'
 import { getPublicClasses } from '../../services/sportClassService'
 import { getRooms } from '../../services/roomService'
 import { bookingUnavailableReason, cancellationDeadline, classStatusLabel, getRoomForClass, registrationActions } from '../../utils/memberClasses'
+import { timetableWeekStart } from '../../utils/memberTimetable'
+import WeeklyTimetable from '../../components/WeeklyTimetable'
 import '../../style/member/ClassesView.css'
 
 const PAGE_SIZE = 12
@@ -60,6 +62,31 @@ function SessionDetails({ item }) {
     <div><dt><MapPin size={15} /> Phòng tập</dt><dd>{item.roomName || 'Chưa cập nhật'}</dd></div>
     {deadline && <div><dt>Hạn hủy đăng ký</dt><dd>{formatDate(deadline)}</dd></div>}
   </dl>
+}
+
+function RegistrationDetailsDialog({ item, busy, now, onClose, onAction }) {
+  const dialogRef = useRef(null)
+  const allowed = registrationActions(item, now)
+  useEffect(() => {
+    const dialog = dialogRef.current
+    dialog.showModal()
+    return () => dialog.close()
+  }, [])
+  return <dialog ref={dialogRef} className="member-classes-dialog" aria-labelledby="member-registration-title" onCancel={event => { event.preventDefault(); onClose() }}>
+    <div className="member-registration-dialog-content">
+      <header><h2 id="member-registration-title">Chi tiết buổi học</h2><button type="button" aria-label="Đóng" onClick={onClose}><X size={20} /></button></header>
+      <h3>{item.className || `Buổi học #${item.sessionId}`}</h3>
+      <span className="member-classes-badge">{classStatusLabel(item.status)}</span>
+      <SessionDetails item={item} />
+      <p className="member-classes-muted">{allowed.checkedIn ? 'Đã điểm danh' : item.attendanceStatus ? classStatusLabel(item.attendanceStatus) : 'Chưa điểm danh'}{item.checkInTime && ` · ${formatDate(item.checkInTime)}`}</p>
+      {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {item.review?.rating ?? item.rating ?? 'Đã gửi'}{(item.review?.rating ?? item.rating) ? '/5 sao' : ' đánh giá'}</strong>{item.review?.comment && <p>{item.review.comment}</p>}</div>}
+      <div className="member-classes-card-actions">
+        {allowed.checkIn && <button type="button" className="primary" disabled={busy} onClick={() => onAction('checkIn', item)}><Check size={15} /> Điểm danh</button>}
+        {allowed.cancel && <button type="button" disabled={busy} onClick={() => onAction('cancel', item)}>Hủy đăng ký</button>}
+        {allowed.review && <button type="button" className="primary" disabled={busy} onClick={() => onAction('review', item)}><Star size={15} /> Đánh giá buổi học</button>}
+      </div>
+    </div>
+  </dialog>
 }
 
 function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscription, onNavigateTab }) {
@@ -136,6 +163,9 @@ export function ClassesView({ showNotice, onNavigateTab }) {
   const [filterError, setFilterError] = useState('')
   const [sessionPage, setSessionPage] = useState(1)
   const [minePage, setMinePage] = useState(1)
+  const [mineLayout, setMineLayout] = useState('timetable')
+  const [weekStart, setWeekStart] = useState(() => timetableWeekStart())
+  const [selectedRegistrationId, setSelectedRegistrationId] = useState(null)
   const [action, setAction] = useState(null)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
@@ -166,7 +196,7 @@ export function ClassesView({ showNotice, onNavigateTab }) {
     to: filters.to ? new Date(`${filters.to}T23:59:59.999`).toISOString() : undefined,
     onlyAvailable: filters.onlyAvailable, page: sessionPage, pageSize: PAGE_SIZE,
   })
-  const mine = useResource(getMyRegistrations, { page: minePage, pageSize: PAGE_SIZE })
+  const mine = useResource(getAllMyRegistrations)
   const subscriptions = useResource(getMySubscriptions)
 
   const roomsList = useMemo(() => (Array.isArray(rooms.data) ? rooms.data : []), [rooms.data])
@@ -248,6 +278,9 @@ export function ClassesView({ showNotice, onNavigateTab }) {
 
     return {
       ...rawItem,
+      className: rawItem.className || session?.className || cls?.className,
+      startsAt: rawItem.startsAt || session?.startsAt,
+      endsAt: rawItem.endsAt || session?.endsAt,
       coachName: coachName || rawItem.coachName,
       roomName: roomName || rawItem.roomName,
       sportName: rawItem.sportName || cls?.sportName || session?.sportName,
@@ -269,6 +302,8 @@ export function ClassesView({ showNotice, onNavigateTab }) {
   }, [subscriptions.data])
 
   const registrations = (mine.data?.items || []).map(item => enrichItem({ ...item, ...patches[item.id] }))
+  const listedRegistrations = registrations.slice((minePage - 1) * PAGE_SIZE, minePage * PAGE_SIZE)
+  const selectedRegistration = registrations.find(item => item.id === selectedRegistrationId)
   const registeredSessions = new Set(registrations.filter(item => !['cancelled', 'canceled'].includes(String(item.status).toLowerCase())).map(item => String(item.sessionId)))
   const current = tab === 'browse' ? sessions : mine
 
@@ -277,11 +312,12 @@ export function ClassesView({ showNotice, onNavigateTab }) {
     if (sessions.data) setSessionPage(page => Math.min(page, Math.max(1, Math.ceil(sessions.data.total / sessions.data.pageSize))))
   }, [sessions.data])
   useEffect(() => {
-    if (mine.data) setMinePage(page => Math.min(page, Math.max(1, Math.ceil(mine.data.total / mine.data.pageSize))))
+    if (mine.data) setMinePage(page => Math.min(page, Math.max(1, Math.ceil(mine.data.total / PAGE_SIZE))))
   }, [mine.data])
 
   const openAction = (type, rawItem) => {
     const item = enrichItem(rawItem)
+    setSelectedRegistrationId(null)
     setActionError('')
     setNotice('')
     if (type === 'book' && hasActiveSubscription === false) {
@@ -319,6 +355,7 @@ export function ClassesView({ showNotice, onNavigateTab }) {
       if (type === 'book') {
         setBooked(previous => ({ ...previous, [item.id]: true }))
         setMinePage(1)
+        setWeekStart(timetableWeekStart(item.startsAt))
         setTab('mine')
       } else {
         const patch = type === 'cancel' ? { status: 'Cancelled' } : type === 'checkIn' ? { checkInTime: new Date().toISOString() } : { hasReviewed: true, review: { rating: values.rating, comment: values.comment.trim() } }
@@ -404,8 +441,13 @@ export function ClassesView({ showNotice, onNavigateTab }) {
       {coaches.error && <p className="member-classes-error" role="alert">Không tải được HLV: {coaches.error} <button type="button" onClick={coaches.reload}>Thử lại</button></p>}
     </form>}
 
+    {tab === 'mine' && <div className="member-classes-layout-toggle" role="group" aria-label="Cách hiển thị lịch đã đặt">
+      <button type="button" aria-pressed={mineLayout === 'timetable'} onClick={() => setMineLayout('timetable')}><CalendarDays size={16} /> Thời khóa biểu</button>
+      <button type="button" aria-pressed={mineLayout === 'list'} onClick={() => setMineLayout('list')}>Danh sách</button>
+    </div>}
+
     <section aria-label={tab === 'browse' ? 'Các buổi học' : 'Các lượt đăng ký'} aria-busy={current.loading}>
-      {current.loading || current.error || !current.data?.items.length ? <ResourceState resource={current} emptyText={tab === 'browse' ? 'Không tìm thấy buổi học phù hợp. Hãy thử thay đổi bộ lọc.' : 'Bạn chưa đăng ký buổi học nào.'} /> : <div className="member-classes-grid">
+      {tab === 'mine' && mineLayout === 'timetable' && !mine.loading && !mine.error ? <WeeklyTimetable items={registrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} /> : current.loading || current.error || !current.data?.items.length ? <ResourceState resource={current} emptyText={tab === 'browse' ? 'Không tìm thấy buổi học phù hợp. Hãy thử thay đổi bộ lọc.' : 'Bạn chưa đăng ký buổi học nào.'} /> : <div className="member-classes-grid">
         {tab === 'browse' ? sessions.data.items.map(rawSession => {
           const session = enrichItem(rawSession)
           const unavailable = bookingUnavailableReason(session, booked[session.id] || registeredSessions.has(String(session.id)), now)
@@ -424,7 +466,7 @@ export function ClassesView({ showNotice, onNavigateTab }) {
               {unavailable || 'Đặt lịch buổi học'}
             </button>
           </article>
-        }) : registrations.map(registration => {
+        }) : listedRegistrations.map(registration => {
           const allowed = registrationActions(registration, now)
           return <article className="member-classes-card" key={registration.id}>
             <div className="member-classes-card-top"><span className="member-classes-badge">{classStatusLabel(registration.status)}</span><small>Đăng ký #{registration.id}</small></div>
@@ -440,8 +482,10 @@ export function ClassesView({ showNotice, onNavigateTab }) {
           </article>
         })}
       </div>}
-      <Pagination resource={current} page={tab === 'browse' ? sessionPage : minePage} onChange={tab === 'browse' ? setSessionPage : setMinePage} />
+      {(tab === 'browse' || mineLayout === 'list') && <Pagination resource={tab === 'browse' ? sessions : { ...mine, data: mine.data && { ...mine.data, pageSize: PAGE_SIZE } }} page={tab === 'browse' ? sessionPage : minePage} onChange={tab === 'browse' ? setSessionPage : setMinePage} />}
     </section>
+
+    {selectedRegistration && <RegistrationDetailsDialog item={selectedRegistration} busy={busy} now={now} onClose={() => setSelectedRegistrationId(null)} onAction={openAction} />}
 
     {action && (
       <ActionDialog

@@ -92,6 +92,22 @@ export async function getMyRegistrations({ page = 1, pageSize = 20 } = {}) {
   return readPage(response.data, page, pageSize, 'Không thể tải lịch học của bạn.')
 }
 
+// The weekly timetable must include registrations beyond the first API page.
+export async function getAllMyRegistrations() {
+  const items = []
+  let page = 1
+  let result
+  do {
+    result = await getMyRegistrations({ page, pageSize: 100 })
+    if (result.page !== page || (!result.items.length && items.length < result.total)) {
+      throw new Error('Chưa tải đủ lịch học của bạn. Vui lòng thử lại.')
+    }
+    items.push(...result.items)
+    page += 1
+  } while (items.length < result.total)
+  return { items, total: items.length, page: 1, pageSize: 100 }
+}
+
 /**
  * Hội viên hủy một lượt đăng ký buổi học
  * POST /api/class-registrations/{id}/cancel
@@ -142,6 +158,7 @@ export default {
   getAvailableSessions,
   bookSession,
   getMyRegistrations,
+  getAllMyRegistrations,
   cancelRegistration,
   checkInRegistration,
   reviewRegistration,
