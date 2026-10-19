@@ -48,3 +48,51 @@ export function bookingUnavailableReason(session, registered = false, now = Date
   if (session.canRegister === false) return 'Chưa thể đăng ký'
   return ''
 }
+
+/**
+ * Trích xuất phòng tập từ thông tin lớp học (schedule, roomId, roomName)
+ */
+export function getRoomForClass(cls, roomsList = []) {
+  if (!cls) return null
+  if (cls.roomId) {
+    const found = roomsList.find((r) => r.id === Number(cls.roomId))
+    if (found) return found
+  }
+  if (cls.roomName) {
+    const found = roomsList.find((r) => r.name?.toLowerCase() === cls.roomName?.toLowerCase())
+    if (found) return found
+  }
+  if (cls.schedule) {
+    // Kiểm tra định dạng [Phòng: ...] hoặc [...]
+    const match = cls.schedule.match(/\[Phòng:\s*([^\]]+)\]/i) || cls.schedule.match(/\[([^\]]+)\]/)
+    if (match) {
+      const candidate = match[1].trim()
+      const found = roomsList.find(
+        (r) =>
+          r.name?.toLowerCase() === candidate.toLowerCase() ||
+          candidate.toLowerCase().includes(r.name?.toLowerCase())
+      )
+      if (found) return found
+      return { id: null, name: candidate }
+    }
+    // Kiểm tra dạng phân cách bằng ký tự |
+    if (cls.schedule.includes('|')) {
+      const parts = cls.schedule.split('|').map((p) => p.trim())
+      for (const part of parts) {
+        const found = roomsList.find(
+          (r) =>
+            r.name?.toLowerCase() === part.toLowerCase() ||
+            part.toLowerCase().includes(r.name?.toLowerCase())
+        )
+        if (found) return found
+      }
+    }
+    // Kiểm tra trực tiếp tên phòng trong chuỗi schedule
+    for (const r of roomsList) {
+      if (r.name && cls.schedule.toLowerCase().includes(r.name.toLowerCase())) {
+        return r
+      }
+    }
+  }
+  return null
+}

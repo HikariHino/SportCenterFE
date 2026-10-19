@@ -36,6 +36,27 @@ export async function getManagedClasses(params = {}) {
 }
 
 /**
+ * GET /api/classes
+ * Tìm kiếm danh sách lớp học mở cho tất cả người dùng (Member, Khách vãng lai)
+ */
+export async function getPublicClasses(params = {}) {
+  const response = await api.get('/classes', { params })
+  const body = response.data
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải danh sách lớp học.')
+  }
+  const payload = body?.data ?? body
+  return {
+    items: Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : [],
+    total: Number(payload?.total || (Array.isArray(payload) ? payload.length : 0)),
+    page: Number(payload?.page || 1),
+    pageSize: Number(payload?.pageSize || 20),
+  }
+}
+
+export const getClasses = getPublicClasses
+
+/**
  * GET /api/classes/{id}
  * Xem chi tiết một lớp học
  */

@@ -24,10 +24,38 @@ export function getMemberClassErrorMessage(error, fallback = 'Có lỗi xảy ra
   if (validationErrors && typeof validationErrors === 'object') {
     const firstKey = Object.keys(validationErrors)[0]
     if (firstKey && Array.isArray(validationErrors[firstKey])) {
-      return validationErrors[firstKey][0]
+      const firstVal = validationErrors[firstKey][0]
+      const lowerVal = String(firstVal).toLowerCase()
+      if (
+        lowerVal.includes('gói') ||
+        lowerVal.includes('subscription') ||
+        lowerVal.includes('package') ||
+        lowerVal.includes('membership') ||
+        lowerVal.includes('thành viên')
+      ) {
+        return 'Không thể đặt lịch khi chưa đăng ký gói thành viên.'
+      }
+      return firstVal
     }
   }
-  return body?.message || body?.detail || (typeof body === 'string' && body) || error?.message || fallback
+  const raw = body?.message || body?.detail || (typeof body === 'string' && body) || error?.message || fallback
+  const lower = String(raw).toLowerCase()
+  if (
+    lower.includes('gói') ||
+    lower.includes('subscription') ||
+    lower.includes('package') ||
+    lower.includes('membership') ||
+    lower.includes('thành viên') ||
+    lower.includes('chưa đăng ký') ||
+    lower.includes('không có gói') ||
+    lower.includes('no active') ||
+    lower.includes('not active') ||
+    lower.includes('expired') ||
+    lower.includes('hết hạn')
+  ) {
+    return 'Không thể đặt lịch khi chưa đăng ký gói thành viên.'
+  }
+  return raw
 }
 
 /**
