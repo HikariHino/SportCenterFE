@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getUserDisplayName, getUserInitials } from '../../utils/auth'
-import { getNotifications, markNotificationRead } from '../../services/notificationService'
+import { getNotifications, markNotificationRead, getNotificationErrorMessage } from '../../services/notificationService'
 import {
   ProfileView,
   SubscriptionsView,
@@ -93,10 +93,23 @@ export default function Member() {
 
   // Quick notification bell dropdown state
   const [notificationOpen, setNotificationOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadCount, setUnreadCount] = useState(null)
   const [quickNotifications, setQuickNotifications] = useState([])
   const [notifLoading, setNotifLoading] = useState(false)
+  const [notifError, setNotifError] = useState('')
+  const [quickMarkingId, setQuickMarkingId] = useState(null)
+  const [notificationRevision, setNotificationRevision] = useState(0)
   const notificationRef = useRef(null)
+  const quickReadLock = useRef(false)
+  const mounted = useRef(true)
+  const refreshNotifications = useCallback(() => {
+    if (mounted.current) setNotificationRevision(value => value + 1)
+  }, [])
+
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
 
   const displayName = getUserDisplayName(user)
   const initials = getUserInitials(user)
@@ -112,20 +125,26 @@ export default function Member() {
     navigate('/login', { replace: true })
   }
 
-  // Load unread count
+  // Read the unread total independently from the recent-notification list.
   useEffect(() => {
     let active = true
-    getNotifications({ unreadOnly: true, page: 1, pageSize: 5 })
-      .then(res => {
+    setNotifError('')
+    setNotifLoading(notificationOpen)
+    Promise.allSettled([
+      getNotifications({ unreadOnly: true, page: 1, pageSize: 1 }),
+      notificationOpen ? getNotifications({ page: 1, pageSize: 5 }) : Promise.resolve(null),
+    ]).then(([unread, recent]) => {
         if (!active) return
-        setUnreadCount(res.total || 0)
-        setQuickNotifications(res.items || [])
-      })
-      .catch(() => {
-        if (active) setUnreadCount(0)
-      })
+        setUnreadCount(unread.status === 'fulfilled' ? unread.value.total : null)
+        if (notificationOpen) {
+          setQuickNotifications(recent.status === 'fulfilled' ? recent.value.items : [])
+          if (recent.status === 'rejected') setNotifError(getNotificationErrorMessage(recent.reason))
+          else if (unread.status === 'rejected') setNotifError('Chưa thể cập nhật số thông báo chưa đọc. Vui lòng thử lại.')
+        }
+        setNotifLoading(false)
+    })
     return () => { active = false }
-  }, [activeNav])
+  }, [activeNav, notificationOpen, notificationRevision])
 
   // Handle outside click to close notification popup
   useEffect(() => {
@@ -135,34 +154,37 @@ export default function Member() {
         setNotificationOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [notificationOpen])
-
-  const toggleNotifications = async () => {
-    const next = !notificationOpen
-    setNotificationOpen(next)
-    if (next) {
-      setNotifLoading(true)
-      try {
-        const res = await getNotifications({ page: 1, pageSize: 5 })
-        setQuickNotifications(res.items || [])
-        setUnreadCount(res.total || 0)
-      } catch {
-        // ignore
-      } finally {
-        setNotifLoading(false)
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setNotificationOpen(false)
+        notificationRef.current?.querySelector('button')?.focus()
       }
     }
-  }
+    document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [notificationOpen])
+
+  const toggleNotifications = () => setNotificationOpen(value => !value)
 
   const handleQuickMarkRead = async (id) => {
+    if (quickReadLock.current) return
+    quickReadLock.current = true
+    setQuickMarkingId(id)
+    setNotifError('')
     try {
       await markNotificationRead(id)
+      if (!mounted.current) return
       setQuickNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n))
-      setUnreadCount(c => Math.max(0, c - 1))
-    } catch {
-      // ignore
+      refreshNotifications()
+    } catch (error) {
+      if (mounted.current) setNotifError(getNotificationErrorMessage(error))
+    } finally {
+      quickReadLock.current = false
+      if (mounted.current) setQuickMarkingId(null)
     }
   }
 
@@ -189,7 +211,7 @@ export default function Member() {
       case 'support':
         return <SupportTicketsView showNotice={showNotice} />
       case 'notifications':
-        return <NotificationsView showNotice={showNotice} />
+        return <NotificationsView refreshKey={notificationRevision} onNotificationsChange={refreshNotifications} />
       default:
         return <ProfileView user={user} showNotice={showNotice} />
     }
@@ -269,11 +291,13 @@ export default function Member() {
             <ThemeToggle />
 
             {/* Quick Notification Dropdown */}
-            <div className="member-notification-wrap" ref={notificationRef} style={{ position: 'relative' }}>
+            <div className="member-notification-wrap" ref={notificationRef}>
               <button
                 type="button"
                 className="member-icon-button member-notification"
-                aria-label="Thông báo"
+                aria-label={unreadCount === null ? 'Thông báo' : `Thông báo: ${unreadCount} chưa đọc`}
+                aria-expanded={notificationOpen}
+                aria-controls="member-notifications-popup"
                 onClick={toggleNotifications}
               >
                 <Bell size={20} />
@@ -281,67 +305,46 @@ export default function Member() {
               </button>
 
               {notificationOpen && (
-                <div
-                  className="member-card"
-                  style={{
-                    position: 'absolute',
-                    top: 48,
-                    right: 0,
-                    width: 340,
-                    maxHeight: 440,
-                    overflowY: 'auto',
-                    zIndex: 40,
-                    padding: 16,
-                    boxShadow: '0 16px 40px rgba(0,0,0,0.15)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <strong style={{ fontSize: 13 }}>Thông báo ({unreadCount} chưa đọc)</strong>
+                <section id="member-notifications-popup" className="member-notifications-popup" aria-label="Thông báo gần đây" aria-busy={notifLoading}>
+                  <header>
+                    <strong>Thông báo{unreadCount !== null ? ` (${unreadCount} chưa đọc)` : ''}</strong>
                     <button
                       type="button"
-                      className="member-button member-button--text"
-                      style={{ fontSize: 10, padding: 0 }}
                       onClick={() => { setNotificationOpen(false); selectNav('notifications') }}
                     >
                       Xem tất cả
                     </button>
-                  </div>
+                  </header>
+
+                  {notifError && <div className="member-notifications-error" role="alert"><p>{notifError}</p><button type="button" disabled={notifLoading} onClick={refreshNotifications}>Thử lại</button></div>}
 
                   {notifLoading ? (
-                    <div style={{ textAlign: 'center', padding: 20, fontSize: 11, color: '#64748b' }}>Đang tải...</div>
+                    <div className="member-notifications-popup-state" role="status">Đang tải...</div>
                   ) : quickNotifications.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 20, fontSize: 11, color: '#64748b' }}>Không có thông báo mới.</div>
+                    !notifError && <div className="member-notifications-popup-state">Chưa có thông báo.</div>
                   ) : (
-                    <div style={{ display: 'grid', gap: 10 }}>
+                    <div className="member-notifications-preview">
                       {quickNotifications.map(item => (
-                        <div
+                        <article
                           key={item.id}
-                          style={{
-                            padding: 10,
-                            borderRadius: 8,
-                            background: item.isRead ? '#f8fafc' : '#eff6ff',
-                            border: '1px solid #e2e8f0',
-                            fontSize: 11,
-                          }}
+                          className={item.isRead ? '' : 'unread'}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: 12 }}>{item.title}</strong>
+                            <h4>{item.title}</h4>
+                            <p>{item.content}</p>
                             {!item.isRead && (
                               <button
                                 type="button"
-                                style={{ border: 0, background: 'none', color: '#004ac6', fontSize: 10, cursor: 'pointer', fontWeight: 600 }}
+                                disabled={quickMarkingId !== null}
                                 onClick={() => handleQuickMarkRead(item.id)}
                               >
-                                Đã đọc
+                                {quickMarkingId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}
                               </button>
                             )}
-                          </div>
-                          <p style={{ margin: '4px 0 0', color: '#475569', lineHeight: 1.5 }}>{item.content}</p>
-                        </div>
+                        </article>
                       ))}
                     </div>
                   )}
-                </div>
+                </section>
               )}
             </div>
 

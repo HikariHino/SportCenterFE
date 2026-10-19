@@ -1,5 +1,10 @@
 import api from './api'
 
+export function getNotificationErrorMessage(error, fallback = 'Không thể xử lý thông báo. Vui lòng thử lại.') {
+  const body = error?.response?.data
+  return body?.message || body?.detail || error?.message || fallback
+}
+
 export async function getNotifications({ unreadOnly = false, page = 1, pageSize = 6 } = {}) {
   const response = await api.get('/notifications', {
     params: { unreadOnly, page, pageSize },
@@ -11,9 +16,14 @@ export async function getNotifications({ unreadOnly = false, page = 1, pageSize 
   }
 
   const payload = body?.data ?? body
+  if (Array.isArray(payload)) {
+    const items = unreadOnly ? payload.filter(item => !item.isRead) : payload
+    return { items: items.slice((page - 1) * pageSize, page * pageSize), total: items.length, page, pageSize }
+  }
+  if (!Array.isArray(payload?.items)) throw new Error('Dữ liệu thông báo không hợp lệ. Vui lòng thử lại.')
   return {
-    items: Array.isArray(payload?.items) ? payload.items : [],
-    total: Number(payload?.total || 0),
+    items: payload.items,
+    total: Number(payload.total ?? payload.totalCount ?? payload.items.length),
     page: Number(payload?.page || page),
     pageSize: Number(payload?.pageSize || pageSize),
   }

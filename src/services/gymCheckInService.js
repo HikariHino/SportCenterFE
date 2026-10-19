@@ -105,7 +105,10 @@ export async function getMyGymCheckInHistory() {
     throw new Error(body.message || 'Không thể tải lịch sử check-in.')
   }
   const payload = body?.data ?? body
-  return Array.isArray(payload) ? payload : []
+  if (!Array.isArray(payload)) {
+    throw new Error('Dữ liệu lịch sử ra/vào không hợp lệ. Vui lòng thử lại sau.')
+  }
+  return payload
 }
 
 export default {

@@ -13,6 +13,7 @@ import {
   cancelSubscription,
 } from '../../services/memberSubscriptionService'
 import { createPayment } from '../../services/paymentService'
+import '../../style/member/SubscriptionsView.css'
 
 function formatCurrency(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} đ`
@@ -534,16 +535,15 @@ export function SubscriptionsView({ showNotice }) {
                           {isPend && (
                             <button
                               type="button"
-                              className="member-button member-button--primary"
+                              className="member-btn-checkout member-btn-checkout--sm"
                               onClick={() => handlePayOSCheckout(sub.id)}
                               disabled={payingSubId === sub.id}
                               title="Thanh toán ngay bằng PayOS"
-                              style={{ padding: '6px 9px', fontSize: 11 }}
                             >
                               {payingSubId === sub.id ? (
                                 <LoaderCircle className="member-spin" size={13} />
                               ) : (
-                                <><CreditCard size={13} /> Thanh toán</>
+                                <><CreditCard size={13} /> Thanh toán ngay</>
                               )}
                             </button>
                           )}
@@ -770,26 +770,26 @@ export function SubscriptionsView({ showNotice }) {
                 </div>
 
                 {/* Các nút hành động */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 8, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
+                <div className="member-package-card-actions">
                   <button
                     type="button"
-                    className="member-button"
+                    className="member-btn-detail"
                     onClick={() => handleOpenPackageDetail(pkg)}
-                    style={{ fontSize: 11 }}
+                    title="Xem chi tiết quyền lợi gói"
                   >
                     <Eye size={14} /> Chi tiết
                   </button>
                   <button
                     type="button"
                     disabled={subscribingId === pkg.id}
-                    className="member-button member-button--primary"
+                    className="member-btn-checkout"
                     onClick={() => handleRegister(pkg)}
-                    style={{ fontSize: 11 }}
+                    title="Đăng ký và thanh toán trực tuyến ngay"
                   >
                     {subscribingId === pkg.id ? (
                       <><LoaderCircle className="member-spin" size={14} /> Đang tạo...</>
                     ) : (
-                      <><CreditCard size={14} /> Đăng ký ngay</>
+                      <><CreditCard size={14} /> Thanh toán ngay</>
                     )}
                   </button>
                 </div>
@@ -909,13 +909,13 @@ export function SubscriptionsView({ showNotice }) {
               <button
                 type="button"
                 disabled={subscribingId === viewingPackage.id}
-                className="member-button member-button--primary"
+                className="member-btn-checkout member-btn-checkout--lg"
                 onClick={() => handleRegister(viewingPackage)}
               >
                 {subscribingId === viewingPackage.id ? (
                   <><LoaderCircle className="member-spin" size={15} /> Đang tạo đơn...</>
                 ) : (
-                  <><CreditCard size={15} /> Đăng ký gói này ngay</>
+                  <><CreditCard size={15} /> Thanh toán ngay</>
                 )}
               </button>
             </div>
@@ -1022,7 +1022,7 @@ export function SubscriptionsView({ showNotice }) {
               <button
                 type="button"
                 disabled={payingSubId === registrationSuccessSub.id}
-                className="member-button member-button--primary"
+                className="member-btn-checkout member-btn-checkout--lg"
                 onClick={() => handlePayOSCheckout(registrationSuccessSub.id)}
               >
                 {payingSubId === registrationSuccessSub.id ? (
@@ -1251,7 +1251,7 @@ export function SubscriptionsView({ showNotice }) {
                   <button
                     type="button"
                     disabled={payingSubId === viewingSub.id}
-                    className="member-button member-button--primary"
+                    className="member-btn-checkout"
                     onClick={() => handlePayOSCheckout(viewingSub.id)}
                   >
                     {payingSubId === viewingSub.id ? (
