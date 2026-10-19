@@ -46,6 +46,7 @@
 .member-classes-dialog::backdrop { background: #0d1422a8; }
 .member-classes-dialog form { display: grid; gap: 14px; }
 .member-classes-dialog header, .member-classes-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.member-classes-dialog form > footer { justify-content: flex-end; flex-wrap: wrap; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--theme-border); background: transparent; color: inherit; }
 .member-classes-dialog h2 { font-size: 19px; margin: 0; }
 .member-classes-dialog h3, .member-classes-dialog p { margin: 0; }
 .member-classes-dialog textarea { box-sizing: border-box; resize: vertical; }
@@ -88,6 +89,7 @@
   .member-classes-details > div { flex-direction: column; gap: 3px; }
   .member-classes-details dd { text-align: left; }
   .member-classes-dialog { padding: 18px; }
+  .member-classes-dialog form > footer > button { flex: 1 1 130px; }
   .member-classes-no-sub-banner { flex-direction: column; align-items: flex-start; }
   .member-classes-no-sub-btn { width: 100%; }
 }
