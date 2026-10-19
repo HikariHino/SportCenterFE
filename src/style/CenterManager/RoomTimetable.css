@@ -73,7 +73,7 @@
 .room-reschedule-dialog p { margin: 0; }
 .room-reschedule-dialog fieldset { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .room-reschedule-dialog label { display: grid; gap: 7px; font-weight: 600; }
-.room-reschedule-dialog input { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.room-reschedule-dialog input, .room-reschedule-dialog select { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
 .room-reschedule-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .room-reschedule-dialog .room-reschedule-overnight { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 400; }
 .room-reschedule-overnight input { width: 16px; height: 16px; padding: 0; }

@@ -129,8 +129,8 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
   </dialog>
 }
 
-export function ClassesView({ showNotice, onNavigateTab }) {
-  const [tab, setTab] = useState('browse')
+export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', notificationSessionId }) {
+  const [tab, setTab] = useState(initialTab)
   const [browseRevision, setBrowseRevision] = useState(0)
   const [bulkResult, setBulkResult] = useState(null)
   const [bulkProgress, setBulkProgress] = useState(null)
@@ -160,6 +160,15 @@ export function ClassesView({ showNotice, onNavigateTab }) {
   const allSessions = useResource(getAllAvailableSessions)
   const mine = useResource(getAllMyRegistrations)
   const subscriptions = useResource(getMySubscriptions)
+
+  useEffect(() => {
+    if (!notificationSessionId) return
+    const registration = mine.data?.items.find(item => String(item.sessionId) === String(notificationSessionId)
+      && !['cancelled', 'canceled'].includes(String(item.status).toLowerCase()))
+    if (!registration) return
+    setSelectedRegistrationId(registration.id)
+    if (Number.isFinite(Date.parse(registration.startsAt))) setWeekStart(timetableWeekStart(registration.startsAt))
+  }, [notificationSessionId, mine.data])
 
   const roomsList = useMemo(() => (Array.isArray(rooms.data) ? rooms.data : []), [rooms.data])
   const coachesList = useMemo(() => (Array.isArray(coaches.data) ? coaches.data : []), [coaches.data])

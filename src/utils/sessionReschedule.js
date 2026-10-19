@@ -1,11 +1,9 @@
 import { shiftTimetableDate, timetableDateKey, timetableTime } from './memberTimetable.js'
 import { getClassDateRange } from './recurringSessions.js'
-import { sessionTimeLockReason } from './sessionEnrollment.js'
 
 export function canRescheduleSession(session, now = Date.now()) {
   return String(session?.status || session?.Status || 'Scheduled').toLowerCase() === 'scheduled'
     && Date.parse(session?.startsAt) > now && Date.parse(session?.endsAt) > Date.parse(session?.startsAt)
-    && !sessionTimeLockReason(session)
 }
 
 export function sessionRescheduleDraft(session, target = {}) {
@@ -14,12 +12,11 @@ export function sessionRescheduleDraft(session, target = {}) {
     startTime: target.startTime || timetableTime(session.startsAt),
     endTime: target.endTime || timetableTime(session.endsAt),
     endsNextDay: target.nextDay ?? (timetableDateKey(session.endsAt) > timetableDateKey(session.startsAt)),
+    coachId: session.coachId,
   }
 }
 
 export function buildSessionReschedule(session, draft, { sportClass, now = Date.now() } = {}) {
-  const lockReason = sessionTimeLockReason(session)
-  if (lockReason) throw new Error(lockReason)
   if (!canRescheduleSession(session, now)) throw new Error('Chỉ có thể đổi lịch buổi học chưa bắt đầu và chưa bị hủy hoặc hoàn thành.')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.date) || !Number.isFinite(Date.parse(`${draft.date}T00:00:00Z`))
     || new Date(`${draft.date}T00:00:00Z`).toISOString().slice(0, 10) !== draft.date) throw new Error('Vui lòng chọn ngày học hợp lệ.')
@@ -38,7 +35,7 @@ export function buildSessionReschedule(session, draft, { sportClass, now = Date.
   if (Date.parse(startsAt) < bound(course.startDate) || Date.parse(endsAt) > bound(course.endDate, true)) {
     throw new Error(`Buổi học phải nằm trong thời gian của lớp: ${range.start.split('-').reverse().join('/')} – ${range.end.split('-').reverse().join('/')}.`)
   }
-  const coachId = Number(session.coachId ?? course.coachId)
+  const coachId = Number(draft.coachId ?? session.coachId ?? course.coachId)
   const cancellationPolicyId = Number(session.cancellationPolicyId)
   const capacity = Number(session.capacity)
   if (![coachId, cancellationPolicyId, capacity].every(value => Number.isInteger(value) && value > 0)) {

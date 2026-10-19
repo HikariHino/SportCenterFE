@@ -7,8 +7,8 @@ const session = { id: 100, status: 'Scheduled', startsAt: '2026-10-21T11:00:00Z'
 const build = (draft, item = session) => buildSessionReschedule(item, draft, { now })
 
 test('same-day and another-day drops preserve Vietnamese times unless a target time slot is supplied', () => {
-  assert.deepEqual(sessionRescheduleDraft(session, { date: '2026-10-21' }), { date: '2026-10-21', startTime: '18:00', endTime: '19:30', endsNextDay: false })
-  assert.deepEqual(sessionRescheduleDraft(session, { date: '2026-10-23' }), { date: '2026-10-23', startTime: '18:00', endTime: '19:30', endsNextDay: false })
+  assert.deepEqual(sessionRescheduleDraft(session, { date: '2026-10-21' }), { date: '2026-10-21', startTime: '18:00', endTime: '19:30', endsNextDay: false, coachId: 5 })
+  assert.deepEqual(sessionRescheduleDraft(session, { date: '2026-10-23' }), { date: '2026-10-23', startTime: '18:00', endTime: '19:30', endsNextDay: false, coachId: 5 })
   const draft = sessionRescheduleDraft(session, { date: '2026-10-23', startTime: '08:00', endTime: '09:00', nextDay: false })
   assert.equal(draft.startTime, '08:00')
   assert.equal(draft.endTime, '09:00')
@@ -27,13 +27,22 @@ test('only upcoming scheduled sessions can move, including the exact starting bo
   assert.throws(() => build({ date: '2026-10-23', startTime: '18:00', endTime: '19:30' }, { ...session, status: 'Cancelled' }))
 })
 
-test('enrolled sessions and unknown enrolment cannot be dragged or rescheduled', () => {
+test('upcoming sessions can move with enrolled members or unknown enrolment', () => {
   for (const overrides of [{ currentEnrollment: 1 }, { currentEnrollment: 0, registeredCount: 1 }, { currentEnrollment: undefined }, { currentEnrollment: -1 }]) {
     const item = { ...session, ...overrides }
-    assert.equal(canRescheduleSession(item, now), false)
-    assert.throws(() => build({ date: '2026-10-23', startTime: '18:00', endTime: '19:30' }, item), /học viên/)
+    assert.equal(canRescheduleSession(item, now), true)
+    assert.equal(build({ date: '2026-10-23', startTime: '18:00', endTime: '19:30' }, item).startsAt, '2026-10-23T11:00:00.000Z')
   }
   assert.equal(canRescheduleSession({ ...session, currentEnrollment: '0' }, now), true)
+})
+
+test('a substitute coach changes only the selected coach in the session payload', () => {
+  const payload = build({ ...sessionRescheduleDraft(session), coachId: '9' }, { ...session, currentEnrollment: 3 })
+  assert.equal(payload.coachId, 9)
+  assert.equal(Date.parse(payload.startsAt), Date.parse(session.startsAt))
+  assert.equal(Date.parse(payload.endsAt), Date.parse(session.endsAt))
+  assert.equal(payload.capacity, session.capacity)
+  assert.throws(() => build({ ...sessionRescheduleDraft(session), coachId: '' }), /Thiếu thông tin/)
 })
 
 test('impossible dates, invalid times, backwards intervals and past target times are rejected', () => {
@@ -59,7 +68,7 @@ test('overnight sessions retain the following date and cannot extend beyond the 
 
 test('missing policy or capacity never silently switches to a different cancellation policy', () => {
   const draft = sessionRescheduleDraft(session, { date: '2026-10-23' })
-  for (const overrides of [{ cancellationPolicyId: undefined }, { capacity: 0 }, { coachId: null }]) assert.throws(() => build(draft, { ...session, ...overrides }), /Thiếu thông tin/)
+  for (const overrides of [{ cancellationPolicyId: undefined }, { capacity: 0 }, { coachId: null }]) assert.throws(() => build({ ...draft, coachId: undefined }, { ...session, ...overrides }), /Thiếu thông tin/)
 })
 
 test('adjacent intervals do not conflict and overlapping intervals do', () => {

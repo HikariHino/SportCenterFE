@@ -54,7 +54,6 @@ import { classDateInput } from '../../utils/classForm'
 import { shiftTimetableDate, timetableDateKey } from '../../utils/memberTimetable'
 import ClassCourseFields from './ClassCourseFields'
 import '../../style/CenterManager/ClassManagement.css'
-import { sessionTimeLockReason } from '../../utils/sessionEnrollment'
 
 // Sport icon helper based on keywords
 function getSportIcon(name) {
@@ -237,7 +236,6 @@ export default function ClassManagement() {
   const sessionRoom = rooms.find(room => String(room.id) === String(sessionForm.roomId))
   const sessionCapacityLimit = Math.min(Number(sessionRoom?.capacity) || 0, Number(selectedClassForSessions?.maxCapacity) || 0)
   const invalidSessionCapacity = !Number.isInteger(Number(sessionForm.capacity)) || Number(sessionForm.capacity) < 1 || Number(sessionForm.capacity) > sessionCapacityLimit
-  const sessionTimeLock = reschedulingSession ? sessionTimeLockReason(reschedulingSession) : ''
 
   // Roster Modal
   const [rosterSession, setRosterSession] = useState(null)
@@ -605,8 +603,8 @@ export default function ClassManagement() {
     try {
       await validateSessionWrite(selectedClassForSessions.id, {
         ...sessionForm,
-        startsAt: reschedulingSession && (sessionTimeLock || sessionForm.startsAt === toLocalInputString(reschedulingSession.startsAt)) ? reschedulingSession.startsAt : new Date(sessionForm.startsAt).toISOString(),
-        endsAt: reschedulingSession && (sessionTimeLock || sessionForm.endsAt === toLocalInputString(reschedulingSession.endsAt)) ? reschedulingSession.endsAt : new Date(sessionForm.endsAt).toISOString(),
+        startsAt: reschedulingSession && sessionForm.startsAt === toLocalInputString(reschedulingSession.startsAt) ? reschedulingSession.startsAt : new Date(sessionForm.startsAt).toISOString(),
+        endsAt: reschedulingSession && sessionForm.endsAt === toLocalInputString(reschedulingSession.endsAt) ? reschedulingSession.endsAt : new Date(sessionForm.endsAt).toISOString(),
       }, reschedulingSession?.id)
       setAvailabilityResult({ isAvailable: true })
     } catch (error) {
@@ -695,12 +693,12 @@ export default function ClassManagement() {
       await updateClassSession(selectedClassForSessions.id, reschedulingSession.id, {
         ...sessionForm,
         roomId: Number(sessionForm.roomId),
-        startsAt: sessionTimeLock || sessionForm.startsAt === toLocalInputString(reschedulingSession.startsAt) ? reschedulingSession.startsAt : new Date(sessionForm.startsAt).toISOString(),
-        endsAt: sessionTimeLock || sessionForm.endsAt === toLocalInputString(reschedulingSession.endsAt) ? reschedulingSession.endsAt : new Date(sessionForm.endsAt).toISOString(),
+        startsAt: sessionForm.startsAt === toLocalInputString(reschedulingSession.startsAt) ? reschedulingSession.startsAt : new Date(sessionForm.startsAt).toISOString(),
+        endsAt: sessionForm.endsAt === toLocalInputString(reschedulingSession.endsAt) ? reschedulingSession.endsAt : new Date(sessionForm.endsAt).toISOString(),
       })
       await loadClassSessions(selectedClassForSessions.id)
       setReschedulingSession(null)
-      setSuccess(`Đã dời lịch / cập nhật buổi học tại ${selectedRoom?.name || 'phòng tập'} thành công!`)
+      setSuccess(`Đã cập nhật buổi học tại ${selectedRoom?.name || 'phòng tập'}. Khi đổi lịch hoặc HLV, học viên đã đăng ký được giữ chỗ và nhận thông báo kiểm tra lại lịch.`)
     } catch (err) {
       setError(getClassErrorMessage(err, 'Không thể dời lịch hoặc đổi huấn luyện viên buổi học.'))
     } finally {
@@ -1544,7 +1542,7 @@ export default function ClassManagement() {
             </div>
             <form onSubmit={handleRescheduleSubmit}>
               <div className="class-modal-body">
-                {sessionTimeLock && <p className="class-scheduling-note" role="status">{sessionTimeLock} Bạn vẫn có thể cập nhật huấn luyện viên và sức chứa hợp lệ.</p>}
+                <p className="class-scheduling-note" role="status">Khi đổi ngày, giờ hoặc HLV, học viên đã đăng ký sẽ nhận thông báo kiểm tra lại lịch. Đăng ký được giữ nguyên; học viên tự hủy nếu không thể tham gia, theo hạn hủy của buổi học.</p>
                 {error && <p className="class-form-error" role="alert">{error}</p>}
                 {invalidSessionCapacity && <p className="class-form-error" role="alert">{sessionCapacityLimit > 0 ? `Sức chứa phải từ 1 đến ${sessionCapacityLimit} học viên, theo sức chứa của phòng và lớp.` : 'Vui lòng chọn phòng để xác nhận sức chứa.'}</p>}
                 <div className="class-form-group">
@@ -1625,7 +1623,6 @@ export default function ClassManagement() {
                       type="datetime-local"
                       className="class-form-input"
                       name="sessionStartsAt"
-                      disabled={Boolean(sessionTimeLock)}
                       value={sessionForm.startsAt}
                       onChange={(e) => {
                         setSessionForm({ ...sessionForm, startsAt: e.target.value })
@@ -1643,7 +1640,6 @@ export default function ClassManagement() {
                       type="datetime-local"
                       className="class-form-input"
                       name="sessionEndsAt"
-                      disabled={Boolean(sessionTimeLock)}
                       value={sessionForm.endsAt}
                       onChange={(e) => {
                         setSessionForm({ ...sessionForm, endsAt: e.target.value })
@@ -1682,7 +1678,7 @@ export default function ClassManagement() {
                     return null
                   })()}
                   <span className="class-form-help">
-                    * Nếu buổi học đã có học viên đăng ký, hệ thống chỉ cho phép điều chỉnh sức chứa. Nếu cần dời lịch hoặc đổi HLV khi đã có học viên, hãy hủy buổi cũ và tạo buổi mới.
+                    Sức chứa không được nhỏ hơn số học viên đã đăng ký hoặc vượt quá giới hạn của phòng và lớp.
                   </span>
                 </div>
               </div>

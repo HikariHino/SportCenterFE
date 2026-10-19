@@ -214,6 +214,9 @@ export async function updateClassSession(classId, sessionId, data) {
       payload.roomId = Number(data.roomId)
     }
     await validateSessionWrite(classId, payload, sessionId)
+    // SaveSessionAsync notifies registered members in the same transaction when
+    // time, coach or policy changes. Keep registrations; do not cancel/rebook them
+    // or send a second notification from the client.
     const response = await api.put(`/classes/${classId}/sessions/${sessionId}`, payload)
     const body = response.data
     if (body?.success === false) {
