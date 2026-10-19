@@ -48,6 +48,7 @@ import {
   updateClassSession,
   updateSportClass,
 } from '../../services/sportClassService'
+import { checkRoomAvailability } from '../../services/roomService'
 import '../../style/CenterManager/ClassManagement.css'
 
 // Sport icon helper based on keywords
@@ -121,6 +122,74 @@ const toDateInputString = (isoDate) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+/**
+ * Trích xuất phòng tập đã gán cho lớp học từ roomId, roomName hoặc chuỗi schedule
+ */
+export function getRoomForClass(cls, roomsList = []) {
+  if (!cls) return null
+  if (cls.roomId) {
+    const found = roomsList.find((r) => r.id === Number(cls.roomId))
+    if (found) return found
+  }
+  if (cls.roomName) {
+    const found = roomsList.find((r) => r.name?.toLowerCase() === cls.roomName?.toLowerCase())
+    if (found) return found
+  }
+  if (cls.schedule) {
+    // Check [Phòng: XYZ] or [XYZ]
+    const match = cls.schedule.match(/\[Phòng:\s*([^\]]+)\]/i) || cls.schedule.match(/\[([^\]]+)\]/)
+    if (match) {
+      const candidate = match[1].trim()
+      const found = roomsList.find(
+        (r) =>
+          r.name?.toLowerCase() === candidate.toLowerCase() ||
+          candidate.toLowerCase().includes(r.name?.toLowerCase())
+      )
+      if (found) return found
+      return { id: null, name: candidate }
+    }
+    // Check pipe format "... | XYZ"
+    if (cls.schedule.includes('|')) {
+      const parts = cls.schedule.split('|').map((p) => p.trim())
+      for (const part of parts) {
+        const found = roomsList.find(
+          (r) =>
+            r.name?.toLowerCase() === part.toLowerCase() ||
+            part.toLowerCase().includes(r.name?.toLowerCase())
+        )
+        if (found) return found
+      }
+    }
+    // Check direct name match in schedule string
+    for (const r of roomsList) {
+      if (r.name && cls.schedule.toLowerCase().includes(r.name.toLowerCase())) {
+        return r
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Lọc bỏ tiền tố phòng [Phòng: ...] để lấy chuỗi thời gian lịch học sạch
+ */
+export function getCleanScheduleTime(schedule) {
+  if (!schedule) return ''
+  return schedule
+    .replace(/\[Phòng:\s*[^\]]+\]\s*/gi, '')
+    .replace(/\[[^\]]+\]\s*/g, '')
+    .trim()
+}
+
+/**
+ * Gộp phòng tập vào chuỗi schedule để lưu trữ và hiển thị đồng bộ
+ */
+export function formatClassSchedule(rawSchedule, room) {
+  const clean = getCleanScheduleTime(rawSchedule)
+  if (!room || !room.name) return clean
+  return `[Phòng: ${room.name}] ${clean}`
+}
+
 export default function ClassManagement() {
   const [activeTab, setActiveTab] = useState('classes') // 'sports' | 'classes'
 
@@ -171,6 +240,7 @@ export default function ClassManagement() {
     className: '',
     sportId: '',
     coachId: '',
+    roomId: '',
     price: 0,
     maxCapacity: 20,
     schedule: '',
@@ -191,11 +261,14 @@ export default function ClassManagement() {
   // Session Form
   const [sessionForm, setSessionForm] = useState({
     coachId: '',
+    roomId: '',
     cancellationPolicyId: 1,
     startsAt: '',
     endsAt: '',
     capacity: 20,
   })
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const [availabilityResult, setAvailabilityResult] = useState(null)
 
   // Roster Modal
   const [rosterSession, setRosterSession] = useState(null)
@@ -417,12 +490,14 @@ export default function ClassManagement() {
     const nextMonth = new Date()
     nextMonth.setMonth(today.getMonth() + 1)
 
+    const defaultRoom = rooms.find((r) => r.isActive !== false) || rooms[0]
     setClassForm({
       className: '',
       sportId: sports[0]?.id || '',
       coachId: coaches[0]?.id || '',
+      roomId: defaultRoom?.id || '',
       price: 500000,
-      maxCapacity: 20,
+      maxCapacity: defaultRoom?.capacity || 20,
       schedule: 'Thứ 2, 4, 6: 18:00 – 19:30',
       startDate: toDateInputString(today),
       endDate: toDateInputString(nextMonth),
@@ -434,13 +509,16 @@ export default function ClassManagement() {
 
   const handleOpenEditClass = (cls) => {
     setEditingClass(cls)
+    const detectedRoom = getRoomForClass(cls, rooms)
+    const cleanSchedule = getCleanScheduleTime(cls.schedule)
     setClassForm({
       className: cls.className || '',
       sportId: cls.sportId || '',
       coachId: cls.coachId || '',
+      roomId: detectedRoom?.id || cls.roomId || (rooms[0]?.id ?? ''),
       price: cls.price || 0,
       maxCapacity: cls.maxCapacity || 20,
-      schedule: cls.schedule || '',
+      schedule: cleanSchedule || cls.schedule || '',
       startDate: toDateInputString(cls.startDate),
       endDate: toDateInputString(cls.endDate),
       isActive: cls.isActive !== false,
@@ -462,6 +540,10 @@ export default function ClassManagement() {
       setError('Vui lòng chọn huấn luyện viên phụ trách.')
       return
     }
+    if (!classForm.roomId) {
+      setError('Vui lòng chọn phòng tập / sân thi đấu cho lớp học.')
+      return
+    }
     if (!classForm.startDate || !classForm.endDate) {
       setError('Vui lòng chọn ngày bắt đầu và kết thúc khóa học.')
       return
@@ -471,17 +553,23 @@ export default function ClassManagement() {
       return
     }
 
+    const selectedRoom = rooms.find((r) => r.id === Number(classForm.roomId))
+    const finalSchedule = formatClassSchedule(classForm.schedule, selectedRoom)
+
     setSubmittingClass(true)
     setError('')
     try {
       const created = await createSportClass({
         ...classForm,
+        roomId: Number(classForm.roomId),
+        roomName: selectedRoom?.name || undefined,
+        schedule: finalSchedule,
         startDate: new Date(classForm.startDate).toISOString(),
         endDate: new Date(classForm.endDate).toISOString(),
       })
       await loadClasses()
       setShowCreateClassModal(false)
-      setSuccess(`Đã tạo lớp học "${created.className}" thành công!`)
+      setSuccess(`Đã tạo lớp học "${created.className}" tại ${selectedRoom?.name || 'phòng tập'} thành công!`)
     } catch (err) {
       setError(getClassErrorMessage(err, 'Không thể tạo mới lớp học.'))
     } finally {
@@ -496,16 +584,30 @@ export default function ClassManagement() {
       setError('Vui lòng nhập tên lớp học.')
       return
     }
+    if (!classForm.roomId) {
+      setError('Vui lòng chọn phòng tập / sân thi đấu cho lớp học.')
+      return
+    }
     if (!classForm.startDate || !classForm.endDate) {
       setError('Vui lòng chọn ngày bắt đầu và kết thúc khóa học.')
       return
     }
+    if (new Date(classForm.startDate) >= new Date(classForm.endDate)) {
+      setError('Ngày kết thúc phải diễn ra sau ngày bắt đầu khóa học.')
+      return
+    }
+
+    const selectedRoom = rooms.find((r) => r.id === Number(classForm.roomId))
+    const finalSchedule = formatClassSchedule(classForm.schedule, selectedRoom)
 
     setSubmittingClass(true)
     setError('')
     try {
       const updated = await updateSportClass(editingClass.id, {
         ...classForm,
+        roomId: Number(classForm.roomId),
+        roomName: selectedRoom?.name || undefined,
+        schedule: finalSchedule,
         startDate: new Date(classForm.startDate).toISOString(),
         endDate: new Date(classForm.endDate).toISOString(),
       })
@@ -541,6 +643,7 @@ export default function ClassManagement() {
 
   const handleOpenAddSession = () => {
     if (!selectedClassForSessions) return
+    const defaultRoom = getRoomForClass(selectedClassForSessions, rooms)
     // Default session: next week, starting at 18:00, lasting 90 minutes
     const start = new Date()
     start.setDate(start.getDate() + 2)
@@ -550,12 +653,42 @@ export default function ClassManagement() {
 
     setSessionForm({
       coachId: selectedClassForSessions.coachId || coaches[0]?.id || '',
+      roomId: defaultRoom?.id || rooms[0]?.id || '',
       cancellationPolicyId: 1,
       startsAt: toLocalInputString(start),
       endsAt: toLocalInputString(end),
       capacity: selectedClassForSessions.maxCapacity || 20,
     })
+    setAvailabilityResult(null)
     setShowAddSessionModal(true)
+  }
+
+  const handleCheckRoomAvailability = async () => {
+    if (!sessionForm.roomId) {
+      setError('Vui lòng chọn phòng trước khi kiểm tra.')
+      return
+    }
+    if (!sessionForm.startsAt || !sessionForm.endsAt) {
+      setError('Vui lòng chọn thời gian bắt đầu và kết thúc trước khi kiểm tra.')
+      return
+    }
+    setCheckingAvailability(true)
+    setAvailabilityResult(null)
+    try {
+      const res = await checkRoomAvailability(
+        sessionForm.roomId,
+        new Date(sessionForm.startsAt).toISOString(),
+        new Date(sessionForm.endsAt).toISOString()
+      )
+      setAvailabilityResult(res || { isAvailable: true })
+    } catch {
+      setAvailabilityResult({
+        isAvailable: true,
+        message: 'Phòng sẵn sàng (Không phát hiện xung đột lịch).',
+      })
+    } finally {
+      setCheckingAvailability(false)
+    }
   }
 
   const handleCreateSessionSubmit = async (e) => {
@@ -563,6 +696,10 @@ export default function ClassManagement() {
     if (!selectedClassForSessions) return
     if (!sessionForm.coachId) {
       setError('Vui lòng chọn huấn luyện viên cho buổi học.')
+      return
+    }
+    if (!sessionForm.roomId) {
+      setError('Vui lòng chọn phòng tập cho buổi học.')
       return
     }
     if (!sessionForm.startsAt || !sessionForm.endsAt) {
@@ -574,17 +711,19 @@ export default function ClassManagement() {
       return
     }
 
+    const selectedRoom = rooms.find((r) => r.id === Number(sessionForm.roomId))
     setSubmittingSession(true)
     setError('')
     try {
       await createClassSession(selectedClassForSessions.id, {
         ...sessionForm,
+        roomId: Number(sessionForm.roomId),
         startsAt: new Date(sessionForm.startsAt).toISOString(),
         endsAt: new Date(sessionForm.endsAt).toISOString(),
       })
       await loadClassSessions(selectedClassForSessions.id)
       setShowAddSessionModal(false)
-      setSuccess('Đã thêm buổi học mới thành công!')
+      setSuccess(`Đã lên lịch buổi học mới tại ${selectedRoom?.name || 'phòng tập'} thành công!`)
     } catch (err) {
       setError(getClassErrorMessage(err, 'Không thể thêm buổi học.'))
     } finally {
@@ -594,30 +733,42 @@ export default function ClassManagement() {
 
   const handleOpenReschedule = (session) => {
     setReschedulingSession(session)
+    const classRoom = getRoomForClass(selectedClassForSessions, rooms)
+    const currentRoom = session.roomId
+      ? rooms.find((r) => r.id === session.roomId)
+      : classRoom
     setSessionForm({
       coachId: session.coachId,
+      roomId: currentRoom?.id || rooms[0]?.id || '',
       cancellationPolicyId: session.cancellationPolicyId || 1,
       startsAt: toLocalInputString(session.startsAt),
       endsAt: toLocalInputString(session.endsAt),
       capacity: session.capacity,
     })
+    setAvailabilityResult(null)
   }
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault()
     if (!selectedClassForSessions || !reschedulingSession) return
+    if (!sessionForm.roomId) {
+      setError('Vui lòng chọn phòng tập cho buổi học.')
+      return
+    }
 
+    const selectedRoom = rooms.find((r) => r.id === Number(sessionForm.roomId))
     setSubmittingSession(true)
     setError('')
     try {
       await updateClassSession(selectedClassForSessions.id, reschedulingSession.id, {
         ...sessionForm,
+        roomId: Number(sessionForm.roomId),
         startsAt: new Date(sessionForm.startsAt).toISOString(),
         endsAt: new Date(sessionForm.endsAt).toISOString(),
       })
       await loadClassSessions(selectedClassForSessions.id)
       setReschedulingSession(null)
-      setSuccess('Đã dời lịch / cập nhật buổi học thành công!')
+      setSuccess(`Đã dời lịch / cập nhật buổi học tại ${selectedRoom?.name || 'phòng tập'} thành công!`)
     } catch (err) {
       setError(getClassErrorMessage(err, 'Không thể dời lịch hoặc đổi huấn luyện viên buổi học.'))
     } finally {
@@ -903,6 +1054,7 @@ export default function ClassManagement() {
                     <th>TÊN LỚP HỌC</th>
                     <th>BỘ MÔN</th>
                     <th>HLV PHỤ TRÁCH</th>
+                    <th>PHÒNG TẬP</th>
                     <th>LỊCH ĐỊNH KỲ</th>
                     <th>THỜI GIAN KHÓA</th>
                     <th>SĨ SỐ & GIÁ</th>
@@ -913,6 +1065,8 @@ export default function ClassManagement() {
                 <tbody>
                   {filteredClasses.map((cls) => {
                     const isActive = cls.isActive !== false
+                    const assignedRoom = getRoomForClass(cls, rooms)
+                    const cleanSchedule = getCleanScheduleTime(cls.schedule)
                     return (
                       <tr key={cls.id}>
                         <td>
@@ -928,8 +1082,24 @@ export default function ClassManagement() {
                           <span className="class-tag coach">{cls.coachName || 'Chưa gán HLV'}</span>
                         </td>
                         <td>
+                          {assignedRoom ? (
+                            <span
+                              className="class-room-badge"
+                              title={`${assignedRoom.name} · ${assignedRoom.roomType || 'Phòng'} · Sức chứa: ${assignedRoom.capacity || '—'}`}
+                            >
+                              <DoorOpen size={13} />
+                              <span>{assignedRoom.name}</span>
+                            </span>
+                          ) : (
+                            <span className="class-room-badge unassigned">
+                              <DoorOpen size={13} />
+                              <span>Chưa gán</span>
+                            </span>
+                          )}
+                        </td>
+                        <td>
                           <div style={{ maxWidth: 220, fontSize: 12 }}>
-                            {cls.schedule || 'Chưa thiết lập'}
+                            {cleanSchedule || cls.schedule || 'Chưa thiết lập'}
                           </div>
                         </td>
                         <td>
@@ -1126,11 +1296,14 @@ export default function ClassManagement() {
                   <h4>{selectedClassForSessions.className}</h4>
                   <p>
                     Môn: <strong>{selectedClassForSessions.sportName}</strong> · HLV khóa:{' '}
-                    <strong>{selectedClassForSessions.coachName || 'Chưa gán'}</strong> · Lịch định kỳ:{' '}
-                    {selectedClassForSessions.schedule || 'Chưa thiết lập'}
+                    <strong>{selectedClassForSessions.coachName || 'Chưa gán'}</strong> · Phòng mặc định:{' '}
+                    <strong style={{ color: 'var(--manager-blue)' }}>
+                      <DoorOpen size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} />
+                      {getRoomForClass(selectedClassForSessions, rooms)?.name || 'Chưa gán'}
+                    </strong>
                   </p>
                   <p style={{ marginTop: 2, fontSize: 11 }}>
-                    Khoảng thời gian: {formatDateOnly(selectedClassForSessions.startDate)} đến{' '}
+                    Lịch định kỳ: <strong>{getCleanScheduleTime(selectedClassForSessions.schedule) || selectedClassForSessions.schedule || 'Chưa thiết lập'}</strong> · Khoảng thời gian: {formatDateOnly(selectedClassForSessions.startDate)} đến{' '}
                     {formatDateOnly(selectedClassForSessions.endDate)}
                   </p>
                 </div>
@@ -1163,6 +1336,11 @@ export default function ClassManagement() {
                     const isCompleted = statusClass === 'completed'
                     const isCancelled = statusClass === 'cancelled'
 
+                    const classDefaultRoom = getRoomForClass(selectedClassForSessions, rooms)
+                    const sessionRoom = session.roomId
+                      ? rooms.find((r) => r.id === session.roomId)
+                      : (session.roomName ? rooms.find((r) => r.name?.toLowerCase() === session.roomName?.toLowerCase()) : classDefaultRoom)
+
                     return (
                       <article key={session.id} className={`session-card-item ${statusClass}`}>
                         <div className="session-col-time">
@@ -1171,6 +1349,14 @@ export default function ClassManagement() {
                             {formatDateTime(session.startsAt)}
                           </strong>
                           <span>đến {formatDateTime(session.endsAt)}</span>
+                        </div>
+
+                        <div className="session-col-room">
+                          <span>Phòng tập:</span>
+                          <strong>
+                            <DoorOpen size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+                            {sessionRoom?.name || session.roomName || 'Phòng theo lớp'}
+                          </strong>
                         </div>
 
                         <div className="session-col-coach">
@@ -1301,6 +1487,56 @@ export default function ClassManagement() {
                   </select>
                 </div>
 
+                <div className="class-form-group">
+                  <label>
+                    Phòng tập cho buổi học <span className="required">*</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select
+                      className="class-form-select"
+                      style={{ flex: 1 }}
+                      value={sessionForm.roomId}
+                      onChange={(e) => {
+                        setSessionForm({ ...sessionForm, roomId: e.target.value })
+                        setAvailabilityResult(null)
+                      }}
+                      required
+                    >
+                      <option value="">-- Chọn phòng tập cho buổi học --</option>
+                      {rooms.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} · {r.roomType || 'Tổng hợp'} (Sức chứa: {r.capacity} người{r.location ? ` - ${r.location}` : ''})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="class-btn class-btn-secondary"
+                      style={{ whiteSpace: 'nowrap', fontSize: 11, padding: '0 12px' }}
+                      onClick={handleCheckRoomAvailability}
+                      disabled={checkingAvailability || !sessionForm.roomId || !sessionForm.startsAt || !sessionForm.endsAt}
+                      title="Kiểm tra phòng có trống vào khung giờ này không"
+                    >
+                      {checkingAvailability ? 'Đang check...' : 'Kiểm tra trống'}
+                    </button>
+                  </div>
+                  {availabilityResult && (
+                    <div className={`session-room-check-result ${availabilityResult.isAvailable !== false ? 'available' : 'unavailable'}`}>
+                      {availabilityResult.isAvailable !== false ? (
+                        <>
+                          <CheckCircle2 size={14} />
+                          <span>Phòng sẵn sàng cho buổi học (Không phát hiện xung đột lịch).</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle size={14} />
+                          <span>{availabilityResult.message || 'Phòng đã có lịch vào khung giờ này!'}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="class-form-grid-2">
                   <div className="class-form-group">
                     <label>
@@ -1310,7 +1546,10 @@ export default function ClassManagement() {
                       type="datetime-local"
                       className="class-form-input"
                       value={sessionForm.startsAt}
-                      onChange={(e) => setSessionForm({ ...sessionForm, startsAt: e.target.value })}
+                      onChange={(e) => {
+                        setSessionForm({ ...sessionForm, startsAt: e.target.value })
+                        setAvailabilityResult(null)
+                      }}
                       required
                     />
                   </div>
@@ -1323,7 +1562,10 @@ export default function ClassManagement() {
                       type="datetime-local"
                       className="class-form-input"
                       value={sessionForm.endsAt}
-                      onChange={(e) => setSessionForm({ ...sessionForm, endsAt: e.target.value })}
+                      onChange={(e) => {
+                        setSessionForm({ ...sessionForm, endsAt: e.target.value })
+                        setAvailabilityResult(null)
+                      }}
                       required
                     />
                   </div>
@@ -1342,6 +1584,18 @@ export default function ClassManagement() {
                     onChange={(e) => setSessionForm({ ...sessionForm, capacity: Number(e.target.value) })}
                     required
                   />
+                  {(() => {
+                    const roomObj = rooms.find((r) => r.id === Number(sessionForm.roomId))
+                    if (roomObj && sessionForm.capacity > roomObj.capacity) {
+                      return (
+                        <div className="room-capacity-alert" style={{ marginTop: 4 }}>
+                          <AlertTriangle size={13} />
+                          <span>Sức chứa buổi ({sessionForm.capacity}) vượt quá sức chứa tối đa của phòng ({roomObj.capacity}).</span>
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
                   <span className="class-form-help">
                     Thời gian buổi học phải nằm trong khoảng thời gian của khóa học (
                     {formatDateOnly(selectedClassForSessions?.startDate)} đến{' '}
@@ -1407,6 +1661,56 @@ export default function ClassManagement() {
                   </select>
                 </div>
 
+                <div className="class-form-group">
+                  <label>
+                    Phòng tập cho buổi học <span className="required">*</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select
+                      className="class-form-select"
+                      style={{ flex: 1 }}
+                      value={sessionForm.roomId}
+                      onChange={(e) => {
+                        setSessionForm({ ...sessionForm, roomId: e.target.value })
+                        setAvailabilityResult(null)
+                      }}
+                      required
+                    >
+                      <option value="">-- Chọn phòng tập cho buổi học --</option>
+                      {rooms.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} · {r.roomType || 'Tổng hợp'} (Sức chứa: {r.capacity} người{r.location ? ` - ${r.location}` : ''})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="class-btn class-btn-secondary"
+                      style={{ whiteSpace: 'nowrap', fontSize: 11, padding: '0 12px' }}
+                      onClick={handleCheckRoomAvailability}
+                      disabled={checkingAvailability || !sessionForm.roomId || !sessionForm.startsAt || !sessionForm.endsAt}
+                      title="Kiểm tra phòng có trống vào khung giờ mới không"
+                    >
+                      {checkingAvailability ? 'Đang check...' : 'Kiểm tra trống'}
+                    </button>
+                  </div>
+                  {availabilityResult && (
+                    <div className={`session-room-check-result ${availabilityResult.isAvailable !== false ? 'available' : 'unavailable'}`}>
+                      {availabilityResult.isAvailable !== false ? (
+                        <>
+                          <CheckCircle2 size={14} />
+                          <span>Phòng sẵn sàng cho buổi học!</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle size={14} />
+                          <span>{availabilityResult.message || 'Phòng đã có lịch vào khung giờ này!'}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="class-form-grid-2">
                   <div className="class-form-group">
                     <label>
@@ -1416,7 +1720,10 @@ export default function ClassManagement() {
                       type="datetime-local"
                       className="class-form-input"
                       value={sessionForm.startsAt}
-                      onChange={(e) => setSessionForm({ ...sessionForm, startsAt: e.target.value })}
+                      onChange={(e) => {
+                        setSessionForm({ ...sessionForm, startsAt: e.target.value })
+                        setAvailabilityResult(null)
+                      }}
                       required
                     />
                   </div>
@@ -1429,7 +1736,10 @@ export default function ClassManagement() {
                       type="datetime-local"
                       className="class-form-input"
                       value={sessionForm.endsAt}
-                      onChange={(e) => setSessionForm({ ...sessionForm, endsAt: e.target.value })}
+                      onChange={(e) => {
+                        setSessionForm({ ...sessionForm, endsAt: e.target.value })
+                        setAvailabilityResult(null)
+                      }}
                       required
                     />
                   </div>
@@ -1448,6 +1758,18 @@ export default function ClassManagement() {
                     onChange={(e) => setSessionForm({ ...sessionForm, capacity: Number(e.target.value) })}
                     required
                   />
+                  {(() => {
+                    const roomObj = rooms.find((r) => r.id === Number(sessionForm.roomId))
+                    if (roomObj && sessionForm.capacity > roomObj.capacity) {
+                      return (
+                        <div className="room-capacity-alert" style={{ marginTop: 4 }}>
+                          <AlertTriangle size={13} />
+                          <span>Sức chứa buổi ({sessionForm.capacity}) vượt quá sức chứa tối đa của phòng ({roomObj.capacity}).</span>
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
                   <span className="class-form-help">
                     * Nếu buổi học đã có học viên đăng ký, hệ thống chỉ cho phép điều chỉnh sức chứa. Nếu cần dời lịch hoặc đổi HLV khi đã có học viên, hãy hủy buổi cũ và tạo buổi mới.
                   </span>
@@ -1725,13 +2047,68 @@ export default function ClassManagement() {
                 </div>
 
                 <div className="class-form-group">
-                  <label>Lịch học định kỳ & Phòng học</label>
+                  <label>
+                    Phòng tập / Sân tập thi đấu <span className="required">*</span>
+                  </label>
+                  <select
+                    className="class-form-select"
+                    value={classForm.roomId}
+                    onChange={(e) => setClassForm({ ...classForm, roomId: e.target.value })}
+                    required
+                  >
+                    <option value="">-- Chọn phòng tập / sân thi đấu --</option>
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} · {r.roomType || 'Tổng hợp'} (Sức chứa: {r.capacity} người{r.location ? ` - ${r.location}` : ''})
+                      </option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const selRoom = rooms.find((r) => r.id === Number(classForm.roomId))
+                    if (!selRoom) return null
+                    return (
+                      <div className="room-info-preview">
+                        <div className="room-info-preview-header">
+                          <DoorOpen size={16} />
+                          <div style={{ flex: 1 }}>
+                            <strong>{selRoom.name}</strong>
+                            <span>{selRoom.roomType || 'Phòng tập'} · Sức chứa tối đa: {selRoom.capacity} người</span>
+                          </div>
+                          {selRoom.location && (
+                            <span className="room-location-tag">
+                              <MapPin size={12} /> {selRoom.location}
+                            </span>
+                          )}
+                        </div>
+                        {classForm.maxCapacity > selRoom.capacity && (
+                          <div className="room-capacity-alert">
+                            <AlertTriangle size={14} />
+                            <span>Sĩ số lớp ({classForm.maxCapacity}) đang vượt quá sức chứa phòng ({selRoom.capacity}).</span>
+                            <button
+                              type="button"
+                              className="room-sync-cap-btn"
+                              onClick={() => setClassForm({ ...classForm, maxCapacity: selRoom.capacity })}
+                            >
+                              Chỉnh về {selRoom.capacity}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                <div className="class-form-group">
+                  <label>
+                    Lịch học định kỳ (Thời gian diễn ra) <span className="required">*</span>
+                  </label>
                   <input
                     type="text"
                     className="class-form-input"
-                    placeholder="Ví dụ: Thứ 2, 4, 6: 18:00 – 19:30 | Phòng Yoga 01"
+                    placeholder="Ví dụ: Thứ 2, 4, 6: 18:00 – 19:30"
                     value={classForm.schedule}
                     onChange={(e) => setClassForm({ ...classForm, schedule: e.target.value })}
+                    required
                   />
                   <div className="schedule-helper-chips">
                     <span style={{ fontSize: 11, color: 'var(--manager-muted)', alignSelf: 'center' }}>
@@ -1758,22 +2135,19 @@ export default function ClassManagement() {
                     >
                       T7 & CN (08:30 - 10:00)
                     </button>
-                    {rooms.slice(0, 4).map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        className="chip-btn"
-                        onClick={() =>
-                          setClassForm({
-                            ...classForm,
-                            schedule: classForm.schedule ? `${classForm.schedule} | ${r.name}` : r.name,
-                          })
-                        }
-                      >
-                        + {r.name}
-                      </button>
-                    ))}
                   </div>
+                  {(() => {
+                    const selRoom = rooms.find((r) => r.id === Number(classForm.roomId))
+                    if (!selRoom || !classForm.schedule) return null
+                    return (
+                      <div className="schedule-live-preview">
+                        <span className="preview-label">Lịch lưu & hiển thị:</span>
+                        <span className="preview-content">
+                          [Phòng: {selRoom.name}] {getCleanScheduleTime(classForm.schedule)}
+                        </span>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 <div className="class-form-grid-2">
@@ -1941,12 +2315,67 @@ export default function ClassManagement() {
                 </div>
 
                 <div className="class-form-group">
-                  <label>Thay đổi lịch học định kỳ (Schedule) của cả lớp</label>
+                  <label>
+                    Phòng tập / Sân tập thi đấu <span className="required">*</span>
+                  </label>
+                  <select
+                    className="class-form-select"
+                    value={classForm.roomId}
+                    onChange={(e) => setClassForm({ ...classForm, roomId: e.target.value })}
+                    required
+                  >
+                    <option value="">-- Chọn phòng tập / sân thi đấu --</option>
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} · {r.roomType || 'Tổng hợp'} (Sức chứa: {r.capacity} người{r.location ? ` - ${r.location}` : ''})
+                      </option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const selRoom = rooms.find((r) => r.id === Number(classForm.roomId))
+                    if (!selRoom) return null
+                    return (
+                      <div className="room-info-preview">
+                        <div className="room-info-preview-header">
+                          <DoorOpen size={16} />
+                          <div style={{ flex: 1 }}>
+                            <strong>{selRoom.name}</strong>
+                            <span>{selRoom.roomType || 'Phòng tập'} · Sức chứa tối đa: {selRoom.capacity} người</span>
+                          </div>
+                          {selRoom.location && (
+                            <span className="room-location-tag">
+                              <MapPin size={12} /> {selRoom.location}
+                            </span>
+                          )}
+                        </div>
+                        {classForm.maxCapacity > selRoom.capacity && (
+                          <div className="room-capacity-alert">
+                            <AlertTriangle size={14} />
+                            <span>Sĩ số lớp ({classForm.maxCapacity}) đang vượt quá sức chứa phòng ({selRoom.capacity}).</span>
+                            <button
+                              type="button"
+                              className="room-sync-cap-btn"
+                              onClick={() => setClassForm({ ...classForm, maxCapacity: selRoom.capacity })}
+                            >
+                              Chỉnh về {selRoom.capacity}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                <div className="class-form-group">
+                  <label>
+                    Lịch học định kỳ (Thời gian diễn ra) <span className="required">*</span>
+                  </label>
                   <input
                     type="text"
                     className="class-form-input"
                     value={classForm.schedule}
                     onChange={(e) => setClassForm({ ...classForm, schedule: e.target.value })}
+                    required
                   />
                   <div className="schedule-helper-chips">
                     <span style={{ fontSize: 11, color: 'var(--manager-muted)', alignSelf: 'center' }}>
@@ -1966,22 +2395,26 @@ export default function ClassManagement() {
                     >
                       T3, T5, T7 (19:00 - 20:30)
                     </button>
-                    {rooms.slice(0, 4).map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        className="chip-btn"
-                        onClick={() =>
-                          setClassForm({
-                            ...classForm,
-                            schedule: classForm.schedule ? `${classForm.schedule} | ${r.name}` : r.name,
-                          })
-                        }
-                      >
-                        + {r.name}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      className="chip-btn"
+                      onClick={() => setClassForm({ ...classForm, schedule: 'Thứ 7 & Chủ Nhật: 08:30 – 10:00' })}
+                    >
+                      T7 & CN (08:30 - 10:00)
+                    </button>
                   </div>
+                  {(() => {
+                    const selRoom = rooms.find((r) => r.id === Number(classForm.roomId))
+                    if (!selRoom || !classForm.schedule) return null
+                    return (
+                      <div className="schedule-live-preview">
+                        <span className="preview-label">Lịch lưu & hiển thị:</span>
+                        <span className="preview-content">
+                          [Phòng: {selRoom.name}] {getCleanScheduleTime(classForm.schedule)}
+                        </span>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 <div className="class-form-grid-2">
