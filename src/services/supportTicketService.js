@@ -12,7 +12,7 @@ export function getTicketErrorMessage(error, fallback = 'Có lỗi xảy ra khi 
       return validationErrors[firstKey][0]
     }
   }
-  return body?.message || error?.message || fallback
+  return body?.message || body?.detail || error?.message || fallback
 }
 
 /**
@@ -55,10 +55,15 @@ export async function resolveSupportTicket(ticketId, { status, resolutionNote })
  * @param {{ title: string, description: string, priority?: string }} payload
  */
 export async function createSupportTicket({ title, description, priority = 'Normal' }) {
+  if (!title?.trim() || !description?.trim()) {
+    throw new Error('Vui lòng nhập tiêu đề và nội dung yêu cầu hỗ trợ.')
+  }
+  if (title.trim().length > 200) throw new Error('Tiêu đề không được vượt quá 200 ký tự.')
+  if (priority && priority.trim().length > 50) throw new Error('Mức độ ưu tiên không hợp lệ.')
   const response = await api.post('/SupportTickets', {
     title: title.trim(),
     description: description.trim(),
-    priority: priority || 'Normal',
+    priority: priority?.trim() || 'Normal',
   })
   const body = response.data
   if (body?.success === false) {
@@ -79,7 +84,8 @@ export async function getMySupportTickets() {
     throw new Error(body.message || 'Không thể tải danh sách phiếu hỗ trợ.')
   }
   const payload = body?.data ?? body
-  return Array.isArray(payload) ? payload : []
+  if (!Array.isArray(payload)) throw new Error('Dữ liệu phiếu hỗ trợ không hợp lệ. Vui lòng thử lại.')
+  return payload
 }
 
 export default {

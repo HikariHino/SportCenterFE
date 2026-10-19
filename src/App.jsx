@@ -1,15 +1,21 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
-import SportDashboard from './pages/SportDashboard'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import ForgotPassword from './pages/ForgotPassword'
-import Coach from './pages/Coach/Coach'
-import Receptionist from './pages/Receptionist/Receptionist'
 import { useAuth } from './contexts/AuthContext'
-import Member from './pages/member/Member'
-import PaymentResult from './pages/member/PaymentResult'
-import CenterManager from './pages/CenterManager/CenterManager'
 import { getToken, isManagerRole } from './utils/auth'
+
+const SportDashboard = lazy(() => import('./pages/SportDashboard'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const Coach = lazy(() => import('./pages/Coach/Coach'))
+const Receptionist = lazy(() => import('./pages/Receptionist/Receptionist'))
+const Member = lazy(() => import('./pages/member/Member'))
+const PaymentResult = lazy(() => import('./pages/member/PaymentResult'))
+const CenterManager = lazy(() => import('./pages/CenterManager/CenterManager'))
+
+function RouteFallback() {
+  return <main role="status" aria-live="polite" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#526177', background: '#f4f7fa', fontFamily: "'Be Vietnam Pro', sans-serif" }}>Đang tải trang...</main>
+}
 
 function CoachRoute() {
   const { user } = useAuth()
@@ -38,18 +44,20 @@ function MemberRoute({ children }) {
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<SportDashboard />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/coach" element={<CoachRoute />} />
-        <Route path="/manager" element={<ManagerRoute />} />
-        <Route path="/receptionist" element={<ReceptionistRoute />} />
-        <Route path="/member" element={<MemberRoute><Member /></MemberRoute>} />
-        <Route path="/payment/success" element={<MemberRoute><PaymentResult /></MemberRoute>} />
-        <Route path="/payment/cancel" element={<MemberRoute><PaymentResult cancelled /></MemberRoute>} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<SportDashboard />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/coach" element={<CoachRoute />} />
+          <Route path="/manager" element={<ManagerRoute />} />
+          <Route path="/receptionist" element={<ReceptionistRoute />} />
+          <Route path="/member" element={<MemberRoute><Member /></MemberRoute>} />
+          <Route path="/payment/success" element={<MemberRoute><PaymentResult /></MemberRoute>} />
+          <Route path="/payment/cancel" element={<MemberRoute><PaymentResult cancelled /></MemberRoute>} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

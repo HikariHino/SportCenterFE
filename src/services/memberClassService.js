@@ -1,5 +1,20 @@
 import api from './api'
 
+function readPage(body, page, pageSize, fallback) {
+  if (body?.success === false) throw new Error(body.message || fallback)
+  const payload = body?.data ?? body
+  if (Array.isArray(payload)) {
+    return { items: payload.slice((page - 1) * pageSize, page * pageSize), total: payload.length, page, pageSize }
+  }
+  if (!Array.isArray(payload?.items)) throw new Error('Dữ liệu danh sách lớp học không hợp lệ. Vui lòng thử lại.')
+  return {
+    items: payload.items,
+    total: Number(payload.total ?? payload.totalCount ?? payload.items.length),
+    page: Number(payload.page || page),
+    pageSize: Number(payload.pageSize || pageSize),
+  }
+}
+
 /**
  * Trích xuất lỗi từ backend cho Class & Sessions
  */
@@ -12,7 +27,7 @@ export function getMemberClassErrorMessage(error, fallback = 'Có lỗi xảy ra
       return validationErrors[firstKey][0]
     }
   }
-  return body?.message || error?.message || fallback
+  return body?.message || body?.detail || (typeof body === 'string' && body) || error?.message || fallback
 }
 
 /**
@@ -21,17 +36,7 @@ export function getMemberClassErrorMessage(error, fallback = 'Có lỗi xảy ra
  */
 export async function getAvailableSessions(params = {}) {
   const response = await api.get('/class-sessions', { params })
-  const body = response.data
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể tải danh sách buổi học.')
-  }
-  const payload = body?.data ?? body
-  return {
-    items: Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : [],
-    total: Number(payload?.total || (Array.isArray(payload) ? payload.length : 0)),
-    page: Number(payload?.page || 1),
-    pageSize: Number(payload?.pageSize || 20),
-  }
+  return readPage(response.data, params.page || 1, params.pageSize || 20, 'Không thể tải danh sách buổi học.')
 }
 
 /**
@@ -56,17 +61,7 @@ export async function getMyRegistrations({ page = 1, pageSize = 20 } = {}) {
   const response = await api.get('/class-registrations/mine', {
     params: { page, pageSize },
   })
-  const body = response.data
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể tải lịch học của bạn.')
-  }
-  const payload = body?.data ?? body
-  return {
-    items: Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : [],
-    total: Number(payload?.total || (Array.isArray(payload) ? payload.length : 0)),
-    page: Number(payload?.page || page),
-    pageSize: Number(payload?.pageSize || pageSize),
-  }
+  return readPage(response.data, page, pageSize, 'Không thể tải lịch học của bạn.')
 }
 
 /**
@@ -100,6 +95,20 @@ export async function checkInRegistration(registrationId) {
   return body?.data ?? body
 }
 
+/** POST /api/class-registrations/{id}/review — ReviewRequest from backend Swagger. */
+export async function reviewRegistration(registrationId, { rating, comment = '' }) {
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw new Error('Vui lòng chọn điểm đánh giá từ 1 đến 5 sao.')
+  }
+  if (comment.trim().length > 2000) throw new Error('Nhận xét không được vượt quá 2.000 ký tự.')
+  const response = await api.post(`/class-registrations/${registrationId}/review`, {
+    rating, comment: comment.trim() || null,
+  })
+  const body = response.data
+  if (body?.success === false) throw new Error(body.message || 'Không thể gửi đánh giá buổi học.')
+  return body?.data ?? body
+}
+
 export default {
   getMemberClassErrorMessage,
   getAvailableSessions,
@@ -107,4 +116,5 @@ export default {
   getMyRegistrations,
   cancelRegistration,
   checkInRegistration,
+  reviewRegistration,
 }

@@ -1,0 +1,54 @@
+.training-plans-view { color: var(--theme-text); }
+.training-plans-muted, .training-plans-count { color: var(--theme-muted); }
+.training-plans-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 14px; border: 1px solid var(--theme-border); border-radius: 9px;
+  color: var(--theme-text); background: var(--theme-surface); font: inherit; font-weight: 600; cursor: pointer;
+}
+.training-plans-button:hover:not(:disabled) { border-color: var(--theme-accent); background: var(--theme-raised); }
+.training-plans-button:disabled { cursor: not-allowed; opacity: .55; }
+.training-plans-view :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+.training-plans-count { margin: 0 0 16px; font-size: 12px; }
+.training-plans-list { display: grid; gap: 24px; }
+.training-plans-card { min-width: 0; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); }
+.training-plans-card-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; padding: 22px 22px 0; }
+.training-plans-card-header > div { min-width: 0; flex: 1; }
+.training-plans-card-header p { margin: 0 0 4px; font-size: 11px; }
+.training-plans-card-header h3 { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+.training-plans-status { padding: 5px 10px; border-radius: 20px; background: var(--theme-raised); color: var(--theme-accent); font-size: 11px; font-weight: 600; }
+.training-plans-goal { display: flex; align-items: flex-start; gap: 12px; margin: 20px 22px; padding: 16px; border-radius: 10px; background: var(--theme-raised); }
+.training-plans-goal > svg { flex-shrink: 0; color: var(--theme-accent); margin-top: 2px; }
+.training-plans-goal > div { min-width: 0; }
+.training-plans-goal span { font-size: 11px; color: var(--theme-muted); }
+.training-plans-goal p { margin: 4px 0 0; font-size: 15px; font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+.training-plans-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0 22px 22px; }
+.training-plans-meta dt { display: flex; align-items: center; gap: 7px; color: var(--theme-muted); font-size: 12px; }
+.training-plans-meta dd { margin: 6px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.training-plans-exercises { border-top: 1px solid var(--theme-border); }
+.training-plans-exercises summary { padding: 16px 22px; cursor: pointer; font-weight: 600; border-radius: 0 0 14px 14px; }
+.training-plans-exercises summary span:last-child { display: inline-block; margin-left: 12px; font-size: 11px; font-weight: 400; color: var(--theme-muted); }
+.training-plans-exercises summary:hover { background: var(--theme-raised); }
+.training-plans-table-scroll { overflow-x: auto; border-radius: 0 0 14px 14px; }
+.training-plans-table-scroll table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.training-plans-table-scroll thead th { background: var(--theme-bg); color: var(--theme-muted); white-space: nowrap; }
+.training-plans-table-scroll th, .training-plans-table-scroll td { padding: 16px; border-top: 1px solid var(--theme-border); text-align: left; vertical-align: top; }
+.training-plans-table-scroll td:not(.training-plans-notes) { white-space: nowrap; }
+.training-plans-exercise-name { display: flex; gap: 10px; min-width: 180px; }
+.training-plans-exercise-name > span { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; color: var(--theme-accent); background: var(--theme-raised); }
+.training-plans-exercise-name > div { min-width: 0; max-width: 300px; overflow-wrap: anywhere; }
+.training-plans-exercise-name p { margin: 6px 0 0; font-weight: 400; white-space: pre-wrap; color: var(--theme-muted); }
+.training-plans-notes { min-width: 220px; max-width: 400px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.training-plans-state, .training-plans-exercises-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 40px 22px; color: var(--theme-muted); text-align: center; }
+.training-plans-state { min-height: 260px; background: var(--theme-surface); border: 1px solid var(--theme-border); border-radius: 14px; }
+.training-plans-state h3, .training-plans-state p, .training-plans-exercises-empty p { margin: 0; max-width: 550px; overflow-wrap: anywhere; }
+.training-plans-state h3 { color: var(--theme-text); font-size: 18px; }
+.training-plans-error { color: var(--theme-red, #b42318); }
+.training-plans-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .training-plans-card-header { padding: 16px 16px 0; }
+  .training-plans-card-header h3 { font-size: 18px; }
+  .training-plans-goal { margin: 16px; }
+  .training-plans-meta { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0 16px 16px; }
+  .training-plans-exercises summary { padding: 16px; }
+}

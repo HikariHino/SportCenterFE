@@ -1,0 +1,82 @@
+.gym-checkin-view {
+  color: var(--theme-text);
+}
+
+.gym-checkin-overview {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.gym-checkin-view .member-card {
+  background: var(--theme-surface);
+  border-color: var(--theme-border);
+}
+
+.gym-checkin-view .member-muted { color: var(--theme-muted); }
+.gym-checkin-card { padding: 22px; }
+.gym-checkin-side { display: grid; gap: 20px; min-width: 0; }
+.gym-checkin-card-heading, .gym-checkin-actions, .gym-checkin-pagination,
+.gym-checkin-pagination > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.gym-checkin-card-heading h3, .gym-checkin-guide h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.gym-checkin-card-heading h3 svg { color: var(--theme-accent); }
+.gym-checkin-identity { display: grid; justify-items: center; gap: 10px; padding-top: 24px; }
+.gym-checkin-identity p { margin: 0; }
+.gym-checkin-name { font-size: 18px; overflow-wrap: anywhere; text-align: center; }
+.gym-checkin-qr { width: min(100%, 280px); padding: 8px; border: 1px solid #d8e0ed; border-radius: 16px; background: #fff; }
+.gym-checkin-qr img { display: block; width: 100%; height: auto; aspect-ratio: 1; }
+.gym-checkin-details { width: 100%; margin: 12px 0 0; border-top: 1px solid var(--theme-border); }
+.gym-checkin-details > div { display: flex; justify-content: space-between; gap: 16px; padding-top: 12px; }
+.gym-checkin-details dt { color: var(--theme-muted); flex-shrink: 0; }
+.gym-checkin-details dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.gym-checkin-summary { display: grid; gap: 20px; }
+.gym-checkin-summary > div { display: grid; gap: 6px; }
+.gym-checkin-summary span { color: var(--theme-muted); }
+.gym-checkin-summary strong { color: var(--theme-accent); font-size: 22px; }
+.gym-checkin-guide ol { margin: 18px 0; padding-left: 20px; display: grid; gap: 14px; line-height: 1.8; }
+.gym-checkin-guide p { line-height: 1.8; margin-bottom: 0; }
+.gym-checkin-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 220px; padding: 28px; color: var(--theme-muted); text-align: center; }
+.gym-checkin-state p { margin: 0; overflow-wrap: anywhere; }
+.gym-checkin-error { color: var(--theme-red, #b42318); }
+.gym-checkin-view .member-button { color: var(--theme-text); background: var(--theme-surface); border-color: var(--theme-border); }
+.gym-checkin-view .member-button:hover:not(:disabled) { background: var(--theme-raised); border-color: var(--theme-accent); }
+.gym-checkin-view .member-button:disabled { opacity: .5; cursor: not-allowed; }
+.gym-checkin-view :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+.gym-checkin-history { overflow: hidden; }
+.gym-checkin-history > .gym-checkin-card-heading { padding: 20px 22px; }
+.gym-checkin-actions { justify-content: flex-end; font-size: 12px; }
+.gym-checkin-actions select { max-width: 100%; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.gym-checkin-table-scroll { overflow-x: auto; }
+.gym-checkin-table-scroll table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.gym-checkin-table-scroll th { background: var(--theme-raised); color: var(--theme-muted); text-align: left; white-space: nowrap; }
+.gym-checkin-table-scroll th, .gym-checkin-table-scroll td { padding: 14px 18px; border-bottom: 1px solid var(--theme-border); }
+.gym-checkin-table-scroll td { min-width: 110px; }
+.gym-checkin-table-scroll .gym-checkin-notes { min-width: 160px; max-width: 300px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.gym-checkin-pending { display: inline-block; border-radius: 20px; padding: 4px 8px; background: var(--theme-gold-bg, #fff1cf); color: var(--theme-gold, #805200); font-size: 11px; white-space: nowrap; }
+.gym-checkin-pagination { padding: 16px 22px; color: var(--theme-muted); font-size: 12px; }
+
+@media (max-width: 1000px) {
+  .gym-checkin-overview { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .gym-checkin-card, .gym-checkin-history > .gym-checkin-card-heading { padding: 16px; }
+  .gym-checkin-actions { justify-content: flex-start; width: 100%; }
+  .gym-checkin-pagination { padding: 14px 16px; }
+  .gym-checkin-pagination > div { width: 100%; }
+}
