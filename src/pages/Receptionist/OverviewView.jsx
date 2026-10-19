@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, CalendarDays, CircleDollarSign, CreditCard, DoorOpen, MapPin, QrCode, RefreshCw, UserCheck, Users } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, CalendarDays, CircleDollarSign, CreditCard, DoorOpen, MapPin, QrCode, RefreshCw, UserCheck, Users } from 'lucide-react'
 import { getTodayCheckIns } from '../../services/gymCheckInService'
 import { getMembers } from '../../services/memberService'
 import { getPayments } from '../../services/paymentService'
@@ -44,7 +44,7 @@ export function Overview({ onNavigate }) {
   return <>
     {error && <div className="reception-overview-warning" role="alert"><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={13} />Thử lại</button></div>}
     <section className="reception-metrics" aria-label="Thống kê lễ tân">
-      {metrics.map(([Icon, label, value, tone, note]) => <article key={label}><span className={tone}><Icon size={21} /></span><div><small>{label}</small><strong>{loading ? '--' : value}</strong><p>{loading ? 'Đang đồng bộ...' : note}</p></div></article>)}
+      {metrics.map(([Icon, label, value, tone, note]) => <article key={label}><span className={tone}><Icon size={20} /></span><div><small>{label}</small><strong>{loading ? '--' : value}</strong><p>{loading ? 'Đang đồng bộ...' : note}</p></div><ArrowUpRight size={17} /></article>)}
     </section>
     <div className="reception-overview-grid">
       <section className="reception-card reception-queue">
