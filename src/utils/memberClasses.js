@@ -19,6 +19,17 @@ export function cancellationDeadline(item) {
   return new Date(start - Number(hours) * 3600000).toISOString()
 }
 
+export function checkInUnavailableReason(item, now = Date.now()) {
+  const start = Date.parse(item.startsAt), end = Date.parse(item.endsAt)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 'Chưa xác định được thời gian điểm danh. Vui lòng làm mới lịch học.'
+  const opensAt = start - 30 * 60000
+  if (now < opensAt) {
+    const label = new Date(opensAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })
+    return `Chưa đến giờ điểm danh. Chỉ được điểm danh từ 30 phút trước giờ học đến trước khi buổi học kết thúc. Bạn có thể điểm danh từ ${label} (giờ Việt Nam).`
+  }
+  return now >= end ? 'Buổi học đã kết thúc, không thể điểm danh.' : ''
+}
+
 export function registrationActions(item, now = Date.now()) {
   const status = normalized(item.status)
   const isCancelled = cancelled(item.status) || cancelled(item.sessionStatus)
@@ -30,10 +41,13 @@ export function registrationActions(item, now = Date.now()) {
   const deadline = cancellationDeadline(item)
   const beforeDeadline = !deadline || !(Date.parse(deadline) <= now)
   const beforeStart = !(Date.parse(item.startsAt) <= now)
+  const checkInEligible = !isCancelled && active && !checkedIn && !ended && item.canCheckIn !== false
+  const checkInReason = checkInEligible ? checkInUnavailableReason(item, now) : ''
   return {
     checkedIn, reviewed, ended,
     cancel: !isCancelled && active && !checkedIn && !ended && beforeStart && beforeDeadline && item.canCancel !== false,
-    checkIn: !isCancelled && active && !checkedIn && !ended && item.canCheckIn !== false,
+    checkIn: checkInEligible && !checkInReason,
+    checkInReason,
     review: !isCancelled && ended && !reviewed && !['noshow', 'absent'].includes(status)
       && !['absent', 'excused'].includes(normalized(item.attendanceStatus)) && item.canReview !== false,
   }

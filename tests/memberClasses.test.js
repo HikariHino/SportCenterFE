@@ -1,9 +1,45 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bookingUnavailableReason, cancellationDeadline, hasActiveMembership, registeredSessionIds, registrationActions } from '../src/utils/memberClasses.js'
+import { bookingUnavailableReason, cancellationDeadline, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions } from '../src/utils/memberClasses.js'
 
 const now = Date.parse('2026-10-19T10:00:00+07:00')
 const upcoming = { id: 1, status: 'Confirmed', startsAt: '2026-10-19T14:00:00+07:00', endsAt: '2026-10-19T15:00:00+07:00' }
+
+test('early check-in is blocked with a Vietnamese opening-time notice', () => {
+  const allowed = registrationActions(upcoming, now)
+  assert.equal(allowed.checkIn, false)
+  assert.match(allowed.checkInReason, /Chưa đến giờ điểm danh/)
+  assert.match(allowed.checkInReason, /30 phút/)
+  assert.match(allowed.checkInReason, /13:30/)
+  assert.match(allowed.checkInReason, /giờ Việt Nam/)
+})
+
+test('check-in opens exactly 30 minutes before class and closes at the ending instant', () => {
+  const opensAt = Date.parse(upcoming.startsAt) - 30 * 60000
+  assert.equal(registrationActions(upcoming, opensAt - 1).checkIn, false)
+  for (const time of [opensAt, Date.parse(upcoming.startsAt), Date.parse(upcoming.endsAt) - 1]) {
+    assert.equal(registrationActions(upcoming, time).checkIn, true)
+    assert.equal(checkInUnavailableReason(upcoming, time), '')
+  }
+  assert.equal(registrationActions(upcoming, Date.parse(upcoming.endsAt)).checkIn, false)
+  assert.match(checkInUnavailableReason(upcoming, Date.parse(upcoming.endsAt)), /đã kết thúc/)
+})
+
+test('check-in handles midnight and UTC offsets without opening on the wrong date', () => {
+  const item = { ...upcoming, startsAt: '2026-10-19T17:10:00Z', endsAt: '2026-10-19T18:10:00Z' }
+  const opensAt = Date.parse('2026-10-19T23:40:00+07:00')
+  assert.equal(registrationActions(item, opensAt).checkIn, true)
+  assert.equal(registrationActions(item, opensAt - 1).checkIn, false)
+  assert.match(checkInUnavailableReason(item, opensAt - 1), /23:40/)
+})
+
+test('unknown or invalid session times never offer check-in', () => {
+  for (const changes of [{ startsAt: null }, { endsAt: undefined }, { startsAt: 'invalid' }, { endsAt: upcoming.startsAt }]) {
+    const item = { ...upcoming, ...changes }
+    assert.equal(registrationActions(item, now).checkIn, false)
+    assert.match(checkInUnavailableReason(item, now), /Chưa xác định/)
+  }
+})
 
 test('booking rejects full, cancelled, started and already registered sessions', () => {
   const session = { ...upcoming, status: 'Scheduled', capacity: 10, enrolledCount: 9 }
