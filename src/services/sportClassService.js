@@ -53,7 +53,7 @@ export async function getClassById(id) {
  * Quản lý tạo lớp học mới
  */
 export async function createSportClass(data) {
-  const response = await api.post('/classes', {
+  const payload = {
     className: data.className.trim(),
     sportId: Number(data.sportId),
     coachId: Number(data.coachId),
@@ -63,7 +63,14 @@ export async function createSportClass(data) {
     startDate: data.startDate,
     endDate: data.endDate,
     isActive: data.isActive !== false,
-  })
+  }
+  if (data.roomId) {
+    payload.roomId = Number(data.roomId)
+  }
+  if (data.roomName) {
+    payload.roomName = data.roomName
+  }
+  const response = await api.post('/classes', payload)
   const body = response.data
   if (body?.success === false) {
     throw new Error(body.message || 'Không thể tạo lớp học.')
@@ -76,7 +83,7 @@ export async function createSportClass(data) {
  * Quản lý cập nhật thông tin lớp học (đổi HLV, đổi lịch định kỳ, cập nhật sĩ số, v.v.)
  */
 export async function updateSportClass(id, data) {
-  const response = await api.put(`/classes/${id}`, {
+  const payload = {
     className: data.className.trim(),
     sportId: Number(data.sportId),
     coachId: Number(data.coachId),
@@ -86,7 +93,14 @@ export async function updateSportClass(id, data) {
     startDate: data.startDate,
     endDate: data.endDate,
     isActive: data.isActive !== false,
-  })
+  }
+  if (data.roomId) {
+    payload.roomId = Number(data.roomId)
+  }
+  if (data.roomName) {
+    payload.roomName = data.roomName
+  }
+  const response = await api.put(`/classes/${id}`, payload)
   const body = response.data
   if (body?.success === false) {
     throw new Error(body.message || 'Không thể cập nhật lớp học.')
@@ -133,13 +147,17 @@ export async function getClassSessions(classId, params = {}) {
  * Thêm buổi học mới vào lớp
  */
 export async function createClassSession(classId, data) {
-  const response = await api.post(`/classes/${classId}/sessions`, {
+  const payload = {
     coachId: Number(data.coachId),
     cancellationPolicyId: Number(data.cancellationPolicyId || 1),
     startsAt: data.startsAt,
     endsAt: data.endsAt,
     capacity: Number(data.capacity),
-  })
+  }
+  if (data.roomId) {
+    payload.roomId = Number(data.roomId)
+  }
+  const response = await api.post(`/classes/${classId}/sessions`, payload)
   const body = response.data
   if (body?.success === false) {
     throw new Error(body.message || 'Không thể tạo buổi học.')
@@ -152,13 +170,17 @@ export async function createClassSession(classId, data) {
  * Dời lịch buổi học (Reschedule), đổi HLV, cập nhật sức chứa buổi học
  */
 export async function updateClassSession(classId, sessionId, data) {
-  const response = await api.put(`/classes/${classId}/sessions/${sessionId}`, {
+  const payload = {
     coachId: Number(data.coachId),
     cancellationPolicyId: Number(data.cancellationPolicyId || 1),
     startsAt: data.startsAt,
     endsAt: data.endsAt,
     capacity: Number(data.capacity),
-  })
+  }
+  if (data.roomId) {
+    payload.roomId = Number(data.roomId)
+  }
+  const response = await api.put(`/classes/${classId}/sessions/${sessionId}`, payload)
   const body = response.data
   if (body?.success === false) {
     throw new Error(body.message || 'Không thể cập nhật buổi học.')
