@@ -1,6 +1,14 @@
 import api from './api'
 import { getMyMemberProfile } from './memberService'
 
+const toUtcISOString = value => {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('Thời gian giáo án không hợp lệ.')
+  }
+  return date.toISOString()
+}
+
 export function getTrainingPlanErrorMessage(error) {
   const body = error?.response?.data
   return body?.message || body?.detail || error?.message || 'Không thể tải lộ trình tập luyện. Vui lòng thử lại.'
@@ -11,8 +19,8 @@ export async function createTrainingPlan({ planName, goal, memberId, startDate, 
     planName,
     goal,
     memberId,
-    startDate,
-    endDate,
+    startDate: toUtcISOString(startDate),
+    endDate: toUtcISOString(endDate),
     exercises,
   })
   const body = response.data
