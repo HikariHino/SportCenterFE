@@ -582,7 +582,7 @@ export default function CancellationPolicyManagement() {
                       </strong>
                     </td>
                     <td>
-                      <span style={{ fontSize: 12, color: '#475569' }}>
+                      <span style={{ fontSize: 12, color: 'var(--manager-secondary, #475569)' }}>
                         Hủy trước tối thiểu {policy.minimumHoursBeforeStart}h trước giờ bắt đầu
                       </span>
                     </td>
@@ -732,8 +732,8 @@ export default function CancellationPolicyManagement() {
                       <strong>Bất kỳ lúc nào</strong>
                     </div>
                     <div>
-                      <span style={{ color: '#dc2626' }}>Hạn chót hủy</span>
-                      <strong style={{ color: '#b91c1c' }}>
+                      <span style={{ color: 'var(--manager-danger, #dc2626)' }}>Hạn chót hủy</span>
+                      <strong style={{ color: 'var(--manager-danger, #b91c1c)' }}>
                         Trước {formatHours(policyForm.minimumHoursBeforeStart)}
                       </strong>
                     </div>
@@ -863,8 +863,8 @@ export default function CancellationPolicyManagement() {
                       <strong>Bất kỳ lúc nào</strong>
                     </div>
                     <div>
-                      <span style={{ color: '#dc2626' }}>Hạn chót hủy</span>
-                      <strong style={{ color: '#b91c1c' }}>
+                      <span style={{ color: 'var(--manager-danger, #dc2626)' }}>Hạn chót hủy</span>
+                      <strong style={{ color: 'var(--manager-danger, #b91c1c)' }}>
                         Trước {formatHours(policyForm.minimumHoursBeforeStart)}
                       </strong>
                     </div>
@@ -954,8 +954,8 @@ export default function CancellationPolicyManagement() {
                     <strong>Hợp lệ</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#dc2626' }}>Hạn chót hủy</span>
-                    <strong style={{ color: '#b91c1c' }}>
+                    <span style={{ color: 'var(--manager-danger, #dc2626)' }}>Hạn chót hủy</span>
+                    <strong style={{ color: 'var(--manager-danger, #b91c1c)' }}>
                       Trước {formatHours(selectedPolicyForDetail.minimumHoursBeforeStart)}
                     </strong>
                   </div>

@@ -1044,8 +1044,8 @@ export default function PackageManagement() {
                     style={{
                       marginTop: 6,
                       lineHeight: 1.6,
-                      color: '#334155',
-                      background: '#f8fafc',
+                      color: 'var(--manager-text, #334155)',
+                      background: 'var(--manager-raised, #f8fafc)',
                       padding: '12px 14px',
                       borderRadius: 8,
                       border: '1px solid var(--manager-line)',

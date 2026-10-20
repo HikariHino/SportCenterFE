@@ -1271,7 +1271,7 @@ export default function ClassManagement() {
                             {isScheduled ? 'Đang lên lịch' : isCompleted ? 'Đã hoàn thành' : 'Đã hủy'}
                           </span>
                           {isCancelled && session.cancellationReason && (
-                            <div style={{ fontSize: 11, color: '#b91c1c', marginTop: 2, maxWidth: 160 }}>
+                            <div style={{ fontSize: 11, color: 'var(--manager-danger, #b91c1c)', marginTop: 2, maxWidth: 160 }}>
                               Lý do: {session.cancellationReason}
                             </div>
                           )}

@@ -405,7 +405,7 @@ export default function CenterManager() {
                 <RefreshCw size={13} className={loadingOverview ? 'spin' : ''} />
                 <span>{loadingOverview ? 'Đang đồng bộ...' : 'Đồng bộ dữ liệu'}</span>
               </button>
-              <small style={{ color: '#10b981', fontWeight: 550 }}>
+              <small style={{ color: 'var(--manager-success, #10b981)', fontWeight: 550 }}>
                 ● Dữ liệu đồng bộ trực tiếp từ máy chủ
               </small>
             </span>
@@ -555,7 +555,7 @@ export default function CenterManager() {
                 </div>
                 <div className="manager-court-grid">
                   {roomsList.length === 0 ? (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: 12 }}>
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px 0', color: 'var(--manager-secondary, #94a3b8)', fontSize: 12 }}>
                       Chưa có phòng tập nào trong hệ thống
                     </div>
                   ) : (
@@ -688,7 +688,7 @@ export default function CenterManager() {
               </div>
               <div className="manager-table-footer" role="status">
                 <span>Hiển thị {filteredPayments.length} / {paymentsList.length} giao dịch</span>
-                <span style={{ color: '#10b981', fontWeight: 550 }}>● Kết nối dữ liệu thời gian thực</span>
+                <span style={{ color: 'var(--manager-success, #10b981)', fontWeight: 550 }}>● Kết nối dữ liệu thời gian thực</span>
               </div>
             </section>
           )}
@@ -707,7 +707,7 @@ export default function CenterManager() {
               </div>
               <div className="manager-staff-grid">
                 {staffList.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: 12 }}>
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px 0', color: 'var(--manager-secondary, #94a3b8)', fontSize: 12 }}>
                     Chưa có nhân sự nào trong hệ thống
                   </div>
                 ) : (
@@ -805,9 +805,9 @@ export default function CenterManager() {
                 className="manager-button"
                 style={{
                   flex: 1,
-                  background: '#f1f5f9',
-                  color: '#334155',
-                  borderColor: '#cbd5e1',
+                  background: 'var(--manager-raised, #f1f5f9)',
+                  color: 'var(--manager-text, #334155)',
+                  borderColor: 'var(--manager-control-border, #cbd5e1)',
                 }}
                 type="button"
                 onClick={() => detailDialog.current?.close()}
