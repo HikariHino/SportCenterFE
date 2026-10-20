@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
-  Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen, Dumbbell,
+  Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
   ClipboardCheck, LayoutDashboard, LogOut, Search, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -159,7 +159,6 @@ export default function Coach() {
         </button>)}
       </nav>
 
-      <div className="coach-sidebar-card"><span><Dumbbell size={20} /></span><p>Nguồn dữ liệu</p><strong>Coach API</strong><small>Lịch, học viên và điểm danh</small></div>
       <div className="coach-sidebar-user"><span className="coach-avatar">{coachInitials}</span><div><strong>{coachName}</strong><small>Huấn luyện viên</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div>
     </aside>
 
