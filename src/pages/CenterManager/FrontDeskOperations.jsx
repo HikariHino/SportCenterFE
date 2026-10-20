@@ -158,6 +158,7 @@ export default function FrontDeskOperations() {
   const [payOsData, setPayOsData] = useState(null) // { qrCode, checkoutUrl }
 
   // Tab 4: Class & Attendance states
+  const [classView, setClassView] = useState('booking')
   const [classBookingRevision, setClassBookingRevision] = useState(0)
   const [attendanceRevision, setAttendanceRevision] = useState(0)
 
@@ -1331,8 +1332,12 @@ export default function FrontDeskOperations() {
       {/* Tab 4: Điểm danh & Quản lý đăng ký lớp */}
       {activeTab === 'classes' && (
         <div className="fdesk-section">
-          <FrontDeskClassBooking disabled={submitting} members={members} membersLoading={loadingMembers} reloadKey={classBookingRevision} onBusyChange={setSubmitting} onRegistered={() => setAttendanceRevision(value => value + 1)} />
-          <FrontDeskClassAttendance reloadKey={attendanceRevision} disabled={submitting} onBusyChange={setSubmitting} onRegistrationsChanged={() => setClassBookingRevision(value => value + 1)} />
+          <div className="fdesk-class-switch" role="group" aria-label="Chức năng lớp học">
+            <button type="button" aria-pressed={classView === 'booking'} aria-controls="frontdesk-booking-panel" disabled={submitting} onClick={() => setClassView('booking')}><CalendarDays size={16} />Đăng ký học</button>
+            <button type="button" aria-pressed={classView === 'attendance'} aria-controls="frontdesk-attendance-panel" disabled={submitting} onClick={() => setClassView('attendance')}><UserCheck size={16} />Điểm danh</button>
+          </div>
+          <div id="frontdesk-booking-panel" className="fdesk-class-panel" hidden={classView !== 'booking'}><FrontDeskClassBooking disabled={submitting} members={members} membersLoading={loadingMembers} reloadKey={classBookingRevision} onBusyChange={setSubmitting} onRegistered={() => setAttendanceRevision(value => value + 1)} /></div>
+          <div id="frontdesk-attendance-panel" className="fdesk-class-panel" hidden={classView !== 'attendance'}><FrontDeskClassAttendance reloadKey={attendanceRevision} disabled={submitting} onBusyChange={setSubmitting} onRegistrationsChanged={() => setClassBookingRevision(value => value + 1)} /></div>
         </div>
       )}
 

@@ -1,16 +1,25 @@
 .fdesk-attendance-session { width: 100%; text-align: left; color: var(--manager-ink, #18263e); font: inherit; }
-.fdesk-attendance .fdesk-booking-class-list { max-height: 420px; }
-.fdesk-attendance .fdesk-booking-session-list { max-height: 380px; }
+.fdesk-attendance .fdesk-booking-class-list { max-height: 330px; }
+.fdesk-attendance .fdesk-booking-session-list { max-height: 250px; }
+.fdesk-attendance-session .fdesk-booking-session-content { grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; }
+.fdesk-attendance-session .fdesk-booking-session-content small, .fdesk-attendance-session .fdesk-attendance-cancel-reason { grid-column: 1 / -1; }
 .fdesk-attendance-session:hover:not(:disabled) { border-color: var(--manager-blue, #2463eb); }
-.fdesk-attendance-roster { min-width: 0; border-top: 1px solid var(--manager-line, #d8e0ed); padding-top: 20px; }
+.fdesk-attendance-roster { min-width: 0; border: 1px solid var(--manager-line, #d8e0ed); border-radius: 10px; padding: 16px; background: var(--manager-surface, #fff); }
 .fdesk-attendance .fdesk-booking-section-heading { flex-wrap: wrap; }
 .fdesk-attendance-summary { margin: 8px 0 0; font-size: 12px; color: var(--manager-secondary, #536179); line-height: 1.7; }
-.fdesk-attendance-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; color: var(--manager-secondary, #536179); font-size: 12px; }
-.fdesk-attendance-stats > span { padding: 6px 10px; border-radius: 6px; background: var(--manager-raised, #f8fafc); }
+.fdesk-attendance-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; color: var(--manager-secondary, #536179); font-size: 12px; }
+.fdesk-attendance-stats > span { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 6px; background: var(--manager-raised, #f8fafc); }
+.fdesk-attendance-stats > span:nth-child(2) { background: var(--manager-success-bg, #ecfdf5); color: var(--manager-success, #047857); }
 .fdesk-attendance-member-id, .fdesk-attendance-reason { display: block; margin-top: 5px; color: var(--manager-secondary, #536179); font-size: 11px; line-height: 1.6; }
 .fdesk-attendance .fdesk-attendance-reason { max-width: 250px; white-space: normal; }
 .fdesk-attendance .fdesk-table th, .fdesk-attendance .fdesk-table td { color: var(--manager-ink, #18263e); }
 .fdesk-attendance .fdesk-table-scroll { max-width: 100%; }
+.fdesk-attendance .fdesk-table { font-size: 12px; }
+.fdesk-attendance .fdesk-table :is(th, td) { padding: 12px; }
+.fdesk-attendance .fdesk-table tbody tr:hover { background: var(--manager-raised, #f8fafc); }
+.fdesk-attendance .fdesk-booking-state { padding: 10px 0; }
+.fdesk-attendance .fdesk-table-scroll { border: 1px solid var(--manager-line, #d8e0ed); border-radius: 8px; }
+.fdesk-attendance-roster .fdesk-booking-placeholder { min-height: 100px; }
 .fdesk-attendance .fdesk-action-group { flex-wrap: wrap; }
 .fdesk-attendance .fdesk-action-group .fdesk-btn { padding: 6px 10px; font-size: 11px; }
 .fdesk-attendance-cancelled { margin-top: 18px; border-top: 1px solid var(--manager-line, #d8e0ed); padding-top: 16px; }
@@ -18,3 +27,12 @@
 .fdesk-attendance-cancelled summary > span { margin-left: 8px; font-size: 11px; color: var(--manager-secondary, #536179); }
 .fdesk-attendance-cancelled .fdesk-booking-session-tag { background: var(--manager-danger-bg, #fef2f2); color: var(--manager-danger, #b91c1c); }
 .fdesk-attendance .fdesk-attendance-cancel-reason { color: var(--manager-secondary, #536179); overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .fdesk-class-switch { display: flex; align-self: stretch; }
+  .fdesk-class-switch button { flex: 1; padding-inline: 10px; }
+  .fdesk-attendance-session { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  .fdesk-attendance-session .fdesk-booking-session-content { grid-template-columns: minmax(0, 1fr); }
+  .fdesk-attendance-session .fdesk-booking-session-content small, .fdesk-attendance-session .fdesk-attendance-cancel-reason { grid-column: auto; }
+  .fdesk-attendance-session .fdesk-booking-session-tag { margin-left: 0; max-width: 80px; white-space: normal; text-align: center; }
+  .fdesk-attendance-roster { padding: 12px; }
+}
