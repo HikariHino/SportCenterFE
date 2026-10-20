@@ -4,8 +4,9 @@ import { classStatusLabel } from '../utils/memberClasses'
 import { buildWeeklyTimetable, shiftTimetableDate, timetableDateKey, timetableWeekStart } from '../utils/memberTimetable'
 import '../style/WeeklyTimetable.css'
 import { sessionEnrollmentCount } from '../utils/sessionEnrollment'
+import AttendanceStatus from './AttendanceStatus'
 
-export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSelect, totalCount, onReschedule, canReschedule = () => true, interactionDisabled = false, now = Date.now(), title = 'Thời khóa biểu hàng tuần', description = 'Lịch học theo giờ Việt Nam · Chọn buổi học để xem chi tiết' }) {
+export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSelect, totalCount, onReschedule, canReschedule = () => true, interactionDisabled = false, showAttendance = false, now = Date.now(), title = 'Thời khóa biểu hàng tuần', description = 'Lịch học theo giờ Việt Nam · Chọn buổi học để xem chi tiết' }) {
   const titleId = useId()
   const dragged = useRef(null)
   const suppressClickUntil = useRef(0)
@@ -78,6 +79,7 @@ export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSele
                 <span><MapPin size={14} />{item.roomName || 'Chưa cập nhật phòng'}</span>
                 <span><User size={14} />{item.coachName || 'Chưa phân công HLV'}</span>
                 <small>{isCancelled ? 'Đã hủy' : classStatusLabel(item.status)}</small>
+                {showAttendance && <AttendanceStatus item={item} />}
                 {movable && <small className="member-timetable-drag-hint">Kéo để đổi lịch</small>}
                 {onReschedule && !isCancelled && sessionEnrollmentCount(item) > 0 && <small>{sessionEnrollmentCount(item)} học viên đã đăng ký</small>}
               </button>
