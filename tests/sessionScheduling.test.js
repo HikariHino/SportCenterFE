@@ -1,12 +1,49 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { assertSessionSchedule } from '../src/utils/sessionScheduling.js'
+import { assertSessionSchedule, buildDatedSession } from '../src/utils/sessionScheduling.js'
 
 const room = { id: 1, name: 'Gym', capacity: 25, isActive: true }
 const otherRoom = { id: 2, name: 'Yoga', capacity: 20, isActive: true }
 const sportClass = { id: 10, className: 'Gym Advanced', roomId: 1, maxCapacity: 20, coachId: 5, startDate: '2099-10-01', endDate: '2099-10-31', isActive: true }
 const data = { startsAt: '2099-10-21T11:00:00Z', endsAt: '2099-10-21T12:30:00Z', coachId: 5, cancellationPolicyId: 1, capacity: 20 }
 const check = options => assertSessionSchedule({ sportClass, room, rooms: [room, otherRoom], groups: [], data, ...options })
+const datedForm = { date: '2099-10-21', startTime: '18:00', endTime: '19:30' }
+const build = (fields = {}, course = sportClass, now = Date.parse('2099-09-30T00:00:00Z')) => buildDatedSession({ ...datedForm, ...fields }, { sportClass: course, now })
+
+test('a specific date produces one session using Vietnam time, including early hours on a UTC date boundary', () => {
+  const item = build()
+  assert.equal(item.date, datedForm.date)
+  assert.equal(item.startsAt, data.startsAt.replace('Z', '.000Z'))
+  assert.equal(item.endsAt, data.endsAt.replace('Z', '.000Z'))
+  assert.equal(item.weekday, (new Date('2099-10-21T00:00:00Z').getUTCDay() + 6) % 7)
+  const early = build({ startTime: '00:00', endTime: '01:00' })
+  assert.equal(early.date, '2099-10-21')
+  assert.equal(early.startsAt, '2099-10-20T17:00:00.000Z')
+})
+
+test('specific dates include both class boundary dates and reject dates outside the class', () => {
+  build({ date: sportClass.startDate, startTime: '00:00', endTime: '01:00' })
+  build({ date: sportClass.endDate, startTime: '23:00', endTime: '23:59' })
+  for (const date of ['2099-09-30', '2099-11-01']) assert.throws(() => build({ date }), /thời gian|bắt đầu và kết thúc của lớp/)
+  for (const course of [undefined, {}, { ...sportClass, endDate: '2099-02-30' }, { startDate: '2099-11-01', endDate: '2099-10-01' }]) {
+    assert.throws(() => buildDatedSession(datedForm, { sportClass: course }))
+  }
+})
+
+test('specific dates respect exact class start and end times, allowing equality at each boundary', () => {
+  const course = { ...sportClass, startDate: data.startsAt, endDate: data.endsAt }
+  build({}, course)
+  assert.throws(() => build({ startTime: '17:59' }, course), /bắt đầu và kết thúc của lớp/)
+  assert.throws(() => build({ endTime: '19:31' }, course), /bắt đầu và kết thúc của lớp/)
+})
+
+test('specific dates reject impossible dates, invalid times, reversed intervals and elapsed start times', () => {
+  for (const date of ['', '2099-02-29', '2099-10-32', '2099-13-01', '21/10/2099', '2099-10-21T00:00:00Z']) assert.throws(() => build({ date }), /ngày học hợp lệ/)
+  for (const fields of [{ startTime: '' }, { startTime: '24:00' }, { endTime: '19:60' }, { endTime: '18:00' }, { endTime: '17:59' }]) assert.throws(() => build(fields))
+  const start = Date.parse(data.startsAt)
+  build({}, sportClass, start - 1)
+  assert.throws(() => build({}, sportClass, start), /sau thời điểm hiện tại/)
+})
 
 test('capacity is a positive integer bounded by both room and class, including current enrolment', () => {
   for (const capacity of [0, -1, 1.5, 21, 26, '', 'abc']) assert.throws(() => check({ data: { ...data, capacity } }), /Sức chứa/)

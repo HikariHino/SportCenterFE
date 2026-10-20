@@ -36,7 +36,8 @@
 .room-recurring-weekdays { display: grid; gap: 10px; }
 .room-recurring-weekdays > label { max-width: 400px; }
 .room-recurring-weekdays > div { display: flex; flex-wrap: wrap; gap: 8px; }
-.room-recurring-weekdays button[aria-pressed='true'] { border-color: var(--theme-accent); color: var(--theme-accent); background: var(--theme-raised); font-weight: 700; }
+.room-session-create-mode { display: flex; flex-wrap: wrap; gap: 8px; }
+.room-recurring-weekdays button[aria-pressed='true'], .room-session-create-mode button[aria-pressed='true'] { border-color: var(--theme-accent); color: var(--theme-accent); background: var(--theme-raised); font-weight: 700; }
 .room-recurring-preview { padding: 14px; border: 1px solid var(--theme-border); border-radius: 10px; background: var(--theme-surface); }
 .room-recurring-preview summary { cursor: pointer; font-size: 12px; }
 .room-recurring-preview summary strong { color: var(--theme-accent); }
