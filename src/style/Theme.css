@@ -253,6 +253,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] :is(.coach-notification-panel, .coach-notification-panel > header, .coach-notification-panel > footer) { background: var(--theme-surface); border-color: var(--theme-border); }
 [data-theme='dark'] .coach-notification { color: var(--theme-muted); }
 [data-theme='dark'] .coach-notification i { border-color: var(--theme-surface); }
+[data-theme='dark'] .coach-avatar { background: linear-gradient(135deg, #2e4c76, #243655); color: #d2e2ff; border-color: #486186; }
 [data-theme='dark'] .coach-notification-panel > header button { color: var(--theme-muted); background: var(--theme-raised); }
 [data-theme='dark'] .coach-notification-list article { border-color: var(--theme-border); }
 [data-theme='dark'] .coach-notification-list article.unread { background: var(--theme-raised); }
@@ -282,7 +283,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-exercise-result-form > footer button:not([type='submit']) { border-color: var(--theme-border); color: var(--theme-text); background: var(--theme-surface); }
 [data-theme='dark'] .coach-exercise-result-form > p { color: #ff9eaa; }
 [data-theme='dark'] .coach-exercise-result-saved { color: var(--theme-green); }
-[data-theme='dark'] :is(.coach-search, .coach-session > button, .coach-student-list article > button, .coach-session-picker select, .coach-attendance-actions select) { background: var(--theme-raised); border-color: var(--theme-border); color: var(--theme-text); }
+[data-theme='dark'] :is(.coach-content-search, .coach-session > button, .coach-student-list article > button, .coach-session-picker select, .coach-attendance-actions select) { background: var(--theme-raised); border-color: var(--theme-border); color: var(--theme-text); }
 [data-theme='dark'] :is(.coach-card-head, .coach-session, .coach-student-list article, .coach-quick-actions > div:last-child > button) { border-color: var(--theme-border); }
 [data-theme='dark'] :is(.coach-notification, .coach-session-info small, .coach-student-list article > b, .coach-chart small) { color: var(--theme-muted); }
 [data-theme='dark'] :is(.coach-metric-icon.blue, .coach-status.done, .coach-student-avatar.blue, .coach-quick-actions .video) { background: var(--theme-blue-bg); color: var(--theme-accent); }

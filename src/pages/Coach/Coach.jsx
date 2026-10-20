@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
   Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
-  ClipboardCheck, LayoutDashboard, LogOut, Search, Trophy, UserRound, Users, X,
+  ClipboardCheck, LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
@@ -48,6 +48,7 @@ export default function Coach() {
   const [activeNav, setActiveNav] = useState('Tổng quan')
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notificationPage, setNotificationPage] = useState({ items: [], total: 0, page: 1, pageSize: 6 })
   const [notificationsLoading, setNotificationsLoading] = useState(false)
@@ -128,6 +129,7 @@ export default function Coach() {
   const selectNavigation = label => {
     setActiveNav(label)
     setQuery('')
+    setSidebarOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -145,31 +147,37 @@ export default function Coach() {
     return <OverviewView onNavigate={selectNavigation} showNotice={showNotice} />
   }
 
-  const meta = pageMeta[activeNav]
+  const ActiveNavIcon = navigation.find(([, label]) => label === activeNav)?.[0] || LayoutDashboard
+  const meta = activeNav === 'Tổng quan'
+    ? { eyebrow: 'BẢNG ĐIỀU KHIỂN COACH', title: `Chào bạn, ${coachName}!`, description: `${today} · Lịch huấn luyện và học viên được đồng bộ từ Coach API.` }
+    : pageMeta[activeNav]
   return <main className="coach-dashboard">
-    <aside className="coach-sidebar">
+    <aside className={`coach-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
       <Link to="/" className="coach-brand" aria-label="Về trang chủ SportPulse">
-        <span><Trophy size={23} /></span><div><strong>SportPulse <em>Olympus</em></strong><small>COACH PORTAL</small></div>
+        <span><Trophy size={24} /></span><div><strong>SportPulse<span>.</span></strong><small>COACH PORTAL</small></div>
       </Link>
+      <div className="coach-portal-tag"><ShieldCheck size={14} />Cổng thông tin huấn luyện viên</div>
 
       <nav className="coach-nav" aria-label="Điều hướng Coach">
-        <p>QUẢN LÝ HUẤN LUYỆN</p>
-        {navigation.map(([Icon, label]) => <button key={label} type="button" className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onClick={() => selectNavigation(label)}>
-          <Icon size={19} /><span>{label}</span>
-        </button>)}
+        <div className="coach-nav-group">
+          <p className="coach-nav-title">QUẢN LÝ HUẤN LUYỆN</p>
+          {navigation.map(([Icon, label]) => <button key={label} type="button" className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onClick={() => selectNavigation(label)}>
+            <Icon size={18} /><span>{label}</span>{activeNav === label && <ChevronRight size={14} />}
+          </button>)}
+        </div>
       </nav>
 
-      <div className="coach-sidebar-user"><span className="coach-avatar">{coachInitials}</span><div><strong>{coachName}</strong><small>Huấn luyện viên</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div>
+      <div className="coach-sidebar-bottom"><div className="coach-sidebar-user"><span className="coach-avatar">{coachInitials}</span><div><strong>{coachName}</strong><small>Huấn luyện viên</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div></div>
     </aside>
 
     <section className="coach-workspace">
       <header className="coach-topbar">
-        <label className="coach-search"><Search size={18} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm học viên..." aria-label="Tìm kiếm" /></label>
-        <div className="coach-topbar-actions"><ThemeToggle compact /><div className="coach-notification-wrap" ref={notificationRef}><button className="coach-notification" type="button" aria-label="Thông báo" aria-expanded={notificationOpen} onClick={toggleNotifications}><Bell size={20} />{unreadCount > 0 && <i><span>{unreadCount > 99 ? '99+' : unreadCount}</span></i>}</button>{notificationOpen && <section className="coach-notification-panel" aria-label="Thông báo Coach"><header><div><span>THÔNG BÁO</span><strong>{unreadCount ? `${unreadCount} chưa đọc` : 'Đã xem tất cả'}</strong></div><button type="button" aria-label="Đóng thông báo" onClick={() => setNotificationOpen(false)}><X size={17} /></button></header>{notificationActionError && <div className="coach-notification-action-error" role="alert">{notificationActionError}</div>}{notificationsLoading ? <div className="coach-notification-state">Đang tải thông báo...</div> : notificationsError ? <div className="coach-notification-state error"><strong>Không thể tải thông báo</strong><span>{notificationsError}</span><button type="button" onClick={() => loadNotifications(notificationPage.page)}>Thử lại</button></div> : notificationPage.items.length ? <><div className="coach-notification-list">{notificationPage.items.map(item => <article className={item.isRead ? '' : 'unread'} key={item.id}><span><Bell size={15} /></span><div><strong>{item.title}</strong><p>{item.content}</p><small>{notificationDateFormatter.format(new Date(item.sentAt))}</small>{!item.isRead && <button type="button" className="coach-notification-read" disabled={Boolean(markingNotificationId)} onClick={() => handleMarkNotificationRead(item)}><CheckCircle2 size={13} />{markingNotificationId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}</button>}</div>{!item.isRead && <i />}</article>)}</div>{notificationPageCount > 1 && <footer><button type="button" disabled={notificationPage.page <= 1} onClick={() => loadNotifications(notificationPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{notificationPage.page}/{notificationPageCount}</span><button type="button" disabled={notificationPage.page >= notificationPageCount} onClick={() => loadNotifications(notificationPage.page + 1)}>Sau<ChevronRight size={14} /></button></footer>}</> : <div className="coach-notification-state"><Bell size={24} /><strong>Chưa có thông báo</strong><span>Thông báo dành cho Coach sẽ xuất hiện tại đây.</span></div>}</section>}</div><button className="coach-topbar-profile" type="button" aria-label="Mở hồ sơ Coach" aria-pressed={activeNav === 'Hồ sơ'} onClick={() => { setNotificationOpen(false); selectNavigation('Hồ sơ') }}><span className="coach-avatar">{coachInitials}</span><span><strong>{coachName}</strong><small>Huấn luyện viên</small></span></button></div>
+        <div className="coach-topbar-left"><button className="coach-menu-btn" type="button" aria-label={sidebarOpen ? 'Đóng menu' : 'Mở menu'} onClick={() => setSidebarOpen(value => !value)}>{sidebarOpen ? <X size={21} /> : <Menu size={21} />}</button><div className="coach-breadcrumb"><span>Huấn luyện viên</span><ChevronRight size={13} /><strong>{activeNav}</strong></div></div>
+        <div className="coach-topbar-actions"><ThemeToggle /><div className="coach-notification-wrap" ref={notificationRef}><button className="coach-notification" type="button" aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ''}`} aria-expanded={notificationOpen} onClick={toggleNotifications}><Bell size={20} />{unreadCount > 0 && <i />}</button>{notificationOpen && <section className="coach-notification-panel" aria-label="Thông báo Coach"><header><div><span>THÔNG BÁO</span><strong>{unreadCount ? `${unreadCount} chưa đọc` : 'Đã xem tất cả'}</strong></div><button type="button" aria-label="Đóng thông báo" onClick={() => setNotificationOpen(false)}><X size={17} /></button></header>{notificationActionError && <div className="coach-notification-action-error" role="alert">{notificationActionError}</div>}{notificationsLoading ? <div className="coach-notification-state">Đang tải thông báo...</div> : notificationsError ? <div className="coach-notification-state error"><strong>Không thể tải thông báo</strong><span>{notificationsError}</span><button type="button" onClick={() => loadNotifications(notificationPage.page)}>Thử lại</button></div> : notificationPage.items.length ? <><div className="coach-notification-list">{notificationPage.items.map(item => <article className={item.isRead ? '' : 'unread'} key={item.id}><span><Bell size={15} /></span><div><strong>{item.title}</strong><p>{item.content}</p><small>{notificationDateFormatter.format(new Date(item.sentAt))}</small>{!item.isRead && <button type="button" className="coach-notification-read" disabled={Boolean(markingNotificationId)} onClick={() => handleMarkNotificationRead(item)}><CheckCircle2 size={13} />{markingNotificationId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}</button>}</div>{!item.isRead && <i />}</article>)}</div>{notificationPageCount > 1 && <footer><button type="button" disabled={notificationPage.page <= 1} onClick={() => loadNotifications(notificationPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{notificationPage.page}/{notificationPageCount}</span><button type="button" disabled={notificationPage.page >= notificationPageCount} onClick={() => loadNotifications(notificationPage.page + 1)}>Sau<ChevronRight size={14} /></button></footer>}</> : <div className="coach-notification-state"><Bell size={24} /><strong>Chưa có thông báo</strong><span>Thông báo dành cho Coach sẽ xuất hiện tại đây.</span></div>}</section>}</div><button className="coach-topbar-profile" type="button" aria-label="Mở hồ sơ Coach" aria-pressed={activeNav === 'Hồ sơ'} onClick={() => { setNotificationOpen(false); selectNavigation('Hồ sơ') }}><span className="coach-avatar">{coachInitials}</span><span><strong>{coachName}</strong><small>Huấn luyện viên</small></span></button></div>
       </header>
 
       <div className="coach-main">
-        {activeNav === 'Tổng quan' ? <section className="coach-welcome"><div><p>{today}</p><h1>Chào bạn, {coachName}! <span>👋</span></h1><small>Lịch huấn luyện và học viên theo buổi được đồng bộ từ Coach API.</small></div></section> : <section className="coach-page-heading"><div><p>{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div></section>}
+        <section className="coach-page-heading"><div><p><ActiveNavIcon size={16} />{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div>{['Học viên', 'Điểm danh'].includes(activeNav) && <label className="coach-content-search"><Search size={16} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm học viên..." aria-label="Tìm học viên" /></label>}</section>
 
         {notice && <div className="coach-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
         <div className="coach-view-content" key={activeNav}><Suspense fallback={<ViewLoader />}>{renderActiveView()}</Suspense></div>
