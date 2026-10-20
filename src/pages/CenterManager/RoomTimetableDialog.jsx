@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, Calendar, CalendarClock, CalendarPlus, MapPin, RefreshCw, Users, X } from 'lucide-react'
-import WeeklyTimetable from '../../components/WeeklyTimetable'
+import RoomSessionTimetable from './RoomSessionTimetable'
 import { assignClassToRoom, getRoomTimetable } from '../../services/roomTimetableService'
 import { getRoomErrorMessage } from '../../services/roomService'
 import { classStatusLabel } from '../../utils/memberClasses'
@@ -99,8 +99,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
           <ul>{state.unassignedClasses.map(sportClass => <li key={sportClass.id}><span>{sportClass.className} · {sportClass.unassignedCount} buổi chưa có phòng</span><button type="button" disabled={creating || showCreate || room.isActive === false} onClick={() => assignRoom(sportClass)}>Gán lịch vào phòng này</button></li>)}</ul>
           {assignmentError && <p role="alert" className="room-recurring-error">{assignmentError}</p>}
         </section>}
-        <WeeklyTimetable items={state.items} totalCount={state.items.length} weekStart={weekStart} onWeekChange={changeWeek} onSelect={setSelectedId} onReschedule={openReschedule} canReschedule={canRescheduleSession} interactionDisabled={creating || showCreate || Boolean(reschedule) || Boolean(rosterSession) || room.isActive === false} title="Thời khóa biểu của phòng" description="Kéo buổi học vào ngày hoặc khung giờ khác để đổi lịch · Chọn buổi học để xem chi tiết" />
-        <p className="room-timetable-note">Các ô trống là khung giờ chưa có buổi học trong lịch. Buổi đã hủy được gạch tên và không chiếm lịch phòng.</p>
+        <RoomSessionTimetable items={state.items} weekStart={weekStart} onWeekChange={changeWeek} onSelect={setSelectedId} onReschedule={openReschedule} canReschedule={canRescheduleSession} interactionDisabled={creating || showCreate || Boolean(reschedule) || Boolean(rosterSession) || room.isActive === false} title="Thời khóa biểu của phòng" description="Kéo buổi học vào ngày hoặc khung giờ khác để đổi lịch · Chọn buổi học để xem chi tiết" />
         {selected && <section ref={detailRef} className="room-timetable-detail" aria-labelledby="room-session-title" aria-live="polite">
           <header><div><small>BUỔI HỌC #{selected.id}</small><h3 id="room-session-title">{selected.className}</h3></div><button type="button" aria-label="Đóng chi tiết buổi học" onClick={() => setSelectedId(null)}><X size={18} /></button></header>
           <dl><div><dt>Bộ môn</dt><dd>{selected.sportName || 'Chưa cập nhật'}</dd></div><div><dt>Huấn luyện viên</dt><dd>{selected.coachName || 'Chưa phân công'}</dd></div><div><dt>Bắt đầu</dt><dd>{formatDateTime(selected.startsAt)}</dd></div><div><dt>Kết thúc</dt><dd>{formatDateTime(selected.endsAt)}</dd></div><div><dt>Sĩ số / Sức chứa</dt><dd>{selected.currentEnrollment ?? selected.enrolledCount ?? selected.registeredCount ?? '—'} / {selected.capacity ?? '—'}</dd></div><div><dt>Trạng thái</dt><dd>{classStatusLabel(selected.status)}</dd></div></dl>
