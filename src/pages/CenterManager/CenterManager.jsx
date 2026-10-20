@@ -26,6 +26,7 @@ import { getRooms } from '../../services/roomService'
 import { getStaffUsers } from '../../services/userService'
 import { getTodayCheckIns } from '../../services/gymCheckInService'
 import '../../style/CenterManager/CenterManager.css'
+import '../../style/CenterManager/ManagerOverview.css'
 
 const managerNavSections = [
   {
@@ -379,7 +380,7 @@ export default function CenterManager() {
           </div>
         </header>
 
-        <main className="manager-main" id="manager-content">
+        <main className={`manager-main${section === 'overview' ? ' manager-overview' : ''}`} id="manager-content">
           <section className="manager-welcome">
             <div>
               <p className="manager-eyebrow">VẬN HÀNH HIỆU QUẢ, KẾT NỐI ĐAM MÊ</p>
@@ -424,7 +425,7 @@ export default function CenterManager() {
                 },
                 {
                   icon: Users,
-                  label: 'Hội viên & Lớp học',
+                  label: 'Hội viên hoạt động',
                   value: String(overviewData?.totalActiveMembers ?? 0).padStart(2, '0'),
                   note: `${todayCheckIns.length} lượt check-in hôm nay · ${overviewData?.totalActiveClasses ?? 0} lớp đang mở`,
                   tone: 'purple',
@@ -446,12 +447,12 @@ export default function CenterManager() {
                   tone: 'amber',
                 },
               ].map(({ icon: Icon, label, value, suffix, note, tone }) => (
-                <article key={label} className="manager-metric">
+                <article key={label} className={`manager-metric manager-metric-${tone}`}>
                   <div>
                     <span>{label}</span>
                     <span className={`manager-icon ${tone}`}><Icon size={20} /></span>
                   </div>
-                  <strong>{value} {suffix && <small>{suffix}</small>}</strong>
+                  <strong><span className="manager-metric-number">{value}</span>{suffix && <small>{suffix}</small>}</strong>
                   <p>{note}</p>
                 </article>
               ))}
@@ -485,8 +486,8 @@ export default function CenterManager() {
               <section className="manager-card manager-revenue">
                 <div className="manager-card-heading">
                   <div>
-                    <h2>Doanh thu trung tâm</h2>
-                    <p>Biểu đồ dòng tiền thực tế theo từng tháng ({revenueYear})</p>
+                    <h2>Doanh thu theo tháng</h2>
+                    <p>Tình hình thanh toán trong năm {revenueYear}</p>
                   </div>
                   <select
                     aria-label="Khoảng thời gian doanh thu"
@@ -544,7 +545,7 @@ export default function CenterManager() {
               <section className="manager-card manager-courts">
                 <div className="manager-card-heading">
                   <div>
-                    <h2>Cơ sở vật chất & Phòng tập</h2>
+                    <h2>Phòng tập & Cơ sở vật chất</h2>
                     <p>{roomsList.length} phòng tập · Sức chứa tổng: {roomsList.reduce((sum, r) => sum + (r.capacity || 0), 0)} người</p>
                   </div>
                   <span className="manager-icon green"><DoorOpen size={21} /></span>
@@ -565,10 +566,9 @@ export default function CenterManager() {
                         className={`manager-court ${room.isActive ? 'available' : 'maintenance'}`}
                         title={`${room.name} (${room.roomType || 'Phòng tập'}): ${room.isActive ? 'Sẵn sàng' : 'Bảo trì'}`}
                       >
-                        <DoorOpen size={19} />
-                        <strong>{room.name}</strong>
-                        <small>{room.roomType || 'Phòng tập'} · {room.capacity} chỗ</small>
-                        <span className="manager-sr-only">{room.isActive ? 'Sẵn sàng' : 'Bảo trì'}</span>
+                        <span className="manager-court-icon"><DoorOpen size={19} /></span>
+                        <div className="manager-court-info"><strong>{room.name}</strong><small>{room.roomType || 'Phòng tập'} · {room.capacity} chỗ</small></div>
+                        <span className="manager-court-status">{room.isActive ? 'Sẵn sàng' : 'Tạm dừng'}</span>
                       </div>
                     ))
                   )}
@@ -616,7 +616,7 @@ export default function CenterManager() {
                   <option value="cancelled">Đã hủy (Cancelled)</option>
                 </select>
               </div>
-              <div className="manager-table-scroll">
+              <div className="manager-table-scroll" role="region" aria-label="Danh sách giao dịch gần đây" tabIndex={0}>
                 <table>
                   <thead>
                     <tr>
@@ -719,7 +719,7 @@ export default function CenterManager() {
                         <span className={`manager-avatar ${roleBadge.tone}`}>{initials}</span>
                         <div>
                           <strong>{person.fullName}</strong>
-                          <p>{roleBadge.label}</p>
+                          <p className="manager-staff-role">{roleBadge.label}</p>
                           <small>
                             <Phone size={12} /> {person.phone || person.email || 'Chưa cập nhật SĐT'}
                           </small>

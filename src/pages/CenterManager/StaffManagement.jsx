@@ -288,14 +288,18 @@ export default function StaffManagement() {
             <p>Tra cứu thông tin, tạo tài khoản mới, điều chỉnh phân quyền và quản lý trạng thái hoạt động nhân sự.</p>
           </div>
           <div className="staff-mgmt-actions">
+            <button type="button" className="staff-btn staff-btn-secondary" onClick={fetchStaff} disabled={loading}>
+              <RefreshCw size={16} className={loading ? "spin" : ""} /> Làm mới
+            </button>
             <button type="button" className="staff-btn staff-btn-primary" onClick={handleOpenCreateModal}>
               <Plus size={16} /> Thêm nhân viên
             </button>
           </div>
         </div>
+      </section>
 
         {/* Metrics Row */}
-        <div className="staff-metrics" style={{ marginTop: "20px" }}>
+        <div className="staff-metrics" aria-label="Thống kê nhân sự">
           <div className="staff-metric-card">
             <span className="staff-metric-icon blue">
               <Users size={22} />
@@ -310,7 +314,7 @@ export default function StaffManagement() {
               <ShieldCheck size={22} />
             </span>
             <div className="staff-metric-info">
-              <small>Quản lý (Manager)</small>
+              <small>Quản lý</small>
               <strong>{loading ? "--" : metrics.managers}</strong>
             </div>
           </div>
@@ -319,7 +323,7 @@ export default function StaffManagement() {
               <Shield size={22} />
             </span>
             <div className="staff-metric-info">
-              <small>HLV (Coach)</small>
+              <small>Huấn luyện viên</small>
               <strong>{loading ? "--" : metrics.coaches}</strong>
             </div>
           </div>
@@ -328,7 +332,7 @@ export default function StaffManagement() {
               <UserCheck size={22} />
             </span>
             <div className="staff-metric-info">
-              <small>Lễ tân (Receptionist)</small>
+              <small>Lễ tân</small>
               <strong>{loading ? "--" : metrics.receptionists}</strong>
             </div>
           </div>
@@ -343,12 +347,15 @@ export default function StaffManagement() {
           </div>
         </div>
 
+      <section className="manager-card staff-list-card" aria-labelledby="staff-list-title">
+        <div className="staff-list-heading"><div><h3 id="staff-list-title">Danh sách nhân sự</h3><p>Tra cứu hồ sơ, quản lý vai trò và trạng thái tài khoản.</p></div><span className="staff-result-count" role="status">{loading ? "Đang tải..." : `${filteredList.length} / ${metrics.total} nhân sự`}</span></div>
         {/* Filter Toolbar */}
-        <div className="staff-toolbar" style={{ marginTop: "20px", marginBottom: "16px" }}>
+        <div className="staff-toolbar">
           <div className="staff-search-box">
             <Search size={16} />
             <input
-              type="text"
+              type="search"
+              aria-label="Tìm nhân sự"
               placeholder="Tìm theo tên, email, SĐT hoặc mã nhân viên..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -356,8 +363,9 @@ export default function StaffManagement() {
             {searchQuery && (
               <button
                 type="button"
+                className="staff-search-clear"
+                aria-label="Xóa từ khóa tìm kiếm"
                 onClick={() => setSearchQuery("")}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--manager-secondary, #94a3b8)" }}
               >
                 <X size={14} />
               </button>
@@ -388,15 +396,6 @@ export default function StaffManagement() {
               <option value="INACTIVE">Đã vô hiệu hóa</option>
             </select>
 
-            <button
-              type="button"
-              className="staff-refresh-btn"
-              onClick={fetchStaff}
-              title="Làm mới danh sách"
-              disabled={loading}
-            >
-              <RefreshCw size={16} className={loading ? "spin" : ""} />
-            </button>
           </div>
         </div>
 
@@ -443,14 +442,13 @@ export default function StaffManagement() {
               )}
             </div>
           ) : (
-            <div className="staff-table-scroll">
+            <div className="staff-table-scroll" role="region" aria-label="Danh sách nhân sự" tabIndex={0}>
               <table className="staff-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "80px" }}>MÃ NV</th>
                     <th>NHÂN SỰ</th>
                     <th>SỐ ĐIỆN THOẠI</th>
-                    <th>VAI TRÒ (ROLE)</th>
+                    <th>VAI TRÒ</th>
                     <th>TRẠNG THÁI</th>
                     <th>NGÀY TẠO</th>
                     <th style={{ textAlign: "right" }}>THAO TÁC</th>
@@ -469,16 +467,13 @@ export default function StaffManagement() {
                     return (
                       <tr key={staff.userId} className={!staff.isActive ? "inactive-row" : ""}>
                         <td>
-                          <strong>#{staff.userId}</strong>
-                        </td>
-                        <td>
                           <div className="staff-user-cell">
                             <span className={"staff-avatar " + roleBadgeClass(staff.role)}>{initials}</span>
                             <div className="staff-user-names">
                               <strong>
                                 {staff.fullName} {isSelf && <small style={{ color: "var(--manager-info, #2563eb)" }}>(Bạn)</small>}
                               </strong>
-                              <small>{staff.email}</small>
+                              <small>#{staff.userId} · {staff.email || "Chưa có email"}</small>
                             </div>
                           </div>
                         </td>
@@ -504,6 +499,7 @@ export default function StaffManagement() {
                               type="button"
                               className="staff-action-icon-btn"
                               title="Xem chi tiết"
+                              aria-label={`Xem hồ sơ ${staff.fullName}`}
                               onClick={() => setSelectedStaffForDetail(staff)}
                             >
                               <Eye size={15} />
@@ -513,6 +509,7 @@ export default function StaffManagement() {
                               type="button"
                               className="staff-action-icon-btn"
                               title={isSelf ? "Không thể tự đổi quyền của mình" : "Đổi vai trò"}
+                              aria-label={`Đổi vai trò của ${staff.fullName}`}
                               disabled={isSelf || !staff.isActive}
                               onClick={() => handleOpenUpdateRole(staff)}
                             >
@@ -522,6 +519,7 @@ export default function StaffManagement() {
                             <button
                               type="button"
                               className="staff-action-icon-btn danger"
+                              aria-label={`Vô hiệu hóa ${staff.fullName}`}
                               title={
                                 isSelf
                                   ? "Không thể vô hiệu hóa tài khoản của chính mình"
@@ -558,6 +556,7 @@ export default function StaffManagement() {
               <button
                 type="button"
                 className="staff-modal-close"
+                aria-label="Đóng biểu mẫu tạo nhân viên"
                 onClick={() => setShowCreateModal(false)}
                 disabled={createSubmitting}
               >
@@ -566,7 +565,7 @@ export default function StaffManagement() {
             </div>
 
             <form onSubmit={handleCreateSubmit}>
-              <div className="staff-modal-body">
+              <div className="staff-modal-body staff-create-body">
                 {createError && (
                   <div className="staff-form-error">
                     <AlertCircle size={16} />
@@ -624,7 +623,7 @@ export default function StaffManagement() {
                 </div>
 
                 <div className="staff-form-group">
-                  <label htmlFor="staff-role">Vai trò (Role) *</label>
+                  <label htmlFor="staff-role">Vai trò *</label>
                   <select
                     id="staff-role"
                     value={createForm.role}
@@ -635,6 +634,7 @@ export default function StaffManagement() {
                     <option value="Receptionist">Lễ tân (Receptionist)</option>
                     <option value="Manager">Quản lý (Manager)</option>
                   </select>
+                  <small>{ROLE_OPTIONS.find(option => option.value === createForm.role)?.desc}</small>
                 </div>
               </div>
 
@@ -671,6 +671,7 @@ export default function StaffManagement() {
               <button
                 type="button"
                 className="staff-modal-close"
+                aria-label="Đóng biểu mẫu phân quyền"
                 onClick={() => setSelectedStaffForRole(null)}
                 disabled={updateRoleSubmitting}
               >
@@ -709,6 +710,7 @@ export default function StaffManagement() {
                     <option value="Receptionist">Lễ tân (Receptionist)</option>
                     <option value="Manager">Quản lý (Manager)</option>
                   </select>
+                  <small>{ROLE_OPTIONS.find(option => option.value === updateRoleForm)?.desc}</small>
                 </div>
 
                 <div className="staff-deactivate-notice" style={{ background: "var(--manager-info-bg, #f0f9ff)", borderColor: "var(--manager-info-border, #bae6fd)", color: "var(--manager-info, #0369a1)" }}>
@@ -760,6 +762,7 @@ export default function StaffManagement() {
               <button
                 type="button"
                 className="staff-modal-close"
+                aria-label="Đóng xác nhận vô hiệu hóa"
                 onClick={() => setSelectedStaffForDeactivate(null)}
                 disabled={deactivateSubmitting}
               >
@@ -820,11 +823,12 @@ export default function StaffManagement() {
             <div className="staff-modal-header">
               <div>
                 <h3>Hồ sơ nhân sự #{selectedStaffForDetail.userId}</h3>
-                <p>Thông tin chi tiết tài khoản từ UsersController.</p>
+                <p>Thông tin liên hệ, vai trò và trạng thái tài khoản.</p>
               </div>
               <button
                 type="button"
                 className="staff-modal-close"
+                aria-label="Đóng hồ sơ nhân sự"
                 onClick={() => setSelectedStaffForDetail(null)}
               >
                 <X size={18} />
