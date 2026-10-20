@@ -51,36 +51,36 @@
 }
 
 .policy-btn-primary {
-  background: var(--manager-blue);
+  background: var(--manager-action, var(--manager-blue));
   color: #fff;
-  border-color: var(--manager-blue);
+  border-color: var(--manager-action, var(--manager-blue));
   box-shadow: 0 2px 6px rgba(36, 99, 235, 0.2);
 }
 
 .policy-btn-primary:hover {
-  background: #1754d4;
-  border-color: #1754d4;
+  background: var(--manager-action-hover, #1754d4);
+  border-color: var(--manager-action-hover, #1754d4);
 }
 
 .policy-btn-secondary {
-  background: #fff;
+  background: var(--manager-surface, #fff);
   color: var(--manager-ink);
-  border-color: #d1d9e6;
+  border-color: var(--manager-control-border, #d1d9e6);
 }
 
 .policy-btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #b5c2d6;
+  background: var(--manager-raised, #f8fafc);
+  border-color: var(--manager-control-border, #b5c2d6);
 }
 
 .policy-btn-danger {
-  background: #ef4444;
+  background: var(--manager-danger-action, #ef4444);
   color: #fff;
   border-color: #ef4444;
 }
 
 .policy-btn-danger:hover {
-  background: #dc2626;
+  background: var(--manager-danger-action-hover, #dc2626);
   border-color: #dc2626;
 }
 
@@ -101,7 +101,7 @@
   padding: 16px 18px;
   border: 1px solid var(--manager-line);
   border-radius: 10px;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -118,23 +118,23 @@
 }
 
 .policy-metric-icon.blue {
-  background: #e9f0ff;
+  background: var(--manager-info-bg, #e9f0ff);
   color: var(--manager-blue);
 }
 
 .policy-metric-icon.amber {
-  background: #fef3c7;
-  color: #d97706;
+  background: var(--manager-warning-bg, #fef3c7);
+  color: var(--manager-warning, #d97706);
 }
 
 .policy-metric-icon.green {
-  background: #dcfce7;
-  color: #16a34a;
+  background: var(--manager-success-bg, #dcfce7);
+  color: var(--manager-success, #16a34a);
 }
 
 .policy-metric-icon.red {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--manager-danger-bg, #fee2e2);
+  color: var(--manager-danger, #dc2626);
 }
 
 .policy-metric-info {
@@ -174,15 +174,15 @@
 }
 
 .policy-alert-error {
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background: var(--manager-danger-bg, #fef2f2);
+  color: var(--manager-danger, #b91c1c);
+  border: 1px solid var(--manager-danger-border, #fecaca);
 }
 
 .policy-alert-success {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background: var(--manager-success-bg, #f0fdf4);
+  color: var(--manager-success, #15803d);
+  border: 1px solid var(--manager-success-border, #bbf7d0);
 }
 
 .policy-alert-close {
@@ -230,7 +230,7 @@
   border: 1px solid var(--manager-line);
   border-radius: 8px;
   font-size: 13px;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   color: var(--manager-ink);
   outline: none;
   transition: border-color 0.15s;
@@ -252,7 +252,7 @@
   border: 1px solid var(--manager-line);
   border-radius: 8px;
   font-size: 12px;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   color: var(--manager-ink);
   outline: none;
 }
@@ -272,7 +272,7 @@
 .policy-card {
   border: 1px solid var(--manager-line);
   border-radius: 14px;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   padding: 22px;
   display: flex;
   flex-direction: column;
@@ -287,7 +287,7 @@
 }
 
 .policy-card.inactive {
-  background: #fbfbfb;
+  background: var(--manager-raised, #fbfbfb);
   opacity: 0.85;
 }
 
@@ -332,15 +332,15 @@
 }
 
 .policy-badge.active {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+  background: var(--manager-success-bg, #ecfdf5);
+  color: var(--manager-success, #059669);
+  border: 1px solid var(--manager-success-border, #a7f3d0);
 }
 
 .policy-badge.inactive {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: var(--manager-danger-bg, #fef2f2);
+  color: var(--manager-danger, #dc2626);
+  border: 1px solid var(--manager-danger-border, #fecaca);
 }
 
 .policy-badge i {
@@ -352,7 +352,7 @@
 
 /* Rule highlight box */
 .policy-rule-box {
-  background: #f8fafc;
+  background: var(--manager-raised, #f8fafc);
   border: 1px solid var(--manager-line);
   border-radius: 10px;
   padding: 14px 16px;
@@ -382,9 +382,9 @@
 .policy-rule-example {
   margin: 0;
   font-size: 12px;
-  color: #4b5563;
+  color: var(--manager-secondary, #4b5563);
   line-height: 1.5;
-  background: #f1f5f9;
+  background: var(--manager-raised, #f1f5f9);
   padding: 10px 12px;
   border-radius: 8px;
 }
@@ -409,29 +409,29 @@
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
+  border: 1px solid var(--manager-control-border, #e2e8f0);
+  background: var(--manager-surface, #fff);
+  color: var(--manager-secondary, #64748b);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .policy-action-btn:hover {
-  background: #f8fafc;
+  background: var(--manager-raised, #f8fafc);
   color: var(--manager-blue);
-  border-color: #cbd5e1;
+  border-color: var(--manager-control-border, #cbd5e1);
 }
 
 .policy-action-btn.danger:hover {
-  color: #dc2626;
-  border-color: #fca5a5;
-  background: #fff5f5;
+  color: var(--manager-danger, #dc2626);
+  border-color: var(--manager-danger-border, #fca5a5);
+  background: var(--manager-danger-bg, #fff5f5);
 }
 
 .policy-action-btn.info:hover {
-  color: #0284c7;
-  border-color: #bae6fd;
-  background: #f0f9ff;
+  color: var(--manager-info, #0284c7);
+  border-color: var(--manager-info-border, #bae6fd);
+  background: var(--manager-info-bg, #f0f9ff);
 }
 
 /* Table View */
@@ -449,7 +449,7 @@
 
 .policy-table th {
   padding: 12px 14px;
-  background: #f8fafc;
+  background: var(--manager-raised, #f8fafc);
   color: var(--manager-muted);
   font-weight: 600;
   font-size: 11px;
@@ -466,12 +466,12 @@
 }
 
 .policy-table tr:hover td {
-  background: #fafcff;
+  background: var(--manager-raised, #fafcff);
 }
 
 /* Visual Timeline representation */
 .policy-timeline-preview {
-  background: #f8fafc;
+  background: var(--manager-raised, #f8fafc);
   border: 1px solid var(--manager-line);
   border-radius: 10px;
   padding: 16px;
@@ -495,7 +495,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: #e2e8f0;
+  background: var(--manager-track, #e2e8f0);
   transform: translateY(-50%);
   z-index: 1;
 }
@@ -503,7 +503,7 @@
 .policy-timeline-point {
   position: relative;
   z-index: 2;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   border: 2px solid #94a3b8;
   width: 18px;
   height: 18px;
@@ -512,12 +512,12 @@
 
 .policy-timeline-point.active {
   border-color: var(--manager-blue);
-  background: #e0f2fe;
+  background: var(--manager-info-bg, #e0f2fe);
 }
 
 .policy-timeline-point.danger {
   border-color: #ef4444;
-  background: #fee2e2;
+  background: var(--manager-danger-bg, #fee2e2);
 }
 
 /* Modals */
@@ -534,7 +534,7 @@
 }
 
 .policy-modal {
-  background: #fff;
+  background: var(--manager-surface, #fff);
   border-radius: 12px;
   width: 100%;
   max-width: 520px;
@@ -571,7 +571,7 @@
 }
 
 .policy-modal-close:hover {
-  background: #f1f5f9;
+  background: var(--manager-raised, #f1f5f9);
   color: var(--manager-ink);
 }
 
@@ -585,7 +585,7 @@
 .policy-modal-footer {
   padding: 16px 22px;
   border-top: 1px solid var(--manager-line);
-  background: #f8fafc;
+  background: var(--manager-raised, #f8fafc);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -607,7 +607,7 @@
 }
 
 .policy-form-group label .required {
-  color: #ef4444;
+  color: var(--manager-danger, #ef4444);
   margin-left: 2px;
 }
 
@@ -617,7 +617,7 @@
   border-radius: 8px;
   font-size: 13px;
   color: var(--manager-ink);
-  background: #fff;
+  background: var(--manager-surface, #fff);
   outline: none;
   font-family: inherit;
   transition: border-color 0.15s;
@@ -658,16 +658,16 @@
 .policy-chip-btn {
   padding: 4px 9px;
   border-radius: 6px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: var(--manager-raised, #f1f5f9);
+  border: 1px solid var(--manager-control-border, #e2e8f0);
   font-size: 11px;
-  color: #334155;
+  color: var(--manager-text, #334155);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .policy-chip-btn:hover {
-  background: #e2e8f0;
+  background: var(--manager-track, #e2e8f0);
   color: var(--manager-ink);
 }
 
@@ -684,7 +684,7 @@
 
 .policy-empty svg {
   margin-bottom: 12px;
-  color: #94a3b8;
+  color: var(--manager-secondary, #94a3b8);
 }
 
 .policy-empty strong {
@@ -714,7 +714,7 @@
 .policy-spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid #e2e8f0;
+  border: 3px solid var(--manager-control-border, #e2e8f0);
   border-top-color: var(--manager-blue);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

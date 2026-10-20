@@ -1,0 +1,56 @@
+/* Icon and input share one focus indicator when the wrapper owns the border. */
+:is(.manager-dashboard, .coach-dashboard, .reception-dashboard, .member-page)
+  :is(.manager-search, .staff-search-box, .fdesk-search-box, .report-search-box,
+    .fdesk-booking-search, .coach-search, .reception-search) {
+  transition: border-color .15s, outline-color .15s;
+}
+
+:is(.manager-dashboard, .coach-dashboard, .reception-dashboard, .member-page)
+  :is(.manager-search, .staff-search-box, .fdesk-search-box, .report-search-box,
+    .fdesk-booking-search, .coach-search, .reception-search) > svg {
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+:is(.manager-dashboard, .coach-dashboard, .reception-dashboard, .member-page)
+  :is(.manager-search, .staff-search-box, .fdesk-search-box, .report-search-box,
+    .fdesk-booking-search, .coach-search, .reception-search) > input {
+  flex: 1;
+  min-width: 0;
+}
+
+:is(.manager-dashboard, .coach-dashboard, .reception-dashboard, .member-page)
+  :is(.manager-search, .staff-search-box, .fdesk-search-box, .report-search-box,
+    .fdesk-booking-search, .coach-search, .reception-search):focus-within {
+  border-color: var(--theme-accent, #1557d5);
+  outline: 2px solid var(--theme-accent, #1557d5);
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+/* More specific than dashboard-wide :focus-visible rules, including lazy CSS. */
+:is(.manager-dashboard, .coach-dashboard, .reception-dashboard, .member-page)
+  :is(.manager-search, .staff-search-box, .fdesk-search-box, .report-search-box,
+    .fdesk-booking-search, .coach-search, .reception-search) > input:is(:focus, :focus-visible) {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+/* These inputs own the entire border, with icons positioned over the padding. */
+:is(.manager-dashboard, .coach-dashboard, .reception-dashboard, .member-page)
+  :is(.class-search-box, .room-search-box, .pkg-search-box, .policy-search-box,
+    .pay-search-box) > input:is(:focus, :focus-visible) {
+  border-color: var(--theme-accent, #1557d5);
+  outline: 2px solid var(--theme-accent, #1557d5);
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.manager-dashboard, .coach-dashboard, .reception-dashboard, .member-page)
+    :is(.manager-search, .staff-search-box, .fdesk-search-box, .report-search-box,
+      .fdesk-booking-search, .coach-search, .reception-search) {
+    transition: none;
+  }
+}

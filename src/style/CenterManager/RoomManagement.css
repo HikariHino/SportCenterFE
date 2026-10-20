@@ -51,36 +51,36 @@
 }
 
 .room-btn-primary {
-  background: var(--manager-blue);
+  background: var(--manager-action, var(--manager-blue));
   color: #fff;
-  border-color: var(--manager-blue);
+  border-color: var(--manager-action, var(--manager-blue));
   box-shadow: 0 2px 6px rgba(36, 99, 235, 0.2);
 }
 
 .room-btn-primary:hover {
-  background: #1754d4;
-  border-color: #1754d4;
+  background: var(--manager-action-hover, #1754d4);
+  border-color: var(--manager-action-hover, #1754d4);
 }
 
 .room-btn-secondary {
-  background: #fff;
+  background: var(--manager-surface, #fff);
   color: var(--manager-ink);
-  border-color: #d1d9e6;
+  border-color: var(--manager-control-border, #d1d9e6);
 }
 
 .room-btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #b5c2d6;
+  background: var(--manager-raised, #f8fafc);
+  border-color: var(--manager-control-border, #b5c2d6);
 }
 
 .room-btn-danger {
-  background: #ef4444;
+  background: var(--manager-danger-action, #ef4444);
   color: #fff;
   border-color: #ef4444;
 }
 
 .room-btn-danger:hover {
-  background: #dc2626;
+  background: var(--manager-danger-action-hover, #dc2626);
   border-color: #dc2626;
 }
 
@@ -101,7 +101,7 @@
   padding: 16px 18px;
   border: 1px solid var(--manager-line);
   border-radius: 10px;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -118,23 +118,23 @@
 }
 
 .room-metric-icon.blue {
-  background: #e9f0ff;
+  background: var(--manager-info-bg, #e9f0ff);
   color: var(--manager-blue);
 }
 
 .room-metric-icon.green {
-  background: #dcfce7;
-  color: #16a34a;
+  background: var(--manager-success-bg, #dcfce7);
+  color: var(--manager-success, #16a34a);
 }
 
 .room-metric-icon.purple {
-  background: #f3e8ff;
-  color: #9333ea;
+  background: var(--manager-purple-bg, #f3e8ff);
+  color: var(--manager-purple, #9333ea);
 }
 
 .room-metric-icon.amber {
-  background: #fef3c7;
-  color: #d97706;
+  background: var(--manager-warning-bg, #fef3c7);
+  color: var(--manager-warning, #d97706);
 }
 
 .room-metric-info {
@@ -174,15 +174,15 @@
 }
 
 .room-alert-error {
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background: var(--manager-danger-bg, #fef2f2);
+  color: var(--manager-danger, #b91c1c);
+  border: 1px solid var(--manager-danger-border, #fecaca);
 }
 
 .room-alert-success {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background: var(--manager-success-bg, #f0fdf4);
+  color: var(--manager-success, #15803d);
+  border: 1px solid var(--manager-success-border, #bbf7d0);
 }
 
 .room-alert-close {
@@ -230,7 +230,7 @@
   border: 1px solid var(--manager-line);
   border-radius: 8px;
   font-size: 13px;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   color: var(--manager-ink);
   outline: none;
   transition: border-color 0.15s;
@@ -252,7 +252,7 @@
   border: 1px solid var(--manager-line);
   border-radius: 8px;
   font-size: 12px;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   color: var(--manager-ink);
   outline: none;
 }
@@ -263,7 +263,7 @@
 
 .view-mode-toggle {
   display: flex;
-  background: #f1f5f9;
+  background: var(--manager-raised, #f1f5f9);
   border-radius: 6px;
   padding: 3px;
 }
@@ -273,7 +273,7 @@
   background: transparent;
   padding: 5px 8px;
   border-radius: 4px;
-  color: #64748b;
+  color: var(--manager-secondary, #64748b);
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -281,7 +281,7 @@
 }
 
 .view-mode-btn.active {
-  background: #fff;
+  background: var(--manager-surface, #fff);
   color: var(--manager-blue);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
@@ -298,7 +298,7 @@
   position: relative;
   border: 1px solid var(--manager-line);
   border-radius: 12px;
-  background: #fff;
+  background: var(--manager-surface, #fff);
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -313,7 +313,7 @@
 }
 
 .room-card.inactive {
-  background: #fafafa;
+  background: var(--manager-raised, #fafafa);
   opacity: 0.85;
 }
 
@@ -330,29 +330,29 @@
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: #e9f0ff;
+  background: var(--manager-info-bg, #e9f0ff);
   color: var(--manager-blue);
   flex-shrink: 0;
 }
 
 .room-card-icon.yoga {
-  background: #f3e8ff;
-  color: #9333ea;
+  background: var(--manager-purple-bg, #f3e8ff);
+  color: var(--manager-purple, #9333ea);
 }
 
 .room-card-icon.gym {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: var(--manager-info-bg, #e0f2fe);
+  color: var(--manager-info, #0284c7);
 }
 
 .room-card-icon.court {
-  background: #dcfce7;
-  color: #16a34a;
+  background: var(--manager-success-bg, #dcfce7);
+  color: var(--manager-success, #16a34a);
 }
 
 .room-card-icon.pool {
-  background: #cffafe;
-  color: #0891b2;
+  background: var(--manager-info-bg, #cffafe);
+  color: var(--manager-info, #0891b2);
 }
 
 .room-card-title {
@@ -397,15 +397,15 @@
 }
 
 .room-badge.active {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+  background: var(--manager-success-bg, #ecfdf5);
+  color: var(--manager-success, #059669);
+  border: 1px solid var(--manager-success-border, #a7f3d0);
 }
 
 .room-badge.inactive {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: var(--manager-danger-bg, #fef2f2);
+  color: var(--manager-danger, #dc2626);
+  border: 1px solid var(--manager-danger-border, #fecaca);
 }
 
 .room-badge i {
@@ -420,7 +420,7 @@
   flex-direction: column;
   gap: 8px;
   font-size: 12px;
-  color: #4b5563;
+  color: var(--manager-secondary, #4b5563);
 }
 
 .room-detail-row {
@@ -454,29 +454,29 @@
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
+  border: 1px solid var(--manager-control-border, #e2e8f0);
+  background: var(--manager-surface, #fff);
+  color: var(--manager-secondary, #64748b);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .room-action-btn:hover {
-  background: #f8fafc;
+  background: var(--manager-raised, #f8fafc);
   color: var(--manager-blue);
-  border-color: #cbd5e1;
+  border-color: var(--manager-control-border, #cbd5e1);
 }
 
 .room-action-btn.danger:hover {
-  color: #dc2626;
-  border-color: #fca5a5;
-  background: #fff5f5;
+  color: var(--manager-danger, #dc2626);
+  border-color: var(--manager-danger-border, #fca5a5);
+  background: var(--manager-danger-bg, #fff5f5);
 }
 
 .room-action-btn.info:hover {
-  color: #0284c7;
-  border-color: #bae6fd;
-  background: #f0f9ff;
+  color: var(--manager-info, #0284c7);
+  border-color: var(--manager-info-border, #bae6fd);
+  background: var(--manager-info-bg, #f0f9ff);
 }
 
 /* Rooms Table View */
@@ -494,7 +494,7 @@
 
 .room-table th {
   padding: 12px 14px;
-  background: #f8fafc;
+  background: var(--manager-raised, #f8fafc);
   color: var(--manager-muted);
   font-weight: 600;
   font-size: 11px;
@@ -511,7 +511,7 @@
 }
 
 .room-table tr:hover td {
-  background: #fafcff;
+  background: var(--manager-raised, #fafcff);
 }
 
 .room-type-tag {
@@ -521,8 +521,8 @@
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--manager-raised, #f1f5f9);
+  color: var(--manager-text, #334155);
 }
 
 /* Modals */
@@ -539,7 +539,7 @@
 }
 
 .room-modal {
-  background: #fff;
+  background: var(--manager-surface, #fff);
   border-radius: 12px;
   width: 100%;
   max-width: 520px;
@@ -576,7 +576,7 @@
 }
 
 .room-modal-close:hover {
-  background: #f1f5f9;
+  background: var(--manager-raised, #f1f5f9);
   color: var(--manager-ink);
 }
 
@@ -590,7 +590,7 @@
 .room-modal-footer {
   padding: 16px 22px;
   border-top: 1px solid var(--manager-line);
-  background: #f8fafc;
+  background: var(--manager-raised, #f8fafc);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -612,7 +612,7 @@
 }
 
 .room-form-group label .required {
-  color: #ef4444;
+  color: var(--manager-danger, #ef4444);
   margin-left: 2px;
 }
 
@@ -623,7 +623,7 @@
   border-radius: 8px;
   font-size: 13px;
   color: var(--manager-ink);
-  background: #fff;
+  background: var(--manager-surface, #fff);
   outline: none;
   font-family: inherit;
   transition: border-color 0.15s;
@@ -671,16 +671,16 @@
 .room-chip-btn {
   padding: 3px 8px;
   border-radius: 4px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: var(--manager-raised, #f1f5f9);
+  border: 1px solid var(--manager-control-border, #e2e8f0);
   font-size: 11px;
-  color: #475569;
+  color: var(--manager-secondary, #475569);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .room-chip-btn:hover {
-  background: #e2e8f0;
+  background: var(--manager-track, #e2e8f0);
   color: var(--manager-ink);
 }
 
@@ -695,15 +695,15 @@
 }
 
 .availability-result-box.free {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background: var(--manager-success-bg, #f0fdf4);
+  color: var(--manager-success, #15803d);
+  border: 1px solid var(--manager-success-border, #bbf7d0);
 }
 
 .availability-result-box.busy {
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background: var(--manager-danger-bg, #fef2f2);
+  color: var(--manager-danger, #b91c1c);
+  border: 1px solid var(--manager-danger-border, #fecaca);
 }
 
 /* Empty State */
@@ -719,7 +719,7 @@
 
 .room-empty svg {
   margin-bottom: 12px;
-  color: #94a3b8;
+  color: var(--manager-secondary, #94a3b8);
 }
 
 .room-empty strong {
@@ -749,7 +749,7 @@
 .room-spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid #e2e8f0;
+  border: 3px solid var(--manager-control-border, #e2e8f0);
   border-top-color: var(--manager-blue);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

@@ -395,7 +395,7 @@ export default function ReportManagement() {
             {overview ? formatVND(overview.totalRevenue) : '...'}
           </div>
           <p className="report-metric-note">
-            <CheckCircle2 size={13} color="#059669" />
+            <CheckCircle2 size={13} color="var(--manager-success, #059669)" />
             Lũy kế từ các hóa đơn hoàn tất
           </p>
         </div>
@@ -411,7 +411,7 @@ export default function ReportManagement() {
             {overview ? formatVND(overview.currentMonthRevenue) : '...'}
           </div>
           <p className="report-metric-note">
-            <Clock3 size={13} color="#2563eb" />
+            <Clock3 size={13} color="var(--manager-info, #2563eb)" />
             Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
           </p>
         </div>
@@ -428,7 +428,7 @@ export default function ReportManagement() {
             <small>thành viên</small>
           </div>
           <p className="report-metric-note">
-            <CheckCircle2 size={13} color="#7c3aed" />
+            <CheckCircle2 size={13} color="var(--manager-purple, #7c3aed)" />
             Tài khoản hội viên Active
           </p>
         </div>
@@ -445,7 +445,7 @@ export default function ReportManagement() {
             <small>lớp học</small>
           </div>
           <p className="report-metric-note">
-            <Calendar size={13} color="#d97706" />
+            <Calendar size={13} color="var(--manager-warning, #d97706)" />
             Lớp thể thao còn hạn đào tạo
           </p>
         </div>
@@ -620,7 +620,7 @@ export default function ReportManagement() {
                           <strong>Tháng {String(item.month).padStart(2, '0')}/{item.year}</strong>
                         </td>
                         <td>
-                          <span style={{ fontWeight: 600, color: rev > 0 ? 'var(--manager-ink, #18263e)' : '#94a3b8' }}>
+                          <span style={{ fontWeight: 600, color: rev > 0 ? 'var(--manager-ink, #18263e)' : 'var(--manager-secondary, #94a3b8)' }}>
                             {formatVND(rev)}
                           </span>
                         </td>
@@ -635,13 +635,13 @@ export default function ReportManagement() {
                         </td>
                         <td>
                           {rev === 0 ? (
-                            <span style={{ color: '#94a3b8', fontSize: 12 }}>Chưa có thu</span>
+                            <span style={{ color: 'var(--manager-secondary, #94a3b8)', fontSize: 12 }}>Chưa có thu</span>
                           ) : diffFromAvg >= 0 ? (
-                            <span style={{ color: '#059669', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ color: 'var(--manager-success, #059669)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               <TrendingUp size={13} /> +{diffFromAvg}%
                             </span>
                           ) : (
-                            <span style={{ color: '#dc2626', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ color: 'var(--manager-danger, #dc2626)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               <TrendingDown size={13} /> {diffFromAvg}%
                             </span>
                           )}
@@ -654,7 +654,7 @@ export default function ReportManagement() {
                           ) : rev > 0 ? (
                             <span className="report-badge warning">Dưới trung bình</span>
                           ) : (
-                            <span className="report-badge" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                            <span className="report-badge" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #64748b)' }}>
                               Không có dữ liệu
                             </span>
                           )}
@@ -666,7 +666,7 @@ export default function ReportManagement() {
                 <tfoot>
                   <tr>
                     <td>TỔNG DOANH THU NĂM {selectedYear}</td>
-                    <td colSpan={2} style={{ color: '#059669', fontSize: 15 }}>
+                    <td colSpan={2} style={{ color: 'var(--manager-success, #059669)', fontSize: 15 }}>
                       {formatVND(yearStats.totalYear)}
                     </td>
                     <td colSpan={2} style={{ color: 'var(--manager-muted, #748096)' }}>
@@ -695,10 +695,10 @@ export default function ReportManagement() {
               <span className="report-chip amber">
                 Lớp ổn định (50-79%): <strong>{classOverallStats.mediumCount} lớp</strong>
               </span>
-              <span className="report-chip" style={{ background: '#fef2f2', color: '#b91c1c' }}>
+              <span className="report-chip" style={{ background: 'var(--manager-danger-bg, #fef2f2)', color: 'var(--manager-danger, #b91c1c)' }}>
                 Cần tối ưu (&lt;50%): <strong>{classOverallStats.lowCount} lớp</strong>
               </span>
-              <span className="report-chip" style={{ background: '#f8fafc', color: 'var(--manager-ink, #18263e)' }}>
+              <span className="report-chip" style={{ background: 'var(--manager-raised, #f8fafc)', color: 'var(--manager-ink, #18263e)' }}>
                 Tổng học viên: <strong>{classOverallStats.totalRegistered} / {classOverallStats.totalCapacity} chỗ</strong>
               </span>
             </div>
@@ -788,7 +788,7 @@ export default function ReportManagement() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <UserCheck size={14} color="#64748b" />
+                              <UserCheck size={14} color="var(--manager-secondary, #64748b)" />
                               <span>{cls.coachName || 'Chưa gán HLV'}</span>
                             </div>
                           </td>
@@ -948,7 +948,7 @@ export default function ReportManagement() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <Clock3 size={13} color="#64748b" />
+                              <Clock3 size={13} color="var(--manager-secondary, #64748b)" />
                               <span>{formatDate(p.paidAt || p.createdAt)}</span>
                             </div>
                           </td>
@@ -958,12 +958,12 @@ export default function ReportManagement() {
                             </strong>
                           </td>
                           <td>
-                            <span style={{ color: p.amountReceived > 0 ? '#059669' : '#94a3b8', fontWeight: 600 }}>
+                            <span style={{ color: p.amountReceived > 0 ? 'var(--manager-success, #059669)' : 'var(--manager-secondary, #94a3b8)', fontWeight: 600 }}>
                               {formatVND(p.amountReceived > 0 ? p.amountReceived : p.amount)}
                             </span>
                           </td>
                           <td>
-                            <span className="report-chip" style={{ background: '#f1f5f9', color: '#475569', fontSize: 11 }}>
+                            <span className="report-chip" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #475569)', fontSize: 11 }}>
                               {p.paymentMethod || 'PayOS / Online'}
                             </span>
                           </td>
@@ -981,7 +981,7 @@ export default function ReportManagement() {
                                 <XCircle size={12} /> Đã hủy
                               </span>
                             ) : (
-                              <span className="report-badge" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                              <span className="report-badge" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #64748b)' }}>
                                 {p.status}
                               </span>
                             )}

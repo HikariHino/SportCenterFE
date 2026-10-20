@@ -357,7 +357,7 @@ export default function StaffManagement() {
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--manager-secondary, #94a3b8)" }}
               >
                 <X size={14} />
               </button>
@@ -413,7 +413,7 @@ export default function StaffManagement() {
           ) : error ? (
             <div className="staff-state-box">
               <span>
-                <AlertCircle size={24} color="#ef4444" />
+                <AlertCircle size={24} color="var(--manager-danger, #ef4444)" />
               </span>
               <strong>Không thể tải dữ liệu</strong>
               <p>{error}</p>
@@ -476,13 +476,13 @@ export default function StaffManagement() {
                             <span className={"staff-avatar " + roleBadgeClass(staff.role)}>{initials}</span>
                             <div className="staff-user-names">
                               <strong>
-                                {staff.fullName} {isSelf && <small style={{ color: "#2563eb" }}>(Bạn)</small>}
+                                {staff.fullName} {isSelf && <small style={{ color: "var(--manager-info, #2563eb)" }}>(Bạn)</small>}
                               </strong>
                               <small>{staff.email}</small>
                             </div>
                           </div>
                         </td>
-                        <td>{staff.phone || <span style={{ color: "#94a3b8" }}>Chưa cập nhật</span>}</td>
+                        <td>{staff.phone || <span style={{ color: "var(--manager-secondary, #94a3b8)" }}>Chưa cập nhật</span>}</td>
                         <td>
                           <span className={"staff-role-badge " + roleBadgeClass(staff.role)}>
                             {staff.role === "Manager" ? <ShieldCheck size={12} /> : staff.role === "Coach" ? <Shield size={12} /> : <UserCheck size={12} />}
@@ -692,7 +692,7 @@ export default function StaffManagement() {
                   <strong>
                     {selectedStaffForRole.fullName} ({selectedStaffForRole.email})
                   </strong>
-                  <span style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                  <span style={{ fontSize: "11px", color: "var(--manager-secondary, #64748b)", marginTop: "2px" }}>
                     Vai trò hiện tại: <strong>{roleNameVi(selectedStaffForRole.role)}</strong>
                   </span>
                 </div>
@@ -711,11 +711,11 @@ export default function StaffManagement() {
                   </select>
                 </div>
 
-                <div className="staff-deactivate-notice" style={{ background: "#f0f9ff", borderColor: "#bae6fd", color: "#0369a1" }}>
+                <div className="staff-deactivate-notice" style={{ background: "var(--manager-info-bg, #f0f9ff)", borderColor: "var(--manager-info-border, #bae6fd)", color: "var(--manager-info, #0369a1)" }}>
                   <ShieldCheck size={20} style={{ flexShrink: 0 }} />
                   <div>
-                    <strong style={{ color: "#0284c7" }}>Lưu ý về lịch sử</strong>
-                    <p style={{ color: "#0369a1" }}>
+                    <strong style={{ color: "var(--manager-info, #0284c7)" }}>Lưu ý về lịch sử</strong>
+                    <p style={{ color: "var(--manager-info, #0369a1)" }}>
                       Khi chuyển đổi vai trò, các phân quyền trong hệ thống sẽ được cập nhật ngay lập tức. Nếu chuyển từ
                       Coach sang vai trò khác, hồ sơ lịch sử lớp dạy vẫn được bảo toàn.
                     </p>
@@ -754,7 +754,7 @@ export default function StaffManagement() {
           <div className="staff-modal">
             <div className="staff-modal-header">
               <div>
-                <h3 style={{ color: "#dc2626" }}>Xác nhận vô hiệu hóa tài khoản</h3>
+                <h3 style={{ color: "var(--manager-danger, #dc2626)" }}>Xác nhận vô hiệu hóa tài khoản</h3>
                 <p>Khóa quyền truy cập hệ thống của nhân viên.</p>
               </div>
               <button

@@ -1,3 +1,5 @@
+@import './SearchFields.css';
+
 /* Shared theme tokens. Existing page styles remain the light palette. */
 :root {
   color-scheme: light;
@@ -118,6 +120,33 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 }
 [data-theme='dark'] .manager-dashboard {
   --manager-ink: var(--theme-text); --manager-muted: var(--theme-muted); --manager-line: var(--theme-border); --manager-blue: var(--theme-accent);
+  --manager-surface: var(--theme-surface);
+  --manager-text: var(--theme-text);
+  --manager-raised: var(--theme-raised);
+  --manager-track: var(--theme-border);
+  --manager-control-border: var(--theme-border);
+  --manager-secondary: var(--theme-muted);
+  --manager-action: #2563eb;
+  --manager-action-hover: #1d4ed8;
+  --manager-success-action: #047857;
+  --manager-success-action-hover: #065f46;
+  --manager-danger-action: #dc2626;
+  --manager-danger-action-hover: #b91c1c;
+  --manager-info: var(--theme-accent);
+  --manager-info-bg: var(--theme-blue-bg);
+  --manager-info-border: #3c5f9f;
+  --manager-success: var(--theme-green);
+  --manager-success-bg: var(--theme-green-bg);
+  --manager-success-border: #2c6554;
+  --manager-warning: var(--theme-gold);
+  --manager-warning-bg: var(--theme-gold-bg);
+  --manager-warning-border: #6b5935;
+  --manager-danger: var(--theme-red);
+  --manager-danger-bg: var(--theme-red-bg);
+  --manager-danger-border: #79424b;
+  --manager-purple: var(--theme-purple);
+  --manager-purple-bg: var(--theme-purple-bg);
+  --manager-purple-border: #635181;
   background: var(--theme-bg);
 }
 [data-theme='dark'] .coach-dashboard {

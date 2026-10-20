@@ -4,6 +4,7 @@ import { getClassDateRange } from './recurringSessions.js'
 import { sessionEnrollmentCount } from './sessionEnrollment.js'
 
 export const isCancelledSession = item => ['cancelled', 'canceled'].includes(String(item.status || item.Status || '').trim().toLowerCase())
+export const isScheduledSession = item => String(item.status || item.Status || '').trim().toLowerCase() === 'scheduled'
 
 export function assertSessionTimeRange({ startsAt, endsAt }, sportClass, now = Date.now()) {
   const start = Date.parse(startsAt), end = Date.parse(endsAt)
