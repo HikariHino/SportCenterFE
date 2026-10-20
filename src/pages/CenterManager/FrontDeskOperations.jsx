@@ -69,7 +69,6 @@ import {
   cancelReceptionistRegistration,
   checkInReceptionistRegistration,
   getReceptionistSessionRoster,
-  registerMemberForSession,
 } from '../../services/receptionistClassService'
 import {
   getReceptionistSessionAttendances,
@@ -81,6 +80,7 @@ import {
   resolveSupportTicket,
 } from '../../services/supportTicketService'
 import '../../style/CenterManager/FrontDeskOperations.css'
+import FrontDeskClassBooking from './FrontDeskClassBooking'
 
 function formatVND(value) {
   const number = Number(value) || 0
@@ -166,8 +166,7 @@ export default function FrontDeskOperations() {
   const [payOsData, setPayOsData] = useState(null) // { qrCode, checkoutUrl }
 
   // Tab 4: Class & Attendance states
-  const [classSessionId, setClassSessionId] = useState('')
-  const [classMemberId, setClassMemberId] = useState('')
+  const [classBookingRevision, setClassBookingRevision] = useState(0)
   const [rosterSessionId, setRosterSessionId] = useState('')
   const [sessionRoster, setSessionRoster] = useState([])
   const [loadingRoster, setLoadingRoster] = useState(false)
@@ -262,6 +261,8 @@ export default function FrontDeskOperations() {
       loadPackagesData()
       if (subMemberId) handleLoadMemberSubscriptions(subMemberId)
     } else if (activeTab === 'classes') {
+      setClassBookingRevision(value => value + 1)
+      loadMembersData(true)
       if (rosterSessionId) handleLoadRoster(rosterSessionId)
     } else if (activeTab === 'tickets') {
       loadTicketsData(true)
@@ -463,29 +464,6 @@ export default function FrontDeskOperations() {
     }
   }
 
-  // Book session for member
-  async function handleRegisterSession(e) {
-    e.preventDefault()
-    if (!classSessionId || !classMemberId) {
-      setErrorMessage('Vui lòng nhập Mã buổi học và Mã hội viên.')
-      return
-    }
-
-    setSubmitting(true)
-    setErrorMessage(null)
-    try {
-      const reg = await registerMemberForSession(Number(classSessionId), Number(classMemberId))
-      setSuccessMessage(`Đã đăng ký hội viên #${classMemberId} vào buổi học #${classSessionId} thành công!`)
-      setRosterSessionId(classSessionId)
-      await handleLoadRoster(classSessionId)
-      setClassMemberId('')
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể đăng ký buổi học.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   // Load roster
   async function handleLoadRoster(sessId) {
     if (!sessId) return
@@ -523,6 +501,7 @@ export default function FrontDeskOperations() {
     setErrorMessage(null)
     try {
       await cancelReceptionistRegistration(cancelRegModal.registrationId, cancelReason || 'Hủy tại quầy lễ tân')
+      setClassBookingRevision(value => value + 1)
       setSuccessMessage('Đã hủy đăng ký buổi học và giải phóng chỗ thành công!')
       setCancelRegModal(null)
       setCancelReason('')
@@ -767,6 +746,7 @@ export default function FrontDeskOperations() {
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'members' ? 'active' : ''}`}
+          disabled={submitting}
           onClick={() => setActiveTab('members')}
         >
           <Users size={16} />
@@ -777,6 +757,7 @@ export default function FrontDeskOperations() {
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'checkin' ? 'active' : ''}`}
+          disabled={submitting}
           onClick={() => setActiveTab('checkin')}
         >
           <ScanLine size={16} />
@@ -791,6 +772,7 @@ export default function FrontDeskOperations() {
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'packages' ? 'active' : ''}`}
+          disabled={submitting}
           onClick={() => setActiveTab('packages')}
         >
           <ReceiptText size={16} />
@@ -800,6 +782,7 @@ export default function FrontDeskOperations() {
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'classes' ? 'active' : ''}`}
+          disabled={submitting}
           onClick={() => setActiveTab('classes')}
         >
           <CalendarDays size={16} />
@@ -809,6 +792,7 @@ export default function FrontDeskOperations() {
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'tickets' ? 'active' : ''}`}
+          disabled={submitting}
           onClick={() => setActiveTab('tickets')}
         >
           <Headset size={16} />
@@ -1408,64 +1392,10 @@ export default function FrontDeskOperations() {
       {/* Tab 4: Điểm danh & Quản lý đăng ký lớp */}
       {activeTab === 'classes' && (
         <div className="fdesk-section">
-          {/* Card 1: Thêm học viên vào buổi học */}
-          <div className="fdesk-card">
-            <div className="fdesk-card-header">
-              <div>
-                <h3>Đăng ký buổi học cho học viên tại quầy</h3>
-                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
-                  Hỗ trợ học viên đăng ký hoặc đặt chỗ ca học trực tiếp tại quầy lễ tân.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleRegisterSession} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-                <div className="fdesk-input-group">
-                  <label htmlFor="class-session-id">Mã buổi học (Session ID) (*):</label>
-                  <input
-                    id="class-session-id"
-                    type="number"
-                    min="1"
-                    className="fdesk-input"
-                    placeholder="Ví dụ: 12"
-                    value={classSessionId}
-                    onChange={(e) => setClassSessionId(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="fdesk-input-group">
-                  <label htmlFor="class-member-select">Học viên (*):</label>
-                  <select
-                    id="class-member-select"
-                    className="fdesk-select"
-                    value={classMemberId}
-                    onChange={(e) => setClassMemberId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- Chọn hội viên --</option>
-                    {members.map((m) => (
-                      <option key={m.memberId} value={m.memberId}>
-                        #{m.memberId} - {m.fullName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                <button
-                  type="submit"
-                  className="fdesk-btn fdesk-btn-primary"
-                  disabled={submitting || !classSessionId || !classMemberId}
-                >
-                  <Plus size={16} />
-                  {submitting ? 'Đang đăng ký...' : 'Xác nhận đăng ký buổi học'}
-                </button>
-              </div>
-            </form>
-          </div>
+          <FrontDeskClassBooking members={members} membersLoading={loadingMembers} reloadKey={classBookingRevision} onBusyChange={setSubmitting} onRegistered={async result => {
+            const sessionId = result.registered[0] || result.existing[0]
+            if (sessionId) { setRosterSessionId(sessionId); await handleLoadRoster(sessionId) }
+          }} />
 
           {/* Card 2: Danh sách học viên & Điểm danh buổi học */}
           <div className="fdesk-card">
