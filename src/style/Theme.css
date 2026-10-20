@@ -318,7 +318,25 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-room-availability>p.available { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .coach-review-pagination button { border-color: var(--theme-border); color: var(--theme-text); background: var(--theme-raised); }
 
-/* Receptionist page (also ready for when its route is connected). */
+/* Receptionist workspace. */
+[data-theme='dark'] .reception-dashboard {
+  --rc-ink:var(--theme-text); --rc-muted:var(--theme-muted); --rc-line:var(--theme-border);
+  --rc-bg:var(--theme-bg); --rc-accent:var(--theme-accent);
+}
+[data-theme='dark'] :is(.reception-topbar,.reception-card,.reception-notification-button,.reception-metrics article) { background:var(--theme-surface); border-color:var(--theme-border); }
+[data-theme='dark'] :is(.reception-search,.reception-table-tools>label,.reception-table-tools button,.reception-shortcut-grid button) { color:var(--theme-text); background:var(--theme-raised); border-color:var(--theme-border); }
+[data-theme='dark'] :is(.reception-card-head,.reception-overview-checkins article,.reception-overview-rooms article,.reception-shortcut-grid) { border-color:var(--theme-border); }
+[data-theme='dark'] .reception-shortcut-grid { background:var(--theme-border); }
+[data-theme='dark'] .reception-shortcut-grid button:hover { background:var(--theme-blue-bg); }
+[data-theme='dark'] .reception-topbar-profile:hover { background:var(--theme-raised); }
+[data-theme='dark'] :is(.reception-table-heading,.reception-table-row) { color:var(--theme-muted); background:var(--theme-raised); border-color:var(--theme-border); }
+[data-theme='dark'] .reception-table-row:hover { background:var(--theme-blue-bg); }
+[data-theme='dark'] :is(.reception-metrics .blue,.reception-shortcut-grid .blue,.reception-notification-list article>span,.reception-overview-checkins article>span,.reception-overview-rooms article>span,.reception-room-toolbar>div:first-child>span,.reception-room-grid article>header>span,.reception-room-detail-title>span,.reception-profile-grid article>span) { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] :is(.reception-metrics .green,.reception-shortcut-grid .green) { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] :is(.reception-metrics .purple,.reception-shortcut-grid .purple) { color:var(--theme-purple); background:var(--theme-purple-bg); }
+[data-theme='dark'] :is(.reception-metrics .amber,.reception-shortcut-grid .amber) { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] .reception-metrics p { color:var(--theme-green); }
+[data-theme='dark'] .reception-dashboard .reception-room-detail-trigger { color:var(--theme-accent); background:var(--theme-raised); border-color:var(--theme-border); }
 [data-theme='dark'] .receptionist-page__content { background: var(--theme-surface); border-color: var(--theme-border); }
 [data-theme='dark'] .receptionist-page__content > p:not(.receptionist-page__eyebrow) { color: var(--theme-muted); }
 [data-theme='dark'] .receptionist-page__eyebrow { color: var(--theme-gold); }
@@ -388,10 +406,10 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-notification-button i { border-color:var(--theme-surface); }
 [data-theme='dark'] .reception-notification-list article { border-color:var(--theme-border); }
 [data-theme='dark'] .reception-notification-list article.unread { background:var(--theme-raised); }
-[data-theme='dark'] .reception-notification-list article>span { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .reception-notification-list article>span { color:var(--theme-accent); background:var(--theme-blue-bg); }
 [data-theme='dark'] :is(.reception-notification-list p,.reception-notification-list small,.reception-notification-state) { color:var(--theme-muted); }
 [data-theme='dark'] .reception-notification-panel>footer button { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
-[data-theme='dark'] .reception-notification-read { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .reception-notification-read { border-color:#3c5f9f; color:var(--theme-accent); background:var(--theme-blue-bg); }
 [data-theme='dark'] .reception-notification-action-error { border-color:#6d3a41; color:#ff9eaa; background:#351f25; }
 [data-theme='dark'] .reception-subscription-detail-loading { border-color:var(--theme-border); color:var(--theme-muted); }
 [data-theme='dark'] .reception-session-catalog-list>button { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
@@ -409,3 +427,42 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 
 [data-theme='dark'] .reception-subscription-actions button.payment { color:var(--theme-gold); background:var(--theme-gold-bg); }
 [data-theme='dark'] :is(.reception-payment-form-grid input,.reception-payment-form-grid select,.reception-payment-confirm) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
+[data-theme='dark'] :is(.reception-member-metrics article,.reception-payment-metrics article) { border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] :is(.reception-member-metrics article>span,.reception-payment-metrics .green) { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] :is(.reception-member-metrics article:nth-child(2)>span,.reception-payment-metrics .blue) { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] :is(.reception-member-metrics article:nth-child(3)>span,.reception-payment-metrics .amber) { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] :is(.reception-member-metrics p,.reception-payment-metrics p) { color:var(--theme-green); }
+[data-theme='dark'] .reception-table-tools button:is(.active,:hover) { border-color:#3c5f9f; color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] .reception-empty>span { color:var(--theme-muted); background:var(--theme-raised); }
+[data-theme='dark'] .reception-empty strong { color:var(--theme-text); }
+[data-theme='dark'] :is(.reception-room-toolbar select,.reception-room-availability input,.reception-profile-form input,.reception-gym-checkin-card input,.reception-gym-manual-card input,.reception-support-dialog select,.reception-support-dialog textarea) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
+[data-theme='dark'] :is(.reception-room-grid article,.reception-room-detail-title,.reception-room-detail-grid>div,.reception-profile-grid article,.reception-gym-result-body dl>div) { border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] :is(.reception-room-grid footer,.reception-room-availability) { border-color:var(--theme-border); }
+[data-theme='dark'] .reception-room-catalog>.reception-card-head>strong { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .reception-profile-summary b { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .reception-profile-summary dl>div { border-color:var(--theme-border); background:var(--theme-raised); }
+
+/* Detailed Coach overview. */
+[data-theme='dark'] .coach-next-session-body { background:linear-gradient(120deg,#1a2941,var(--theme-surface) 62%); }
+[data-theme='dark'] .coach-overview-empty { color:var(--theme-muted); }
+[data-theme='dark'] .coach-overview-empty strong { color:var(--theme-text); }
+[data-theme='dark'] .coach-next-date { border-color:#3c5f9f; color:var(--theme-accent); background:var(--theme-blue-bg); box-shadow:none; }
+[data-theme='dark'] .coach-next-session-meta svg { color:var(--theme-accent); }
+[data-theme='dark'] .coach-capacity>span { background:var(--theme-border); }
+[data-theme='dark'] .coach-next-session-body>button,
+[data-theme='dark'] .coach-overview-empty>button { border-color:#3c5f9f; color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] .coach-next-session-body>button:hover,
+[data-theme='dark'] .coach-overview-empty>button:hover { border-color:#5175ad; background:#29466f; }
+[data-theme='dark'] .coach-progress-ring { background:conic-gradient(var(--theme-accent) var(--coach-progress),var(--theme-border) 0); }
+[data-theme='dark'] .coach-progress-ring::before { background:var(--theme-surface); }
+[data-theme='dark'] .coach-attendance-breakdown>span { border-color:var(--theme-border); color:var(--theme-muted); background:var(--theme-raised); }
+[data-theme='dark'] .coach-day-progress-card>footer { border-color:var(--theme-border); color:var(--theme-muted); background:var(--theme-raised); }
+[data-theme='dark'] .coach-week-card>.coach-card-head>strong,
+[data-theme='dark'] .coach-week-session time,
+[data-theme='dark'] .coach-overview-actions .blue { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] :is(.coach-week-session,.coach-week-more,.coach-overview-actions>div:last-child>button) { border-color:var(--theme-border); }
+[data-theme='dark'] .coach-week-more { color:var(--theme-accent); background:var(--theme-raised); }
+[data-theme='dark'] .coach-overview-actions .green { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .coach-overview-actions .amber { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] .coach-overview-actions .purple { color:var(--theme-purple); background:var(--theme-purple-bg); }
+[data-theme='dark'] .coach-status.cancelled { color:var(--theme-red); background:var(--theme-red-bg); }
