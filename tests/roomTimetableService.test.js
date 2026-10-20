@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
+import { buildDatedSession } from '../src/utils/sessionScheduling.js'
 
 let server
 let api
@@ -77,6 +78,31 @@ function mockApi({ conflictAt, unavailableResponse, availabilityError, failAt, l
   }
   return state
 }
+
+test('a dated session is saved once and a repeated submission reuses the saved session', async () => {
+  const item = buildDatedSession({ date: '2099-10-26', startTime: '18:00', endTime: '19:30' }, { sportClass })
+  const state = mockApi()
+  const request = { ...options, sessions: [item] }
+  const result = await createRecurringRoomSessions(request)
+  assert.equal(result.created.length, 1)
+  assert.equal(state.posts.length, 1)
+  assert.equal(state.posts[0].startsAt, item.startsAt)
+  assert.equal(state.posts[0].endsAt, item.endsAt)
+  const retry = await createRecurringRoomSessions(request)
+  assert.equal(retry.created.length, 0)
+  assert.equal(retry.existing.length, 1)
+  assert.equal(state.posts.length, 1)
+})
+
+test('a dated session is rejected if the class period changes after the form was filled', async () => {
+  const item = buildDatedSession({ date: '2099-10-26', startTime: '18:00', endTime: '19:30' }, { sportClass })
+  const state = mockApi({ course: { ...sportClass, endDate: '2099-10-26T12:00:00Z' } })
+  const result = await createRecurringRoomSessions({ ...options, sessions: [item] })
+  assert.equal(result.conflicts.length, 1)
+  assert.match(result.conflicts[0].message, /bắt đầu và kết thúc của lớp/)
+  assert.equal(state.posts.length, 0)
+  assert.equal(state.puts.length, 0)
+})
 
 test('a conflict anywhere blocks every create request for the series', async () => {
   const state = mockApi({ conflictAt: sessions[1].startsAt })

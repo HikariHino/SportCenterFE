@@ -258,14 +258,15 @@ export async function completeClassSession(sessionId) {
  * GET /api/class-sessions/{id}/roster
  * Xem danh sách học viên đăng ký của buổi học
  */
-export async function getSessionRoster(sessionId) {
-  const response = await api.get(`/class-sessions/${sessionId}/roster`)
+export async function getSessionRoster(sessionId, { signal } = {}) {
+  const response = await api.get(`/class-sessions/${sessionId}/roster`, { signal })
   const body = response.data
   if (body?.success === false) {
     throw new Error(body.message || 'Không thể tải danh sách học viên.')
   }
   const payload = body?.data ?? body
-  return Array.isArray(payload) ? payload : []
+  if (!Array.isArray(payload)) throw new Error('Dữ liệu danh sách học viên không hợp lệ. Vui lòng thử lại.')
+  return payload
 }
 
 /**

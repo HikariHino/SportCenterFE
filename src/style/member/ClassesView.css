@@ -40,12 +40,15 @@
 .member-classes-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 45px 22px; color: var(--theme-muted); background: var(--theme-surface); border: 1px solid var(--theme-border); border-radius: 14px; text-align: center; }
 .member-classes-error { color: var(--theme-red, #b42318); overflow-wrap: anywhere; }
 .member-classes-notice { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 16px; border-radius: 8px; color: var(--theme-green, #096445); background: var(--theme-green-bg, #e1f6ee); }
+.member-classes-checkin-notice { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 12px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-gold, #805200); background: var(--theme-gold-bg, #fff7e5); font-size: 12px; overflow-wrap: anywhere; }
+.member-classes-checkin-notice svg { flex-shrink: 0; margin-top: 2px; }
 .member-classes-pagination, .member-classes-pagination > div { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .member-classes-pagination { margin-top: 20px; color: var(--theme-muted); font-size: 12px; }
 .member-classes-dialog { position: fixed; inset: 0; margin: auto; box-sizing: border-box; width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: auto; padding: 24px; border: 1px solid var(--theme-border); border-radius: 16px; color: var(--theme-text); background: var(--theme-surface); font: 400 13px/1.65 'Be Vietnam Pro', sans-serif; }
 .member-classes-dialog::backdrop { background: #0d1422a8; }
 .member-classes-dialog form { display: grid; gap: 14px; }
 .member-classes-dialog header, .member-classes-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.member-classes-dialog form > footer { justify-content: flex-end; flex-wrap: wrap; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--theme-border); background: transparent; color: inherit; }
 .member-classes-dialog h2 { font-size: 19px; margin: 0; }
 .member-classes-dialog h3, .member-classes-dialog p { margin: 0; }
 .member-classes-dialog textarea { box-sizing: border-box; resize: vertical; }
@@ -88,6 +91,7 @@
   .member-classes-details > div { flex-direction: column; gap: 3px; }
   .member-classes-details dd { text-align: left; }
   .member-classes-dialog { padding: 18px; }
+  .member-classes-dialog form > footer > button { flex: 1 1 130px; }
   .member-classes-no-sub-banner { flex-direction: column; align-items: flex-start; }
   .member-classes-no-sub-btn { width: 100%; }
 }

@@ -6,9 +6,17 @@ import { createRecurringRoomSessions, getRoomTimetableClasses } from '../../serv
 import { getClassErrorMessage } from '../../services/sportClassService'
 import { buildRecurringSessions, formatRecurringWeekdays, getClassDateRange, parseRecurringWeekdays } from '../../utils/recurringSessions'
 import { getSessionRoom, roomSessionForTimetable } from '../../utils/roomTimetable'
+import { buildDatedSession } from '../../utils/sessionScheduling'
+import { timetableDateKey } from '../../utils/memberTimetable'
 
 const dateLabel = value => value ? value.split('-').reverse().join('/') : 'Chưa cập nhật'
 const weekdayLabel = day => day === 6 ? 'Chủ nhật' : `Thứ ${day + 2}`
+const buildPlan = (form, sportClass) => form.mode === 'date'
+  ? { items: [buildDatedSession(form, { sportClass })] }
+  : buildRecurringSessions(form, { sportClass })
+const classBoundaryLabel = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '')
+  ? dateLabel(value)
+  : new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })
 
 export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusyChange, onUpdate }) {
   const id = useId()
@@ -18,7 +26,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
   const [catalog, setCatalog] = useState({ classes: [], coaches: [], policies: [], loading: true, error: '' })
   const [form, setForm] = useState(() => ({
     classId: '', coachId: '', cancellationPolicyId: '', capacity: room.capacity || '',
-    weekdays: '246', startTime: '18:00', endTime: '19:30',
+    mode: 'date', date: '', weekdays: '246', startTime: '18:00', endTime: '19:30',
   }))
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(null)
@@ -56,7 +64,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
     try {
       const assigned = getSessionRoom({}, selectedClass, rooms)
       if (assigned && !roomSessionForTimetable({}, selectedClass, rooms, room)) throw new Error(`Lớp đã được gán vào ${assigned.name || `phòng #${assigned.id}`}. Vui lòng tạo lịch tại phòng đó.`)
-      const plan = buildRecurringSessions(form, { sportClass: selectedClass })
+      const plan = buildPlan(form, selectedClass)
       return { ...plan, error: plan.items.length ? '' : plan.skippedPast
         ? 'Không còn buổi học nào chưa qua giờ bắt đầu trong thời gian của lớp.'
         : 'Không có buổi học phù hợp trong thời gian của lớp. Hãy chọn lại thứ hoặc giờ học.' }
@@ -75,7 +83,12 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
   const selectClass = value => {
     const sportClass = catalog.classes.find(item => String(item.id) === value)
     const coachId = catalog.coaches.some(item => String(item.id) === String(sportClass?.coachId)) ? sportClass.coachId : ''
-    setForm(previous => ({ ...previous, classId: value, coachId: String(coachId), capacity: Math.min(Number(room.capacity) || Infinity, Number(sportClass?.maxCapacity) || Number(room.capacity) || 1) }))
+    const range = getClassDateRange(sportClass)
+    const today = timetableDateKey(new Date().toISOString())
+    setForm(previous => ({ ...previous, classId: value, coachId: String(coachId),
+      date: previous.date && previous.date >= range.start && previous.date <= range.end ? previous.date
+        : range.start && range.end ? (today < range.start ? range.start : today > range.end ? range.end : today) : '',
+      capacity: Math.min(Number(room.capacity) || Infinity, Number(sportClass?.maxCapacity) || Number(room.capacity) || 1) }))
     setError('')
     setConflicts([])
   }
@@ -92,7 +105,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
       if (!catalog.coaches.some(item => String(item.id) === form.coachId)) throw new Error('Vui lòng chọn huấn luyện viên.')
       if (!catalog.policies.some(item => String(item.id) === form.cancellationPolicyId)) throw new Error('Vui lòng chọn chính sách hủy đang hoạt động.')
       if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1 || Number(form.capacity) > maxCapacity) throw new Error(`Sức chứa phải từ 1 đến ${maxCapacity} học viên.`)
-      items = pending || buildRecurringSessions(form, { sportClass: selectedClass }).items
+      items = pending || buildPlan(form, selectedClass).items
       if (!items.length) throw new Error('Không có buổi học phù hợp để tạo trong thời gian của lớp.')
       if (items.some(item => Date.parse(item.startsAt) <= Date.now())) throw new Error('Có buổi đã qua giờ bắt đầu. Hãy đóng biểu mẫu và chọn lại lịch.')
     } catch (validationError) { setError(validationError.message); return }
@@ -117,26 +130,33 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
   }
 
   return <form ref={formRef} className="room-recurring-form" onSubmit={submit} aria-labelledby={`${id}-title`}>
-    <header><div><h3 id={`${id}-title`}><CalendarPlus size={19} /> Thêm buổi học theo lịch lớp</h3><p>Lịch được tạo tại <strong>{room.name}</strong>, trong thời gian của lớp, theo giờ Việt Nam.</p></div><button type="button" aria-label="Đóng biểu mẫu tạo lịch" disabled={busy} onClick={onClose}><X size={18} /></button></header>
+    <header><div><h3 id={`${id}-title`}><CalendarPlus size={19} /> Thêm buổi học</h3><p>Lịch được tạo tại <strong>{room.name}</strong>, trong thời gian của lớp, theo giờ Việt Nam.</p></div><button type="button" aria-label="Đóng biểu mẫu tạo lịch" disabled={busy} onClick={onClose}><X size={18} /></button></header>
     {catalog.loading && <p role="status">Đang tải lớp học, huấn luyện viên và chính sách hủy...</p>}
     {catalog.error && <div className="room-recurring-error" role="alert"><p>{catalog.error}</p><button type="button" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>}
     {!catalog.loading && !catalog.error && (!catalog.classes.length || !catalog.coaches.length || !catalog.policies.length) && <p className="room-recurring-error" role="status">{!catalog.classes.length ? 'Chưa có lớp học đang hoạt động. ' : ''}{!catalog.coaches.length ? 'Chưa có huấn luyện viên. ' : ''}{!catalog.policies.length ? 'Chưa có chính sách hủy đang hoạt động. ' : ''}Vui lòng bổ sung dữ liệu trước khi tạo lịch.</p>}
     <fieldset disabled={busy || locked || catalog.loading || Boolean(catalog.error)}>
+      <div className="room-session-create-mode" role="group" aria-label="Cách tạo buổi học">
+        <button type="button" aria-pressed={form.mode === 'date'} onClick={() => change('mode', 'date')}>Theo ngày cụ thể</button>
+        <button type="button" aria-pressed={form.mode === 'weekly'} onClick={() => change('mode', 'weekly')}>Lặp theo tuần</button>
+      </div>
       <div className="room-recurring-fields">
         <label>Lớp học<select name="classId" required value={form.classId} onChange={event => selectClass(event.target.value)}><option value="">Chọn lớp học</option>{catalog.classes.map(item => <option key={item.id} value={item.id}>{item.className}</option>)}</select></label>
         <label>Huấn luyện viên<select name="coachId" required value={form.coachId} onChange={event => change('coachId', event.target.value)}><option value="">Chọn huấn luyện viên</option>{catalog.coaches.map(item => <option key={item.id} value={item.id}>{item.fullName}</option>)}</select></label>
         <label>Sức chứa mỗi buổi<input name="capacity" type="number" required min={1} max={Number.isFinite(maxCapacity) ? maxCapacity : undefined} step={1} value={form.capacity} onChange={event => change('capacity', event.target.value)} />{Number.isFinite(maxCapacity) && <small>Tối đa {maxCapacity} học viên theo sức chứa phòng và lớp.</small>}</label>
+        {form.mode === 'date' && <label>Ngày học<input name="date" type="date" required disabled={!selectedClass} min={classRange.start || undefined} max={classRange.end || undefined} value={form.date} aria-describedby={`${id}-class-range`} onChange={event => change('date', event.target.value)} /><small>Chọn ngày trong thời gian diễn ra lớp học.</small></label>}
         <label>Giờ bắt đầu<input name="startTime" type="time" required value={form.startTime} onChange={event => change('startTime', event.target.value)} /></label>
         <label>Giờ kết thúc<input name="endTime" type="time" required value={form.endTime} onChange={event => change('endTime', event.target.value)} /></label>
         <label>Chính sách hủy<select name="cancellationPolicyId" required value={form.cancellationPolicyId} onChange={event => change('cancellationPolicyId', event.target.value)}><option value="">Chọn chính sách hủy</option>{catalog.policies.map(item => <option key={item.id} value={item.id}>{item.name} · Trước {item.minimumHoursBeforeStart} giờ</option>)}</select></label>
       </div>
-      <div className="room-recurring-weekdays">
+      {form.mode === 'weekly' && <div className="room-recurring-weekdays">
         <label>Các ngày trong tuần<input name="weekdays" required type="text" value={form.weekdays} maxLength={100} aria-describedby={`${id}-days-help`} placeholder="246 hoặc 357" onChange={event => change('weekdays', event.target.value)} /></label>
         <small id={`${id}-days-help`}>Nhập 246 cho thứ 2, 4, 6; 357 cho thứ 3, 5, 7; hoặc 2, 3, 4, 5, 6, 7, CN.</small>
         <div role="group" aria-label="Chọn các ngày học">{Array.from({ length: 7 }, (_, day) => <button type="button" key={day} aria-pressed={chosenDays.includes(day)} onClick={() => change('weekdays', formatRecurringWeekdays(chosenDays.includes(day) ? chosenDays.filter(value => value !== day) : [...chosenDays, day].sort((a, b) => a - b)))}>{day === 6 ? 'CN' : `Thứ ${day + 2}`}</button>)}</div>
-      </div>
+      </div>}
     </fieldset>
-    {(classRange.start || classRange.end) && <p className="room-recurring-class-range">Thời gian xếp lịch: {dateLabel(classRange.start)} – {dateLabel(classRange.end)}.</p>}
+    <p id={`${id}-class-range`} className="room-recurring-class-range">{classRange.start && classRange.end
+      ? `Thời gian xếp lịch: ${classBoundaryLabel(selectedClass.startDate)} – ${classBoundaryLabel(selectedClass.endDate)} (giờ Việt Nam).`
+      : 'Chọn lớp học để xem thời gian được phép xếp lịch.'}</p>
     {capacityError && <p className="room-recurring-error" role="alert">{capacityError}</p>}
     {selectedClass && !classRoom && <p className="room-recurring-class-range">Khi tạo lịch, lớp và các buổi chưa có phòng của lớp sẽ được gán vào {room.name}.</p>}
     {preview.skippedPast > 0 && <p className="room-recurring-skip">Bỏ qua {preview.skippedPast} buổi đã qua giờ bắt đầu.</p>}

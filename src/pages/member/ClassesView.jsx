@@ -4,7 +4,7 @@ import { getSports, getCoaches } from '../../services/classCatalogService'
 import { getAllAvailableSessions, getAllMemberClasses, getAllMyRegistrations, bookClassSessions, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
 import { getMySubscriptions } from '../../services/memberSubscriptionService'
 import { getRooms } from '../../services/roomService'
-import { bookingUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, registeredSessionIds, registrationActions } from '../../utils/memberClasses'
+import { bookingUnavailableReason, checkInUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, registeredSessionIds, registrationActions } from '../../utils/memberClasses'
 import { timetableWeekStart } from '../../utils/memberTimetable'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
 import '../../style/member/ClassesView.css'
@@ -47,15 +47,16 @@ function RegistrationDetailsDialog({ item, busy, now, onClose, onAction }) {
       <p className="member-classes-muted">{allowed.checkedIn ? 'Đã điểm danh' : item.attendanceStatus ? classStatusLabel(item.attendanceStatus) : 'Chưa điểm danh'}{item.checkInTime && ` · ${formatDate(item.checkInTime)}`}</p>
       {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {item.review?.rating ?? item.rating ?? 'Đã gửi'}{(item.review?.rating ?? item.rating) ? '/5 sao' : ' đánh giá'}</strong>{item.review?.comment && <p>{item.review.comment}</p>}</div>}
       <div className="member-classes-card-actions">
-        {allowed.checkIn && <button type="button" className="primary" disabled={busy} onClick={() => onAction('checkIn', item)}><Check size={15} /> Điểm danh</button>}
+        {(allowed.checkIn || allowed.checkInReason) && <button type="button" className="primary" disabled={busy || !allowed.checkIn} onClick={() => onAction('checkIn', item)}><Check size={15} /> Điểm danh</button>}
         {allowed.cancel && <button type="button" disabled={busy} onClick={() => onAction('cancel', item)}>Hủy đăng ký</button>}
         {allowed.review && <button type="button" className="primary" disabled={busy} onClick={() => onAction('review', item)}><Star size={15} /> Đánh giá buổi học</button>}
       </div>
+      {allowed.checkInReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.checkInReason}</p>}
     </div>
   </dialog>
 }
 
-function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscription, onNavigateTab, bulkResult, bulkProgress }) {
+function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscription, onNavigateTab, bulkResult, bulkProgress, now }) {
   const dialogRef = useRef(null)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
@@ -68,6 +69,7 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
   const titles = { book: 'Xác nhận đặt lịch', bookClass: 'Đăng ký các buổi học của lớp', cancel: 'Hủy đăng ký buổi học', checkIn: 'Điểm danh buổi học', review: 'Đánh giá buổi học' }
   const isBooking = action.type === 'book' || action.type === 'bookClass'
   const isBookBlocked = isBooking && hasActiveSubscription !== true
+  const checkInReason = action.type === 'checkIn' ? checkInUnavailableReason(action.item, now) : ''
   return <dialog className="member-classes-dialog" ref={dialogRef} aria-labelledby="member-class-dialog-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }}>
     <form onSubmit={event => { event.preventDefault(); onSubmit({ rating, comment, reason }) }}>
       <header><h2 id="member-class-dialog-title">{titles[action.type]}</h2><button type="button" aria-label="Đóng" disabled={busy} onClick={onClose}><X size={20} /></button></header>
@@ -104,7 +106,7 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
           <p>Đăng ký giữ chỗ tham gia buổi học bằng gói tập của bạn. Gói tập cần còn hiệu lực và đáp ứng điều kiện của buổi học.</p>
         )}
       </>}
-      {action.type === 'checkIn' && <p>Xác nhận bạn đã có mặt tại phòng tập để tham gia buổi học.</p>}
+      {action.type === 'checkIn' && <><p>Chỉ điểm danh từ 30 phút trước giờ học đến trước khi buổi học kết thúc. Xác nhận bạn đã có mặt tại phòng tập để tham gia.</p>{checkInReason && <p className="member-classes-checkin-notice" role="alert"><AlertCircle size={17} />{checkInReason}</p>}</>}
       {action.type === 'cancel' && <>
         <p>Yêu cầu hủy chỉ được chấp nhận trong thời hạn theo chính sách của buổi học.</p>
         <label htmlFor="member-class-cancel-reason">Lý do hủy (không bắt buộc)</label>
@@ -124,7 +126,7 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
         <small>{comment.length}/2.000 ký tự</small>
       </>}
       {error && <p className="member-classes-error" role="alert">{error}</p>}
-      <footer><button type="button" disabled={busy} onClick={onClose}>Đóng</button><button type="submit" className="primary" disabled={busy || isBookBlocked || (action.type === 'review' && !rating)}>{busy ? <><LoaderCircle className="member-spin" size={16} /> Đang xử lý...</> : action.type === 'review' ? 'Gửi đánh giá' : action.type === 'bookClass' && bulkResult?.remaining.length ? `Thử lại ${bulkResult.remaining.length} buổi còn lại` : 'Xác nhận'}</button></footer>
+      <footer><button type="button" disabled={busy} onClick={onClose}>Đóng</button><button type="submit" className="primary" disabled={busy || isBookBlocked || Boolean(checkInReason) || (action.type === 'review' && !rating)}>{busy ? <><LoaderCircle className="member-spin" size={16} /> Đang xử lý...</> : action.type === 'review' ? 'Gửi đánh giá' : action.type === 'bookClass' && bulkResult?.remaining.length ? `Thử lại ${bulkResult.remaining.length} buổi còn lại` : 'Xác nhận'}</button></footer>
     </form>
   </dialog>
 }
@@ -327,7 +329,11 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
       } else {
         if (!registrationActions(item)[type]) throw new Error('Thao tác không còn khả dụng. Vui lòng đóng cửa sổ và làm mới lịch đã đặt.')
         if (type === 'cancel') await cancelRegistration(item.id, values.reason)
-        if (type === 'checkIn') await checkInRegistration(item.id)
+        if (type === 'checkIn') {
+          const reason = checkInUnavailableReason(item, Date.now())
+          if (reason) throw new Error(reason)
+          await checkInRegistration(item.id)
+        }
         if (type === 'review') await reviewRegistration(item.id, values)
       }
       if (!mounted.current) return
@@ -404,10 +410,11 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
             <p className="member-classes-muted">{allowed.checkedIn ? 'Đã điểm danh' : registration.attendanceStatus ? classStatusLabel(registration.attendanceStatus) : 'Chưa điểm danh'}{registration.checkInTime && ` · ${formatDate(registration.checkInTime)}`}</p>
             {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {registration.review?.rating ?? registration.rating ?? 'Đã gửi'}{(registration.review?.rating ?? registration.rating) ? '/5 sao' : ' đánh giá'}</strong>{registration.review?.comment && <p>{registration.review.comment}</p>}</div>}
             <div className="member-classes-card-actions">
-              {allowed.checkIn && <button type="button" className="primary" disabled={busy} onClick={() => openAction('checkIn', registration)}><Check size={15} /> Điểm danh</button>}
+              {(allowed.checkIn || allowed.checkInReason) && <button type="button" className="primary" disabled={busy || !allowed.checkIn} onClick={() => openAction('checkIn', registration)}><Check size={15} /> Điểm danh</button>}
               {allowed.cancel && <button type="button" disabled={busy} onClick={() => openAction('cancel', registration)}>Hủy đăng ký</button>}
               {allowed.review && <button type="button" className="primary" disabled={busy} onClick={() => openAction('review', registration)}><Star size={15} /> Đánh giá buổi học</button>}
             </div>
+            {allowed.checkInReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.checkInReason}</p>}
           </article>
         })}
       </div>}
@@ -420,6 +427,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
       <ActionDialog
         action={action}
         busy={busy}
+        now={now}
         error={actionError}
         bulkResult={bulkResult}
         bulkProgress={bulkProgress}

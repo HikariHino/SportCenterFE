@@ -9,6 +9,7 @@ import '../../style/CenterManager/RoomTimetable.css'
 import RecurringRoomSessionsForm from './RecurringRoomSessionsForm'
 import RescheduleRoomSessionDialog from './RescheduleRoomSessionDialog'
 import { canRescheduleSession } from '../../utils/sessionReschedule'
+import SessionRosterDialog from './SessionRosterDialog'
 
 const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật'
 
@@ -24,6 +25,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
   const [notice, setNotice] = useState('')
   const [assignmentError, setAssignmentError] = useState('')
   const [reschedule, setReschedule] = useState(null)
+  const [rosterSession, setRosterSession] = useState(null)
   const assignmentLock = useRef(false)
   const selected = state.items.find(item => item.id === selectedId)
 
@@ -51,7 +53,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
   const changeWeek = value => { setWeekStart(value); setSelectedId(null) }
   const closeDialog = () => { if (!creating) onClose() }
   const openReschedule = (session, target) => {
-    if (creating || showCreate || reschedule || room.isActive === false || !canRescheduleSession(session)) return
+    if (creating || showCreate || reschedule || rosterSession || room.isActive === false || !canRescheduleSession(session)) return
     setReschedule({ session, target })
     setNotice('')
   }
@@ -82,7 +84,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
     if (result.complete) setShowCreate(false)
   }
 
-  return <dialog ref={dialogRef} className="room-timetable-dialog" aria-labelledby="room-timetable-title" onCancel={event => { event.preventDefault(); closeDialog() }} onClick={event => { if (event.target === event.currentTarget) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeDialog() } }}>
+  return <dialog ref={dialogRef} className="room-timetable-dialog" aria-labelledby="room-timetable-title" onCancel={event => { event.preventDefault(); if (event.target === event.currentTarget && !rosterSession && !reschedule) closeDialog() }} onClick={event => { if (event.target === event.currentTarget) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeDialog() } }}>
     <header className="room-timetable-header">
       <div><span><Calendar size={16} /> LỊCH SỬ DỤNG PHÒNG</span><h2 id="room-timetable-title">{room.name}</h2><p><MapPin size={14} />{room.location || 'Chưa cập nhật vị trí'}<span>·</span><Users size={14} />{room.capacity} học viên{room.isActive === false && <strong>· Phòng đã ngừng hoạt động</strong>}</p></div>
       <div className="room-timetable-header-actions"><button type="button" className="room-timetable-add" disabled={creating || showCreate || room.isActive === false} onClick={() => { setShowCreate(true); setSelectedId(null); setNotice('') }}><CalendarPlus size={16} /> Thêm buổi học</button><button type="button" disabled={state.loading || creating} onClick={() => { setSelectedId(null); setRevision(value => value + 1) }}><RefreshCw size={16} /> Làm mới</button><button type="button" aria-label="Đóng lịch phòng" disabled={creating} onClick={closeDialog}><X size={21} /></button></div>
@@ -97,16 +99,18 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
           <ul>{state.unassignedClasses.map(sportClass => <li key={sportClass.id}><span>{sportClass.className} · {sportClass.unassignedCount} buổi chưa có phòng</span><button type="button" disabled={creating || showCreate || room.isActive === false} onClick={() => assignRoom(sportClass)}>Gán lịch vào phòng này</button></li>)}</ul>
           {assignmentError && <p role="alert" className="room-recurring-error">{assignmentError}</p>}
         </section>}
-        <WeeklyTimetable items={state.items} totalCount={state.items.length} weekStart={weekStart} onWeekChange={changeWeek} onSelect={setSelectedId} onReschedule={openReschedule} canReschedule={canRescheduleSession} interactionDisabled={creating || showCreate || Boolean(reschedule) || room.isActive === false} title="Thời khóa biểu của phòng" description="Kéo buổi học vào ngày hoặc khung giờ khác để đổi lịch · Chọn buổi học để xem chi tiết" />
+        <WeeklyTimetable items={state.items} totalCount={state.items.length} weekStart={weekStart} onWeekChange={changeWeek} onSelect={setSelectedId} onReschedule={openReschedule} canReschedule={canRescheduleSession} interactionDisabled={creating || showCreate || Boolean(reschedule) || Boolean(rosterSession) || room.isActive === false} title="Thời khóa biểu của phòng" description="Kéo buổi học vào ngày hoặc khung giờ khác để đổi lịch · Chọn buổi học để xem chi tiết" />
         <p className="room-timetable-note">Các ô trống là khung giờ chưa có buổi học trong lịch. Buổi đã hủy được gạch tên và không chiếm lịch phòng.</p>
         {selected && <section ref={detailRef} className="room-timetable-detail" aria-labelledby="room-session-title" aria-live="polite">
           <header><div><small>BUỔI HỌC #{selected.id}</small><h3 id="room-session-title">{selected.className}</h3></div><button type="button" aria-label="Đóng chi tiết buổi học" onClick={() => setSelectedId(null)}><X size={18} /></button></header>
           <dl><div><dt>Bộ môn</dt><dd>{selected.sportName || 'Chưa cập nhật'}</dd></div><div><dt>Huấn luyện viên</dt><dd>{selected.coachName || 'Chưa phân công'}</dd></div><div><dt>Bắt đầu</dt><dd>{formatDateTime(selected.startsAt)}</dd></div><div><dt>Kết thúc</dt><dd>{formatDateTime(selected.endsAt)}</dd></div><div><dt>Sĩ số / Sức chứa</dt><dd>{selected.currentEnrollment ?? selected.enrolledCount ?? selected.registeredCount ?? '—'} / {selected.capacity ?? '—'}</dd></div><div><dt>Trạng thái</dt><dd>{classStatusLabel(selected.status)}</dd></div></dl>
-          {canRescheduleSession(selected) && room.isActive !== false && <><button type="button" className="room-session-reschedule" disabled={creating || showCreate} onClick={() => openReschedule(selected)}><CalendarClock size={16} />Đổi lịch / Thay HLV</button><p className="room-timetable-note">Học viên đã đăng ký sẽ nhận thông báo khi đổi lịch hoặc HLV. Đăng ký được giữ nguyên; học viên tự hủy nếu không thể tham gia, theo hạn hủy của buổi học.</p></>}
+          <div className="room-session-detail-actions"><button type="button" className="room-session-view-roster" disabled={creating || showCreate} onClick={() => setRosterSession(selected)}><Users size={16} />Xem danh sách lớp</button>{canRescheduleSession(selected) && room.isActive !== false && <button type="button" className="room-session-reschedule" disabled={creating || showCreate} onClick={() => openReschedule(selected)}><CalendarClock size={16} />Đổi lịch / Thay HLV</button>}</div>
+          {canRescheduleSession(selected) && room.isActive !== false && <p className="room-timetable-note">Học viên đã đăng ký sẽ nhận thông báo khi đổi lịch hoặc HLV. Đăng ký được giữ nguyên; học viên tự hủy nếu không thể tham gia, theo hạn hủy của buổi học.</p>}
           {selected.cancellationReason && <p>Lý do hủy: {selected.cancellationReason}</p>}
         </section>}
       </>}
     </div>
     {reschedule && <RescheduleRoomSessionDialog room={room} rooms={rooms} request={reschedule} onClose={() => setReschedule(null)} onBusyChange={setCreating} onSaved={sessionRescheduled} />}
+    {rosterSession && <SessionRosterDialog session={rosterSession} onClose={() => setRosterSession(null)} />}
   </dialog>
 }
