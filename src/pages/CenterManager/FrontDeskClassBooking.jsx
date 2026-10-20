@@ -12,7 +12,7 @@ const formatTime = value => value ? new Date(value).toLocaleTimeString('vi-VN', 
 const sessionLabel = item => `${formatDate(item.startsAt)} · ${formatTime(item.startsAt)} – ${formatTime(item.endsAt)}`
 const emptyMember = { key: '', loading: false, data: null, error: '' }
 
-export default function FrontDeskClassBooking({ members, membersLoading = false, reloadKey = 0, onBusyChange, onRegistered }) {
+export default function FrontDeskClassBooking({ members, membersLoading = false, reloadKey = 0, disabled = false, onBusyChange, onRegistered }) {
   const id = useId()
   const actionLock = useRef(false)
   const [revision, setRevision] = useState(0)
@@ -34,7 +34,7 @@ export default function FrontDeskClassBooking({ members, membersLoading = false,
   const memberLoading = Boolean(memberId) && (memberState.key !== memberId || memberState.loading)
   const sessionsLoading = Boolean(classId) && (sessionsState.key !== classId || sessionsState.loading)
   const memberReason = context ? memberBookingReason(context) : ''
-  const canChoose = Boolean(context && !memberReason && !memberLoading && !sessionsLoading && !busy)
+  const canChoose = Boolean(context && !memberReason && !memberLoading && !sessionsLoading && !busy && !disabled)
   const selectedSet = new Set(selectedIds)
   const room = selectedClass ? getRoomForClass(selectedClass) : null
   const choices = useMemo(() => selectableFrontDeskSessions(sessions, registrations), [sessions, registrations])
@@ -90,8 +90,8 @@ export default function FrontDeskClassBooking({ members, membersLoading = false,
   }, [context, sessionsState, classId])
 
   const clearFeedback = () => { setError(''); setResult(null) }
-  const chooseClass = value => { if (busy) return; setClassId(value); setSelectedIds([]); clearFeedback() }
-  const chooseMember = value => { if (busy) return; setMemberId(value); setSelectedIds([]); clearFeedback() }
+  const chooseClass = value => { if (busy || disabled) return; setClassId(value); setSelectedIds([]); clearFeedback() }
+  const chooseMember = value => { if (busy || disabled) return; setMemberId(value); setSelectedIds([]); clearFeedback() }
   const toggleSession = row => {
     if (!canChoose || row.reason) return
     const value = String(row.session.id)
@@ -124,11 +124,11 @@ export default function FrontDeskClassBooking({ members, membersLoading = false,
   }
 
   return <section className="fdesk-card fdesk-booking" aria-labelledby={`${id}-title`} aria-busy={busy}>
-    <header className="fdesk-card-header"><div><h3 id={`${id}-title`}><BookOpen size={20} /> Đăng ký lớp học tại quầy</h3><p>Chọn học viên và lớp học, sau đó chọn các buổi muốn đăng ký. Lịch học hiển thị theo giờ Việt Nam.</p></div><button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={busy} onClick={() => setRevision(value => value + 1)}><RefreshCw size={15} /> Làm mới lịch</button></header>
+    <header className="fdesk-card-header"><div><h3 id={`${id}-title`}><BookOpen size={20} /> Đăng ký lớp học tại quầy</h3><p>Chọn học viên và lớp học, sau đó chọn các buổi muốn đăng ký. Lịch học hiển thị theo giờ Việt Nam.</p></div><button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={busy || disabled} onClick={() => setRevision(value => value + 1)}><RefreshCw size={15} /> Làm mới lịch</button></header>
     <div className="fdesk-booking-body">
       <div className="fdesk-booking-controls">
-        <FrontDeskMemberPicker id={`${id}-member`} members={members} loading={membersLoading} disabled={busy} value={memberId} onChange={chooseMember} />
-        <label className="fdesk-input-group" htmlFor={`${id}-search`}><span>Tìm lớp học</span><span className="fdesk-booking-search"><Search size={16} /><input id={`${id}-search`} type="search" placeholder="Tên lớp, bộ môn hoặc huấn luyện viên" value={query} disabled={busy} onChange={event => setQuery(event.target.value)} /></span></label>
+        <FrontDeskMemberPicker id={`${id}-member`} members={members} loading={membersLoading} disabled={busy || disabled} value={memberId} onChange={chooseMember} />
+        <label className="fdesk-input-group" htmlFor={`${id}-search`}><span>Tìm lớp học</span><span className="fdesk-booking-search"><Search size={16} /><input id={`${id}-search`} type="search" placeholder="Tên lớp, bộ môn hoặc huấn luyện viên" value={query} disabled={busy || disabled} onChange={event => setQuery(event.target.value)} /></span></label>
       </div>
       {memberLoading && <p className="fdesk-booking-state" role="status">Đang kiểm tra gói tập và lịch đã đăng ký của học viên...</p>}
       {memberState.key === memberId && memberState.error && <div className="fdesk-alert-danger" role="alert"><AlertCircle size={16} />{memberState.error}<button type="button" className="fdesk-btn fdesk-btn-secondary" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>}
@@ -139,7 +139,7 @@ export default function FrontDeskClassBooking({ members, membersLoading = false,
           {catalog.loading ? <p className="fdesk-booking-state" role="status">Đang tải lớp học...</p> : catalog.error ? <div className="fdesk-alert-danger" role="alert"><p>{catalog.error}</p><button type="button" className="fdesk-btn fdesk-btn-secondary" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div> : !filteredClasses.length ? <p className="fdesk-booking-state">Không có lớp học phù hợp.</p> : <div className="fdesk-booking-class-list">{filteredClasses.map(item => {
             const booked = new Set(registrations.filter(reg => String(reg.classId) === String(item.id) && reg.sessionId != null && isExistingSessionRegistration(reg, reg.sessionId)).map(reg => String(reg.sessionId))).size
             const classRoom = getRoomForClass(item)
-            return <button type="button" key={item.id} className={`fdesk-booking-class${classId === String(item.id) ? ' is-selected' : ''}`} aria-pressed={classId === String(item.id)} disabled={busy} onClick={() => chooseClass(String(item.id))}>
+            return <button type="button" key={item.id} className={`fdesk-booking-class${classId === String(item.id) ? ' is-selected' : ''}`} aria-pressed={classId === String(item.id)} disabled={busy || disabled} onClick={() => chooseClass(String(item.id))}>
               <span className="fdesk-booking-class-top"><span className="fdesk-booking-sport">{item.sportName || 'Lớp thể thao'}</span><ChevronRight size={18} /></span>
               <strong>{item.className}</strong><span><UserRound size={14} />{item.coachName || 'Chưa phân công HLV'}</span>
               <span><CalendarDays size={14} />{formatDate(item.startDate)} – {formatDate(item.endDate)}</span>

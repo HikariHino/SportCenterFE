@@ -11,8 +11,8 @@ export async function registerMemberForSession(sessionId, memberId) {
   return body?.data ?? body
 }
 
-export async function getReceptionistSessionRoster(sessionId) {
-  const response = await api.get(`/class-sessions/${sessionId}/roster`)
+export async function getReceptionistSessionRoster(sessionId, signal) {
+  const response = await api.get(`/class-sessions/${sessionId}/roster`, { signal })
   const body = response.data
 
   if (body?.success === false) {

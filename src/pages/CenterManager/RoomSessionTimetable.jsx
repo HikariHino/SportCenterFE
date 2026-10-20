@@ -1,6 +1,6 @@
 import { useId, useMemo } from 'react'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
-import { isCancelledSession } from '../../utils/sessionScheduling'
+import { isCancelledSession, isScheduledSession } from '../../utils/sessionScheduling'
 
 const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', {
   timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short',
@@ -10,7 +10,10 @@ export default function RoomSessionTimetable({ items, onSelect, ...timetableProp
   const headingId = useId()
   const { scheduled, cancelled } = useMemo(() => {
     const scheduled = [], cancelled = []
-    for (const item of items) (isCancelledSession(item) ? cancelled : scheduled).push(item)
+    for (const item of items) {
+      if (isCancelledSession(item)) cancelled.push(item)
+      else if (isScheduledSession(item)) scheduled.push(item)
+    }
     cancelled.sort((left, right) => Date.parse(right.startsAt) - Date.parse(left.startsAt))
     return { scheduled, cancelled }
   }, [items])

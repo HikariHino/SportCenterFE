@@ -66,21 +66,13 @@ import {
 } from '../../services/memberSubscriptionService'
 import { createPayment } from '../../services/paymentService'
 import {
-  cancelReceptionistRegistration,
-  checkInReceptionistRegistration,
-  getReceptionistSessionRoster,
-} from '../../services/receptionistClassService'
-import {
-  getReceptionistSessionAttendances,
-  markReceptionistAttendance,
-} from '../../services/receptionistAttendanceService'
-import {
   getAllSupportTickets,
   getTicketErrorMessage,
   resolveSupportTicket,
 } from '../../services/supportTicketService'
 import '../../style/CenterManager/FrontDeskOperations.css'
 import FrontDeskClassBooking from './FrontDeskClassBooking'
+import FrontDeskClassAttendance from './FrontDeskClassAttendance'
 
 function formatVND(value) {
   const number = Number(value) || 0
@@ -167,11 +159,7 @@ export default function FrontDeskOperations() {
 
   // Tab 4: Class & Attendance states
   const [classBookingRevision, setClassBookingRevision] = useState(0)
-  const [rosterSessionId, setRosterSessionId] = useState('')
-  const [sessionRoster, setSessionRoster] = useState([])
-  const [loadingRoster, setLoadingRoster] = useState(false)
-  const [cancelRegModal, setCancelRegModal] = useState(null) // { registrationId, memberName }
-  const [cancelReason, setCancelReason] = useState('')
+  const [attendanceRevision, setAttendanceRevision] = useState(0)
 
   // Tab 5: Support Tickets states
   const [ticketSearch, setTicketSearch] = useState('')
@@ -263,7 +251,7 @@ export default function FrontDeskOperations() {
     } else if (activeTab === 'classes') {
       setClassBookingRevision(value => value + 1)
       loadMembersData(true)
-      if (rosterSessionId) handleLoadRoster(rosterSessionId)
+      setAttendanceRevision(value => value + 1)
     } else if (activeTab === 'tickets') {
       loadTicketsData(true)
     }
@@ -459,55 +447,6 @@ export default function FrontDeskOperations() {
       setSuccessMessage('Đã tạo link thanh toán PayOS thành công! Khách hàng có thể quét mã QR để trả tiền.')
     } catch (err) {
       setErrorMessage(err.message || 'Không thể tạo mã thanh toán PayOS.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  // Load roster
-  async function handleLoadRoster(sessId) {
-    if (!sessId) return
-    setLoadingRoster(true)
-    try {
-      const data = await getReceptionistSessionRoster(Number(sessId))
-      setSessionRoster(data)
-    } catch (err) {
-      setSessionRoster([])
-      setErrorMessage(err.message || 'Không thể tải danh sách học viên của buổi học.')
-    } finally {
-      setLoadingRoster(false)
-    }
-  }
-
-  // Check in student in roster
-  async function handleCheckInStudent(student) {
-    setSubmitting(true)
-    setErrorMessage(null)
-    try {
-      await checkInReceptionistRegistration(student.registrationId)
-      setSuccessMessage(`Đã điểm danh cho học viên ${student.fullName || `#${student.memberId}`} thành công!`)
-      if (rosterSessionId) await handleLoadRoster(rosterSessionId)
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể điểm danh học viên.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  // Cancel student registration
-  async function handleCancelRegistration() {
-    if (!cancelRegModal) return
-    setSubmitting(true)
-    setErrorMessage(null)
-    try {
-      await cancelReceptionistRegistration(cancelRegModal.registrationId, cancelReason || 'Hủy tại quầy lễ tân')
-      setClassBookingRevision(value => value + 1)
-      setSuccessMessage('Đã hủy đăng ký buổi học và giải phóng chỗ thành công!')
-      setCancelRegModal(null)
-      setCancelReason('')
-      if (rosterSessionId) await handleLoadRoster(rosterSessionId)
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể hủy đăng ký buổi học.')
     } finally {
       setSubmitting(false)
     }
@@ -1392,160 +1331,8 @@ export default function FrontDeskOperations() {
       {/* Tab 4: Điểm danh & Quản lý đăng ký lớp */}
       {activeTab === 'classes' && (
         <div className="fdesk-section">
-          <FrontDeskClassBooking members={members} membersLoading={loadingMembers} reloadKey={classBookingRevision} onBusyChange={setSubmitting} onRegistered={async result => {
-            const sessionId = result.registered[0] || result.existing[0]
-            if (sessionId) { setRosterSessionId(sessionId); await handleLoadRoster(sessionId) }
-          }} />
-
-          {/* Card 2: Danh sách học viên & Điểm danh buổi học */}
-          <div className="fdesk-card">
-            <div className="fdesk-card-header">
-              <div>
-                <h3>Danh sách học viên & Điểm danh buổi học</h3>
-                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
-                  Nhập mã buổi học để tra cứu danh sách học viên đăng ký, điểm danh hoặc hủy đăng ký khi có yêu cầu.
-                </p>
-              </div>
-            </div>
-
-            <div className="fdesk-toolbar">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', width: '100%' }}>
-                <div className="fdesk-input-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <label htmlFor="roster-session-input" style={{ whiteSpace: 'nowrap' }}>Mã buổi học:</label>
-                  <input
-                    id="roster-session-input"
-                    type="number"
-                    min="1"
-                    className="fdesk-input"
-                    style={{ width: 140 }}
-                    placeholder="Nhập Session ID"
-                    value={rosterSessionId}
-                    onChange={(e) => setRosterSessionId(e.target.value)}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  className="fdesk-btn fdesk-btn-primary"
-                  onClick={() => handleLoadRoster(rosterSessionId)}
-                  disabled={loadingRoster || !rosterSessionId}
-                >
-                  <Search size={15} />
-                  {loadingRoster ? 'Đang tải...' : 'Xem danh sách học viên'}
-                </button>
-
-                {sessionRoster.length > 0 && (
-                  <span className="fdesk-badge info" style={{ marginLeft: 'auto' }}>
-                    {sessionRoster.length} học viên đăng ký
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {loadingRoster ? (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--manager-secondary, #64748b)' }}>
-                <RefreshCw size={28} className="fdesk-spin" />
-                <p style={{ marginTop: 10 }}>Đang tải danh sách học viên của buổi học...</p>
-              </div>
-            ) : sessionRoster.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--manager-secondary, #64748b)' }}>
-                <CalendarDays size={32} />
-                <p style={{ marginTop: 10 }}>
-                  {rosterSessionId
-                    ? 'Buổi học này chưa có học viên nào đăng ký.'
-                    : 'Nhập mã buổi học và bấm "Xem danh sách học viên" để điểm danh.'}
-                </p>
-              </div>
-            ) : (
-              <div className="fdesk-table-scroll">
-                <table className="fdesk-table">
-                  <thead>
-                    <tr>
-                      <th>Mã ĐK</th>
-                      <th>Học viên</th>
-                      <th>Mã hội viên</th>
-                      <th>Trạng thái đăng ký</th>
-                      <th>Điểm danh</th>
-                      <th>Thời gian check-in</th>
-                      <th style={{ textAlign: 'right' }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sessionRoster.map((student) => {
-                      const isPresent = Boolean(student.checkInTime) || student.attendanceStatus === 'Present'
-
-                      return (
-                        <tr key={student.registrationId}>
-                          <td>
-                            <strong>#{student.registrationId}</strong>
-                          </td>
-                          <td>
-                            <strong>{student.fullName || 'Học viên'}</strong>
-                          </td>
-                          <td>#{student.memberId}</td>
-                          <td>
-                            <span className="fdesk-badge info">
-                              {student.registrationStatus || 'Registered'}
-                            </span>
-                          </td>
-                          <td>
-                            {isPresent ? (
-                              <span className="fdesk-badge present">
-                                <Check size={12} /> Có mặt
-                              </span>
-                            ) : (
-                              <span className="fdesk-badge absent">
-                                Chưa điểm danh
-                              </span>
-                            )}
-                          </td>
-                          <td style={{ fontSize: 12 }}>
-                            {student.checkInTime ? formatDateTime(student.checkInTime) : '—'}
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <div className="fdesk-action-group">
-                              {!isPresent ? (
-                                <button
-                                  type="button"
-                                  className="fdesk-btn fdesk-btn-success"
-                                  style={{ padding: '6px 12px', fontSize: 11 }}
-                                  onClick={() => handleCheckInStudent(student)}
-                                  disabled={submitting}
-                                  title="Điểm danh có mặt tại lớp"
-                                >
-                                  <Check size={12} />
-                                  Điểm danh
-                                </button>
-                              ) : (
-                                <span style={{ fontSize: 11, color: 'var(--manager-success, #059669)', fontWeight: 600 }}>
-                                  Đã check-in
-                                </span>
-                              )}
-
-                              <button
-                                type="button"
-                                className="fdesk-btn fdesk-btn-danger"
-                                style={{ padding: '6px 10px', fontSize: 11 }}
-                                onClick={() => setCancelRegModal({
-                                  registrationId: student.registrationId,
-                                  memberName: student.fullName,
-                                })}
-                                disabled={submitting}
-                                title="Hủy đăng ký và giải phóng chỗ"
-                              >
-                                <Trash2 size={12} />
-                                Hủy chỗ
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <FrontDeskClassBooking disabled={submitting} members={members} membersLoading={loadingMembers} reloadKey={classBookingRevision} onBusyChange={setSubmitting} onRegistered={() => setAttendanceRevision(value => value + 1)} />
+          <FrontDeskClassAttendance reloadKey={attendanceRevision} disabled={submitting} onBusyChange={setSubmitting} onRegistrationsChanged={() => setClassBookingRevision(value => value + 1)} />
         </div>
       )}
 
@@ -1902,59 +1689,6 @@ export default function FrontDeskOperations() {
                 onClick={() => setPayModalSubscription(null)}
               >
                 Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Hủy đăng ký buổi học */}
-      {cancelRegModal && (
-        <div className="fdesk-dialog-overlay" onClick={() => setCancelRegModal(null)}>
-          <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="fdesk-dialog-header">
-              <h3 style={{ color: 'var(--manager-danger, #dc2626)' }}>Hủy đăng ký buổi học</h3>
-              <button
-                type="button"
-                className="fdesk-dialog-close"
-                onClick={() => setCancelRegModal(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="fdesk-dialog-body">
-              <p style={{ margin: 0, fontSize: 13 }}>
-                Xác nhận hủy lượt đăng ký <strong>#{cancelRegModal.registrationId}</strong> của học viên{' '}
-                <strong>{cancelRegModal.memberName || ''}</strong>?
-              </p>
-              <div className="fdesk-input-group">
-                <label htmlFor="cancel-reason-input">Lý do hủy:</label>
-                <input
-                  id="cancel-reason-input"
-                  type="text"
-                  className="fdesk-input"
-                  placeholder="Học viên báo bận / Yêu cầu hủy tại quầy..."
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="fdesk-dialog-footer">
-              <button
-                type="button"
-                className="fdesk-btn fdesk-btn-secondary"
-                onClick={() => setCancelRegModal(null)}
-              >
-                Giữ lại
-              </button>
-              <button
-                type="button"
-                className="fdesk-btn fdesk-btn-danger"
-                style={{ background: '#dc2626', color: '#fff' }}
-                onClick={handleCancelRegistration}
-                disabled={submitting}
-              >
-                {submitting ? 'Đang hủy...' : 'Xác nhận hủy chỗ'}
               </button>
             </div>
           </div>

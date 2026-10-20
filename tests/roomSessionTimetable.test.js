@@ -30,12 +30,12 @@ test('cancelled sessions move out of the room grid and counts while their replac
     session,
     { ...session, id: 2, className: 'Cancelled Yoga', status: 'Cancelled', coachName: 'Coach An', cancellationReason: 'Bảo trì phòng' },
     { ...session, id: 3, className: 'Cancelled Gym', status: ' CANCELED ', startsAt: '2026-11-01T11:00:00Z', endsAt: '2026-11-01T12:30:00Z' },
-    { ...session, id: 4, className: 'Completed Yoga', status: 'Completed', startsAt: '2026-10-18T11:00:00Z', endsAt: '2026-10-18T12:30:00Z' },
+    { ...session, id: 4, className: 'Completed Yoga', status: 'Completed' },
   ]
   const { timetable, cancellations } = sections(render(items))
   assert.match(timetable, /Scheduled Yoga/)
-  assert.doesNotMatch(timetable, /Cancelled Yoga|Cancelled Gym|is-cancelled/)
-  assert.match(timetable, /1 buổi tuần này · 2 buổi tổng cộng/)
+  assert.doesNotMatch(timetable, /Cancelled Yoga|Cancelled Gym|Completed Yoga|is-cancelled/)
+  assert.match(timetable, /1 buổi tuần này · 1 buổi tổng cộng/)
   assert.match(cancellations, /2 buổi/)
   assert.match(cancellations, /Cancelled Yoga/)
   assert.match(cancellations, /Cancelled Gym/)

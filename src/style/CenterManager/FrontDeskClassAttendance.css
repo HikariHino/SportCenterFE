@@ -1,0 +1,20 @@
+.fdesk-attendance-session { width: 100%; text-align: left; color: var(--manager-ink, #18263e); font: inherit; }
+.fdesk-attendance .fdesk-booking-class-list { max-height: 420px; }
+.fdesk-attendance .fdesk-booking-session-list { max-height: 380px; }
+.fdesk-attendance-session:hover:not(:disabled) { border-color: var(--manager-blue, #2463eb); }
+.fdesk-attendance-roster { min-width: 0; border-top: 1px solid var(--manager-line, #d8e0ed); padding-top: 20px; }
+.fdesk-attendance .fdesk-booking-section-heading { flex-wrap: wrap; }
+.fdesk-attendance-summary { margin: 8px 0 0; font-size: 12px; color: var(--manager-secondary, #536179); line-height: 1.7; }
+.fdesk-attendance-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; color: var(--manager-secondary, #536179); font-size: 12px; }
+.fdesk-attendance-stats > span { padding: 6px 10px; border-radius: 6px; background: var(--manager-raised, #f8fafc); }
+.fdesk-attendance-member-id, .fdesk-attendance-reason { display: block; margin-top: 5px; color: var(--manager-secondary, #536179); font-size: 11px; line-height: 1.6; }
+.fdesk-attendance .fdesk-attendance-reason { max-width: 250px; white-space: normal; }
+.fdesk-attendance .fdesk-table th, .fdesk-attendance .fdesk-table td { color: var(--manager-ink, #18263e); }
+.fdesk-attendance .fdesk-table-scroll { max-width: 100%; }
+.fdesk-attendance .fdesk-action-group { flex-wrap: wrap; }
+.fdesk-attendance .fdesk-action-group .fdesk-btn { padding: 6px 10px; font-size: 11px; }
+.fdesk-attendance-cancelled { margin-top: 18px; border-top: 1px solid var(--manager-line, #d8e0ed); padding-top: 16px; }
+.fdesk-attendance-cancelled summary { cursor: pointer; color: var(--manager-ink, #18263e); font-size: 13px; font-weight: 600; }
+.fdesk-attendance-cancelled summary > span { margin-left: 8px; font-size: 11px; color: var(--manager-secondary, #536179); }
+.fdesk-attendance-cancelled .fdesk-booking-session-tag { background: var(--manager-danger-bg, #fef2f2); color: var(--manager-danger, #b91c1c); }
+.fdesk-attendance .fdesk-attendance-cancel-reason { color: var(--manager-secondary, #536179); overflow-wrap: anywhere; }
