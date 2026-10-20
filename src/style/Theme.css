@@ -1,3 +1,5 @@
+@import './SearchFields.css';
+
 /* Shared theme tokens. Existing page styles remain the light palette. */
 :root {
   color-scheme: light;
