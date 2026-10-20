@@ -153,12 +153,6 @@
 .coach-empty strong { color: #536078; font-size: 16px; }
 .coach-empty p { margin: 0; font-size: 13px; }
 .coach-api-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.coach-api-note { min-height: 150px; display: grid; place-items: center; align-content: center; gap: 7px; padding: 24px; color: #6d7a90; text-align: center; }
-.coach-api-note svg { color: #22a879; }
-.coach-api-note strong { color: var(--coach-ink); font-size: 14px; }
-.coach-api-note p { max-width: 220px; margin: 0; font-size: 12px; line-height: 1.55; }
-.coach-api-note.error svg { color: #d05b52; }
-.coach-api-note button { margin-top: 4px; padding: 7px 12px; border: 0; border-radius: 7px; color: #fff; background: var(--coach-blue); font-size: 12px; font-weight: 700; cursor: pointer; }
 .coach-view-toolbar { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 19px; border-bottom: 1px solid #e9edf4; }
 .coach-view-toolbar > div:first-child strong, .coach-view-toolbar > div:first-child span { display: block; }
 .coach-view-toolbar > div:first-child strong { font-size: 18px; }
