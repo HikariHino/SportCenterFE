@@ -10,12 +10,12 @@
 .coach-brand > span { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; color: #fff; background: linear-gradient(135deg, #004ac6, #2563eb); box-shadow: 0 7px 18px #004ac666; }
 .coach-brand strong { display: block; color: #fff; font-size: 14px; letter-spacing: -.3px; }
 .coach-brand strong span { color: #60a5fa; }
-.coach-brand small { display: block; margin-top: 3px; color: #8494b3; font-size: 7.5px; font-weight: 800; letter-spacing: 1.6px; }
-.coach-portal-tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; margin: 18px 8px 0; border-radius: 6px; background: #ffffff0f; color: #93c5fd; font-size: 10px; font-weight: 600; }
+.coach-brand small { display: block; margin-top: 3px; color: #8494b3; font-size: 8.5px; font-weight: 800; letter-spacing: 1.6px; }
+.coach-portal-tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; margin: 18px 8px 0; border-radius: 6px; background: #ffffff0f; color: #93c5fd; font-size: 11px; font-weight: 600; }
 .coach-nav { margin-top: 24px; display: flex; flex-direction: column; gap: 4px; }
 .coach-nav-group { margin-bottom: 16px; }
-.coach-nav-title { margin: 0; padding: 0 12px 8px; color: #70819f; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
-.coach-nav button { width: 100%; display: flex; align-items: center; gap: 11px; margin: 2px 0; padding: 10px 12px; border: 0; border-radius: 8px; color: #aebbd1; background: transparent; text-align: left; font-size: 11.5px; font-weight: 600; transition: all .2s ease; }
+.coach-nav-title { margin: 0; padding: 0 12px 8px; color: #70819f; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+.coach-nav button { width: 100%; display: flex; align-items: center; gap: 11px; margin: 2px 0; padding: 10px 12px; border: 0; border-radius: 8px; color: #aebbd1; background: transparent; text-align: left; font-size: 13px; font-weight: 600; transition: all .2s ease; }
 .coach-nav button:hover { color: #fff; background: #ffffff0f; transform: translateX(2px); }
 .coach-nav button.active { color: #fff; background: linear-gradient(100deg, #1d4ed8, #004ac6); box-shadow: 0 6px 16px #004ac659; }
 .coach-nav button span { flex: 1; }
@@ -25,8 +25,8 @@
 .coach-sidebar-user .coach-avatar { width: 36px; height: 36px; font-size: 11px; }
 .coach-sidebar-user > div { min-width: 0; flex: 1; }
 .coach-sidebar-user strong, .coach-sidebar-user small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.coach-sidebar-user strong { color: #fff; font-size: 11px; }
-.coach-sidebar-user small { color: #8494b3; font-size: 9px; }
+.coach-sidebar-user strong { color: #fff; font-size: 12px; }
+.coach-sidebar-user small { color: #8494b3; font-size: 10px; }
 .coach-sidebar-user button { padding: 6px; border: 0; border-radius: 6px; color: #94a3b8; background: none; transition: color .2s; }
 .coach-sidebar-user button:hover { color: #ef4444; }
 .coach-workspace { min-width: 0; display: flex; flex-direction: column; }
