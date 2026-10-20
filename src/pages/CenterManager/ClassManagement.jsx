@@ -765,7 +765,7 @@ export default function ClassManagement() {
       {/* Module Header */}
       <section className="class-mgmt-header manager-card">
         <div>
-          <h2>Quản lý danh mục & Lớp học</h2>
+          <h2>Bộ môn & Lớp học</h2>
           <p>
             Cấu hình danh mục thể thao, thiết lập khóa học, gán huấn luyện viên và điều phối buổi học chi tiết.
           </p>
@@ -789,7 +789,7 @@ export default function ClassManagement() {
               className="class-btn class-btn-primary"
               onClick={handleOpenCreateSport}
             >
-              <Plus size={16} /> Thêm bộ môn mới
+              <Plus size={16} /> Thêm bộ môn
             </button>
           ) : (
             <button
@@ -797,7 +797,7 @@ export default function ClassManagement() {
               className="class-btn class-btn-primary"
               onClick={handleOpenCreateClass}
             >
-              <Plus size={16} /> Tạo lớp học mới
+              <Plus size={16} /> Tạo lớp học
             </button>
           )}
         </div>
@@ -844,23 +844,25 @@ export default function ClassManagement() {
       </section>
 
       {/* Tabs */}
-      <div className="class-tabs">
+      <div className="class-tabs" role="group" aria-label="Danh mục quản lý">
         <button
           type="button"
           className={`class-tab ${activeTab === 'classes' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'classes'}
           onClick={() => setActiveTab('classes')}
         >
           <BookOpen size={16} />
-          Quản lý lớp học & Buổi học (Sport Classes)
+          Lớp học
           <span className="class-tab-badge">{classes.length}</span>
         </button>
         <button
           type="button"
           className={`class-tab ${activeTab === 'sports' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'sports'}
           onClick={() => setActiveTab('sports')}
         >
           <Trophy size={16} />
-          Danh mục bộ môn (Sports Catalog)
+          Bộ môn
           <span className="class-tab-badge">{sports.length}</span>
         </button>
       </div>
@@ -904,13 +906,15 @@ export default function ClassManagement() {
       {/* TAB 1: SPORT CLASSES MANAGEMENT */}
       {/* ======================================================== */}
       {activeTab === 'classes' && (
-        <>
+        <section className="manager-card class-content-card" aria-labelledby="class-list-title">
+          <div className="class-content-heading"><div><h3 id="class-list-title">Danh sách lớp học</h3><p>Xem thông tin lớp, quản lý buổi học và lịch giảng dạy.</p></div><span className="class-result-count" role="status">{classesLoading ? 'Đang tải...' : `${filteredClasses.length} / ${classes.length} lớp`}</span></div>
           {/* Toolbar */}
           <div className="class-toolbar">
             <div className="class-search-box">
               <Search size={16} />
               <input
-                type="text"
+                type="search"
+                aria-label="Tìm lớp học"
                 className="class-search-input"
                 placeholder="Tìm kiếm lớp học, môn, HLV..."
                 value={classSearch}
@@ -920,6 +924,7 @@ export default function ClassManagement() {
             <div className="class-filter-group">
               <select
                 className="class-select"
+                aria-label="Lọc bộ môn của lớp"
                 value={classSportFilter}
                 onChange={(e) => setClassSportFilter(e.target.value)}
               >
@@ -933,6 +938,7 @@ export default function ClassManagement() {
 
               <select
                 className="class-select"
+                aria-label="Lọc huấn luyện viên"
                 value={classCoachFilter}
                 onChange={(e) => setClassCoachFilter(e.target.value)}
               >
@@ -946,6 +952,7 @@ export default function ClassManagement() {
 
               <select
                 className="class-select"
+                aria-label="Lọc trạng thái lớp"
                 value={classStatusFilter}
                 onChange={(e) => setClassStatusFilter(e.target.value)}
               >
@@ -976,16 +983,14 @@ export default function ClassManagement() {
               </button>
             </div>
           ) : (
-            <div className="class-table-container">
+            <div className="class-table-container" role="region" aria-label="Danh sách lớp học" tabIndex={0}>
               <table className="class-table">
                 <thead>
                   <tr>
-                    <th>MÃ LỚP</th>
-                    <th>TÊN LỚP HỌC</th>
+                    <th>LỚP HỌC</th>
                     <th>BỘ MÔN</th>
                     <th>HLV PHỤ TRÁCH</th>
-                    <th>NGÀY BẮT ĐẦU</th>
-                    <th>NGÀY KẾT THÚC</th>
+                    <th>THỜI GIAN HỌC</th>
                     <th>SĨ SỐ TỐI ĐA</th>
                     <th>TRẠNG THÁI</th>
                     <th style={{ textAlign: 'right' }}>THAO TÁC</th>
@@ -997,10 +1002,8 @@ export default function ClassManagement() {
                     return (
                       <tr key={cls.id}>
                         <td>
-                          <strong>#{cls.id}</strong>
-                        </td>
-                        <td>
                           <div className="class-item-name">{cls.className}</div>
+                          <div className="class-item-meta">Mã lớp #{cls.id}</div>
                         </td>
                         <td>
                           <span className="class-tag sport">{cls.sportName}</span>
@@ -1008,15 +1011,15 @@ export default function ClassManagement() {
                         <td>
                           <span className="class-tag coach">{cls.coachName || 'Chưa gán HLV'}</span>
                         </td>
-                        <td title={cls.sessionDatesError || 'Ngày của buổi học đầu tiên chưa bị hủy'}>
+                        <td className="class-date-cell" title={cls.sessionDatesError || 'Từ buổi học đầu tiên đến buổi cuối cùng chưa bị hủy'}>
+                          <span className="class-date-line"><small>Từ</small>
                           {cls.sessionDatesError ? 'Không tải được' : cls.sessionDateRange?.startDate
                             ? <time dateTime={cls.sessionDateRange.startDate}>{formatSessionDate(cls.sessionDateRange.startDate)}</time>
-                            : <span style={{ color: 'var(--manager-muted)', fontSize: 12 }}>Chưa có buổi học</span>}
-                        </td>
-                        <td title={cls.sessionDatesError || 'Ngày kết thúc của buổi học cuối cùng chưa bị hủy'}>
+                            : <span>Chưa có buổi học</span>}</span>
+                          <span className="class-date-line"><small>Đến</small>
                           {cls.sessionDatesError ? 'Không tải được' : cls.sessionDateRange?.endDate
                             ? <time dateTime={cls.sessionDateRange.endDate}>{formatSessionDate(cls.sessionDateRange.endDate)}</time>
-                            : '—'}
+                            : '—'}</span>
                         </td>
                         <td>
                           <strong>{cls.maxCapacity} học viên</strong>
@@ -1064,22 +1067,24 @@ export default function ClassManagement() {
               </table>
             </div>
           )}
-        </>
+        </section>
       )}
 
       {/* ======================================================== */}
       {/* TAB 2: SPORTS CATALOG MANAGEMENT */}
       {/* ======================================================== */}
       {activeTab === 'sports' && (
-        <>
+        <section className="manager-card class-content-card" aria-labelledby="sport-list-title">
+          <div className="class-content-heading"><div><h3 id="sport-list-title">Danh mục bộ môn</h3><p>Quản lý các môn thể thao và lớp học liên kết.</p></div><span className="class-result-count" role="status">{loading ? 'Đang tải...' : `${filteredSports.length} / ${sports.length} bộ môn`}</span></div>
           {/* Toolbar */}
           <div className="class-toolbar">
             <div className="class-search-box">
               <Search size={16} />
               <input
-                type="text"
+                type="search"
+                aria-label="Tìm bộ môn"
                 className="class-search-input"
-                placeholder="Tìm kiếm môn thể thao (Gym, Yoga, Boxing...)..."
+                placeholder="Tìm tên bộ môn..."
                 value={sportSearch}
                 onChange={(e) => setSportSearch(e.target.value)}
               />
@@ -1087,6 +1092,7 @@ export default function ClassManagement() {
             <div className="class-filter-group">
               <select
                 className="class-select"
+                aria-label="Lọc trạng thái bộ môn"
                 value={sportFilterStatus}
                 onChange={(e) => setSportFilterStatus(e.target.value)}
               >
@@ -1166,7 +1172,7 @@ export default function ClassManagement() {
               })}
             </div>
           )}
-        </>
+        </section>
       )}
 
       {/* ======================================================== */}
@@ -1174,7 +1180,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {selectedClassForSessions && (
         <div className="class-modal-overlay" onClick={() => setSelectedClassForSessions(null)}>
-          <div className="class-modal wide" onClick={(e) => e.stopPropagation()}>
+          <div className="class-modal wide class-session-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
               <div>
                 <h3>Quản lý buổi học chi tiết</h3>
@@ -1775,7 +1781,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {rosterSession && (
         <div className="class-modal-overlay" onClick={() => setRosterSession(null)}>
-          <div className="class-modal wide" onClick={(e) => e.stopPropagation()}>
+          <div className="class-modal wide class-session-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
               <div>
                 <h3>Danh sách học viên đăng ký</h3>

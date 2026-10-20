@@ -2,19 +2,19 @@
 .class-mgmt {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   width: 100%;
+  min-width: 0;
 }
 
 /* Header & Controls */
 .class-mgmt-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  padding: 24px;
-  border-bottom: 1px solid var(--manager-line);
+  padding: 18px 20px;
 }
 
 .class-mgmt-header h2 {
@@ -27,13 +27,15 @@
 .class-mgmt-header p {
   margin: 4px 0 0;
   font-size: 12px;
-  color: var(--manager-muted);
+  color: var(--manager-secondary, #536179);
+  line-height: 1.7;
 }
 
 .class-mgmt-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* Buttons */
@@ -41,6 +43,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  max-width: 100%;
   padding: 9px 16px;
   border-radius: 8px;
   font-size: 12px;
@@ -93,23 +98,27 @@
 .class-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--manager-line);
-  background: var(--manager-surface, #fff);
+  align-self: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--manager-line);
+  border-radius: 10px;
+  background: var(--manager-raised, #f8fafc);
 }
 
 .class-tab {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 18px;
-  border: none;
+  justify-content: center;
+  padding: 9px 18px;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 7px;
   background: transparent;
   font-size: 13px;
   font-weight: 600;
-  color: var(--manager-muted);
-  border-bottom: 2px solid transparent;
+  color: var(--manager-secondary, #536179);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -120,7 +129,9 @@
 
 .class-tab.active {
   color: var(--manager-blue);
-  border-bottom-color: var(--manager-blue);
+  border-color: var(--manager-line);
+  background: var(--manager-surface, #fff);
+  box-shadow: 0 1px 3px #0001;
 }
 
 .class-tab-badge {
@@ -140,25 +151,26 @@
 /* Metric Cards */
 .class-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-  padding: 0 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
 }
 
 .class-metric-card {
-  padding: 16px 18px;
+  padding: 14px 16px;
+  min-width: 0;
   border: 1px solid var(--manager-line);
   border-radius: 10px;
   background: var(--manager-surface, #fff);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .class-metric-icon {
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   display: grid;
   place-items: center;
@@ -188,16 +200,19 @@
 .class-metric-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .class-metric-info span {
   font-size: 11px;
-  color: var(--manager-muted);
+  color: var(--manager-secondary, #536179);
+  line-height: 1.5;
   font-weight: 500;
 }
 
 .class-metric-info strong {
-  font-size: 20px;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
   color: var(--manager-ink);
   font-weight: 700;
   margin-top: 2px;
@@ -208,7 +223,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 24px;
+  margin: 0;
+  gap: 12px;
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 13px;
@@ -219,6 +235,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .class-alert-error {
@@ -248,19 +265,22 @@
 
 /* Filter Toolbar */
 .class-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 0 24px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--manager-line);
+  background: var(--manager-raised, #f8fafc);
 }
 
 .class-search-box {
   position: relative;
   flex: 1;
-  min-width: 240px;
-  max-width: 450px;
+  min-width: 0;
+  max-width: none;
 }
 
 .class-search-box svg {
@@ -274,6 +294,8 @@
 
 .class-search-input {
   width: 100%;
+  min-width: 0;
+  min-height: 42px;
   padding: 9px 12px 9px 36px;
   border: 1px solid var(--manager-line);
   border-radius: 8px;
@@ -289,13 +311,18 @@
 }
 
 .class-filter-group {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
 .class-select {
+  min-width: 0;
+  min-height: 42px;
+  width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--manager-line);
   border-radius: 8px;
@@ -312,16 +339,17 @@
 /* Sports Grid */
 .sports-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 16px;
-  padding: 0 24px;
+  padding: 20px;
 }
 
 .sport-card {
+  min-width: 0;
   border: 1px solid var(--manager-line);
   border-radius: 12px;
   background: var(--manager-surface, #fff);
-  padding: 20px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -363,9 +391,8 @@
   font-size: 15px;
   font-weight: 700;
   color: var(--manager-ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 
 .sport-main-info small {
@@ -383,6 +410,7 @@
   border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .sport-badge.active {
@@ -422,6 +450,9 @@
   align-items: center;
   padding-top: 12px;
   border-top: 1px solid var(--manager-line);
+  margin-top: auto;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .sport-card-actions {
@@ -433,8 +464,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 6px;
   border: 1px solid var(--manager-control-border, #e2e8f0);
   background: var(--manager-surface, #fff);
@@ -457,21 +488,23 @@
 
 /* Table Design for Classes */
 .class-table-container {
-  padding: 0 24px;
+  padding: 0;
+  max-width: 100%;
   overflow-x: auto;
 }
 
 .class-table {
   width: 100%;
+  min-width: 1040px;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
   text-align: left;
 }
 
 .class-table th {
   padding: 12px 14px;
   background: var(--manager-raised, #f8fafc);
-  color: var(--manager-muted);
+  color: var(--manager-secondary, #536179);
   font-weight: 600;
   font-size: 11px;
   letter-spacing: 0.5px;
@@ -493,11 +526,15 @@
 .class-item-name {
   font-weight: 600;
   color: var(--manager-ink);
+  min-width: 160px;
+  max-width: 230px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .class-item-meta {
   font-size: 11px;
-  color: var(--manager-muted);
+  color: var(--manager-secondary, #536179);
   margin-top: 2px;
 }
 
@@ -539,16 +576,22 @@
   background: var(--manager-surface, #fff);
   border-radius: 12px;
   width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-width: 560px;
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.15);
   animation: slideUp 0.2s ease-out;
 }
 
 .class-modal.wide {
-  max-width: 680px;
+  max-width: 720px;
 }
+
+.class-modal.class-session-modal { max-width: 960px; }
+.class-modal > form { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 .class-modal-header {
   display: flex;
@@ -556,6 +599,8 @@
   align-items: center;
   padding: 18px 22px;
   border-bottom: 1px solid var(--manager-line);
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .class-modal-header h3 {
@@ -574,6 +619,9 @@
   place-items: center;
   padding: 4px;
   border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
 }
 
 .class-modal-close:hover {
@@ -586,6 +634,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 .class-modal-footer {
@@ -595,6 +646,8 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
 }
@@ -604,6 +657,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .class-form-group label {
@@ -620,6 +674,10 @@
 .class-form-input,
 .class-form-textarea,
 .class-form-select {
+  min-width: 0;
+  min-height: 42px;
+  max-width: 100%;
+  width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--manager-line);
   border-radius: 8px;
@@ -644,7 +702,7 @@
 
 .class-form-grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -666,7 +724,8 @@
 
 .class-form-help {
   font-size: 11px;
-  color: var(--manager-muted);
+  color: var(--manager-secondary, #536179);
+  line-height: 1.6;
 }
 
 /* Empty State */
@@ -780,9 +839,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 480px;
-  overflow-y: auto;
-  padding-right: 4px;
+  padding: 2px;
 }
 
 .session-card-item {
@@ -790,10 +847,11 @@
   border-radius: 10px;
   background: var(--manager-surface, #fff);
   padding: 14px 18px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1.8fr 1.3fr 1.2fr 1.2fr;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   transition: all 0.15s ease;
 }
 
@@ -815,7 +873,7 @@
 .session-col-time {
   display: flex;
   flex-direction: column;
-  min-width: 170px;
+  min-width: 0;
 }
 
 .session-col-time strong {
@@ -835,7 +893,7 @@
 .session-col-coach {
   display: flex;
   flex-direction: column;
-  min-width: 130px;
+  min-width: 0;
 }
 
 .session-col-coach span {
@@ -852,7 +910,7 @@
 .session-col-seats {
   display: flex;
   flex-direction: column;
-  min-width: 110px;
+  min-width: 0;
 }
 
 .session-col-seats span {
@@ -906,7 +964,13 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  grid-column: 3 / -1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
+
+.session-card-item > div:nth-child(5) { grid-column: 1 / 3; }
+.session-card-item > div { min-width: 0; overflow-wrap: anywhere; }
 
 .session-btn-icon {
   display: inline-flex;
@@ -1124,3 +1188,58 @@
 .class-scheduling-note strong { color: var(--theme-text); font-weight: 600; }
 .class-course-error { margin: 0; color: var(--theme-red, #b42318); font-size: 12px; }
 .class-form-error { margin: 0 0 12px; color: var(--theme-red, #b42318); font-size: 12px; }
+
+.class-content-card { min-width: 0; overflow: hidden; }
+.class-content-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 18px 20px; }
+.class-content-heading h3 { margin: 0; font-size: 15px; color: var(--manager-ink); }
+.class-content-heading p { margin: 5px 0 0; font-size: 12px; color: var(--manager-secondary, #536179); line-height: 1.6; }
+.class-result-count { padding: 6px 10px; border-radius: 7px; background: var(--manager-info-bg, #eff6ff); color: var(--manager-info, #1d4ed8); font-size: 11px; white-space: nowrap; }
+.class-date-line { display: flex; align-items: baseline; gap: 8px; margin-block: 3px; white-space: nowrap; font-size: 12px; }
+.class-date-line small { min-width: 24px; color: var(--manager-secondary, #536179); font-size: 10px; }
+.class-mgmt :is(.class-btn, .class-tab, .class-row-btn, .class-alert, .sport-badge) svg { flex-shrink: 0; }
+.class-mgmt .class-action-group { flex-wrap: nowrap; }
+.class-mgmt .class-row-btn { min-height: 36px; white-space: nowrap; }
+.class-modal :is(.class-modal-header, .sessions-header-info) { overflow-wrap: anywhere; }
+.class-modal .roster-container { max-width: 100%; }
+.class-modal .roster-table { min-width: 650px; }
+.class-form-group > div:has(> .class-form-select) { flex-wrap: wrap; }
+.class-form-group > div > .class-form-select { flex-basis: 200px; }
+.session-col-room { min-width: 0; }
+
+@media (max-width: 1200px) {
+  .class-toolbar { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .class-mgmt-header { grid-template-columns: minmax(0, 1fr); }
+  .class-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .class-mgmt-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .class-mgmt { gap: 14px; }
+  .class-mgmt-header, .class-content-heading, .class-toolbar { padding: 16px; }
+  .class-tabs { align-self: stretch; }
+  .class-tab { flex: 1; padding-inline: 12px; }
+  .class-metrics { gap: 10px; }
+  .class-metric-card { padding: 12px; gap: 8px; }
+  .class-metric-icon { width: 28px; height: 28px; border-radius: 8px; }
+  .class-metric-icon svg { width: 17px; height: 17px; }
+  .class-mgmt-actions .class-btn { padding-inline: 8px; font-size: 11px; }
+  .class-filter-group { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .class-filter-group .class-select:only-child, .class-filter-group .class-select:last-child:nth-child(3) { grid-column: 1 / -1; }
+  .class-select { font-size: 11px; padding-inline: 8px; }
+  .sports-grid { padding: 16px; }
+  .sport-card-top { flex-wrap: wrap; gap: 10px; }
+  .sport-main-info { flex-basis: calc(100% - 54px); }
+  .sport-card-top .sport-badge { margin-left: 54px; }
+  .class-modal-overlay { padding: 12px; }
+  .class-modal { max-height: calc(100dvh - 24px); }
+  .class-modal-header, .class-modal-body, .class-modal-footer { padding: 16px; }
+  .class-form-grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .class-modal-footer .class-btn { flex: 1; padding-inline: 8px; }
+  .session-card-item { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; }
+  .session-card-item > div:nth-child(5), .session-actions { grid-column: 1 / -1; }
+  .sessions-header-card { padding: 12px; }
+  .sessions-header-card > .class-btn { width: 100%; }
+}
