@@ -544,10 +544,10 @@ export default function FrontDeskOperations() {
         <div>
           <h2>
             <Headset size={22} color="var(--manager-blue, #2463eb)" />
-            Vận hành dịch vụ khách hàng (FrontDesk)
+            Quầy lễ tân
           </h2>
           <p>
-            Thừa hưởng quyền lễ tân & quản lý: Check-in thời gian thực, quản lý hội viên, khóa tài khoản vi phạm, đăng ký gói tập và hỗ trợ ticket.
+            Quản lý hội viên, check-in, gói tập, lớp học và hỗ trợ khách hàng.
           </p>
         </div>
         <div className="fdesk-actions">
@@ -567,7 +567,7 @@ export default function FrontDeskOperations() {
             onClick={() => setShowCreateMemberModal(true)}
           >
             <UserPlus size={16} />
-            Đăng ký hội viên tại quầy
+            Thêm hội viên
           </button>
         </div>
       </div>
@@ -611,7 +611,7 @@ export default function FrontDeskOperations() {
       <div className="fdesk-metrics-grid">
         <div className="fdesk-metric-card">
           <div className="fdesk-metric-top">
-            <span className="fdesk-metric-label">Khách đang có mặt tại phòng tập</span>
+            <span className="fdesk-metric-label">Đang tại phòng tập</span>
             <span className="fdesk-metric-icon green">
               <DoorOpen size={20} />
             </span>
@@ -620,18 +620,18 @@ export default function FrontDeskOperations() {
             <span>{gymStats.currentlyInGymCount}</span>
             <span className="fdesk-live-pill">
               <span className="fdesk-live-dot" />
-              Real-time
+              Trực tiếp
             </span>
           </div>
           <p className="fdesk-metric-note">
             <UserCheck size={13} color="var(--manager-success, #059669)" />
-            Hội viên đã check-in chưa check-out
+            Đã vào, chưa rời phòng
           </p>
         </div>
 
         <div className="fdesk-metric-card">
           <div className="fdesk-metric-top">
-            <span className="fdesk-metric-label">Lượt Check-in hôm nay</span>
+            <span className="fdesk-metric-label">Check-in hôm nay</span>
             <span className="fdesk-metric-icon blue">
               <ScanLine size={20} />
             </span>
@@ -642,13 +642,13 @@ export default function FrontDeskOperations() {
           </div>
           <p className="fdesk-metric-note">
             <Clock3 size={13} color="var(--manager-info, #2563eb)" />
-            Ghi nhận tại cổng kiểm soát
+            Lượt vào trong ngày
           </p>
         </div>
 
         <div className="fdesk-metric-card">
           <div className="fdesk-metric-top">
-            <span className="fdesk-metric-label">Tổng số hội viên</span>
+            <span className="fdesk-metric-label">Tổng hội viên</span>
             <span className="fdesk-metric-icon purple">
               <Users size={20} />
             </span>
@@ -665,7 +665,7 @@ export default function FrontDeskOperations() {
 
         <div className="fdesk-metric-card">
           <div className="fdesk-metric-top">
-            <span className="fdesk-metric-label">Phiếu hỗ trợ / Ticket chờ</span>
+            <span className="fdesk-metric-label">Yêu cầu hỗ trợ chờ</span>
             <span className="fdesk-metric-icon amber">
               <Headset size={20} />
             </span>
@@ -676,35 +676,37 @@ export default function FrontDeskOperations() {
           </div>
           <p className="fdesk-metric-note">
             <LifeBuoy size={13} color="var(--manager-warning, #d97706)" />
-            Khiếu nại/trợ giúp từ hội viên
+            Cần tiếp nhận, xử lý
           </p>
         </div>
       </div>
 
       {/* Module Tabs */}
-      <div className="fdesk-tabs">
+      <div className="fdesk-tabs" role="group" aria-label="Chức năng quầy lễ tân">
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'members' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'members'}
           disabled={submitting}
           onClick={() => setActiveTab('members')}
         >
           <Users size={16} />
-          Quản lý Hội viên & Khóa vi phạm
+          <span className="fdesk-tab-label">Hội viên</span>
           <span className="fdesk-tab-badge">{members.length}</span>
         </button>
 
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'checkin' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'checkin'}
           disabled={submitting}
           onClick={() => setActiveTab('checkin')}
         >
           <ScanLine size={16} />
-          Check-in phòng tập Real-time
+          <span className="fdesk-tab-label">Check-in</span>
           {gymStats.currentlyInGymCount > 0 && (
             <span className="fdesk-tab-badge" style={{ background: 'var(--manager-success-bg, #ecfdf5)', color: 'var(--manager-success, #047857)' }}>
-              {gymStats.currentlyInGymCount} đang tập
+              {gymStats.currentlyInGymCount}
             </span>
           )}
         </button>
@@ -712,33 +714,36 @@ export default function FrontDeskOperations() {
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'packages' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'packages'}
           disabled={submitting}
           onClick={() => setActiveTab('packages')}
         >
           <ReceiptText size={16} />
-          Đăng ký gói thẻ & Thanh toán
+          <span className="fdesk-tab-label">Gói tập</span>
         </button>
 
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'classes' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'classes'}
           disabled={submitting}
           onClick={() => setActiveTab('classes')}
         >
           <CalendarDays size={16} />
-          Điểm danh & Đăng ký lớp
+          <span className="fdesk-tab-label">Lớp học</span>
         </button>
 
         <button
           type="button"
           className={`fdesk-tab-btn ${activeTab === 'tickets' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'tickets'}
           disabled={submitting}
           onClick={() => setActiveTab('tickets')}
         >
           <Headset size={16} />
-          Chăm sóc khách hàng & Ticket
+          <span className="fdesk-tab-label">Hỗ trợ</span>
           {pendingTicketsCount > 0 ? (
-            <span className="fdesk-tab-badge danger">{pendingTicketsCount} cần xử lý</span>
+            <span className="fdesk-tab-badge danger">{pendingTicketsCount}</span>
           ) : (
             <span className="fdesk-tab-badge">{tickets.length}</span>
           )}
@@ -1138,8 +1143,8 @@ export default function FrontDeskOperations() {
               </div>
             </div>
 
-            <form onSubmit={handleRegisterSubscription} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+            <form onSubmit={handleRegisterSubscription} className="fdesk-subscription-form">
+              <div className="fdesk-form-grid">
                 <div className="fdesk-input-group">
                   <label htmlFor="sub-member-select">Chọn hội viên (*):</label>
                   <select
@@ -1202,14 +1207,14 @@ export default function FrontDeskOperations() {
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+              <div className="fdesk-form-actions">
                 <button
                   type="submit"
                   className="fdesk-btn fdesk-btn-primary"
                   disabled={submitting || !subMemberId || !selectedPackageId}
                 >
                   <Plus size={16} />
-                  {submitting ? 'Đang tạo...' : 'Tạo đăng ký gói & Chuyển sang thanh toán'}
+                  {submitting ? 'Đang tạo...' : 'Đăng ký gói tập'}
                 </button>
               </div>
             </form>
@@ -1764,7 +1769,7 @@ export default function FrontDeskOperations() {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="fdesk-form-grid">
                   <div className="fdesk-input-group">
                     <label>Ngày sinh:</label>
                     <input
@@ -1896,7 +1901,7 @@ export default function FrontDeskOperations() {
               </button>
             </div>
             <div className="fdesk-dialog-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, fontSize: 13 }}>
+              <div className="fdesk-form-grid fdesk-details-grid">
                 <div>
                   <small style={{ color: 'var(--manager-muted, #748096)', display: 'block' }}>Họ và tên</small>
                   <strong>{selectedMemberDetail.fullName}</strong>
@@ -1925,11 +1930,11 @@ export default function FrontDeskOperations() {
                   <small style={{ color: 'var(--manager-muted, #748096)', display: 'block' }}>Giới tính</small>
                   <span>{selectedMemberDetail.gender === 'Male' ? 'Nam' : selectedMemberDetail.gender === 'Female' ? 'Nữ' : 'Khác'}</span>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div className="wide">
                   <small style={{ color: 'var(--manager-muted, #748096)', display: 'block' }}>Địa chỉ</small>
                   <span>{selectedMemberDetail.address || 'Chưa cập nhật'}</span>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div className="wide">
                   <small style={{ color: 'var(--manager-muted, #748096)', display: 'block' }}>Mục tiêu tập luyện</small>
                   <span>{selectedMemberDetail.fitnessGoal || 'Rèn luyện thể chất'}</span>
                 </div>

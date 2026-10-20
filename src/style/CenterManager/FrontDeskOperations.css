@@ -2,19 +2,21 @@
 .fdesk-mgmt {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   width: 100%;
+  min-width: 0;
 }
 
 /* Header & Controls */
 .fdesk-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  flex-wrap: wrap;
   gap: 16px;
-  padding: 24px;
-  border-bottom: 1px solid var(--manager-line, #e9edf3);
+  padding: 18px 20px;
+  border: 1px solid var(--manager-line, #e9edf3);
+  border-radius: 12px;
+  background: var(--manager-surface, #fff);
 }
 
 .fdesk-header h2 {
@@ -30,7 +32,8 @@
 .fdesk-header p {
   margin: 4px 0 0;
   font-size: 13px;
-  color: var(--manager-muted, #748096);
+  color: var(--manager-secondary, #536179);
+  line-height: 1.7;
 }
 
 .fdesk-actions {
@@ -45,6 +48,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  justify-content: center;
+  min-height: 40px;
+  max-width: 100%;
   padding: 9px 16px;
   border-radius: 8px;
   font-size: 13px;
@@ -108,27 +114,32 @@
 
 /* Tabs */
 .fdesk-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
   gap: 6px;
-  padding: 0 24px;
-  border-bottom: 1px solid var(--manager-line, #e9edf3);
+  padding: 5px;
+  border: 1px solid var(--manager-line, #e9edf3);
+  border-radius: 12px;
   background: var(--manager-raised, #fafbfd);
-  overflow-x: auto;
+  min-width: 0;
 }
 
 .fdesk-tab-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 13px 18px;
-  border: none;
+  padding: 10px 8px;
   background: transparent;
-  color: var(--manager-muted, #748096);
-  font-size: 13px;
+  color: var(--manager-secondary, #536179);
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  min-height: 44px;
+  min-width: 0;
   transition: all 0.2s;
   white-space: nowrap;
 }
@@ -140,9 +151,13 @@
 
 .fdesk-tab-btn.active {
   color: var(--manager-blue, #2463eb);
-  border-bottom-color: var(--manager-blue, #2463eb);
+  border-color: var(--manager-control-border, #d1d9e6);
   background: var(--manager-surface, #fff);
+  box-shadow: 0 1px 4px #0001;
 }
+
+.fdesk-tab-btn svg, .fdesk-btn svg, .fdesk-metric-note svg, .fdesk-header h2 svg { flex-shrink: 0; }
+.fdesk-tab-label { min-width: 0; }
 
 .fdesk-tab-badge {
   padding: 2px 7px;
@@ -167,39 +182,40 @@
 .fdesk-metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  padding: 0 24px;
+  gap: 12px;
+  padding: 0;
 }
 
 .fdesk-metric-card {
-  padding: 18px 20px;
+  padding: 14px 16px;
+  min-width: 0;
   border-radius: 12px;
   background: var(--manager-surface, #fff);
   border: 1px solid var(--manager-line, #e9edf3);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .fdesk-metric-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .fdesk-metric-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--manager-muted, #748096);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--manager-secondary, #536179);
+  line-height: 1.5;
 }
 
 .fdesk-metric-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -216,6 +232,9 @@
   font-weight: 700;
   color: var(--manager-ink, #18263e);
   line-height: 1.1;
+  min-height: 30px;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
 }
 
 .fdesk-metric-value small {
@@ -226,8 +245,9 @@
 }
 
 .fdesk-metric-note {
-  font-size: 12px;
-  color: var(--manager-muted, #748096);
+  font-size: 11px;
+  color: var(--manager-secondary, #536179);
+  line-height: 1.6;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -236,13 +256,15 @@
 
 /* Sections & Cards */
 .fdesk-section {
-  padding: 20px 24px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
+  min-width: 0;
 }
 
 .fdesk-card {
+  min-width: 0;
   background: var(--manager-surface, #fff);
   border: 1px solid var(--manager-line, #e9edf3);
   border-radius: 12px;
@@ -268,6 +290,10 @@
   color: var(--manager-ink, #18263e);
 }
 
+.fdesk-card-header > div { min-width: 0; }
+.fdesk-card-header > div:has(> .fdesk-badge, > .fdesk-live-pill) { flex-wrap: wrap; }
+.fdesk-card-header p { line-height: 1.7; }
+
 /* Filter & Search Toolbar */
 .fdesk-toolbar {
   display: flex;
@@ -288,9 +314,10 @@
   border: 1px solid var(--manager-control-border, #cbd5e1);
   border-radius: 8px;
   padding: 8px 14px;
-  min-width: 260px;
-  flex: 1;
-  max-width: 420px;
+  min-width: min(260px, 100%);
+  flex: 1 1 260px;
+  min-height: 42px;
+  max-width: none;
 }
 
 .fdesk-search-box input {
@@ -310,6 +337,9 @@
 }
 
 .fdesk-select {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 42px;
   padding: 8px 14px;
   border-radius: 7px;
   border: 1px solid var(--manager-control-border, #cbd5e1);
@@ -322,12 +352,15 @@
 /* Table Styles */
 .fdesk-table-scroll {
   overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .fdesk-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  min-width: 680px;
 }
 
 .fdesk-table th {
@@ -349,6 +382,8 @@
   border-bottom: 1px solid var(--manager-control-border, #f1f5f9);
   vertical-align: middle;
 }
+
+.fdesk-table th:first-child, .fdesk-table td:first-child { min-width: 150px; }
 
 .fdesk-table tr:hover td {
   background: var(--manager-raised, #f8fafc);
@@ -405,13 +440,13 @@
 /* Check-in Interactive Panel */
 .fdesk-checkin-panel {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  padding: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 0;
 }
 
 .fdesk-checkin-box {
-  background: var(--manager-raised, #f8fafc);
+  background: var(--manager-surface, #fff);
   border: 1px solid var(--manager-line, #e9edf3);
   border-radius: 10px;
   padding: 20px;
@@ -434,6 +469,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .fdesk-input-group label {
@@ -443,6 +479,9 @@
 }
 
 .fdesk-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
   padding: 9px 13px;
   border-radius: 8px;
   border: 1px solid var(--manager-control-border, #cbd5e1);
@@ -526,6 +565,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
   background: var(--manager-raised, #fafbfd);
   border-radius: 0 0 14px 14px;
 }
@@ -537,7 +577,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 18px;
-  margin: 0 24px;
+  margin: 0;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -567,12 +607,13 @@
 /* Package Subscription and Counter Payment */
 .fdesk-package-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 16px;
   padding: 16px 20px;
 }
 
 .fdesk-package-card {
+  min-width: 0;
   border: 1px solid var(--manager-line, #e9edf3);
   border-radius: 10px;
   padding: 16px;
@@ -625,7 +666,18 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
+
+.fdesk-subscription-form { padding: 20px; display: grid; gap: 18px; }
+.fdesk-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 16px; }
+.fdesk-form-grid > * { min-width: 0; }
+.fdesk-form-grid .wide { grid-column: 1 / -1; }
+.fdesk-form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding-top: 16px; border-top: 1px solid var(--manager-line, #e9edf3); }
+.fdesk-details-grid { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.fdesk-checkin-box form { flex: 1; }
+.fdesk-checkin-box form > button { margin-top: auto; }
+.fdesk-metric-value .fdesk-live-pill { padding: 4px 7px; font-size: 10px; }
 
 /* Ticket Priority and Status Styling */
 .fdesk-priority-pill {
@@ -684,15 +736,43 @@
 
 @media (max-width: 640px) {
   .fdesk-metrics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
   .fdesk-header {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
   }
+  .fdesk-mgmt { gap: 14px; }
+  .fdesk-header h2 { font-size: 18px; }
+  .fdesk-header p { font-size: 12px; }
+  .fdesk-header .fdesk-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }
+  .fdesk-header .fdesk-actions .fdesk-btn { padding-inline: 8px; font-size: 12px; }
+  .fdesk-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .fdesk-tab-btn { gap: 5px; padding-inline: 5px; font-size: 11px; }
+  .fdesk-tab-badge { padding: 2px 5px; font-size: 10px; }
+  .fdesk-metric-card { padding: 12px; }
+  .fdesk-metric-label { font-size: 11px; }
+  .fdesk-metric-top { align-items: flex-start; }
+  .fdesk-metric-icon { width: 24px; height: 24px; }
+  .fdesk-metric-icon svg { width: 15px; height: 15px; }
+  .fdesk-metric-value { font-size: 22px; }
+  .fdesk-metric-value small { display: inline-block; font-size: 10px; }
+  .fdesk-metric-note { font-size: 10px; align-items: flex-start; }
+  .fdesk-metric-note svg { margin-top: 2px; }
+  .fdesk-card-header, .fdesk-toolbar, .fdesk-checkin-box, .fdesk-subscription-form { padding: 16px; }
+  .fdesk-toolbar { align-items: stretch; gap: 10px; }
   .fdesk-search-box {
     max-width: 100%;
+    flex-basis: 100%;
   }
+  .fdesk-filter-group { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); }
+  .fdesk-filter-group .fdesk-select { width: 100%; }
+  .fdesk-form-actions .fdesk-btn { flex: 1; white-space: normal; }
+  .fdesk-dialog-overlay { padding: 12px; }
+  .fdesk-dialog-header, .fdesk-dialog-body, .fdesk-dialog-footer { padding: 16px; }
+  .fdesk-dialog-footer .fdesk-btn { flex: 1; white-space: normal; }
+  .fdesk-alert { align-items: flex-start; padding: 12px; }
 }
 
 
