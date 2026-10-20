@@ -1,42 +1,45 @@
-:root { --coach-blue: #1858d8; --coach-ink: #17213a; --coach-muted: #697386; --coach-line: #e2e8f2; --coach-bg: #f4f7fc; }
-.coach-dashboard { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0, 1fr); background: var(--coach-bg); color: var(--coach-ink); font: 18px 'Be Vietnam Pro', sans-serif; }
+:root { --coach-blue: #004ac6; --coach-ink: #131b2e; --coach-muted: #626878; --coach-line: #dfe3ee; --coach-bg: #f4f7fc; }
+.coach-dashboard { min-height: 100vh; display: grid; grid-template-columns: 260px minmax(0, 1fr); background: var(--theme-bg, var(--coach-bg)); color: var(--coach-ink); font: 400 13px/1.65 'Be Vietnam Pro', sans-serif; }
 .coach-dashboard * { box-sizing: border-box; }
 .coach-dashboard button, .coach-dashboard input { font: inherit; }
 .coach-dashboard button, .coach-dashboard a { -webkit-tap-highlight-color: transparent; }
 .coach-dashboard button { cursor: pointer; transition-duration: 180ms; transition-timing-function: ease; }
 .coach-dashboard button:focus-visible, .coach-dashboard a:focus-visible, .coach-dashboard input:focus-visible { outline: 3px solid #8aafff; outline-offset: 3px; }
-.coach-sidebar { min-height: 100vh; position: sticky; top: 0; align-self: start; padding: 26px 18px 22px; display: flex; flex-direction: column; background: #17243c; color: #fff; }
+.coach-sidebar { min-height: 100vh; height: 100vh; position: sticky; top: 0; align-self: start; z-index: 30; padding: 24px 16px 20px; display: flex; flex-direction: column; background: #17243c; color: #fff; border-right: 1px solid #ffffff14; transition: transform .25s ease; }
 .coach-brand { display: flex; align-items: center; gap: 11px; padding: 0 8px; color: inherit; text-decoration: none; }
-.coach-brand > span { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; color: #fff; background: linear-gradient(135deg, #4382f1, #1758d8); box-shadow: 0 7px 18px #07142e66; }
-.coach-brand strong { display: block; font-size: 18px; letter-spacing: -.3px; }
-.coach-brand em { color: #72a4ff; font-style: normal; }
-.coach-brand small { display: block; margin-top: 3px; color: #8494b3; font-size: 11px; font-weight: 800; letter-spacing: 1.7px; }
-.coach-nav { margin-top: 42px; }
-.coach-nav > p { margin: 0 12px 11px; color: #70819f; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; }
-.coach-nav button { width: 100%; display: flex; align-items: center; gap: 12px; margin: 4px 0; padding: 11px 12px; border: 0; border-radius: 9px; color: #aebbd1; background: transparent; text-align: left; transition: color .22s ease, background-color .22s ease, transform .22s ease; }
-.coach-nav button:hover { color: #fff; background: #ffffff0a; transform: translateX(2px); }
-.coach-nav button.active { color: #fff; background: linear-gradient(100deg, #2869df, #1758d8); box-shadow: 0 7px 18px #07142e4d; }
-.coach-nav button span { flex: 1; font-size: 16px; font-weight: 600; }
-.coach-nav button b { min-width: 20px; padding: 3px 6px; border-radius: 12px; background: #ffffff18; color: #fff; font-size: 13px; text-align: center; }
-.coach-sidebar-user { display: flex; align-items: center; gap: 9px; margin-top: auto; padding: 16px 5px 0; border-top: 1px solid #ffffff12; }
-.coach-avatar { position: relative; width: 35px; height: 35px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; color: #fff; background: linear-gradient(145deg, #397bed, #1752bd); font-size: 14px; font-weight: 800; }
-.coach-avatar i { position: absolute; right: -2px; bottom: -2px; width: 9px; height: 9px; border: 2px solid #17243c; border-radius: 50%; background: #29c98b; }
+.coach-brand > span { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; color: #fff; background: linear-gradient(135deg, #004ac6, #2563eb); box-shadow: 0 7px 18px #004ac666; }
+.coach-brand strong { display: block; color: #fff; font-size: 14px; letter-spacing: -.3px; }
+.coach-brand strong span { color: #60a5fa; }
+.coach-brand small { display: block; margin-top: 3px; color: #8494b3; font-size: 7.5px; font-weight: 800; letter-spacing: 1.6px; }
+.coach-portal-tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; margin: 18px 8px 0; border-radius: 6px; background: #ffffff0f; color: #93c5fd; font-size: 10px; font-weight: 600; }
+.coach-nav { margin-top: 24px; display: flex; flex-direction: column; gap: 4px; }
+.coach-nav-group { margin-bottom: 16px; }
+.coach-nav-title { margin: 0; padding: 0 12px 8px; color: #70819f; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+.coach-nav button { width: 100%; display: flex; align-items: center; gap: 11px; margin: 2px 0; padding: 10px 12px; border: 0; border-radius: 8px; color: #aebbd1; background: transparent; text-align: left; font-size: 11.5px; font-weight: 600; transition: all .2s ease; }
+.coach-nav button:hover { color: #fff; background: #ffffff0f; transform: translateX(2px); }
+.coach-nav button.active { color: #fff; background: linear-gradient(100deg, #1d4ed8, #004ac6); box-shadow: 0 6px 16px #004ac659; }
+.coach-nav button span { flex: 1; }
+.coach-sidebar-bottom { margin-top: auto; padding-top: 16px; border-top: 1px solid #ffffff14; display: flex; flex-direction: column; gap: 12px; }
+.coach-sidebar-user { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
+.coach-avatar { width: 40px; height: 40px; flex-shrink: 0; display: inline-grid; place-items: center; border: 2px solid #dbe1ff; border-radius: 50%; color: #143b79; background: linear-gradient(135deg, #c5daff, #6b93cc); font-size: 13px; font-weight: 800; }
+.coach-sidebar-user .coach-avatar { width: 36px; height: 36px; font-size: 11px; }
 .coach-sidebar-user > div { min-width: 0; flex: 1; }
 .coach-sidebar-user strong, .coach-sidebar-user small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.coach-sidebar-user strong { font-size: 14px; }
-.coach-sidebar-user small { margin-top: 3px; color: #7f90ae; font-size: 12px; }
-.coach-sidebar-user button { padding: 5px; border: 0; color: #8191ad; background: none; transition: color .2s, transform .2s; }
-.coach-sidebar-user button:hover { color: #fff; transform: translateX(2px); }
-.coach-workspace { min-width: 0; }
-.coach-topbar { min-height: 72px; position: relative; z-index: 60; padding: 14px 34px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--coach-line); background: #ffffffed; backdrop-filter: blur(12px); }
-.coach-search { width: min(360px, 45%); display: flex; align-items: center; gap: 9px; padding: 0 13px; border: 1px solid #dbe2ed; border-radius: 9px; color: #8791a3; background: #f8faff; transition: border-color .2s, box-shadow .2s; }
-.coach-search:focus-within { border-color: #7aa5f4; box-shadow: 0 0 0 3px #1557d512; }
-.coach-search input { width: 100%; height: 38px; border: 0; outline: 0; color: var(--coach-ink); background: transparent; font-size: 15px; }
-.coach-topbar-actions { display: flex; align-items: center; gap: 18px; }
+.coach-sidebar-user strong { color: #fff; font-size: 11px; }
+.coach-sidebar-user small { color: #8494b3; font-size: 9px; }
+.coach-sidebar-user button { padding: 6px; border: 0; border-radius: 6px; color: #94a3b8; background: none; transition: color .2s; }
+.coach-sidebar-user button:hover { color: #ef4444; }
+.coach-workspace { min-width: 0; display: flex; flex-direction: column; }
+.coach-topbar { min-height: 72px; position: sticky; top: 0; z-index: 25; padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--coach-line); background: #fff; }
+.coach-topbar-left { display: flex; align-items: center; gap: 12px; }
+.coach-menu-btn { display: none; padding: 6px; border: 0; color: var(--coach-ink); background: none; }
+.coach-breadcrumb { display: flex; align-items: center; gap: 6px; color: var(--coach-muted); font-size: 11px; }
+.coach-breadcrumb strong { color: var(--coach-ink); font-weight: 600; }
+.coach-topbar-actions { display: flex; align-items: center; gap: 14px; }
 .coach-notification-wrap { position: relative; }
-.coach-notification { position: relative; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--coach-line); border-radius: 9px; color: #526078; background: #fff; transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
-.coach-notification:hover, .coach-notification[aria-expanded='true'] { border-color: #aec6f4; color: var(--coach-blue); background: #f0f5ff; box-shadow: 0 5px 14px #1858d81a; transform: translateY(-1px); }
-.coach-notification i { position: absolute; top: -6px; right: -7px; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 4px; border: 2px solid #fff; border-radius: 10px; color: #fff; background: #ef4444; font-size: 11px; font-style: normal; font-weight: 800; }
+.coach-notification { position: relative; display: inline-grid; place-items: center; padding: 10px; border: 0; border-radius: 8px; color: #434655; background: transparent; transition: color .18s ease, background-color .18s ease; }
+.coach-notification:hover, .coach-notification[aria-expanded='true'] { color: var(--coach-blue); background: #eaedff; }
+.coach-notification i { position: absolute; top: 8px; right: 9px; width: 7px; height: 7px; border: 1px solid #fff; border-radius: 50%; background: #2563eb; }
 .coach-notification-panel { width: min(380px, calc(100vw - 36px)); max-height: min(560px, calc(100vh - 96px)); position: absolute; z-index: 40; top: 46px; right: 0; overflow: hidden auto; border: 1px solid var(--coach-line); border-radius: 13px; background: #fff; box-shadow: 0 18px 45px #162b4f26; transform-origin: top right; animation: coach-notification-in .24s cubic-bezier(.22,1,.36,1) both; }
 .coach-notification-panel > header { position: sticky; z-index: 1; top: 0; min-height: 67px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-bottom: 1px solid #e9edf4; background: #fff; }
 .coach-notification-panel > header span, .coach-notification-panel > header strong { display: block; }.coach-notification-panel > header span { color: var(--coach-blue); font-size: 11px; font-weight: 800; letter-spacing: 1px; }.coach-notification-panel > header strong { margin-top: 4px; font-size: 15px; }
@@ -47,19 +50,11 @@
 .coach-notification-action-error { padding: 9px 14px; border-bottom: 1px solid #f0b7bd; color: #a62d3a; background: #fff0f2; font-size: 12px; font-weight: 700; }
 .coach-notification-state { min-height: 190px; display: grid; place-items: center; align-content: center; gap: 7px; padding: 24px; color: #8792a5; text-align: center; font-size: 13px; }.coach-notification-state strong, .coach-notification-state span { display: block; }.coach-notification-state strong { color: var(--coach-ink); font-size: 14px; }.coach-notification-state.error span { max-width: 280px; line-height: 1.5; }.coach-notification-state button { margin-top: 5px; padding: 7px 11px; border: 0; border-radius: 7px; color: #fff; background: var(--coach-blue); font-size: 12px; font-weight: 700; }
 .coach-notification-panel > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-top: 1px solid #e9edf4; background: #fff; }.coach-notification-panel > footer span { color: #788397; font-size: 12px; font-weight: 700; }.coach-notification-panel > footer button { display: flex; align-items: center; gap: 3px; padding: 6px 8px; border: 1px solid #dfe5ef; border-radius: 6px; color: #59677b; background: #fff; font-size: 11px; font-weight: 700; }.coach-notification-panel > footer button:disabled { opacity: .45; cursor: not-allowed; }
-.coach-topbar-profile { display: flex; align-items: center; gap: 9px; padding: 4px 6px; border: 0; border-radius: 9px; color: inherit; background: transparent; text-align: left; transition: background-color .2s ease; }
-.coach-topbar-profile:hover { background: #eef3fb; }
-.coach-topbar-profile .coach-avatar i { border-color: #fff; }
+.coach-topbar-profile { display: flex; align-items: center; gap: 10px; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; }
 .coach-topbar-profile strong, .coach-topbar-profile small { display: block; }
-.coach-topbar-profile strong { font-size: 14px; }
-.coach-topbar-profile small { margin-top: 3px; color: var(--coach-muted); font-size: 12px; }
-.coach-main { width: min(1280px, 100%); margin: 0 auto; padding: 30px 34px 48px; }
-.coach-welcome { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.coach-welcome p { margin: 0 0 7px; color: var(--coach-blue); font-size: 13px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
-.coach-welcome h1 { margin: 0; font-size: clamp(28px, 2.5vw, 36px); letter-spacing: -1px; }
-.coach-welcome h1 span { display: inline-block; animation: coach-wave 2.4s ease-in-out infinite; transform-origin: 70% 70%; }
-.coach-welcome small { display: block; margin-top: 8px; color: var(--coach-muted); font-size: 15px; }
-.coach-welcome small strong { color: var(--coach-ink); }
+.coach-topbar-profile strong { font-size: 12px; }
+.coach-topbar-profile small { color: var(--coach-blue); font-size: 9.5px; font-weight: 600; }
+.coach-main { width: 100%; max-width: 1440px; margin: 0 auto; padding: 28px 32px 64px; }
 .coach-toast { position: fixed; z-index: 20; right: 28px; top: 86px; display: flex; align-items: center; gap: 9px; padding: 12px 15px; border: 1px solid #b9edd8; border-radius: 9px; color: #087251; background: #edfff8; box-shadow: 0 12px 30px #1531571f; font-size: 14px; font-weight: 600; animation: coach-toast-in .35s cubic-bezier(.22, 1, .36, 1) both; }
 .coach-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 25px; }
 .coach-metrics article { position: relative; min-width: 0; display: flex; align-items: flex-start; gap: 12px; padding: 18px; border: 1px solid var(--coach-line); border-radius: 12px; background: #fff; box-shadow: 0 5px 16px #17315a08; transition: transform .22s, box-shadow .22s, border-color .22s; }
@@ -140,10 +135,13 @@
 .coach-rating-card small { font-size: 11px; font-weight: 800; letter-spacing: .8px; color: #bad1ff; }.coach-rating-card strong { display: block; margin-top: 4px; font-size: 20px; }.coach-rating-card p { margin: 7px 0 5px; color: #d9e7ff; font-size: 12px; line-height: 1.55; }.coach-rating-card b { color: #aecaff; font-size: 11px; }
 
 /* Coach management views */
-.coach-page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
-.coach-page-heading p { margin: 0 0 7px; color: var(--coach-blue); font-size: 13px; font-weight: 800; letter-spacing: 1.1px; }
-.coach-page-heading h1 { margin: 0; font-size: clamp(29px, 2.5vw, 36px); letter-spacing: -1px; }
-.coach-page-heading > div > span { display: block; margin-top: 8px; color: var(--coach-muted); font-size: 15px; }
+.coach-page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; }
+.coach-page-heading p { display: flex; align-items: center; gap: 7px; margin: 0 0 5px; color: var(--coach-blue); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+.coach-page-heading h1 { margin: 0 0 5px; font-size: 25px; line-height: 1.4; letter-spacing: -.6px; }
+.coach-page-heading > div > span { display: block; color: var(--coach-muted); font-size: 12px; }
+.coach-content-search { width: min(290px, 100%); display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--coach-line); border-radius: 9px; color: var(--coach-muted); background: #fff; }
+.coach-content-search:focus-within { border-color: #7aa5f4; box-shadow: 0 0 0 3px #1557d512; }
+.coach-content-search input { width: 100%; height: 38px; border: 0; outline: 0; color: var(--coach-ink); background: transparent; font-size: 11px; }
 .coach-view-content { animation: coach-view-in .35s cubic-bezier(.22,1,.36,1); }
 .coach-view-loader { min-height: 360px; display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle at center, #edf4ff 0, #f8faff 42%, #fff 72%); }
 .coach-loader-orbit { width: 50px; height: 50px; overflow: visible; animation: coach-loader-spin .8s linear infinite; }
@@ -301,9 +299,10 @@
 @keyframes coach-wave { 0%, 60%, 100% { transform: rotate(0); } 68% { transform: rotate(16deg); } 76% { transform: rotate(-9deg); } 84% { transform: rotate(12deg); } 92% { transform: rotate(-5deg); } }
 @keyframes coach-live { 0% { box-shadow: 0 0 0 2px #5ed2a8, 0 0 0 2px #10a87366; } 70%, 100% { box-shadow: 0 0 0 2px #5ed2a8, 0 0 0 8px #10a87300; } }
 @keyframes coach-toast-in { from { opacity: 0; transform: translateY(-10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@media(max-width:1100px) { .coach-dashboard { grid-template-columns: 210px minmax(0, 1fr); }.coach-metrics { grid-template-columns: repeat(2, 1fr); }.coach-primary-grid, .coach-secondary-grid { grid-template-columns: 1fr; }.coach-quick-column { grid-template-columns: 1fr 1fr; } }
-@media(max-width:760px) { .coach-dashboard { display: block; }.coach-sidebar { min-height: auto; position: static; padding: 16px; }.coach-sidebar-user { display: none; }.coach-nav { display: flex; gap: 6px; margin-top: 16px; overflow-x: auto; scrollbar-width: none; }.coach-nav > p { display: none; }.coach-nav button { min-width: max-content; width: auto; margin: 0; padding: 9px 11px; }.coach-nav button span { font-size: 13px; }.coach-nav button b { display: none; }.coach-topbar { padding: 12px 18px; }.coach-search { width: 55%; }.coach-main { padding: 24px 18px 38px; }.coach-welcome { align-items: flex-start; }.coach-student-list article { grid-template-columns: 34px minmax(120px, 1fr) auto 25px; }.coach-student-progress { display: none; } }
-@media(max-width:520px) { .coach-topbar-profile > span:last-child, .coach-search { display: none; }.coach-topbar { justify-content: flex-end; }.coach-notification-panel { position: fixed; top: 66px; right: 12px; left: 12px; width: auto; max-height: calc(100vh - 82px); }.coach-welcome { display: block; }.coach-metrics { grid-template-columns: 1fr 1fr; gap: 10px; }.coach-metrics article { padding: 14px; }.coach-metric-icon { width: 32px; height: 32px; }.coach-metrics strong { font-size: 23px; }.coach-metrics p, .coach-metrics article > svg { display: none; }.coach-session { grid-template-columns: 48px 9px minmax(0, 1fr) 24px; gap: 8px; }.coach-status { display: none; }.coach-card-head { padding: 14px; }.coach-session-list, .coach-student-list { padding-inline: 14px; }.coach-student-list article { grid-template-columns: 32px minmax(0, 1fr) 24px; }.coach-student-list article > b { display: none; }.coach-quick-column { grid-template-columns: 1fr; }.coach-toast { left: 18px; right: 18px; top: 78px; }.coach-rating-card { margin-bottom: 12px; } }
+@media(max-width:1100px) { .coach-metrics { grid-template-columns: repeat(2, 1fr); }.coach-primary-grid, .coach-secondary-grid { grid-template-columns: 1fr; }.coach-quick-column { grid-template-columns: 1fr 1fr; } }
+@media(max-width:1024px) { .coach-dashboard { display: flex; flex-direction: column; }.coach-sidebar { display: none; position: fixed; inset: 0 auto 0 0; width: 270px; height: 100vh; box-shadow: 0 0 40px #0006; }.coach-sidebar.is-open { display: flex; }.coach-menu-btn { display: grid; place-items: center; }.coach-topbar { padding-inline: 20px; }.coach-main { padding-inline: 20px; } }
+@media(max-width:760px) { .coach-student-list article { grid-template-columns: 34px minmax(120px, 1fr) auto 25px; }.coach-student-progress { display: none; } }
+@media(max-width:520px) { .coach-topbar-profile > span:last-child { display: none; }.coach-notification-panel { position: fixed; top: 66px; right: 12px; left: 12px; width: auto; max-height: calc(100vh - 82px); }.coach-page-heading h1 { font-size: 22px; }.coach-metrics { grid-template-columns: 1fr 1fr; gap: 10px; }.coach-metrics article { padding: 14px; }.coach-metric-icon { width: 32px; height: 32px; }.coach-metrics strong { font-size: 23px; }.coach-metrics p, .coach-metrics article > svg { display: none; }.coach-session { grid-template-columns: 48px 9px minmax(0, 1fr) 24px; gap: 8px; }.coach-status { display: none; }.coach-card-head { padding: 14px; }.coach-session-list, .coach-student-list { padding-inline: 14px; }.coach-student-list article { grid-template-columns: 32px minmax(0, 1fr) 24px; }.coach-student-list article > b { display: none; }.coach-quick-column { grid-template-columns: 1fr; }.coach-toast { left: 18px; right: 18px; top: 78px; }.coach-rating-card { margin-bottom: 12px; } }
 @media(max-width:1100px) {
   .coach-api-grid, .coach-schedule-layout, .coach-student-layout, .coach-performance-layout { grid-template-columns: 1fr; }
   .coach-day-summary { grid-template-columns: 1fr 1fr; }
@@ -315,7 +314,8 @@
   .coach-profile-main { padding: 24px; text-align: left; }
 }
 @media(max-width:760px) {
-  .coach-page-heading { align-items: flex-start; }
+  .coach-page-heading { align-items: flex-start; flex-wrap: wrap; }
+  .coach-content-search { width: 100%; }
   .coach-calendar-strip { grid-template-columns: 30px minmax(0, 1fr) 30px; padding-inline: 8px; }
   .coach-calendar-strip > div { gap: 4px; }
   .coach-student-kpis { grid-template-columns: 1fr; }
