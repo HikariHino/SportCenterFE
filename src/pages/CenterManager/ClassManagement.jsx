@@ -53,6 +53,7 @@ import { getClassSessionDateRange } from '../../utils/classSessionDates'
 import { classDateInput } from '../../utils/classForm'
 import { shiftTimetableDate, timetableDateKey } from '../../utils/memberTimetable'
 import ClassCourseFields from './ClassCourseFields'
+import ClassSessionGroups from './ClassSessionGroups'
 import '../../style/CenterManager/ClassManagement.css'
 
 // Sport icon helper based on keywords
@@ -1229,9 +1230,10 @@ export default function ClassManagement() {
                   <p>Bấm nút "Thêm buổi học" để tạo buổi đầu tiên cho khóa này.</p>
                 </div>
               ) : (
-                <div className="sessions-list">
-                  {sessionsList.map((session) => {
-                    const statusClass = (session.Status || session.status || 'scheduled').toLowerCase()
+                <ClassSessionGroups items={sessionsList}>
+                  {(session) => {
+                    const rawStatus = String(session.Status || session.status || 'scheduled').trim().toLowerCase()
+                    const statusClass = rawStatus === 'canceled' ? 'cancelled' : rawStatus
                     const isScheduled = statusClass === 'scheduled'
                     const isCompleted = statusClass === 'completed'
                     const isCancelled = statusClass === 'cancelled'
@@ -1274,11 +1276,11 @@ export default function ClassManagement() {
                         <div>
                           <span className={`session-status-badge ${statusClass}`}>
                             <i />
-                            {isScheduled ? 'Đang lên lịch' : isCompleted ? 'Đã hoàn thành' : 'Đã hủy'}
+                            {isScheduled ? 'Đã lên lịch' : isCompleted ? 'Đã hoàn thành' : isCancelled ? 'Đã hủy' : session.Status || session.status}
                           </span>
-                          {isCancelled && session.cancellationReason && (
-                            <div style={{ fontSize: 11, color: 'var(--manager-danger, #b91c1c)', marginTop: 2, maxWidth: 160 }}>
-                              Lý do: {session.cancellationReason}
+                          {isCancelled && (
+                            <div className="class-session-cancel-reason">
+                              Lý do: {session.cancellationReason || 'Chưa cập nhật'}
                             </div>
                           )}
                         </div>
@@ -1332,8 +1334,8 @@ export default function ClassManagement() {
                         </div>
                       </article>
                     )
-                  })}
-                </div>
+                  }}
+                </ClassSessionGroups>
               )}
             </div>
 
