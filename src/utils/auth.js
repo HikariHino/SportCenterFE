@@ -106,18 +106,22 @@ export function getAuthDestination(role, from) {
 }
 
 export function getAuthErrorMessage(error, fallback) {
-  const body = error.response?.data
+  const body = error?.response?.data
   const details = body?.errors
   const messages = (Array.isArray(details) ? details : details && typeof details === 'object' ? Object.values(details).flat() : [details])
     .filter(value => typeof value === 'string' && value.trim())
+  const serverMessage = [body?.message, body?.detail, typeof body === 'string' ? body : null]
+    .find(value => typeof value === 'string' && value.trim())
   // Translate the backend's credential error without replacing OTP or validation errors.
-  if ([...messages, body?.message].some(value => typeof value === 'string' && /^Invalid email or password\.?$/i.test(value.trim()))) {
+  if ([...messages, serverMessage].some(value => typeof value === 'string' && /^Invalid email or password\.?$/i.test(value.trim()))) {
     return 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại hoặc chọn Quên mật khẩu.'
   }
   if (messages.length) return messages.join(' ')
   if (typeof body?.message === 'string' && body.message.trim()) return body.message
+  if (typeof body?.detail === 'string' && body.detail.trim()) return body.detail
   if (error.response?.status === 401) return 'Email hoặc mật khẩu không chính xác.'
   if (error.response?.status === 409) return 'Email đã được đăng ký. Vui lòng dùng email khác hoặc đăng nhập.'
+  if (['ECONNABORTED', 'ETIMEDOUT'].includes(error.code)) return 'Máy chủ phản hồi quá lâu. Vui lòng thử lại sau ít phút.'
   if (error.isAxiosError && !error.response) return 'Không thể kết nối đến máy chủ. Vui lòng thử lại.'
   return error.isAxiosError ? fallback : error.message || fallback
 }

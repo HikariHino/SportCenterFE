@@ -11,6 +11,7 @@ import '../../style/member/ClassesView.css'
 import useResource from '../../hooks/useClassResource'
 import SessionDetails, { formatClassDateTime as formatDate } from './MemberSessionDetails'
 import MemberClassBrowser from './MemberClassBrowser'
+import AttendanceStatus from '../../components/AttendanceStatus'
 
 const PAGE_SIZE = 12
 
@@ -44,7 +45,8 @@ function RegistrationDetailsDialog({ item, busy, now, onClose, onAction }) {
       <h3>{item.className || `Buổi học #${item.sessionId}`}</h3>
       <span className="member-classes-badge">{classStatusLabel(item.status)}</span>
       <SessionDetails item={item} />
-      <p className="member-classes-muted">{allowed.checkedIn ? 'Đã điểm danh' : item.attendanceStatus ? classStatusLabel(item.attendanceStatus) : 'Chưa điểm danh'}{item.checkInTime && ` · ${formatDate(item.checkInTime)}`}</p>
+      <AttendanceStatus item={item} />
+      {item.checkInTime && <p className="member-classes-muted">Giờ điểm danh: {formatDate(item.checkInTime)}</p>}
       {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {item.review?.rating ?? item.rating ?? 'Đã gửi'}{(item.review?.rating ?? item.rating) ? '/5 sao' : ' đánh giá'}</strong>{item.review?.comment && <p>{item.review.comment}</p>}</div>}
       <div className="member-classes-card-actions">
         {(allowed.checkIn || allowed.checkInReason) && <button type="button" className="primary" disabled={busy || !allowed.checkIn} onClick={() => onAction('checkIn', item)}><Check size={15} /> Điểm danh</button>}
@@ -147,6 +149,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
   const [patches, setPatches] = useState({})
   const [booked, setBooked] = useState({})
   const actionLock = useRef(false)
+  const openedNotificationSession = useRef(null)
   const mounted = useRef(true)
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -160,14 +163,36 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
   const rooms = useResource(getRooms)
   const publicClasses = useResource(getAllMemberClasses)
   const allSessions = useResource(getAllAvailableSessions)
-  const mine = useResource(getAllMyRegistrations)
+  const mine = useResource(getAllMyRegistrations, {}, 0, { refreshInterval: 30000 })
   const subscriptions = useResource(getMySubscriptions)
 
   useEffect(() => {
-    if (!notificationSessionId) return
+    if (!mine.data) return
+    // Once a fresh response includes attendance, server results take precedence
+    // over the immediate check-in patch (the coach may have corrected it).
+    setPatches(previous => {
+      let next = previous
+      for (const item of mine.data.items) {
+        const patch = previous[item.id]
+        if (!patch || !Object.hasOwn(item, 'attendanceStatus')
+          || (!Object.hasOwn(patch, 'attendanceStatus') && !Object.hasOwn(patch, 'checkInTime'))) continue
+        if (next === previous) next = { ...previous }
+        const remaining = { ...patch }
+        delete remaining.attendanceStatus
+        delete remaining.checkInTime
+        if (Object.keys(remaining).length) next[item.id] = remaining
+        else delete next[item.id]
+      }
+      return next
+    })
+  }, [mine.data])
+
+  useEffect(() => {
+    if (!notificationSessionId || openedNotificationSession.current === String(notificationSessionId)) return
     const registration = mine.data?.items.find(item => String(item.sessionId) === String(notificationSessionId)
       && !['cancelled', 'canceled'].includes(String(item.status).toLowerCase()))
     if (!registration) return
+    openedNotificationSession.current = String(notificationSessionId)
     setSelectedRegistrationId(registration.id)
     if (Number.isFinite(Date.parse(registration.startsAt))) setWeekStart(timetableWeekStart(registration.startsAt))
   }, [notificationSessionId, mine.data])
@@ -297,6 +322,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
     setBusy(true)
     setActionError('')
     const { type, item } = action
+    let attendanceResult
     try {
       if (type === 'bookClass') {
         if (hasActiveSubscription !== true) throw new Error('Bạn cần có gói hội viên đang còn hiệu lực để đăng ký buổi học.')
@@ -332,7 +358,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
         if (type === 'checkIn') {
           const reason = checkInUnavailableReason(item, Date.now())
           if (reason) throw new Error(reason)
-          await checkInRegistration(item.id)
+          attendanceResult = await checkInRegistration(item.id)
         }
         if (type === 'review') await reviewRegistration(item.id, values)
       }
@@ -342,7 +368,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
         setMinePage(1)
         setWeekStart(timetableWeekStart(item.startsAt))
       } else {
-        const patch = type === 'cancel' ? { status: 'Cancelled' } : type === 'checkIn' ? { checkInTime: new Date().toISOString() } : { hasReviewed: true, review: { rating: values.rating, comment: values.comment.trim() } }
+        const patch = type === 'cancel' ? { status: 'Cancelled' } : type === 'checkIn' ? { attendanceStatus: attendanceResult?.status || 'CheckedIn', checkInTime: attendanceResult?.checkInTime || null } : { hasReviewed: true, review: { rating: values.rating, comment: values.comment.trim() } }
         setPatches(previous => ({ ...previous, [item.id]: { ...previous[item.id], ...patch } }))
         if (type === 'cancel') setBooked(previous => ({ ...previous, [item.sessionId]: false }))
       }
@@ -400,14 +426,16 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
       onBook={session => openAction('book', session)} onBookClass={course => openAction('bookClass', course)} />}
 
     {tab === 'mine' && <section aria-label="Các lượt đăng ký" aria-busy={mine.loading}>
-      {tab === 'mine' && mineLayout === 'timetable' && !mine.loading && !mine.error ? <WeeklyTimetable items={registrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} /> : mine.loading || mine.error || !mine.data?.items.length ? <ResourceState resource={mine} emptyText={'Bạn chưa đăng ký buổi học nào.'} /> : <div className="member-classes-grid">
+      {mine.backgroundError && <p className="member-classes-checkin-notice" role="status">Chưa thể đồng bộ điểm danh mới: {mine.backgroundError} Dữ liệu đang hiển thị là lần tải gần nhất.</p>}
+      {tab === 'mine' && mineLayout === 'timetable' && !mine.loading && !mine.error ? <WeeklyTimetable items={registrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} showAttendance /> : mine.loading || mine.error || !mine.data?.items.length ? <ResourceState resource={mine} emptyText={'Bạn chưa đăng ký buổi học nào.'} /> : <div className="member-classes-grid">
         {listedRegistrations.map(registration => {
           const allowed = registrationActions(registration, now)
           return <article className="member-classes-card" key={registration.id}>
             <div className="member-classes-card-top"><span className="member-classes-badge">{classStatusLabel(registration.status)}</span><small>Đăng ký #{registration.id}</small></div>
             <h3>{registration.className || `Buổi học #${registration.sessionId}`}</h3>
             <SessionDetails item={registration} />
-            <p className="member-classes-muted">{allowed.checkedIn ? 'Đã điểm danh' : registration.attendanceStatus ? classStatusLabel(registration.attendanceStatus) : 'Chưa điểm danh'}{registration.checkInTime && ` · ${formatDate(registration.checkInTime)}`}</p>
+            <AttendanceStatus item={registration} />
+            {registration.checkInTime && <p className="member-classes-muted">Giờ điểm danh: {formatDate(registration.checkInTime)}</p>}
             {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {registration.review?.rating ?? registration.rating ?? 'Đã gửi'}{(registration.review?.rating ?? registration.rating) ? '/5 sao' : ' đánh giá'}</strong>{registration.review?.comment && <p>{registration.review.comment}</p>}</div>}
             <div className="member-classes-card-actions">
               {(allowed.checkIn || allowed.checkInReason) && <button type="button" className="primary" disabled={busy || !allowed.checkIn} onClick={() => openAction('checkIn', registration)}><Check size={15} /> Điểm danh</button>}

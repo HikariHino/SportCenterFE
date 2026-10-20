@@ -11,7 +11,7 @@ import { getRegistrationResult } from '../utils/registration'
  * @param {{ email: string, password: string }} credentials
  */
 export async function login({ email, password }) {
-  const response = await api.post('/Auth/login', { email: email.trim(), password }, { skipAuth: true })
+  const response = await api.post('/Auth/login', { email: email.trim(), password }, { skipAuth: true, timeout: 15000 })
   return getLoginData(response.data)
 }
 

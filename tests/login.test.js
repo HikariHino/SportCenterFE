@@ -71,3 +71,16 @@ test('HTTP credential errors are translated while validation and OTP errors are 
   assert.equal(getAuthErrorMessage({ response: { status: 400, data: { errors: { email: ['Email required'] } } } }, 'fallback'), 'Email required')
   assert.equal(getAuthErrorMessage({ response: { status: 401, data: { message: 'OTP expired' } } }, 'fallback'), 'OTP expired')
 })
+
+test('credential failures are translated from problem details, raw text and validation errors', () => {
+  for (const body of [{ detail: 'Invalid email or password.' }, 'Invalid email or password.', { errors: ['Invalid email or password.'] }]) {
+    assert.match(getAuthErrorMessage({ response: { status: 401, data: body } }, 'fallback'), /Email hoặc mật khẩu không chính xác/)
+  }
+  assert.equal(getAuthErrorMessage({ response: { status: 400, data: { detail: 'OTP expired' } } }, 'fallback'), 'OTP expired')
+})
+
+test('login timeouts are distinguished from connection failures', () => {
+  assert.match(getAuthErrorMessage({ isAxiosError: true, code: 'ECONNABORTED' }, 'fallback'), /phản hồi quá lâu/)
+  assert.match(getAuthErrorMessage({ isAxiosError: true, code: 'ETIMEDOUT' }, 'fallback'), /phản hồi quá lâu/)
+  assert.match(getAuthErrorMessage({ isAxiosError: true, code: 'ERR_NETWORK' }, 'fallback'), /Không thể kết nối/)
+})

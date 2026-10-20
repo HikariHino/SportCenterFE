@@ -1,0 +1,6 @@
+.member-attendance-status[data-tone] { display: inline-flex; align-items: flex-start; align-self: flex-start; gap: 5px; max-width: 100%; box-sizing: border-box; padding: 4px 7px; border-radius: 6px; font-size: 11px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.member-attendance-status[data-tone] svg { flex-shrink: 0; margin-top: 1px; }
+.member-attendance-status[data-tone='success'] { color: var(--theme-green, #096445); background: var(--theme-green-bg, #e1f6ee); }
+.member-attendance-status[data-tone='warning'] { color: var(--theme-gold, #805200); background: var(--theme-gold-bg, #fff7e5); }
+.member-attendance-status[data-tone='danger'] { color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fef2f2); }
+.member-attendance-status[data-tone='neutral'] { color: var(--theme-muted); background: var(--theme-bg); }

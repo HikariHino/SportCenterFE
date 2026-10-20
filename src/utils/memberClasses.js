@@ -7,8 +7,33 @@ export function classStatusLabel(value) {
     confirmed: 'Đã xác nhận', pending: 'Chờ xác nhận', cancelled: 'Đã hủy',
     canceled: 'Đã hủy', completed: 'Hoàn thành', attended: 'Đã tham gia',
     checkedin: 'Đã điểm danh', present: 'Có mặt', late: 'Đi trễ',
-    absent: 'Vắng mặt', noshow: 'Vắng mặt', inprogress: 'Đang diễn ra',
+    absent: 'Vắng mặt', noshow: 'Vắng mặt', excused: 'Vắng có phép', inprogress: 'Đang diễn ra',
   }[normalized(value)] || value || 'Chưa cập nhật'
+}
+
+export function registrationAttendance(item) {
+  if (cancelled(item.status) || cancelled(item.sessionStatus)) return null
+  const states = {
+    present: { code: 'present', label: 'Có mặt', tone: 'success' },
+    attended: { code: 'present', label: 'Có mặt', tone: 'success' },
+    late: { code: 'late', label: 'Đi trễ', tone: 'warning' },
+    absent: { code: 'absent', label: 'Vắng mặt', tone: 'danger' },
+    noshow: { code: 'absent', label: 'Vắng mặt', tone: 'danger' },
+    excused: { code: 'excused', label: 'Vắng có phép', tone: 'warning' },
+    checkedin: { code: 'checkedin', label: 'Đã điểm danh', tone: 'success' },
+  }
+  const recorded = normalized(item.attendanceStatus)
+  if (states[recorded]) return states[recorded]
+  if (!recorded && states[normalized(item.status)]) return states[normalized(item.status)]
+  // A timestamp confirms check-in, but must not override an explicit attendance
+  // status: a coach can change a previous check-in to Absent or Excused.
+  if (!recorded && [item.checkInTime, item.checkedInAt].some(value => Number.isFinite(Date.parse(value)))) return states.checkedin
+  if (!recorded && ['attendanceStatus', 'checkInTime', 'checkedInAt'].some(field => Object.hasOwn(item, field) && (item[field] === null || item[field] === ''))) {
+    return { code: 'pending', label: 'Chưa điểm danh', tone: 'neutral' }
+  }
+  // RegistrationDTO currently omits attendance. Missing data is not evidence
+  // that the student was absent, even after the session has ended.
+  return { code: 'unknown', label: 'Chưa cập nhật điểm danh', tone: 'neutral' }
 }
 
 export function cancellationDeadline(item) {
@@ -35,7 +60,7 @@ export function registrationActions(item, now = Date.now()) {
   const isCancelled = cancelled(item.status) || cancelled(item.sessionStatus)
   const ended = Date.parse(item.endsAt) <= now || normalized(item.sessionStatus) === 'completed' || status === 'completed'
   const checkedIn = Boolean(item.checkInTime || item.checkedInAt) || ['attended', 'checkedin'].includes(status)
-    || ['present', 'late'].includes(normalized(item.attendanceStatus))
+    || ['present', 'late', 'checkedin', 'attended'].includes(normalized(item.attendanceStatus))
   const reviewed = Boolean(item.hasReviewed || item.review || item.reviewedAt || item.rating)
   const active = ['registered', 'confirmed', 'booked'].includes(status)
   const deadline = cancellationDeadline(item)
