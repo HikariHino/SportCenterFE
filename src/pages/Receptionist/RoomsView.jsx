@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, CalendarClock, CalendarDays, CheckCircle2, DoorOpen, Layers3, MapPin, Power, RefreshCw, Search, UsersRound, X } from 'lucide-react'
+import { AlertCircle, Ban, CalendarClock, CalendarDays, CheckCircle2, DoorOpen, Layers3, MapPin, Power, RefreshCw, Search, UsersRound, X } from 'lucide-react'
 import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
 import { getReceptionistClasses, getReceptionistClassSessionsByClass } from '../../services/receptionistCatalogService'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
@@ -118,6 +118,17 @@ function RoomSchedule({ room, rooms, onClose, onOpenSessions }) {
   const [requestKey, setRequestKey] = useState(0)
   const [selectedId, setSelectedId] = useState(null)
   const selected = items.find(item => String(item.id) === String(selectedId))
+  const { scheduledItems, cancelledItems } = useMemo(() => {
+    const scheduled = []
+    const cancelled = []
+    items.forEach(item => {
+      const status = String(item.status || item.sessionStatus || '').toLowerCase()
+      if (status === 'cancelled' || status === 'canceled') cancelled.push(item)
+      else scheduled.push(item)
+    })
+    cancelled.sort((left, right) => Date.parse(right.startsAt) - Date.parse(left.startsAt))
+    return { scheduledItems: scheduled, cancelledItems: cancelled }
+  }, [items])
 
   useEffect(() => {
     let active = true
@@ -141,7 +152,16 @@ function RoomSchedule({ room, rooms, onClose, onOpenSessions }) {
     </header>
 
     {loading ? <div className="reception-room-schedule-state"><ViewLoader /></div> : error ? <div className="reception-room-schedule-state" role="alert"><AlertCircle size={30} /><strong>Không thể tải lịch phòng</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : <>
-      <WeeklyTimetable items={items} weekStart={weekStart} onWeekChange={value => { setWeekStart(value); setSelectedId(null) }} onSelect={setSelectedId} totalCount={items.length} title="Thời khóa biểu của phòng" description="Chọn buổi học để xem thời gian, huấn luyện viên và sĩ số" />
+      <WeeklyTimetable items={scheduledItems} weekStart={weekStart} onWeekChange={value => { setWeekStart(value); setSelectedId(null) }} onSelect={setSelectedId} totalCount={scheduledItems.length} title="Thời khóa biểu của phòng" description="Chỉ hiển thị các buổi đang sử dụng lịch phòng · Chọn buổi học để xem chi tiết" />
+      <section className="reception-room-cancelled" aria-labelledby="reception-room-cancelled-title">
+        <header><div><span><Ban size={15} />LỊCH ĐÃ HỦY</span><h3 id="reception-room-cancelled-title">Buổi học đã hủy</h3><p>Các buổi đã hủy không còn chiếm thời gian sử dụng phòng.</p></div><strong>{cancelledItems.length} buổi</strong></header>
+        {cancelledItems.length ? <div className="reception-room-cancelled-list">{cancelledItems.map(item => <button type="button" key={item.id} onClick={() => setSelectedId(item.id)}>
+          <span><small>BUỔI #{item.id}</small><b>{item.className || `Buổi học #${item.id}`}</b></span>
+          <span><small>THỜI GIAN</small><b>{sessionDateTime(item.startsAt)}</b></span>
+          <span><small>HUẤN LUYỆN VIÊN</small><b>{item.coachName || 'Chưa phân công'}</b></span>
+          <span><small>LÝ DO HỦY</small><b>{item.cancellationReason || 'Chưa cập nhật lý do'}</b></span>
+        </button>)}</div> : <div className="reception-room-cancelled-empty"><CheckCircle2 size={20} /><span>Phòng chưa có buổi học nào bị hủy.</span></div>}
+      </section>
       {selected && <article className="reception-room-session-detail">
         <header><div><small>BUỔI HỌC #{selected.id}</small><h3>{selected.className}</h3></div><button type="button" aria-label="Đóng chi tiết buổi học" onClick={() => setSelectedId(null)}><X size={17} /></button></header>
         <dl><div><dt>Bộ môn</dt><dd>{selected.sportName || 'Chưa cập nhật'}</dd></div><div><dt>Huấn luyện viên</dt><dd>{selected.coachName || 'Chưa phân công'}</dd></div><div><dt>Bắt đầu</dt><dd>{sessionDateTime(selected.startsAt)}</dd></div><div><dt>Kết thúc</dt><dd>{sessionDateTime(selected.endsAt)}</dd></div><div><dt>Sĩ số / Sức chứa</dt><dd>{selected.currentEnrollment ?? selected.registeredCount ?? 0} / {selected.capacity ?? room.capacity}</dd></div><div><dt>Trạng thái</dt><dd>{selected.status || 'Scheduled'}</dd></div></dl>
