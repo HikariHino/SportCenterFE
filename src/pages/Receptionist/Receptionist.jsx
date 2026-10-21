@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
-  LayoutDashboard, LifeBuoy, LogOut, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, UserRound, Users, X,
+  LayoutDashboard, LifeBuoy, LogOut, Menu, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
@@ -45,6 +45,7 @@ export default function Receptionist() {
   const navigate = useNavigate()
   const [activeNav, setActiveNav] = useState('Tổng quan')
   const [query, setQuery] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notificationPage, setNotificationPage] = useState({ items: [], total: 0, page: 1, pageSize: 6 })
@@ -126,6 +127,7 @@ export default function Receptionist() {
   const selectNavigation = label => {
     setActiveNav(label)
     setQuery('')
+    setSidebarOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -145,20 +147,31 @@ export default function Receptionist() {
     return <Overview onNavigate={selectNavigation} />
   }
 
-  const meta = pageMeta[activeNav]
+  const ActiveNavIcon = navigation.find(([, label]) => label === activeNav)?.[0] || LayoutDashboard
+  const meta = activeNav === 'Tổng quan'
+    ? { eyebrow: 'BẢNG ĐIỀU KHIỂN LỄ TÂN', title: `Chào bạn, ${staffName}!`, description: `${today} · Dữ liệu vận hành quầy được đồng bộ trực tiếp.` }
+    : { eyebrow: pageMeta[activeNav][0], title: pageMeta[activeNav][1], description: pageMeta[activeNav][2] }
+  const searchableTabs = ['Hội viên', 'Thanh toán', 'Hỗ trợ', 'Phòng tập']
+  const searchPlaceholder = activeNav === 'Hội viên'
+    ? 'Tìm hội viên...'
+    : activeNav === 'Thanh toán'
+      ? 'Tìm giao dịch...'
+      : activeNav === 'Hỗ trợ'
+        ? 'Tìm phiếu hỗ trợ...'
+        : 'Tìm phòng tập...'
 
   return <main className="reception-dashboard">
-    <aside className="reception-sidebar">
-      <Link to="/" className="reception-brand"><span><Trophy size={23} /></span><div><strong>SportPulse <em>Olympus</em></strong><small>RECEPTION PORTAL</small></div></Link>
-      <nav className="reception-nav" aria-label="Điều hướng lễ tân"><p>VẬN HÀNH QUẦY LỄ TÂN</p>{navigation.map(([Icon, label]) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onClick={() => selectNavigation(label)}><Icon size={19} /><span>{label}</span></button>)}</nav>
-      <div className="reception-source"><span><ShieldCheck size={20} /></span><p>Nguồn dữ liệu</p><strong>Reception API</strong><small>Đang đồng bộ trực tiếp</small></div>
-      <div className="reception-user"><span className="reception-avatar">{initials}<i /></span><div><strong>{staffName}</strong><small>Nhân viên lễ tân</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div>
+    <aside className={`reception-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
+      <Link to="/" className="reception-brand" aria-label="Về trang chủ SportPulse"><span><Trophy size={24} /></span><div><strong>SportPulse<span>.</span></strong><small>RECEPTION PORTAL</small></div></Link>
+      <div className="reception-portal-tag"><ShieldCheck size={14} />Cổng thông tin nhân viên lễ tân</div>
+      <nav className="reception-nav" aria-label="Điều hướng lễ tân"><div className="reception-nav-group"><p className="reception-nav-title">VẬN HÀNH QUẦY LỄ TÂN</p>{navigation.map(([Icon, label]) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onClick={() => selectNavigation(label)}><Icon size={18} /><span>{label}</span>{activeNav === label && <ChevronRight size={14} />}</button>)}</div></nav>
+      <div className="reception-sidebar-bottom"><div className="reception-user"><span className="reception-avatar">{initials}</span><div><strong>{staffName}</strong><small>Nhân viên lễ tân</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div></div>
     </aside>
 
     <section className="reception-workspace">
-      <header className="reception-topbar"><label className="reception-search"><Search size={18} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm mã đặt sân, hội viên..." aria-label="Tìm kiếm" /></label><div className="reception-topbar-actions"><ThemeToggle compact /><div className="reception-notification-wrap" ref={notificationRef}><button className="reception-notification-button" type="button" aria-label="Thông báo" aria-expanded={notificationOpen} onClick={toggleNotifications}><Bell size={20} />{unreadCount > 0 && <i>{unreadCount > 99 ? '99+' : unreadCount}</i>}</button>{notificationOpen && <section className="reception-notification-panel" aria-label="Thông báo Receptionist"><header><div><span>THÔNG BÁO</span><strong>{unreadCount ? `${unreadCount} chưa đọc` : 'Đã xem tất cả'}</strong></div><button type="button" aria-label="Đóng thông báo" onClick={() => setNotificationOpen(false)}><X size={17} /></button></header>{notificationActionError && <div className="reception-notification-action-error" role="alert">{notificationActionError}</div>}{notificationsLoading ? <div className="reception-notification-state">Đang tải thông báo...</div> : notificationsError ? <div className="reception-notification-state error"><strong>Không thể tải thông báo</strong><span>{notificationsError}</span><button type="button" onClick={() => loadNotifications(notificationPage.page)}>Thử lại</button></div> : notificationPage.items.length ? <><div className="reception-notification-list">{notificationPage.items.map(item => <article className={item.isRead ? '' : 'unread'} key={item.id}><span><Bell size={15} /></span><div><strong>{item.title}</strong><p>{item.content}</p><small>{formatDateTime(item.sentAt)}</small>{!item.isRead && <button type="button" className="reception-notification-read" disabled={Boolean(markingNotificationId)} onClick={() => handleMarkNotificationRead(item)}><CheckCircle2 size={13} />{markingNotificationId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}</button>}</div>{!item.isRead && <i />}</article>)}</div>{notificationPageCount > 1 && <footer><button type="button" disabled={notificationPage.page <= 1} onClick={() => loadNotifications(notificationPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{notificationPage.page}/{notificationPageCount}</span><button type="button" disabled={notificationPage.page >= notificationPageCount} onClick={() => loadNotifications(notificationPage.page + 1)}>Sau<ChevronRight size={14} /></button></footer>}</> : <div className="reception-notification-state"><Bell size={24} /><strong>Chưa có thông báo</strong><span>Thông báo dành cho Receptionist sẽ xuất hiện tại đây.</span></div>}</section>}</div><button className="reception-topbar-profile" type="button" aria-label="Mở hồ sơ Receptionist" aria-pressed={activeNav === 'Hồ sơ'} onClick={() => { setNotificationOpen(false); selectNavigation('Hồ sơ') }}><span className="reception-avatar">{initials}<i /></span><span><strong>{staffName}</strong><small>Nhân viên lễ tân</small></span></button></div></header>
+      <header className="reception-topbar"><div className="reception-topbar-left"><button className="reception-menu-btn" type="button" aria-label={sidebarOpen ? 'Đóng menu' : 'Mở menu'} onClick={() => setSidebarOpen(value => !value)}>{sidebarOpen ? <X size={21} /> : <Menu size={21} />}</button><div className="reception-breadcrumb"><span>Lễ tân</span><ChevronRight size={13} /><strong>{activeNav}</strong></div></div><div className="reception-topbar-actions"><ThemeToggle /><div className="reception-notification-wrap" ref={notificationRef}><button className="reception-notification-button" type="button" aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ''}`} aria-expanded={notificationOpen} onClick={toggleNotifications}><Bell size={20} />{unreadCount > 0 && <i>{unreadCount > 99 ? '99+' : unreadCount}</i>}</button>{notificationOpen && <section className="reception-notification-panel" aria-label="Thông báo Receptionist"><header><div><span>THÔNG BÁO</span><strong>{unreadCount ? `${unreadCount} chưa đọc` : 'Đã xem tất cả'}</strong></div><button type="button" aria-label="Đóng thông báo" onClick={() => setNotificationOpen(false)}><X size={17} /></button></header>{notificationActionError && <div className="reception-notification-action-error" role="alert">{notificationActionError}</div>}{notificationsLoading ? <div className="reception-notification-state">Đang tải thông báo...</div> : notificationsError ? <div className="reception-notification-state error"><strong>Không thể tải thông báo</strong><span>{notificationsError}</span><button type="button" onClick={() => loadNotifications(notificationPage.page)}>Thử lại</button></div> : notificationPage.items.length ? <><div className="reception-notification-list">{notificationPage.items.map(item => <article className={item.isRead ? '' : 'unread'} key={item.id}><span><Bell size={15} /></span><div><strong>{item.title}</strong><p>{item.content}</p><small>{formatDateTime(item.sentAt)}</small>{!item.isRead && <button type="button" className="reception-notification-read" disabled={Boolean(markingNotificationId)} onClick={() => handleMarkNotificationRead(item)}><CheckCircle2 size={13} />{markingNotificationId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}</button>}</div>{!item.isRead && <i />}</article>)}</div>{notificationPageCount > 1 && <footer><button type="button" disabled={notificationPage.page <= 1} onClick={() => loadNotifications(notificationPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{notificationPage.page}/{notificationPageCount}</span><button type="button" disabled={notificationPage.page >= notificationPageCount} onClick={() => loadNotifications(notificationPage.page + 1)}>Sau<ChevronRight size={14} /></button></footer>}</> : <div className="reception-notification-state"><Bell size={24} /><strong>Chưa có thông báo</strong><span>Thông báo dành cho Receptionist sẽ xuất hiện tại đây.</span></div>}</section>}</div><button className="reception-topbar-profile" type="button" aria-label="Mở hồ sơ Receptionist" aria-pressed={activeNav === 'Hồ sơ'} onClick={() => { setNotificationOpen(false); selectNavigation('Hồ sơ') }}><span className="reception-avatar">{initials}</span><span><strong>{staffName}</strong><small>Nhân viên lễ tân</small></span></button></div></header>
       <div className="reception-main">
-        {activeNav === 'Tổng quan' ? <section className="reception-welcome"><div><p>{today}</p><h1>Chào bạn, {staffName}! <span>👋</span></h1><small>Dữ liệu vận hành quầy được đồng bộ trực tiếp từ Reception API.</small></div></section> : <section className="reception-page-heading"><div><p>{meta[0]}</p><h1>{meta[1]}</h1><span>{meta[2]}</span></div></section>}
+        <section className="reception-page-heading"><div><p><ActiveNavIcon size={16} />{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div>{searchableTabs.includes(activeNav) && <label className="reception-content-search"><Search size={16} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={searchPlaceholder} aria-label={searchPlaceholder} /></label>}</section>
         {notice && <div className="reception-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
         <div className="reception-view" key={activeNav}><Suspense fallback={<ViewLoader />}>{renderView()}</Suspense></div>
       </div>
