@@ -1,10 +1,35 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { roomSessionForTimetable } from '../src/utils/roomTimetable.js'
+import { roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
 
 const rooms = [{ id: 1, name: 'Studio Yoga 01' }, { id: 2, name: 'Phòng Gym Đa năng' }]
 const yogaClass = { id: 10, className: 'Yoga cơ bản', roomId: 1, coachId: 5, coachName: 'Nguyễn Minh Anh', sportName: 'Yoga' }
 const session = { id: 100, startsAt: '2026-10-19T09:00:00+07:00', endsAt: '2026-10-19T10:30:00+07:00', status: 'Scheduled' }
+
+test('room session status becomes completed at the end time, including sessions across midnight', () => {
+  const end = Date.parse(session.endsAt)
+  assert.equal(roomSessionStatusLabel(session, Date.parse(session.startsAt) - 1), 'Đã lên lịch')
+  assert.equal(roomSessionStatusLabel(session, end - 1), 'Đã lên lịch')
+  assert.equal(roomSessionStatusLabel(session, end), 'Đã hoàn thành')
+  assert.equal(roomSessionStatusLabel(session, end + 1), 'Đã hoàn thành')
+  const overnight = { ...session, startsAt: '2026-10-19T23:00:00+07:00', endsAt: '2026-10-20T01:00:00+07:00' }
+  assert.equal(roomSessionStatusLabel(overnight, Date.parse('2026-10-20T00:00:00+07:00')), 'Đã lên lịch')
+  assert.equal(roomSessionStatusLabel(overnight, Date.parse(overnight.endsAt)), 'Đã hoàn thành')
+  assert.equal(session.status, 'Scheduled')
+})
+
+test('room session status preserves cancellations, recognizes explicit completion and handles missing end times', () => {
+  const now = Date.parse(session.endsAt) + 1
+  for (const status of ['Cancelled', ' CANCELED ']) {
+    assert.equal(roomSessionStatusLabel({ ...session, status }, now), 'Đã hủy')
+  }
+  assert.equal(roomSessionStatusLabel({ ...session, status: undefined, Status: 'Cancelled' }, now), 'Đã hủy')
+  assert.equal(roomSessionStatusLabel({ ...session, status: 'Completed' }, 0), 'Đã hoàn thành')
+  assert.equal(roomSessionStatusLabel({ ...session, status: undefined, Status: ' COMPLETED ' }, 0), 'Đã hoàn thành')
+  for (const endsAt of [undefined, null, '', 'invalid']) {
+    assert.equal(roomSessionStatusLabel({ ...session, endsAt }, now), 'Đã lên lịch')
+  }
+})
 
 test('sessions inherit the default room and metadata from their class', () => {
   const result = roomSessionForTimetable(session, yogaClass, rooms, rooms[0])

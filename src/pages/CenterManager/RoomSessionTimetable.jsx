@@ -1,6 +1,7 @@
 import { useId, useMemo } from 'react'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
 import { isCancelledSession, isScheduledSession } from '../../utils/sessionScheduling'
+import { roomSessionStatusLabel } from '../../utils/roomTimetable'
 
 const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', {
   timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short',
@@ -8,18 +9,18 @@ const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', 
 
 export default function RoomSessionTimetable({ items, onSelect, ...timetableProps }) {
   const headingId = useId()
-  const { scheduled, cancelled } = useMemo(() => {
-    const scheduled = [], cancelled = []
+  const { timetableSessions, cancelled } = useMemo(() => {
+    const timetableSessions = [], cancelled = []
     for (const item of items) {
       if (isCancelledSession(item)) cancelled.push(item)
-      else if (isScheduledSession(item)) scheduled.push(item)
+      else if (isScheduledSession(item) || String(item.status || item.Status).trim().toLowerCase() === 'completed') timetableSessions.push(item)
     }
     cancelled.sort((left, right) => Date.parse(right.startsAt) - Date.parse(left.startsAt))
-    return { scheduled, cancelled }
+    return { timetableSessions, cancelled }
   }, [items])
 
   return <>
-    <WeeklyTimetable {...timetableProps} items={scheduled} totalCount={scheduled.length} onSelect={onSelect} />
+    <WeeklyTimetable {...timetableProps} items={timetableSessions} totalCount={timetableSessions.length} onSelect={onSelect} getStatusLabel={roomSessionStatusLabel} />
     <p className="room-timetable-note">Các ô trống là khung giờ chưa có buổi học trong lịch. Các buổi đã hủy được liệt kê ở mục riêng bên dưới và không chiếm lịch phòng.</p>
     <details className="room-cancelled-sessions">
       <summary id={headingId}>Buổi học đã hủy <span>{cancelled.length} buổi</span></summary>

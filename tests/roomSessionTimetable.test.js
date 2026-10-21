@@ -16,8 +16,9 @@ before(async () => {
 after(async () => { await server?.close() })
 
 const session = { id: 1, className: 'Scheduled Yoga', status: 'Scheduled', startsAt: '2026-10-21T11:00:00Z', endsAt: '2026-10-21T12:30:00Z' }
-const render = items => renderToStaticMarkup(createElement(RoomSessionTimetable, {
+const render = (items, props = {}) => renderToStaticMarkup(createElement(RoomSessionTimetable, {
   items, weekStart: '2026-10-19', onWeekChange: () => {}, onSelect: () => {},
+  ...props,
 }))
 const sections = html => {
   const boundary = html.indexOf('<details class="room-cancelled-sessions">')
@@ -34,8 +35,9 @@ test('cancelled sessions move out of the room grid and counts while their replac
   ]
   const { timetable, cancellations } = sections(render(items))
   assert.match(timetable, /Scheduled Yoga/)
-  assert.doesNotMatch(timetable, /Cancelled Yoga|Cancelled Gym|Completed Yoga|is-cancelled/)
-  assert.match(timetable, /1 buổi tuần này · 1 buổi tổng cộng/)
+  assert.match(timetable, /Completed Yoga/)
+  assert.doesNotMatch(timetable, /Cancelled Yoga|Cancelled Gym|is-cancelled/)
+  assert.match(timetable, /2 buổi tuần này · 2 buổi tổng cộng/)
   assert.match(cancellations, /2 buổi/)
   assert.match(cancellations, /Cancelled Yoga/)
   assert.match(cancellations, /Cancelled Gym/)
@@ -47,6 +49,20 @@ test('cancelled sessions move out of the room grid and counts while their replac
   assert.doesNotMatch(cancellations, /Scheduled Yoga|Completed Yoga|draggable=/)
   assert.ok(cancellations.indexOf('Cancelled Gym') < cancellations.indexOf('Cancelled Yoga'))
   assert.equal(items[0], session, 'Rendering preserves the source array and session data')
+})
+
+test('room grid shows completed labels for ended and explicitly completed sessions while future sessions remain scheduled', () => {
+  const now = Date.parse('2026-10-21T12:30:00Z')
+  const items = [
+    session,
+    { ...session, id: 2, className: 'Future Yoga', startsAt: '2026-10-22T11:00:00Z', endsAt: '2026-10-22T12:30:00Z' },
+    { ...session, id: 3, className: 'Completed Yoga', status: undefined, Status: ' COMPLETED ' },
+  ]
+  const { timetable } = sections(render(items, { now }))
+  assert.equal((timetable.match(/<small>Đã hoàn thành<\/small>/g) || []).length, 2)
+  assert.equal((timetable.match(/<small>Đã lên lịch<\/small>/g) || []).length, 1)
+  assert.match(timetable, /3 buổi tuần này · 3 buổi tổng cộng/)
+  assert.equal(session.status, 'Scheduled')
 })
 
 test('a week containing only cancelled sessions shows an empty grid and retains cancelled details separately', () => {
