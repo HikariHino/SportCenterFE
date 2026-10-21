@@ -77,7 +77,7 @@ const mapSession = session => {
   }
 }
 
-const getScheduleError = error => error.response?.data?.message || error.message || 'Không thể kết nối tới Coach API.'
+const getScheduleError = error => error.response?.data?.message || error.message || 'Không thể tải lịch huấn luyện.'
 
 export function ScheduleView({ showNotice }) {
   const [weekOffset, setWeekOffset] = useState(0)
@@ -93,7 +93,6 @@ export function ScheduleView({ showNotice }) {
   const [reviewPage, setReviewPage] = useState({ items: [], total: 0, page: 1, pageSize: 5 })
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState('')
-  const [requestKey, setRequestKey] = useState(0)
   const selectedDay = weekDays.find(day => day.key === selectedDate) || weekDays[0]
   const daySessions = sessions.filter(item => item.date === selectedDate && (filter === 'Tất cả' || item.status === filter))
   const allDaySessions = sessions.filter(item => item.date === selectedDate)
@@ -127,7 +126,7 @@ export function ScheduleView({ showNotice }) {
 
     loadSchedule()
     return () => { active = false }
-  }, [requestKey, weekDays])
+  }, [weekDays])
 
   const changeWeek = direction => {
     const nextOffset = weekOffset + direction
@@ -186,16 +185,15 @@ export function ScheduleView({ showNotice }) {
       <section className="coach-card coach-agenda">
         <div className="coach-view-toolbar"><div><strong>Lịch ngày {selectedDay.date}/{selectedDay.month}</strong><span>{loading ? 'Đang tải lịch...' : `${allDaySessions.length} buổi huấn luyện`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã hoàn thành', 'Đang diễn ra', 'Sắp tới', 'Đã hủy'].map(label => <button type="button" key={label} className={filter === label ? 'active' : ''} onClick={() => setFilter(label)}>{label}</button>)}</div></div>
         {actionError && <div className="coach-attendance-error" role="alert">{actionError}</div>}
-        {loading ? <EmptyState title="Đang tải lịch huấn luyện" text="Dữ liệu đang được đồng bộ từ Coach API." /> : error ? <EmptyState title="Không thể tải lịch" text={error} /> : daySessions.length ? <div className="coach-agenda-list">{daySessions.map(session => <article key={session.id} className={session.tone || 'next'}>
+        {loading ? <EmptyState title="Đang tải lịch huấn luyện" text="Dữ liệu đang được đồng bộ từ hệ thống." /> : error ? <EmptyState title="Không thể tải lịch" text={error} /> : daySessions.length ? <div className="coach-agenda-list">{daySessions.map(session => <article key={session.id} className={session.tone || 'next'}>
           <div className="coach-agenda-time"><strong>{session.time || '--:--'}</strong><span>{session.endTime || '--:--'}</span></div><div className="coach-agenda-line"><i /></div>
           <div className="coach-agenda-body"><div><span className={`coach-status ${session.tone || 'next'}`}>{session.status || 'Chưa xác định'}</span><small>{session.type || ''}</small></div><h3>{session.studentName || session.student}</h3><p>{session.program || 'Chưa có chương trình'}</p><footer><span><Users size={14} />Còn {session.availableSeats} chỗ</span><span><Clock3 size={14} />{session.durationMinutes || 0} phút</span><span className="coach-session-actions"><button type="button" className="coach-session-reviews" disabled={reviewsLoading && reviewSession?.id === session.id} onClick={() => loadSessionReviews(session)}><Star size={14} />{reviewsLoading && reviewSession?.id === session.id ? 'Đang tải...' : 'Đánh giá'}</button>{session.canComplete && <button type="button" className="coach-complete-session" disabled={Boolean(completingId)} onClick={() => handleCompleteSession(session)}><CheckCircle2 size={14} />{completingId === session.id ? 'Đang hoàn thành...' : 'Hoàn thành buổi'}</button>}</span></footer></div>
-        </article>)}</div> : <EmptyState title="Chưa có lịch huấn luyện" text="Coach API chưa trả về buổi huấn luyện nào trong ngày này." />}
+        </article>)}</div> : <EmptyState title="Chưa có lịch huấn luyện" text="Chưa có buổi huấn luyện nào trong ngày này." />}
       </section>
 
       <aside className="coach-day-summary">
         <section className="coach-card"><div className="coach-summary-title"><CalendarDays size={20} /><div><small>TỔNG QUAN NGÀY</small><strong>{selectedDay.date}/{selectedDay.month}/{selectedDate.slice(0, 4)}</strong></div></div><div className="coach-summary-stats"><div><strong>{allDaySessions.length}</strong><span>Buổi tập</span></div><div><strong>{totalMinutes ? `${(totalMinutes / 60).toFixed(totalMinutes % 60 ? 1 : 0)}h` : '0h'}</strong><span>Thời lượng</span></div><div><strong>{enrollmentCount}</strong><span>Lượt đăng ký</span></div></div></section>
-        <section className={`coach-card coach-api-note${error ? ' error' : ''}`}><CheckCircle2 size={22} /><strong>{loading ? 'Đang đồng bộ lịch' : error ? 'Mất kết nối Coach API' : 'Đã kết nối Coach API'}</strong><p>{error || 'Lịch được tải trực tiếp từ tài khoản huấn luyện viên đang đăng nhập.'}</p>{error && <button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button>}</section>
-        {reviewSession && <section className="coach-card coach-session-review-panel"><div className="coach-review-head"><div><span>ĐÁNH GIÁ HỌC VIÊN</span><strong>{reviewSession.studentName}</strong></div><b><Star size={15} fill="currentColor" />{reviewPage.total}</b></div>{reviewsLoading ? <EmptyState title="Đang tải đánh giá" text="Dữ liệu đang được đồng bộ từ API." /> : reviewsError ? <div className="coach-inline-error"><EmptyState title="Không thể tải đánh giá" text={reviewsError} /><button className="coach-retry-button" type="button" onClick={() => loadSessionReviews(reviewSession, reviewPage.page)}>Thử lại</button></div> : reviewPage.items.length ? <><div className="coach-session-review-list">{reviewPage.items.map(review => <article key={review.id}><div><strong>Đăng ký #{review.registrationId}</strong><span>{Array.from({ length: 5 }, (_, index) => <Star key={index} size={13} className={index < review.rating ? 'filled' : ''} fill={index < review.rating ? 'currentColor' : 'none'} />)}</span></div><p>{review.comment || 'Học viên không để lại nhận xét.'}</p><small>{reviewDateFormatter.format(new Date(review.createdAt))}</small></article>)}</div>{reviewPageCount > 1 && <div className="coach-review-pagination"><button type="button" disabled={reviewPage.page <= 1} onClick={() => loadSessionReviews(reviewSession, reviewPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{reviewPage.page}/{reviewPageCount}</span><button type="button" disabled={reviewPage.page >= reviewPageCount} onClick={() => loadSessionReviews(reviewSession, reviewPage.page + 1)}>Sau<ChevronRight size={14} /></button></div>}</> : <EmptyState title="Chưa có đánh giá" text="Buổi huấn luyện này chưa nhận được đánh giá từ học viên." />}</section>}
+        {reviewSession && <section className="coach-card coach-session-review-panel"><div className="coach-review-head"><div><span>ĐÁNH GIÁ HỌC VIÊN</span><strong>{reviewSession.studentName}</strong></div><b><Star size={15} fill="currentColor" />{reviewPage.total}</b></div>{reviewsLoading ? <EmptyState title="Đang tải đánh giá" text="Dữ liệu đang được đồng bộ từ hệ thống." /> : reviewsError ? <div className="coach-inline-error"><EmptyState title="Không thể tải đánh giá" text={reviewsError} /><button className="coach-retry-button" type="button" onClick={() => loadSessionReviews(reviewSession, reviewPage.page)}>Thử lại</button></div> : reviewPage.items.length ? <><div className="coach-session-review-list">{reviewPage.items.map(review => <article key={review.id}><div><strong>Đăng ký #{review.registrationId}</strong><span>{Array.from({ length: 5 }, (_, index) => <Star key={index} size={13} className={index < review.rating ? 'filled' : ''} fill={index < review.rating ? 'currentColor' : 'none'} />)}</span></div><p>{review.comment || 'Học viên không để lại nhận xét.'}</p><small>{reviewDateFormatter.format(new Date(review.createdAt))}</small></article>)}</div>{reviewPageCount > 1 && <div className="coach-review-pagination"><button type="button" disabled={reviewPage.page <= 1} onClick={() => loadSessionReviews(reviewSession, reviewPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{reviewPage.page}/{reviewPageCount}</span><button type="button" disabled={reviewPage.page >= reviewPageCount} onClick={() => loadSessionReviews(reviewSession, reviewPage.page + 1)}>Sau<ChevronRight size={14} /></button></div>}</> : <EmptyState title="Chưa có đánh giá" text="Buổi huấn luyện này chưa nhận được đánh giá từ học viên." />}</section>}
       </aside>
     </div>
   </div>
