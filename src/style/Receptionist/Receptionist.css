@@ -326,3 +326,54 @@
 [data-theme='dark'] .reception-content-search input { color:var(--theme-text); }
 [data-theme='dark'] .reception-breadcrumb strong { color:var(--theme-text); }
 [data-theme='dark'] .reception-menu-btn { color:var(--theme-text); }
+[data-theme='dark'] .reception-support-card>.reception-card-head>button {
+  border-color:#3c5f9f;
+  color:var(--theme-accent);
+  background:var(--theme-blue-bg);
+}
+[data-theme='dark'] .reception-support-toolbar {
+  border-color:var(--theme-border);
+}
+[data-theme='dark'] .reception-support-toolbar button {
+  border-color:var(--theme-border);
+  color:var(--theme-muted);
+  background:var(--theme-raised);
+}
+[data-theme='dark'] .reception-support-toolbar button:hover {
+  border-color:#5175ad;
+  color:var(--theme-text);
+  background:#29466f;
+}
+[data-theme='dark'] .reception-support-toolbar button.active {
+  border-color:#5175ad;
+  color:var(--theme-accent);
+  background:var(--theme-blue-bg);
+}
+[data-theme='dark'] .reception-support-toolbar>strong,
+[data-theme='dark'] .reception-support-list :is(header>span,p,footer) {
+  color:var(--theme-muted);
+}
+[data-theme='dark'] .reception-support-list>article {
+  border-color:var(--theme-border);
+}
+[data-theme='dark'] .reception-support-list>article>.priority {
+  color:var(--theme-accent);
+  background:var(--theme-blue-bg);
+}
+[data-theme='dark'] .reception-support-list>article>.priority:is(.high,.urgent) {
+  color:var(--theme-red);
+  background:var(--theme-red-bg);
+}
+[data-theme='dark'] .reception-support-list header>b {
+  color:var(--theme-gold);
+  background:var(--theme-gold-bg);
+}
+[data-theme='dark'] .reception-support-list header>b:is(.resolved,.closed) {
+  color:var(--theme-green);
+  background:var(--theme-green-bg);
+}
+[data-theme='dark'] .reception-support-list blockquote {
+  border-color:var(--theme-accent);
+  color:var(--theme-text);
+  background:var(--theme-raised);
+}
