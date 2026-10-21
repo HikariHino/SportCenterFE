@@ -1,6 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
 .reception-dashboard { --rc-accent:#1858d8; --rc-dark:#17243c; --rc-ink:#17213a; --rc-muted:#697386; --rc-line:#e2e8f2; --rc-bg:#f4f7fc; min-height:100vh; display:grid; grid-template-columns:248px minmax(0,1fr); color:var(--rc-ink); background:var(--rc-bg); font:18px 'Be Vietnam Pro',sans-serif; }
 .reception-dashboard * { box-sizing:border-box; }
-.reception-dashboard button,.reception-dashboard input { font:inherit; }
+.reception-dashboard button,.reception-dashboard input,.reception-dashboard select,.reception-dashboard textarea { font:inherit; }
 .reception-dashboard button { cursor:pointer; transition-duration:180ms; transition-timing-function:ease; }
 .reception-dashboard button:focus-visible,.reception-dashboard a:focus-visible,.reception-dashboard input:focus-visible { outline:3px solid #8aafff; outline-offset:3px; }
 .reception-sidebar { min-height:100vh; position:sticky; top:0; align-self:start; display:flex; flex-direction:column; padding:26px 18px 22px; color:#fff; background:#17243c; }
