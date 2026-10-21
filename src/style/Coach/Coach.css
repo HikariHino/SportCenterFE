@@ -1,7 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
 :root { --coach-blue: #004ac6; --coach-ink: #131b2e; --coach-muted: #626878; --coach-line: #dfe3ee; --coach-bg: #f4f7fc; }
 .coach-dashboard { min-height: 100vh; display: grid; grid-template-columns: 260px minmax(0, 1fr); background: var(--theme-bg, var(--coach-bg)); color: var(--coach-ink); font: 400 13px/1.65 'Be Vietnam Pro', sans-serif; }
 .coach-dashboard * { box-sizing: border-box; }
-.coach-dashboard button, .coach-dashboard input { font: inherit; }
+.coach-dashboard button, .coach-dashboard input, .coach-dashboard select, .coach-dashboard textarea { font: inherit; }
 .coach-dashboard button, .coach-dashboard a { -webkit-tap-highlight-color: transparent; }
 .coach-dashboard button { cursor: pointer; transition-duration: 180ms; transition-timing-function: ease; }
 .coach-dashboard button:focus-visible, .coach-dashboard a:focus-visible, .coach-dashboard input:focus-visible { outline: 3px solid #8aafff; outline-offset: 3px; }
