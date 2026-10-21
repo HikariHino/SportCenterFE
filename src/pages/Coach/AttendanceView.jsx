@@ -140,15 +140,15 @@ export function AttendanceView({ query, showNotice }) {
 
     <section className="coach-student-kpis coach-attendance-kpis">
       <article><span className="blue"><Users size={21} /></span><div><small>Đăng ký trong buổi</small><strong>{students.length}</strong><p>Danh sách roster</p></div></article>
-      <article><span className="green"><CheckCircle2 size={21} /></span><div><small>Đã điểm danh</small><strong>{presentCount}</strong><p>Đồng bộ Attendance API</p></div></article>
+      <article><span className="green"><CheckCircle2 size={21} /></span><div><small>Đã điểm danh</small><strong>{presentCount}</strong><p>Đồng bộ dữ liệu điểm danh</p></div></article>
       <article><span className="purple"><Clock3 size={21} /></span><div><small>Chưa điểm danh</small><strong>{pendingCount}</strong><p>{attendanceAvailability.message}</p></div></article>
     </section>
 
     <section className="coach-card coach-attendance-list">
       <div className="coach-view-toolbar"><div><strong>Điểm danh học viên</strong><span>{loading ? 'Đang đồng bộ...' : `${filtered.length} học viên`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã điểm danh', 'Chưa điểm danh', 'Vắng mặt', 'Có phép'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
-      <div className={`coach-checkin-window ${attendanceAvailability.open ? 'open' : ''}`}><Clock3 size={16} /><span><strong>{attendanceAvailability.open ? 'Có thể cập nhật điểm danh' : 'Không thể điểm danh'}</strong><small>{attendanceAvailability.message}. Trạng thái được lưu trực tiếp qua Attendance API.</small></span></div>
+      <div className={`coach-checkin-window ${attendanceAvailability.open ? 'open' : ''}`}><Clock3 size={16} /><span><strong>{attendanceAvailability.open ? 'Có thể cập nhật điểm danh' : 'Không thể điểm danh'}</strong><small>{attendanceAvailability.message}. Trạng thái được lưu trực tiếp trên hệ thống.</small></span></div>
       {actionError && <div className="coach-attendance-error" role="alert">{actionError}</div>}
-      {loading ? <EmptyState title="Đang tải danh sách điểm danh" text="Dữ liệu đang được đồng bộ từ Coach API." /> : error ? <div className="coach-inline-error"><EmptyState title="Không thể tải điểm danh" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-attendance-table"><div className="coach-attendance-heading"><span>Học viên</span><span>Đăng ký</span><span>Trạng thái</span><span>Thao tác</span></div>{filtered.map(student => {
+      {loading ? <EmptyState title="Đang tải danh sách điểm danh" text="Dữ liệu đang được đồng bộ từ hệ thống." /> : error ? <div className="coach-inline-error"><EmptyState title="Không thể tải điểm danh" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-attendance-table"><div className="coach-attendance-heading"><span>Học viên</span><span>Đăng ký</span><span>Trạng thái</span><span>Thao tác</span></div>{filtered.map(student => {
         const isMarking = markingId === student.registrationId
         const canMark = attendanceAvailability.open && !markingId
         return <article className="coach-attendance-row" key={student.id}>

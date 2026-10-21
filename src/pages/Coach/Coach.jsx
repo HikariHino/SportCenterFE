@@ -149,7 +149,7 @@ export default function Coach() {
 
   const ActiveNavIcon = navigation.find(([, label]) => label === activeNav)?.[0] || LayoutDashboard
   const meta = activeNav === 'Tổng quan'
-    ? { eyebrow: 'BẢNG ĐIỀU KHIỂN COACH', title: `Chào bạn, ${coachName}!`, description: `${today} · Lịch huấn luyện và học viên được đồng bộ từ Coach API.` }
+    ? { eyebrow: 'BẢNG ĐIỀU KHIỂN COACH', title: `Chào bạn, ${coachName}!`, description: `${today} · Lịch huấn luyện và học viên được đồng bộ từ hệ thống.` }
     : pageMeta[activeNav]
   return <main className="coach-dashboard">
     <aside className={`coach-sidebar ${sidebarOpen ? 'is-open' : ''}`}>

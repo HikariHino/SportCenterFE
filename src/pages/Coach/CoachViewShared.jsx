@@ -86,5 +86,5 @@ export const formatSessionOption = session => {
   return `${session.className} · ${sessionDateFormatter.format(start)} · ${timeFormatter.format(start)}–${timeFormatter.format(end)}`
 }
 
-export const getStudentsError = error => error.response?.data?.message || error.message || 'Không thể kết nối tới API học viên theo buổi.'
+export const getStudentsError = error => error.response?.data?.message || error.message || 'Không thể tải danh sách học viên theo buổi.'
 
