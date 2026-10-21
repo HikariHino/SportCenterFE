@@ -91,7 +91,7 @@ export function ReceptionistProfileView({ showNotice }) {
     </section>
     <section className="reception-card reception-profile-details">
       <div className="reception-card-head">
-        <div><span>PROFILE API</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>
+        <div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>
         {editing ? <button type="button" onClick={stopEditing} disabled={saving}><X size={16} />Hủy</button> : <button type="button" onClick={startEditing}><Edit3 size={15} />Chỉnh sửa</button>}
       </div>
       {editing ? <form className="reception-profile-form" onSubmit={handleSubmit}>
