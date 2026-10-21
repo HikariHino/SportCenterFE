@@ -52,14 +52,14 @@ export function Overview({ onNavigate }) {
         {loading ? <EmptyState icon={UserCheck} title="Đang tải check-in" text="Dữ liệu check-in đang được đồng bộ từ hệ thống." /> : activeCheckIns.length ? <div className="reception-overview-checkins">{activeCheckIns.slice(0, 5).map(item => <article key={item.id}><span>{String(item.memberName || 'HV').split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase()}</span><div><strong>{item.memberName}</strong><small>{item.memberCode} · {item.packageName || 'Chưa có gói'}</small></div><time>{formatDateTime(item.checkInTime)}</time></article>)}</div> : <EmptyState icon={UserCheck} title="Chưa có khách trong phòng gym" text="Hôm nay chưa có lượt check-in đang hoạt động." />}
       </section>
       <section className="reception-card reception-court-panel">
-        <div className="reception-card-head"><div><span>PHÒNG HOẠT ĐỘNG</span><h2>Cơ sở đang sẵn sàng</h2></div><button type="button" onClick={() => onNavigate('Phòng tập')}>Xem phòng <ArrowRight size={15} /></button></div>
+        <div className="reception-card-head"><div><span>PHÒNG HOẠT ĐỘNG</span><h2>Cơ sở đang sẵn sàng</h2></div><button type="button" onClick={() => onNavigate('Buổi học & Phòng tập')}>Xem phòng <ArrowRight size={15} /></button></div>
         {loading ? <EmptyState icon={DoorOpen} title="Đang tải phòng" text="Dữ liệu phòng đang được đồng bộ từ hệ thống." /> : data.rooms.length ? <div className="reception-overview-rooms">{data.rooms.slice(0, 5).map(room => <article key={room.id}><span><DoorOpen size={16} /></span><div><strong>{room.name}</strong><small>{room.roomType} · {room.capacity} người</small></div></article>)}</div> : <EmptyState icon={MapPin} title="Chưa có phòng hoạt động" text="Hiện chưa có phòng nào ở trạng thái hoạt động." />}
       </section>
     </div>
     <section className="reception-card reception-shortcuts">
       <div className="reception-card-head"><div><span>TRUY CẬP NHANH</span><h2>Nghiệp vụ tại quầy</h2></div></div>
       <div className="reception-shortcut-grid">
-        <button type="button" onClick={() => onNavigate('Buổi học')}><span className="blue"><CalendarDays size={21} /></span><div><strong>Quản lý buổi học</strong><small>Đăng ký và kiểm tra học viên</small></div><ArrowRight size={17} /></button>
+        <button type="button" onClick={() => onNavigate('Buổi học & Phòng tập')}><span className="blue"><CalendarDays size={21} /></span><div><strong>Buổi học & phòng tập</strong><small>Xem lịch phòng và hỗ trợ học viên</small></div><ArrowRight size={17} /></button>
         <button type="button" onClick={() => onNavigate('Check-in')}><span className="green"><QrCode size={21} /></span><div><strong>Quét mã check-in</strong><small>Xác minh hội viên tại quầy</small></div><ArrowRight size={17} /></button>
         <button type="button" onClick={() => onNavigate('Hội viên')}><span className="purple"><Users size={21} /></span><div><strong>Tra cứu hội viên</strong><small>Kiểm tra tài khoản và gói dịch vụ</small></div><ArrowRight size={17} /></button>
         <button type="button" onClick={() => onNavigate('Thanh toán')}><span className="amber"><CreditCard size={21} /></span><div><strong>Kiểm tra thanh toán</strong><small>Theo dõi giao dịch và hóa đơn</small></div><ArrowRight size={17} /></button>
