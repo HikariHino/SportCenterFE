@@ -379,3 +379,147 @@
   color:var(--theme-text);
   background:var(--theme-raised);
 }
+
+/* Combined room and class-session workspace */
+.reception-facility-switcher { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:18px; padding:18px 20px; }
+.reception-facility-switcher>div { min-width:0; }
+.reception-facility-switcher small { display:block; color:var(--rc-accent); font-size:11px; font-weight:800; letter-spacing:1.15px; }
+.reception-facility-switcher strong { display:block; margin-top:4px; font-size:19px; }
+.reception-facility-switcher p { margin:5px 0 0; color:var(--rc-muted); font-size:12px; line-height:1.5; }
+.reception-facility-switcher nav { flex-shrink:0; display:flex; gap:7px; padding:5px; border:1px solid var(--rc-line); border-radius:10px; background:#f6f8fc; }
+.reception-facility-switcher button { min-height:39px; display:flex; align-items:center; justify-content:center; gap:7px; padding:0 13px; border:1px solid transparent; border-radius:7px; color:#65738a; background:transparent; font-size:12px; font-weight:750; }
+.reception-facility-switcher button:hover { color:var(--rc-accent); background:#fff; }
+.reception-facility-switcher button.active { color:#fff; background:var(--rc-accent); box-shadow:0 5px 12px #1858d82e; }
+.reception-facility-sessions { animation:reception-view .3s ease both; }
+
+.reception-facility-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+.reception-facility-metrics article { min-width:0; display:flex; align-items:center; gap:12px; padding:17px; border:1px solid var(--rc-line); border-radius:12px; background:#fff; box-shadow:0 5px 16px #17315a08; }
+.reception-facility-metrics article>span { width:42px; height:42px; flex:0 0 auto; display:grid; place-items:center; border-radius:10px; }
+.reception-facility-metrics .blue { color:#1858d8; background:#e9f0ff; }
+.reception-facility-metrics .green { color:#078865; background:#e5f8f0; }
+.reception-facility-metrics .amber { color:#b87408; background:#fff2d8; }
+.reception-facility-metrics .purple { color:#7250c7; background:#f0eaff; }
+.reception-facility-metrics small,.reception-facility-metrics strong { display:block; }
+.reception-facility-metrics small { overflow:hidden; color:var(--rc-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.reception-facility-metrics strong { margin-top:5px; font-size:23px; }
+.reception-facility-metrics strong i { color:var(--rc-muted); font-size:11px; font-style:normal; font-weight:600; }
+
+.reception-facility-catalog { overflow:hidden; }
+.reception-facility-catalog>.reception-card-head>button { min-height:34px; display:flex; align-items:center; gap:6px; padding:0 11px; border:1px solid #dce4ef; border-radius:7px; color:#52627a; background:#fff; font-size:11px; font-weight:750; }
+.reception-facility-catalog>.reception-card-head>button:hover { border-color:#b9cbeb; color:var(--rc-accent); background:#f2f6ff; }
+.reception-facility-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:15px 18px; border-bottom:1px solid #e9edf3; }
+.reception-facility-search { min-width:280px; width:min(460px,50%); display:flex; align-items:center; gap:8px; padding:0 11px; border:1px solid #dce3ec; border-radius:8px; color:#728097; background:#fff; }
+.reception-facility-search input { min-width:0; width:100%; height:39px; border:0; outline:0; color:var(--rc-ink); background:transparent; font-size:12px; }
+.reception-facility-toolbar>div { display:flex; align-items:center; gap:8px; }
+.reception-facility-toolbar>div>label { display:flex; align-items:center; gap:6px; padding-left:9px; border:1px solid #dce3ec; border-radius:8px; color:#7b8799; background:#fff; }
+.reception-facility-toolbar select { min-width:150px; height:39px; padding:0 28px 0 0; border:0; outline:0; color:#56647a; background:transparent; font-size:11px; font-weight:650; }
+.reception-facility-room-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; padding:18px; }
+.reception-facility-room-grid>article { min-width:0; overflow:hidden; border:1px solid #e0e6ef; border-radius:11px; background:#fff; box-shadow:0 5px 14px #17315a09; transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }
+.reception-facility-room-grid>article:hover { transform:translateY(-2px); border-color:#b8cae9; box-shadow:0 10px 22px #17315a12; }
+.reception-facility-room-grid>article.inactive { opacity:.72; }
+.reception-facility-room-grid article>header { display:grid; grid-template-columns:39px minmax(0,1fr) auto; align-items:start; gap:10px; padding:16px 16px 12px; }
+.reception-facility-room-grid article>header>span { width:39px; height:39px; display:grid; place-items:center; border-radius:10px; color:#1858d8; background:#e9f0ff; }
+.reception-facility-room-grid h3 { overflow:hidden; margin:1px 0 0; font-size:14px; text-overflow:ellipsis; white-space:nowrap; }
+.reception-facility-room-grid header small { display:block; margin-top:4px; color:#8a96a8; font-size:10px; }
+.reception-facility-room-grid header>b { display:flex; align-items:center; gap:5px; padding:5px 7px; border-radius:16px; font-size:9px; white-space:nowrap; }
+.reception-facility-room-grid header>b i { width:5px; height:5px; border-radius:50%; background:currentColor; }
+.reception-facility-room-grid header>b.active { color:#087a5c; background:#e4f8f0; }
+.reception-facility-room-grid header>b.inactive { color:#95620f; background:#fff0d5; }
+.reception-facility-room-grid dl { display:grid; gap:8px; margin:0; padding:0 16px 14px; }
+.reception-facility-room-grid dl>div { display:flex; align-items:center; gap:6px; min-width:0; }
+.reception-facility-room-grid dt { display:flex; align-items:center; gap:5px; min-width:76px; color:#8793a5; font-size:10px; }
+.reception-facility-room-grid dd { overflow:hidden; margin:0; color:#405069; font-size:11px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+.reception-facility-room-grid article>footer { display:grid; grid-template-columns:1fr 1fr; gap:7px; padding:12px 16px; border-top:1px solid #edf1f5; background:#fbfcfe; }
+.reception-facility-room-grid footer button { min-height:34px; display:flex; align-items:center; justify-content:center; gap:5px; padding:0 8px; border:1px solid #dce3ec; border-radius:7px; color:#5c6a7e; background:#fff; font-size:10px; font-weight:750; }
+.reception-facility-room-grid footer button:hover { border-color:#a9bfe8; color:var(--rc-accent); background:#f3f7ff; }
+.reception-facility-room-grid footer button.primary { border-color:var(--rc-accent); color:#fff; background:var(--rc-accent); }
+.reception-facility-room-grid footer button.primary:hover { color:#fff; background:#124bc0; }
+
+.reception-room-schedule { animation:reception-view .3s ease both; }
+.reception-room-schedule-header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:18px; padding:18px 20px; border:1px solid var(--rc-line); border-radius:13px; background:#fff; }
+.reception-room-schedule-header>div:first-child>span { display:flex; align-items:center; gap:6px; color:var(--rc-accent); font-size:11px; font-weight:800; letter-spacing:1px; }
+.reception-room-schedule-header h2 { margin:7px 0 0; font-size:23px; }
+.reception-room-schedule-header p { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin:7px 0 0; color:var(--rc-muted); font-size:11px; }
+.reception-room-schedule-header p i { font-style:normal; }
+.reception-room-schedule-header>div:last-child { display:flex; align-items:center; gap:8px; }
+.reception-room-schedule-header button { min-height:38px; display:flex; align-items:center; justify-content:center; gap:6px; padding:0 12px; border:1px solid #dce3ec; border-radius:8px; color:#57667c; background:#fff; font-size:11px; font-weight:750; }
+.reception-room-schedule-header button:hover { border-color:#b8c9e7; color:var(--rc-accent); background:#f4f7fd; }
+.reception-room-schedule-header button.primary { border-color:var(--rc-accent); color:#fff; background:var(--rc-accent); }
+.reception-room-schedule-header button:last-child { width:38px; padding:0; }
+.reception-room-schedule-state { min-height:420px; display:grid; place-items:center; align-content:center; gap:8px; padding:30px; border:1px solid var(--rc-line); border-radius:14px; color:var(--rc-muted); background:#fff; text-align:center; }
+.reception-room-schedule-state>.reception-view-loader { min-height:360px; width:100%; }
+.reception-room-schedule-state>strong { color:var(--rc-ink); }
+.reception-room-schedule-state>p { margin:0; font-size:12px; }
+.reception-room-schedule-state>button { margin-top:5px; padding:8px 13px; border:1px solid var(--rc-accent); border-radius:7px; color:#fff; background:var(--rc-accent); font-size:11px; font-weight:750; }
+.reception-room-session-detail { margin-top:16px; padding:18px; border:1px solid var(--rc-line); border-radius:13px; background:#fff; }
+.reception-room-session-detail>header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.reception-room-session-detail small { color:var(--rc-accent); font-size:10px; font-weight:800; letter-spacing:.8px; }
+.reception-room-session-detail h3 { margin:4px 0 0; font-size:17px; }
+.reception-room-session-detail header button { width:32px; height:32px; display:grid; place-items:center; border:0; border-radius:7px; color:#718097; background:#f1f4f8; }
+.reception-room-session-detail dl { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:14px 0 0; }
+.reception-room-session-detail dl>div { padding:10px 11px; border:1px solid #e5eaf1; border-radius:8px; background:#fbfcfe; }
+.reception-room-session-detail dt { color:#8793a5; font-size:10px; }
+.reception-room-session-detail dd { margin:4px 0 0; color:var(--rc-ink); font-size:11px; font-weight:700; }
+.reception-room-cancelled { margin-top:16px; overflow:hidden; border:1px solid var(--rc-line); border-radius:13px; background:#fff; }
+.reception-room-cancelled>header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; border-bottom:1px solid #e9edf3; }
+.reception-room-cancelled>header span { display:flex; align-items:center; gap:6px; color:#b54b58; font-size:10px; font-weight:800; letter-spacing:.9px; }
+.reception-room-cancelled>header h3 { margin:4px 0 0; font-size:16px; }
+.reception-room-cancelled>header p { margin:4px 0 0; color:var(--rc-muted); font-size:11px; }
+.reception-room-cancelled>header>strong { flex-shrink:0; padding:5px 9px; border-radius:16px; color:#a43a49; background:#ffeaed; font-size:10px; }
+.reception-room-cancelled-list { display:grid; }
+.reception-room-cancelled-list>button { display:grid; grid-template-columns:1.1fr 1fr 1fr 1.4fr; align-items:center; gap:14px; width:100%; padding:13px 18px; border:0; border-top:1px solid #edf1f5; color:var(--rc-ink); background:#fff; text-align:left; }
+.reception-room-cancelled-list>button:first-child { border-top:0; }
+.reception-room-cancelled-list>button:hover { background:#fff7f8; }
+.reception-room-cancelled-list span { min-width:0; }
+.reception-room-cancelled-list small,.reception-room-cancelled-list b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reception-room-cancelled-list small { color:#929daf; font-size:9px; font-weight:750; letter-spacing:.35px; }
+.reception-room-cancelled-list b { margin-top:4px; font-size:10px; font-weight:650; }
+.reception-room-cancelled-list>button>span:first-child b { color:#a43a49; font-size:11px; }
+.reception-room-cancelled-empty { min-height:90px; display:flex; align-items:center; justify-content:center; gap:8px; color:#718095; font-size:11px; }
+.reception-room-cancelled-empty svg { color:#16866a; }
+
+[data-theme='dark'] :is(.reception-facility-switcher,.reception-facility-metrics article,.reception-facility-room-grid>article,.reception-room-schedule-header,.reception-room-schedule-state,.reception-room-session-detail,.reception-room-cancelled) { color:var(--theme-text); border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] .reception-facility-switcher nav { border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] .reception-facility-switcher button { color:var(--theme-muted); }
+[data-theme='dark'] .reception-facility-switcher button:hover { color:var(--theme-text); background:var(--theme-blue-bg); }
+[data-theme='dark'] .reception-facility-switcher button.active { color:#fff; background:var(--theme-accent); }
+[data-theme='dark'] .reception-facility-metrics .blue,[data-theme='dark'] .reception-facility-room-grid article>header>span { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] .reception-facility-metrics .green,[data-theme='dark'] .reception-facility-room-grid header>b.active { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .reception-facility-metrics .amber,[data-theme='dark'] .reception-facility-room-grid header>b.inactive { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] .reception-facility-metrics .purple { color:var(--theme-purple); background:var(--theme-purple-bg); }
+[data-theme='dark'] :is(.reception-facility-search,.reception-facility-toolbar>div>label,.reception-facility-catalog>.reception-card-head>button,.reception-room-schedule-header button,.reception-facility-room-grid footer button) { color:var(--theme-text); border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] :is(.reception-facility-search input,.reception-facility-toolbar select) { color:var(--theme-text); }
+[data-theme='dark'] :is(.reception-facility-toolbar,.reception-facility-room-grid article>footer) { border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] .reception-facility-room-grid>article:hover { border-color:#48658e; }
+[data-theme='dark'] :is(.reception-facility-room-grid footer button.primary,.reception-room-schedule-header button.primary) { color:#fff; border-color:var(--theme-accent); background:var(--theme-accent); }
+[data-theme='dark'] .reception-room-session-detail dl>div { border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] .reception-room-session-detail dd { color:var(--theme-text); }
+[data-theme='dark'] .reception-room-session-detail header button { color:var(--theme-muted); background:var(--theme-raised); }
+[data-theme='dark'] .reception-room-cancelled>header,[data-theme='dark'] .reception-room-cancelled-list>button { border-color:var(--theme-border); }
+[data-theme='dark'] .reception-room-cancelled-list>button { color:var(--theme-text); background:var(--theme-surface); }
+[data-theme='dark'] .reception-room-cancelled-list>button:hover { background:var(--theme-red-bg); }
+[data-theme='dark'] .reception-room-cancelled>header>strong { color:var(--theme-red); background:var(--theme-red-bg); }
+
+@media (max-width:1050px) {
+  .reception-facility-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .reception-facility-room-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .reception-facility-toolbar { align-items:stretch; flex-direction:column; }
+  .reception-facility-search { width:100%; }
+}
+@media (max-width:720px) {
+  .reception-facility-switcher,.reception-room-schedule-header { align-items:stretch; flex-direction:column; }
+  .reception-facility-switcher nav,.reception-room-schedule-header>div:last-child { width:100%; }
+  .reception-facility-switcher nav button { flex:1; }
+  .reception-room-schedule-header>div:last-child { flex-wrap:wrap; }
+  .reception-facility-room-grid { grid-template-columns:1fr; }
+  .reception-room-session-detail dl { grid-template-columns:1fr 1fr; }
+  .reception-room-cancelled-list>button { grid-template-columns:1fr 1fr; }
+}
+@media (max-width:520px) {
+  .reception-facility-metrics { grid-template-columns:1fr; }
+  .reception-facility-toolbar>div { align-items:stretch; flex-direction:column; }
+  .reception-facility-toolbar>div>label,.reception-facility-toolbar select { width:100%; }
+  .reception-facility-switcher nav { flex-direction:column; }
+  .reception-room-session-detail dl { grid-template-columns:1fr; }
+  .reception-room-cancelled-list>button { grid-template-columns:1fr; }
+}

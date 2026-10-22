@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
+  Bell, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
   LayoutDashboard, LifeBuoy, LogOut, Menu, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import ThemeToggle from '../../components/ThemeToggle'
@@ -15,28 +15,25 @@ const MembersView = lazy(() => import('./MembersView').then(module => ({ default
 const Overview = lazy(() => import('./OverviewView').then(module => ({ default: module.Overview })))
 const PaymentsView = lazy(() => import('./PaymentsView').then(module => ({ default: module.PaymentsView })))
 const ReceptionistProfileView = lazy(() => import('./ProfileView').then(module => ({ default: module.ReceptionistProfileView })))
-const RoomsView = lazy(() => import('./RoomsView').then(module => ({ default: module.RoomsView })))
-const SessionsView = lazy(() => import('./SessionsView').then(module => ({ default: module.SessionsView })))
+const FacilitiesView = lazy(() => import('./FacilitiesView').then(module => ({ default: module.FacilitiesView })))
 const SupportTicketsView = lazy(() => import('./SupportTicketsView').then(module => ({ default: module.SupportTicketsView })))
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
-  [CalendarDays, 'Buổi học'],
+  [DoorOpen, 'Buổi học & Phòng tập'],
   [ScanLine, 'Check-in'],
   [Users, 'Hội viên'],
   [ReceiptText, 'Thanh toán'],
   [LifeBuoy, 'Hỗ trợ'],
-  [DoorOpen, 'Phòng tập'],
   [UserRound, 'Hồ sơ'],
 ]
 
 const pageMeta = {
-  'Buổi học': ['VẬN HÀNH BUỔI HỌC', 'Quản lý buổi học', 'Đăng ký học viên, kiểm tra danh sách và cập nhật trạng thái buổi học.'],
+  'Buổi học & Phòng tập': ['VẬN HÀNH CƠ SỞ', 'Phòng tập & Buổi học', 'Theo dõi phòng, lịch sử dụng và xử lý nghiệp vụ buổi học tại quầy.'],
   'Check-in': ['TIẾP NHẬN KHÁCH', 'Check-in tại quầy', 'Xác minh mã đặt sân hoặc tài khoản hội viên trước khi sử dụng dịch vụ.'],
   'Hội viên': ['HỖ TRỢ HỘI VIÊN', 'Tra cứu hội viên', 'Kiểm tra trạng thái tài khoản, gói dịch vụ và thông tin liên hệ.'],
   'Thanh toán': ['GIAO DỊCH TẠI QUẦY', 'Thanh toán', 'Theo dõi giao dịch và hóa đơn phát sinh tại quầy lễ tân.'],
   'Hỗ trợ': ['CHĂM SÓC HỘI VIÊN', 'Phiếu hỗ trợ', 'Theo dõi yêu cầu, phản hồi và tình trạng xử lý của hội viên.'],
-  'Phòng tập': ['CƠ SỞ VẬT CHẤT', 'Phòng tập', 'Tra cứu phòng tập, khu chức năng và sức chứa phục vụ hội viên.'],
   'Hồ sơ': ['TÀI KHOẢN NHÂN VIÊN', 'Hồ sơ Receptionist', 'Xem thông tin tài khoản đang đăng nhập tại quầy lễ tân.'],
 }
 
@@ -137,12 +134,11 @@ export default function Receptionist() {
   }
 
   const renderView = () => {
-    if (activeNav === 'Buổi học') return <SessionsView showNotice={showNotice} />
+    if (activeNav === 'Buổi học & Phòng tập') return <FacilitiesView showNotice={showNotice} />
     if (activeNav === 'Check-in') return <CheckInView showNotice={showNotice} />
     if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
     if (activeNav === 'Thanh toán') return <PaymentsView query={query} showNotice={showNotice} />
     if (activeNav === 'Hỗ trợ') return <SupportTicketsView query={query} showNotice={showNotice} />
-    if (activeNav === 'Phòng tập') return <RoomsView query={query} />
     if (activeNav === 'Hồ sơ') return <ReceptionistProfileView showNotice={showNotice} />
     return <Overview onNavigate={selectNavigation} />
   }
@@ -151,7 +147,7 @@ export default function Receptionist() {
   const meta = activeNav === 'Tổng quan'
     ? { eyebrow: 'BẢNG ĐIỀU KHIỂN LỄ TÂN', title: `Chào bạn, ${staffName}!`, description: `${today} · Dữ liệu vận hành quầy được đồng bộ trực tiếp.` }
     : { eyebrow: pageMeta[activeNav][0], title: pageMeta[activeNav][1], description: pageMeta[activeNav][2] }
-  const searchableTabs = ['Hội viên', 'Thanh toán', 'Hỗ trợ', 'Phòng tập']
+  const searchableTabs = ['Hội viên', 'Thanh toán', 'Hỗ trợ']
   const searchPlaceholder = activeNav === 'Hội viên'
     ? 'Tìm hội viên...'
     : activeNav === 'Thanh toán'

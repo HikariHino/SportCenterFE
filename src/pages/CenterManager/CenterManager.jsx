@@ -381,6 +381,7 @@ export default function CenterManager() {
         </header>
 
         <main className={`manager-main${section === 'overview' ? ' manager-overview' : ''}`} id="manager-content">
+          {section !== 'rooms' && <>
           <section className="manager-welcome">
             <div>
               <p className="manager-eyebrow">VẬN HÀNH HIỆU QUẢ, KẾT NỐI ĐAM MÊ</p>
@@ -411,6 +412,7 @@ export default function CenterManager() {
               </small>
             </span>
           </div>
+          </>}
 
           {/* 4 Cards Chỉ số Tổng quan trực tuyến */}
           {section === 'overview' && (

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, ArrowRight, CalendarClock, CheckCircle2, DoorOpen, MapPin, RefreshCw, SlidersHorizontal, UsersRound, X } from 'lucide-react'
+import { AlertCircle, Ban, CalendarClock, CalendarDays, CheckCircle2, DoorOpen, Layers3, MapPin, Power, RefreshCw, Search, UsersRound, X } from 'lucide-react'
 import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
+import { getReceptionistClasses, getReceptionistClassSessionsByClass } from '../../services/receptionistCatalogService'
+import WeeklyTimetable from '../../components/WeeklyTimetable'
+import { timetableWeekStart } from '../../utils/memberTimetable'
+import { roomSessionForTimetable } from '../../utils/roomTimetable'
 import { ViewLoader } from './ReceptionistViewShared'
 
 const toLocalInputValue = date => {
@@ -79,13 +83,103 @@ function RoomDetailDialog({ roomId, onClose }) {
   </div>
 }
 
-export function RoomsView({ query }) {
+async function loadEveryPage(requestPage) {
+  const pageSize = 100
+  const first = await requestPage(1, pageSize)
+  const items = [...first.items]
+  const pageCount = Math.ceil(first.total / pageSize)
+  for (let page = 2; page <= pageCount; page += 1) {
+    const result = await requestPage(page, pageSize)
+    items.push(...result.items)
+  }
+  return items
+}
+
+async function loadRoomSchedule(room, rooms) {
+  const classes = await loadEveryPage((page, pageSize) => getReceptionistClasses({ page, pageSize }))
+  const result = []
+  for (let offset = 0; offset < classes.length; offset += 4) {
+    const batch = await Promise.all(classes.slice(offset, offset + 4).map(async sportClass => {
+      const sessions = await loadEveryPage((page, pageSize) => getReceptionistClassSessionsByClass(sportClass.id, { page, pageSize }))
+      return sessions.map(session => roomSessionForTimetable(session, sportClass, rooms, room)).filter(Boolean)
+    }))
+    result.push(...batch.flat())
+  }
+  return result.sort((left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt))
+}
+
+const sessionDateTime = value => value ? new Date(value).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật'
+
+function RoomSchedule({ room, rooms, onClose, onOpenSessions }) {
+  const [weekStart, setWeekStart] = useState(() => timetableWeekStart())
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [requestKey, setRequestKey] = useState(0)
+  const [selectedId, setSelectedId] = useState(null)
+  const selected = items.find(item => String(item.id) === String(selectedId))
+  const { scheduledItems, cancelledItems } = useMemo(() => {
+    const scheduled = []
+    const cancelled = []
+    items.forEach(item => {
+      const status = String(item.status || item.sessionStatus || '').toLowerCase()
+      if (status === 'cancelled' || status === 'canceled') cancelled.push(item)
+      else scheduled.push(item)
+    })
+    cancelled.sort((left, right) => Date.parse(right.startsAt) - Date.parse(left.startsAt))
+    return { scheduledItems: scheduled, cancelledItems: cancelled }
+  }, [items])
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError('')
+    setSelectedId(null)
+    loadRoomSchedule(room, rooms).then(result => {
+      if (active) setItems(result)
+    }).catch(requestError => {
+      if (active) setError(getRoomErrorMessage(requestError, 'Không thể tải lịch sử dụng phòng.'))
+    }).finally(() => {
+      if (active) setLoading(false)
+    })
+    return () => { active = false }
+  }, [requestKey, room, rooms])
+
+  return <section className="reception-room-schedule" aria-label={`Lịch sử dụng ${room.name}`}>
+    <header className="reception-room-schedule-header">
+      <div><span><CalendarDays size={16} />LỊCH SỬ DỤNG PHÒNG</span><h2>{room.name}</h2><p><MapPin size={15} />{room.location || 'Chưa cập nhật vị trí'}<i>·</i><UsersRound size={15} />{room.capacity} học viên</p></div>
+      <div><button type="button" className="primary" onClick={onOpenSessions}><CalendarDays size={17} />Nghiệp vụ buổi học</button><button type="button" disabled={loading} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={17} />Làm mới</button><button type="button" aria-label="Đóng lịch phòng" onClick={onClose}><X size={21} /></button></div>
+    </header>
+
+    {loading ? <div className="reception-room-schedule-state"><ViewLoader /></div> : error ? <div className="reception-room-schedule-state" role="alert"><AlertCircle size={30} /><strong>Không thể tải lịch phòng</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : <>
+      <WeeklyTimetable items={scheduledItems} weekStart={weekStart} onWeekChange={value => { setWeekStart(value); setSelectedId(null) }} onSelect={setSelectedId} totalCount={scheduledItems.length} title="Thời khóa biểu của phòng" description="Chỉ hiển thị các buổi đang sử dụng lịch phòng · Chọn buổi học để xem chi tiết" />
+      <section className="reception-room-cancelled" aria-labelledby="reception-room-cancelled-title">
+        <header><div><span><Ban size={15} />LỊCH ĐÃ HỦY</span><h3 id="reception-room-cancelled-title">Buổi học đã hủy</h3><p>Các buổi đã hủy không còn chiếm thời gian sử dụng phòng.</p></div><strong>{cancelledItems.length} buổi</strong></header>
+        {cancelledItems.length ? <div className="reception-room-cancelled-list">{cancelledItems.map(item => <button type="button" key={item.id} onClick={() => setSelectedId(item.id)}>
+          <span><small>BUỔI #{item.id}</small><b>{item.className || `Buổi học #${item.id}`}</b></span>
+          <span><small>THỜI GIAN</small><b>{sessionDateTime(item.startsAt)}</b></span>
+          <span><small>HUẤN LUYỆN VIÊN</small><b>{item.coachName || 'Chưa phân công'}</b></span>
+          <span><small>LÝ DO HỦY</small><b>{item.cancellationReason || 'Chưa cập nhật lý do'}</b></span>
+        </button>)}</div> : <div className="reception-room-cancelled-empty"><CheckCircle2 size={20} /><span>Phòng chưa có buổi học nào bị hủy.</span></div>}
+      </section>
+      {selected && <article className="reception-room-session-detail">
+        <header><div><small>BUỔI HỌC #{selected.id}</small><h3>{selected.className}</h3></div><button type="button" aria-label="Đóng chi tiết buổi học" onClick={() => setSelectedId(null)}><X size={17} /></button></header>
+        <dl><div><dt>Bộ môn</dt><dd>{selected.sportName || 'Chưa cập nhật'}</dd></div><div><dt>Huấn luyện viên</dt><dd>{selected.coachName || 'Chưa phân công'}</dd></div><div><dt>Bắt đầu</dt><dd>{sessionDateTime(selected.startsAt)}</dd></div><div><dt>Kết thúc</dt><dd>{sessionDateTime(selected.endsAt)}</dd></div><div><dt>Sĩ số / Sức chứa</dt><dd>{selected.currentEnrollment ?? selected.registeredCount ?? 0} / {selected.capacity ?? room.capacity}</dd></div><div><dt>Trạng thái</dt><dd>{selected.status || 'Scheduled'}</dd></div></dl>
+      </article>}
+    </>}
+  </section>
+}
+
+export function RoomsView({ query = '', onOpenSessions }) {
   const [rooms, setRooms] = useState([])
-  const [status, setStatus] = useState('active')
+  const [status, setStatus] = useState('all')
+  const [roomType, setRoomType] = useState('all')
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [selectedRoomId, setSelectedRoomId] = useState(null)
+  const [scheduleRoom, setScheduleRoom] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -93,8 +187,7 @@ export function RoomsView({ query }) {
       setLoading(true)
       setError('')
       try {
-        const isActive = status === 'all' ? null : status === 'active'
-        const result = await getRooms(isActive)
+        const result = await getRooms()
         if (active) setRooms(result)
       } catch (requestError) {
         if (active) setError(getRoomErrorMessage(requestError, 'Không thể tải danh sách phòng.'))
@@ -104,32 +197,45 @@ export function RoomsView({ query }) {
     }
     loadRooms()
     return () => { active = false }
-  }, [status, requestKey])
+  }, [requestKey])
 
   const filteredRooms = useMemo(() => {
-    const keyword = query.trim().toLocaleLowerCase('vi-VN')
-    if (!keyword) return rooms
-    return rooms.filter(room => [room.name, room.roomType, room.location, room.id].some(value => String(value ?? '').toLocaleLowerCase('vi-VN').includes(keyword)))
-  }, [query, rooms])
+    const keyword = `${query} ${search}`.trim().toLocaleLowerCase('vi-VN')
+    return rooms.filter(room => {
+      const matchesKeyword = !keyword || [room.name, room.roomType, room.location, room.id].some(value => String(value ?? '').toLocaleLowerCase('vi-VN').includes(keyword))
+      const matchesStatus = status === 'all' || (status === 'active' ? room.isActive !== false : room.isActive === false)
+      const matchesType = roomType === 'all' || String(room.roomType || 'General') === roomType
+      return matchesKeyword && matchesStatus && matchesType
+    })
+  }, [query, roomType, rooms, search, status])
+  const roomTypes = useMemo(() => [...new Set(rooms.map(room => room.roomType || 'General'))].sort((left, right) => left.localeCompare(right, 'vi')), [rooms])
+  const activeCount = rooms.filter(room => room.isActive !== false).length
+  const inactiveCount = rooms.length - activeCount
+  const totalCapacity = rooms.reduce((total, room) => total + Number(room.capacity || 0), 0)
 
-  if (loading) return <ViewLoader />
+  if (scheduleRoom) return <RoomSchedule room={scheduleRoom} rooms={rooms} onClose={() => setScheduleRoom(null)} onOpenSessions={onOpenSessions} />
 
-  return <>
-    <section className="reception-card reception-room-toolbar">
-      <div><span><SlidersHorizontal size={17} /></span><div><small>DANH SÁCH PHÒNG</small><strong>{loading ? 'Đang đồng bộ...' : `${filteredRooms.length} phòng phù hợp`}</strong></div></div>
-      <label>Trạng thái<select value={status} onChange={event => setStatus(event.target.value)}><option value="active">Đang hoạt động</option><option value="inactive">Ngừng hoạt động</option><option value="all">Tất cả</option></select></label>
-      {error && <div className="reception-filter-error"><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={12} />Thử lại</button></div>}
+  return <div className="reception-facility-rooms">
+    <section className="reception-facility-metrics" aria-label="Thống kê phòng tập">
+      <article><span className="blue"><DoorOpen size={22} /></span><div><small>Tổng số phòng & sân tập</small><strong>{rooms.length}</strong></div></article>
+      <article><span className="green"><CheckCircle2 size={22} /></span><div><small>Đang hoạt động (Sẵn sàng)</small><strong>{activeCount}</strong></div></article>
+      <article><span className="amber"><Power size={22} /></span><div><small>Đã khóa / Ngừng sử dụng</small><strong>{inactiveCount}</strong></div></article>
+      <article><span className="purple"><UsersRound size={22} /></span><div><small>Tổng sức chứa trung tâm</small><strong>{totalCapacity} <i>chỗ</i></strong></div></article>
     </section>
 
-    <section className="reception-card reception-room-catalog">
-      <div className="reception-card-head"><div><span>DANH MỤC CƠ SỞ</span><h2>Phòng tập và khu chức năng</h2></div><strong>{rooms.length} phòng</strong></div>
-      {loading ? <div className="reception-empty"><span><DoorOpen size={24} /></span><strong>Đang tải danh sách phòng</strong><p>Dữ liệu đang được lấy trực tiếp từ hệ thống.</p></div> : !filteredRooms.length ? <div className="reception-empty"><span><DoorOpen size={24} /></span><strong>Không tìm thấy phòng</strong><p>Thử đổi trạng thái hoặc từ khóa tìm kiếm.</p></div> : <div className="reception-room-grid">{filteredRooms.map(room => <article key={room.id}>
-        <header><span><DoorOpen size={20} /></span><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Hoạt động' : 'Tạm ngưng'}</b></header>
-        <small>PHÒNG #{room.id}</small><h3>{room.name}</h3><p>{room.roomType || 'General'}</p>
-        <footer><span><UsersRound size={14} />{room.capacity} người</span><span><MapPin size={14} />{room.location || 'Chưa cập nhật'}</span></footer>
-        <button className="reception-room-detail-trigger" type="button" onClick={() => setSelectedRoomId(room.id)}>Xem chi tiết <ArrowRight size={13} /></button>
+    <section className="reception-card reception-room-catalog reception-facility-catalog">
+      <div className="reception-card-head"><div><span>DANH MỤC CƠ SỞ</span><h2>Phòng tập và khu chức năng</h2></div><button type="button" disabled={loading} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={14} />Làm mới</button></div>
+      <div className="reception-facility-toolbar">
+        <label className="reception-facility-search"><Search size={17} /><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm theo tên phòng, loại phòng hoặc vị trí..." aria-label="Tìm phòng tập" /></label>
+        <div><label><Layers3 size={15} /><select value={roomType} onChange={event => setRoomType(event.target.value)} aria-label="Lọc loại phòng"><option value="all">Tất cả loại phòng</option>{roomTypes.map(type => <option value={type} key={type}>{type}</option>)}</select></label><label><CheckCircle2 size={15} /><select value={status} onChange={event => setStatus(event.target.value)} aria-label="Lọc trạng thái phòng"><option value="all">Tất cả trạng thái</option><option value="active">Đang hoạt động</option><option value="inactive">Ngừng hoạt động</option></select></label></div>
+      </div>
+      {error && <div className="reception-filter-error"><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={12} />Thử lại</button></div>}
+      {loading ? <ViewLoader /> : !filteredRooms.length ? <div className="reception-empty"><span><DoorOpen size={24} /></span><strong>Không tìm thấy phòng</strong><p>Thử đổi trạng thái, loại phòng hoặc từ khóa tìm kiếm.</p></div> : <div className="reception-facility-room-grid">{filteredRooms.map(room => <article key={room.id} className={room.isActive === false ? 'inactive' : ''}>
+        <header><span><DoorOpen size={21} /></span><div><h3>{room.name}</h3><small>Mã phòng: #{room.id} · Xem lịch tuần</small></div><b className={room.isActive !== false ? 'active' : 'inactive'}><i />{room.isActive !== false ? 'Hoạt động' : 'Đã khóa'}</b></header>
+        <dl><div><dt><Layers3 size={14} />Loại</dt><dd>{room.roomType || 'General'}</dd></div><div><dt><UsersRound size={14} />Sức chứa</dt><dd>{room.capacity} học viên</dd></div><div><dt><MapPin size={14} />Vị trí</dt><dd>{room.location || 'Chưa cập nhật'}</dd></div></dl>
+        <footer><button type="button" className="primary" onClick={() => setScheduleRoom(room)}><CalendarDays size={15} />Xem lịch tuần</button><button type="button" onClick={() => setSelectedRoomId(room.id)}><CalendarClock size={15} />Kiểm tra lịch</button></footer>
       </article>)}</div>}
     </section>
     {selectedRoomId && <RoomDetailDialog roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />}
-  </>
+  </div>
 }
