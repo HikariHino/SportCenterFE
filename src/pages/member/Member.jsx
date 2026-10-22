@@ -262,7 +262,7 @@ export default function Member() {
   }
 
   return (
-    <div className="member-dashboard">
+    <div className="member-page member-dashboard">
       {/* Sidebar role Member */}
       <aside className={`member-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
         <Link to="/" className="member-brand">

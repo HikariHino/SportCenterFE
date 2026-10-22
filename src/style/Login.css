@@ -46,6 +46,7 @@
 .login-divider { display: flex; align-items: center; gap: 14px; margin: 24px 0; color: #737686; font-size: 11px; text-align: center; }
 .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: #e1e4ed; }
 .login-form { display: grid; gap: 18px; }
+.login-content > header + .login-form { margin-top: 26px; }
 .login-error { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--theme-red, #b42318); border-radius: 8px; color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fef2f2); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .login-error > svg { flex-shrink: 0; margin-top: 2px; }
 .login-error p { margin: 4px 0 0; }

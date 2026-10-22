@@ -1,10 +1,106 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { roomSessionForTimetable } from '../src/utils/roomTimetable.js'
+import { applyRoomSessionCancellations, canCancelRoomSession, getCancelledRoomTimetableWeek, getRoomTimetableWeek, roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
 
 const rooms = [{ id: 1, name: 'Studio Yoga 01' }, { id: 2, name: 'Phòng Gym Đa năng' }]
 const yogaClass = { id: 10, className: 'Yoga cơ bản', roomId: 1, coachId: 5, coachName: 'Nguyễn Minh Anh', sportName: 'Yoga' }
 const session = { id: 100, startsAt: '2026-10-19T09:00:00+07:00', endsAt: '2026-10-19T10:30:00+07:00', status: 'Scheduled' }
+
+test('cancelled timetable selects a populated week independently of active sessions', () => {
+  const items = [session, { ...session, id: 101, status: 'Cancelled', startsAt: '2026-10-26T11:00:00Z' }, { ...session, id: 102, status: undefined, Status: ' CANCELED ', startsAt: '2026-11-02T11:00:00Z' }]
+  assert.equal(getCancelledRoomTimetableWeek(items, '2026-10-19'), '2026-10-26')
+  assert.equal(getCancelledRoomTimetableWeek(items, '2026-11-02'), '2026-11-02')
+  assert.equal(getCancelledRoomTimetableWeek(items, '2026-11-09'), '2026-11-02')
+  assert.equal(getCancelledRoomTimetableWeek([], '2026-10-19'), '2026-10-19')
+})
+
+test('confirmed cancellations update only successful IDs and move the empty week to the remaining schedule', () => {
+  const remaining = { ...session, id: 102, startsAt: '2026-10-26T09:00:00+07:00' }
+  const items = [session, { ...session, id: 101 }, remaining]
+  const updated = applyRoomSessionCancellations(items, [{ id: '100' }, { id: 101 }])
+  assert.equal(updated.length, 3)
+  assert.deepEqual(updated.slice(0, 2).map(item => item.status), ['Cancelled', 'Cancelled'])
+  assert.equal(updated[2], remaining)
+  assert.equal(session.status, 'Scheduled')
+  assert.equal(getRoomTimetableWeek(updated, '2026-10-19'), '2026-10-26')
+  const partial = applyRoomSessionCancellations(items, [{ id: 100 }])
+  assert.equal(partial[1], items[1], 'failed or unselected sessions keep their original data')
+  assert.equal(getRoomTimetableWeek(partial, '2026-10-19'), '2026-10-19')
+})
+
+test('room cancellations are limited to scheduled sessions that have not started', () => {
+  const now = Date.parse(session.startsAt) - 1
+  assert.equal(canCancelRoomSession(session, now), true)
+  assert.equal(canCancelRoomSession({ ...session, status: undefined, Status: ' SCHEDULED ' }, now), true)
+  for (const status of ['Cancelled', ' CANCELED ', 'Completed', 'Other']) {
+    assert.equal(canCancelRoomSession({ ...session, status }, now), false)
+  }
+  assert.equal(canCancelRoomSession(session, Date.parse(session.startsAt)), false)
+  assert.equal(canCancelRoomSession(session, Date.parse(session.endsAt)), false)
+  assert.equal(canCancelRoomSession({ ...session, startsAt: 'invalid' }, now), false)
+  assert.equal(canCancelRoomSession(undefined, now), false)
+})
+
+test('opening a room after cancelling its only session this week selects the next populated week', () => {
+  const items = [
+    { ...session, status: 'Cancelled' },
+    { ...session, id: 101, startsAt: '2026-10-26T09:00:00+07:00' },
+    { ...session, id: 102, startsAt: '2026-11-02T09:00:00+07:00' },
+  ]
+  assert.equal(getRoomTimetableWeek(items, '2026-10-19'), '2026-10-26')
+  assert.equal(items[1].status, 'Scheduled')
+})
+
+test('room week selection keeps this week when another scheduled or completed session remains', () => {
+  for (const status of ['Scheduled', 'Completed']) {
+    assert.equal(getRoomTimetableWeek([
+      { ...session, status: 'Cancelled' },
+      { ...session, id: 101, status, startsAt: '2026-10-21T11:00:00Z' },
+    ], '2026-10-19'), '2026-10-19')
+  }
+})
+
+test('room week selection uses Vietnam dates and picks the nearest populated week regardless of API order', () => {
+  assert.equal(getRoomTimetableWeek([
+    { ...session, id: 103, startsAt: '2026-11-03T11:00:00Z' },
+    { ...session, id: 102, startsAt: '2026-10-25T18:00:00Z' },
+  ], '2026-10-19'), '2026-10-26')
+})
+
+test('past-only room schedules open the latest week and empty rooms keep the requested week', () => {
+  assert.equal(getRoomTimetableWeek([
+    { ...session, id: 101, startsAt: '2026-10-12T09:00:00+07:00', status: 'Completed' },
+    { ...session, id: 102, startsAt: '2026-10-05T09:00:00+07:00', status: 'Completed' },
+  ], '2026-10-19'), '2026-10-12')
+  for (const items of [[], [{ ...session, status: 'Cancelled' }], [{ ...session, startsAt: 'invalid' }]]) {
+    assert.equal(getRoomTimetableWeek(items, '2026-10-19'), '2026-10-19')
+  }
+})
+
+test('ended sessions await server confirmation instead of displaying unsaved completion', () => {
+  const end = Date.parse(session.endsAt)
+  assert.equal(roomSessionStatusLabel(session, Date.parse(session.startsAt) - 1), 'Đã lên lịch')
+  assert.equal(roomSessionStatusLabel(session, end - 1), 'Đã lên lịch')
+  assert.equal(roomSessionStatusLabel(session, end), 'Đã kết thúc · chờ cập nhật')
+  assert.equal(roomSessionStatusLabel(session, end + 1), 'Đã kết thúc · chờ cập nhật')
+  const overnight = { ...session, startsAt: '2026-10-19T23:00:00+07:00', endsAt: '2026-10-20T01:00:00+07:00' }
+  assert.equal(roomSessionStatusLabel(overnight, Date.parse('2026-10-20T00:00:00+07:00')), 'Đã lên lịch')
+  assert.equal(roomSessionStatusLabel(overnight, Date.parse(overnight.endsAt)), 'Đã kết thúc · chờ cập nhật')
+  assert.equal(session.status, 'Scheduled')
+})
+
+test('room session status preserves cancellations, recognizes explicit completion and handles missing end times', () => {
+  const now = Date.parse(session.endsAt) + 1
+  for (const status of ['Cancelled', ' CANCELED ']) {
+    assert.equal(roomSessionStatusLabel({ ...session, status }, now), 'Đã hủy')
+  }
+  assert.equal(roomSessionStatusLabel({ ...session, status: undefined, Status: 'Cancelled' }, now), 'Đã hủy')
+  assert.equal(roomSessionStatusLabel({ ...session, status: 'Completed' }, 0), 'Đã hoàn thành')
+  assert.equal(roomSessionStatusLabel({ ...session, status: undefined, Status: ' COMPLETED ' }, 0), 'Đã hoàn thành')
+  for (const endsAt of [undefined, null, '', 'invalid']) {
+    assert.equal(roomSessionStatusLabel({ ...session, endsAt }, now), 'Đã lên lịch')
+  }
+})
 
 test('sessions inherit the default room and metadata from their class', () => {
   const result = roomSessionForTimetable(session, yogaClass, rooms, rooms[0])

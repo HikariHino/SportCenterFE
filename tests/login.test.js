@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
-import { getAuthDestination, getAuthErrorMessage, getLoginData, getSavedUser, saveSession } from '../src/utils/auth.js'
+import { getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getSavedUser, saveSession } from '../src/utils/auth.js'
 
 function memoryStorage() {
   const values = new Map()
@@ -83,4 +83,40 @@ test('login timeouts are distinguished from connection failures', () => {
   assert.match(getAuthErrorMessage({ isAxiosError: true, code: 'ECONNABORTED' }, 'fallback'), /phản hồi quá lâu/)
   assert.match(getAuthErrorMessage({ isAxiosError: true, code: 'ETIMEDOUT' }, 'fallback'), /phản hồi quá lâu/)
   assert.match(getAuthErrorMessage({ isAxiosError: true, code: 'ERR_NETWORK' }, 'fallback'), /Không thể kết nối/)
+})
+
+test('login handles unauthorized JSON, empty and HTML responses with a credential message', () => {
+  for (const data of [undefined, '', '<html>Unauthorized</html>', { message: 'Invalid email or password.' }]) {
+    assert.match(getLoginErrorMessage({ isAxiosError: true, response: { status: 401, data } }), /Email hoặc mật khẩu không chính xác/)
+  }
+})
+
+test('login translates credential exceptions without exposing the backend stack trace', () => {
+  const trace = 'System.UnauthorizedAccessException: Invalid email or password.\r\n   at SportsCenterAPI.Services.Implement.AuthService.LoginAsync(LoginRequestDTO request) in AuthService.cs:line 45'
+  for (const data of [trace, { message: trace }, { detail: trace }, { errors: { credentials: [trace] } }]) {
+    const message = getLoginErrorMessage({ isAxiosError: true, response: { status: 500, data } })
+    assert.match(message, /Email hoặc mật khẩu không chính xác/)
+    assert.doesNotMatch(message, /Exception|AuthService|line 45/)
+  }
+  assert.match(getLoginErrorMessage(new Error(trace)), /Email hoặc mật khẩu không chính xác/)
+})
+
+test('login server failures are not misreported as invalid credentials', () => {
+  const message = getLoginErrorMessage({ isAxiosError: true, response: { status: 500, data: { message: 'System.InvalidOperationException: database unavailable' } } })
+  assert.match(message, /Máy chủ gặp sự cố/)
+  assert.doesNotMatch(message, /mật khẩu|Exception|database/)
+})
+
+test('login preserves validation, timeout and network errors', () => {
+  assert.equal(getLoginErrorMessage({ response: { status: 400, data: { errors: { email: ['Email required'] } } } }), 'Email required')
+  assert.match(getLoginErrorMessage({ isAxiosError: true, code: 'ECONNABORTED' }), /phản hồi quá lâu/)
+  assert.match(getLoginErrorMessage({ isAxiosError: true, code: 'ERR_NETWORK' }), /Không thể kết nối/)
+  assert.match(getLoginErrorMessage(undefined), /Đăng nhập không thành công/)
+})
+
+test('failed login bodies with exception details never produce a session', () => {
+  assert.throws(() => getLoginData({ statusCode: 500, message: 'System.UnauthorizedAccessException: Invalid email or password.' }), /Email hoặc mật khẩu không chính xác/)
+  assert.equal(getSavedUser(), null)
+  assert.equal(localStorage.getItem('token'), null)
+  assert.equal(sessionStorage.getItem('token'), null)
 })

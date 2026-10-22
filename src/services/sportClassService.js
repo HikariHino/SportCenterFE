@@ -109,12 +109,14 @@ export async function createSportClass(data) {
  */
 export async function updateSportClass(id, data) {
   const payload = buildClassPayload(data)
-  const response = await api.put(`/classes/${id}`, payload)
-  const body = response.data
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể cập nhật lớp học.')
+  const save = async () => {
+    if (payload.isActive === false) await assertClassCanClose(id)
+    const response = await api.put(`/classes/${id}`, payload)
+    const body = response.data
+    if (body?.success === false) throw new Error(body.message || 'Không thể cập nhật lớp học.')
+    return body?.data ?? body
   }
-  return body?.data ?? body
+  return payload.isActive === false ? withSessionWriteLock(save) : save()
 }
 
 /**
@@ -122,12 +124,34 @@ export async function updateSportClass(id, data) {
  * Quản lý ngừng hoạt động / đóng lớp học (xóa mềm bằng IsActive = false)
  */
 export async function deactivateSportClass(id) {
-  const response = await api.delete(`/classes/${id}`)
-  const body = response.data
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể đóng lớp học.')
+  return withSessionWriteLock(async () => {
+    await assertClassCanClose(id)
+    const response = await api.delete(`/classes/${id}`)
+    const body = response.data
+    if (body?.success === false) throw new Error(body.message || 'Không thể đóng lớp học.')
+    return body
+  })
+}
+
+export async function getClassClosureStatus(classId, { signal } = {}) {
+  const sessions = await getAllClassSessions(classId, { signal })
+  if (sessions.some(session => !Number.isSafeInteger(Number(session.id)) || Number(session.id) <= 0
+    || (session.classId != null && String(session.classId) !== String(classId)))) {
+    throw new Error('Chưa xác nhận được buổi học của lớp. Vui lòng tải lại trước khi đóng lớp.')
   }
-  return body
+  // Elapsed time is not proof of completion; require the saved server status.
+  const unfinished = sessions.filter(session => !['completed', 'cancelled', 'canceled']
+    .includes(String(session.status || session.Status || '').trim().toLowerCase()))
+  return { unfinishedCount: unfinished.length }
+}
+
+async function assertClassCanClose(classId) {
+  const { unfinishedCount } = await getClassClosureStatus(classId)
+  if (unfinishedCount) {
+    const error = new Error(`Lớp còn ${unfinishedCount} buổi chưa hoàn thành hoặc chưa hủy. Vui lòng xử lý các buổi này trước khi đóng lớp.`)
+    error.unfinishedCount = unfinishedCount
+    throw error
+  }
 }
 
 /**
@@ -245,13 +269,21 @@ export async function cancelClassSession(sessionId, reason) {
  * POST /api/class-sessions/{id}/complete
  * Đánh dấu buổi học hoàn thành
  */
+const pendingCompletions = new Map()
 export async function completeClassSession(sessionId) {
-  const response = await api.post(`/class-sessions/${sessionId}/complete`)
-  const body = response.data
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể hoàn thành buổi học.')
+  const key = String(sessionId)
+  if (pendingCompletions.has(key)) return pendingCompletions.get(key)
+  const request = api.post(`/class-sessions/${sessionId}/complete`).then(response => {
+    const body = response.data
+    if (body?.success === false) throw new Error(body.message || 'Không thể hoàn thành buổi học.')
+    return body
+  })
+  pendingCompletions.set(key, request)
+  try {
+    return await request
+  } finally {
+    pendingCompletions.delete(key)
   }
-  return body
 }
 
 /**

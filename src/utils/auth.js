@@ -54,7 +54,7 @@ export function updateSessionTokens(token, refreshTokenKey) {
 export function getLoginData(body) {
   // Auth endpoints may return AuthResponse directly or inside an ApiResponse.
   if (body?.success === false || Number(body?.statusCode) >= 400) {
-    throw new Error(getAuthErrorMessage({ response: { data: body, status: body?.statusCode } }, 'Đăng nhập không thành công.'))
+    throw new Error(getLoginErrorMessage({ response: { data: body, status: body?.statusCode } }))
   }
 
   const data = body?.data ?? body
@@ -124,4 +124,25 @@ export function getAuthErrorMessage(error, fallback) {
   if (['ECONNABORTED', 'ETIMEDOUT'].includes(error.code)) return 'Máy chủ phản hồi quá lâu. Vui lòng thử lại sau ít phút.'
   if (error.isAxiosError && !error.response) return 'Không thể kết nối đến máy chủ. Vui lòng thử lại.'
   return error.isAxiosError ? fallback : error.message || fallback
+}
+
+export function getLoginErrorMessage(error) {
+  const fallback = 'Đăng nhập không thành công. Vui lòng thử lại.'
+  const invalidCredentials = 'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại hoặc chọn Quên mật khẩu.'
+  const body = error?.response?.data
+  const status = Number(error?.response?.status || body?.statusCode)
+  const details = body?.errors
+  const messages = [
+    body?.message, body?.detail, typeof body === 'string' ? body : null, error?.message,
+    ...(Array.isArray(details) ? details : details && typeof details === 'object' ? Object.values(details).flat() : [details]),
+  ].filter(value => typeof value === 'string')
+
+  // Development responses can include a .NET exception followed by a stack trace.
+  const credentialError = /^(?:System\.UnauthorizedAccessException:\s*)?Invalid email or password\.?\s*$/im
+  if (status === 401 || messages.some(value => credentialError.test(value.trim()))) {
+    return invalidCredentials
+  }
+  if (status >= 500) return 'Máy chủ gặp sự cố. Vui lòng thử lại sau.'
+
+  return getAuthErrorMessage(error ?? {}, fallback)
 }

@@ -1,6 +1,45 @@
-import { getRoomForClass } from './memberClasses.js'
+import { classStatusLabel, getRoomForClass } from './memberClasses.js'
+import { timetableDateKey, timetableWeekStart } from './memberTimetable.js'
 
 const normalizedName = value => String(value || '').trim().toLocaleLowerCase('vi-VN')
+
+export function canCancelRoomSession(session, now = Date.now()) {
+  return String(session?.status || session?.Status || 'Scheduled').trim().toLowerCase() === 'scheduled'
+    && Date.parse(session?.startsAt) > now
+}
+
+export function applyRoomSessionCancellations(items, cancelled) {
+  const ids = new Set(cancelled.map(item => String(item.id)))
+  return items.map(item => ids.has(String(item.id)) ? { ...item, status: 'Cancelled' } : item)
+}
+
+export function getRoomTimetableWeek(items, preferredWeek = timetableWeekStart()) {
+  return getSessionWeek(items, preferredWeek, ['scheduled', 'completed'])
+}
+
+export function getCancelledRoomTimetableWeek(items, preferredWeek = timetableWeekStart()) {
+  return getSessionWeek(items, preferredWeek, ['cancelled', 'canceled'])
+}
+
+function getSessionWeek(items, preferredWeek, statuses) {
+  const weeks = [...new Set(items.flatMap(item => {
+    const status = String(item.status || item.Status || 'Scheduled').trim().toLowerCase()
+    const date = timetableDateKey(item.startsAt)
+    return date && statuses.includes(status) ? [timetableWeekStart(date)] : []
+  }))].sort()
+  // Keep a populated week; otherwise show the next week with sessions, or the
+  // latest past week when the room has no remaining future sessions.
+  return weeks.find(week => week >= preferredWeek) ?? weeks.at(-1) ?? preferredWeek
+}
+
+export function roomSessionStatusLabel(session, now = Date.now()) {
+  const status = session.status || session.Status || 'Scheduled'
+  const normalizedStatus = String(status).trim().toLowerCase()
+  if (['cancelled', 'canceled'].includes(normalizedStatus)) return 'Đã hủy'
+  if (normalizedStatus === 'completed') return 'Đã hoàn thành'
+  if (normalizedStatus === 'scheduled' && Date.parse(session.endsAt) <= now) return 'Đã kết thúc · chờ cập nhật'
+  return classStatusLabel(status)
+}
 
 export function getSessionRoom(session, sportClass, rooms) {
   let assignedRoom

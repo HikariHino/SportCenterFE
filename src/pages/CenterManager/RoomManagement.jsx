@@ -13,7 +13,6 @@ import {
   Filter,
   Grid,
   Info,
-  Layers,
   List,
   MapPin,
   Plus,
@@ -190,6 +189,8 @@ export default function RoomManagement() {
   const activeRoomsCount = rooms.filter((r) => r.isActive !== false).length
   const inactiveRoomsCount = rooms.length - activeRoomsCount
   const totalCapacity = rooms.reduce((sum, r) => sum + (Number(r.capacity) || 0), 0)
+  const hasFilters = Boolean(searchQuery.trim() || typeFilter !== 'ALL' || statusFilter !== 'ALL')
+  const resetFilters = () => { setSearchQuery(''); setTypeFilter('ALL'); setStatusFilter('ALL') }
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -396,11 +397,12 @@ export default function RoomManagement() {
   return (
     <div className="room-mgmt">
       {/* Header */}
-      <section className="room-mgmt-header manager-card">
+      <section className="room-mgmt-header">
         <div>
-          <h2>Quản lý phòng tập & Cơ sở vật chất</h2>
+          <span className="room-eyebrow"><DoorOpen size={15} /> QUẢN LÝ CƠ SỞ</span>
+          <h1>Phòng tập & Cơ sở vật chất</h1>
           <p>
-            Khai báo phòng và sân tập thể thao, quản lý sức chứa tối đa và theo dõi lịch sử dụng phòng tập.
+            Quản lý không gian tập luyện, sức chứa và lịch sử dụng tại trung tâm.
           </p>
         </div>
         <div className="room-mgmt-actions">
@@ -426,7 +428,7 @@ export default function RoomManagement() {
             className="room-btn room-btn-primary"
             onClick={handleOpenCreate}
           >
-            <Plus size={16} /> Thêm phòng tập mới
+            <Plus size={16} /> Thêm phòng tập
           </button>
         </div>
       </section>
@@ -438,8 +440,8 @@ export default function RoomManagement() {
             <DoorOpen size={22} />
           </div>
           <div className="room-metric-info">
-            <span>Tổng số phòng & sân tập</span>
-            <strong>{rooms.length}</strong>
+            <span>Phòng & sân tập</span>
+            <strong>{loading ? '—' : rooms.length}</strong>
           </div>
         </article>
 
@@ -448,8 +450,8 @@ export default function RoomManagement() {
             <CheckCircle2 size={22} />
           </div>
           <div className="room-metric-info">
-            <span>Đang hoạt động (Sẵn sàng)</span>
-            <strong>{activeRoomsCount}</strong>
+            <span>Đang hoạt động</span>
+            <strong>{loading ? '—' : activeRoomsCount}</strong>
           </div>
         </article>
 
@@ -458,8 +460,8 @@ export default function RoomManagement() {
             <Power size={22} />
           </div>
           <div className="room-metric-info">
-            <span>Đã khóa / Ngừng sử dụng</span>
-            <strong>{inactiveRoomsCount}</strong>
+            <span>Ngừng hoạt động</span>
+            <strong>{loading ? '—' : inactiveRoomsCount}</strong>
           </div>
         </article>
 
@@ -468,8 +470,8 @@ export default function RoomManagement() {
             <Users size={22} />
           </div>
           <div className="room-metric-info">
-            <span>Tổng sức chứa trung tâm</span>
-            <strong>{totalCapacity} <small style={{ fontSize: 13, fontWeight: 500 }}>chỗ</small></strong>
+            <span>Tổng sức chứa</span>
+            <strong>{loading ? '—' : totalCapacity} <small>chỗ</small></strong>
           </div>
         </article>
       </section>
@@ -510,21 +512,38 @@ export default function RoomManagement() {
       )}
 
       {/* Filter Toolbar */}
+      <section className="room-directory manager-card" aria-labelledby="room-directory-title">
+      <header className="room-directory-heading">
+        <div><h3 id="room-directory-title">Danh sách phòng & sân tập</h3><p>Chọn phòng để xem lịch tuần hoặc kiểm tra khung giờ trống.</p></div>
+        {hasFilters && <button type="button" className="room-reset-filters" onClick={resetFilters}><X size={14} /> Xóa bộ lọc</button>}
+      </header>
+      <div className="room-status-tabs" role="group" aria-label="Lọc trạng thái phòng">
+        {[
+          ['ALL', 'Tất cả', rooms.length],
+          ['ACTIVE', 'Hoạt động', activeRoomsCount],
+          ['INACTIVE', 'Tạm ngừng', inactiveRoomsCount],
+        ].map(([value, label, count]) => <button key={value} type="button" aria-pressed={statusFilter === value} onClick={() => setStatusFilter(value)}>
+          {label}<span>{loading ? '—' : count}</span>
+        </button>)}
+      </div>
       <div className="room-toolbar">
         <div className="room-search-box">
           <Search size={16} />
           <input
-            type="text"
+            type="search"
             className="room-search-input"
-            placeholder="Tìm theo tên phòng, loại phòng hoặc vị trí..."
+            aria-label="Tìm phòng theo tên, loại phòng hoặc vị trí"
+            placeholder="Tìm tên phòng, loại phòng, vị trí..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         <div className="room-filter-group">
+          <label className="room-type-filter"><Filter size={15} />
           <select
             className="room-select"
+            aria-label="Lọc loại phòng"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
           >
@@ -535,23 +554,15 @@ export default function RoomManagement() {
               </option>
             ))}
           </select>
-
-          <select
-            className="room-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="ALL">Tất cả trạng thái</option>
-            <option value="ACTIVE">Đang hoạt động</option>
-            <option value="INACTIVE">Đã khóa / Ngừng sử dụng</option>
-          </select>
-
-          <div className="view-mode-toggle">
+          </label>
+          <div className="view-mode-toggle" role="group" aria-label="Kiểu hiển thị phòng">
             <button
               type="button"
               className={`view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
               onClick={() => setViewMode('grid')}
               title="Xem dạng thẻ"
+              aria-label="Xem dạng thẻ"
+              aria-pressed={viewMode === 'grid'}
             >
               <Grid size={16} />
             </button>
@@ -560,6 +571,8 @@ export default function RoomManagement() {
               className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
               onClick={() => setViewMode('table')}
               title="Xem dạng bảng"
+              aria-label="Xem dạng bảng"
+              aria-pressed={viewMode === 'table'}
             >
               <List size={16} />
             </button>
@@ -569,22 +582,23 @@ export default function RoomManagement() {
 
       {/* Body: Loading / Empty / Grid / Table */}
       {loading ? (
-        <div className="room-loading">
+        <div className="room-loading" role="status">
           <div className="room-spinner" />
           <span>Đang tải dữ liệu phòng tập...</span>
         </div>
       ) : filteredRooms.length === 0 ? (
         <div className="room-empty">
           <DoorOpen size={40} />
-          <strong>Không tìm thấy phòng tập nào</strong>
-          <p>Thử tìm kiếm với từ khóa khác hoặc thêm phòng tập mới cho trung tâm.</p>
+          <strong>{hasFilters ? 'Không có phòng phù hợp' : 'Chưa có phòng tập nào'}</strong>
+          <p>{hasFilters ? 'Thử từ khóa khác hoặc xóa bộ lọc để xem tất cả phòng.' : 'Thêm phòng hoặc sân tập để bắt đầu quản lý không gian và lịch sử dụng.'}</p>
+          {hasFilters ? <button type="button" className="room-btn room-btn-secondary" onClick={resetFilters}><RefreshCw size={15} /> Xóa bộ lọc</button> :
           <button
             type="button"
             className="room-btn room-btn-primary"
             onClick={handleOpenCreate}
           >
             <Plus size={16} /> Thêm phòng tập ngay
-          </button>
+          </button>}
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
@@ -601,40 +615,29 @@ export default function RoomManagement() {
                   </div>
                   <div className="room-card-title">
                     <h3><button type="button" className="room-name-button room-card-schedule-trigger" title={`Xem thời khóa biểu ${room.name}`} onClick={() => setTimetableRoom(room)}>{room.name}</button></h3>
-                    <small>Mã phòng: #{room.id} · Xem lịch tuần</small>
+                    <small>Phòng #{room.id} · {room.roomType || 'Đa năng'}</small>
                   </div>
                   <span className={`room-badge ${isActive ? 'active' : 'inactive'}`}>
                     <i />
-                    {isActive ? 'Hoạt động' : 'Đã khóa'}
+                    {isActive ? 'Hoạt động' : 'Ngừng hoạt động'}
                   </span>
                 </div>
 
                 <div className="room-details-list">
                   <div className="room-detail-row">
-                    <Layers size={14} />
-                    <span>
-                      Loại: <strong>{room.roomType || 'Đa năng'}</strong>
-                    </span>
+                    <Users size={16} />
+                    <div><span>Sức chứa</span><strong>{room.capacity} học viên</strong></div>
                   </div>
                   <div className="room-detail-row">
-                    <Users size={14} />
-                    <span>
-                      Sức chứa: <strong>{room.capacity} học viên</strong>
-                    </span>
-                  </div>
-                  <div className="room-detail-row">
-                    <MapPin size={14} />
-                    <span>
-                      Vị trí: <strong>{room.location || 'Chưa cập nhật vị trí'}</strong>
-                    </span>
+                    <MapPin size={16} />
+                    <div><span>Vị trí</span><strong>{room.location || 'Chưa cập nhật vị trí'}</strong></div>
                   </div>
                 </div>
 
                 <div className="room-card-footer">
                   <button
                     type="button"
-                    className="room-btn room-btn-secondary"
-                    style={{ padding: '6px 12px', fontSize: 11 }}
+                    className="room-btn room-card-calendar"
                     title={`Xem thời khóa biểu ${room.name}`}
                     onClick={() => setTimetableRoom(room)}
                   >
@@ -642,11 +645,12 @@ export default function RoomManagement() {
                   </button>
 
                   <div className="room-actions">
-                    <button type="button" className="room-action-btn" title="Kiểm tra lịch trống phòng" onClick={() => handleOpenCheck(room)}><Clock size={15} /></button>
+                    <button type="button" className="room-action-btn" aria-label={`Kiểm tra lịch trống ${room.name}`} title="Kiểm tra lịch trống phòng" onClick={() => handleOpenCheck(room)}><Clock size={15} /></button>
                     <button
                       type="button"
                       className="room-action-btn"
                       title="Chỉnh sửa thông tin phòng"
+                      aria-label={`Chỉnh sửa ${room.name}`}
                       onClick={() => handleOpenEdit(room)}
                     >
                       <Edit2 size={15} />
@@ -656,6 +660,7 @@ export default function RoomManagement() {
                         type="button"
                         className="room-action-btn danger"
                         title="Xóa / Ngừng hoạt động phòng này"
+                        aria-label={`Ngừng hoạt động ${room.name}`}
                         onClick={() => handleOpenDelete(room)}
                       >
                         <Trash2 size={15} />
@@ -665,6 +670,7 @@ export default function RoomManagement() {
                         type="button"
                         className="room-action-btn info"
                         title="Kích hoạt lại phòng này"
+                        aria-label={`Kích hoạt lại ${room.name}`}
                         onClick={() => handleToggleActive(room)}
                       >
                         <Power size={15} />
@@ -678,7 +684,7 @@ export default function RoomManagement() {
         </div>
       ) : (
         /* TABLE VIEW */
-        <div className="room-table-container manager-card" style={{ margin: '0 24px', padding: '16px' }}>
+        <div className="room-table-container" role="region" aria-label="Danh sách phòng dạng bảng, có thể cuộn ngang" tabIndex={0}>
           <table className="room-table">
             <thead>
               <tr>
@@ -710,7 +716,7 @@ export default function RoomManagement() {
                     <td>
                       <span className={`room-badge ${isActive ? 'active' : 'inactive'}`}>
                         <i />
-                        {isActive ? 'Hoạt động' : 'Đã khóa'}
+                        {isActive ? 'Hoạt động' : 'Ngừng hoạt động'}
                       </span>
                     </td>
                     <td>
@@ -760,6 +766,11 @@ export default function RoomManagement() {
           </table>
         </div>
       )}
+      <footer className="room-directory-footer" role="status">
+        <span>{loading ? 'Đang tải danh sách...' : <>Hiển thị <strong>{filteredRooms.length}</strong> / {rooms.length} phòng & sân tập</>}</span>
+        <span><Calendar size={14} /> Lịch sử dụng được xem theo từng phòng</span>
+      </footer>
+      </section>
 
       {timetableRoom && <RoomTimetableDialog room={timetableRoom} rooms={rooms} onClose={() => setTimetableRoom(null)} />}
 

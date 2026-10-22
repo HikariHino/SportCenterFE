@@ -10,6 +10,8 @@ let createRecurringRoomSessions
 let getRoomTimetable
 let assignClassToRoom
 let rescheduleRoomSession
+let cancelRoomSessions
+let cancelSessionsForClass
 let classService
 const storageDescriptors = new Map()
 before(async () => {
@@ -24,6 +26,8 @@ before(async () => {
   getRoomTimetable = service.getRoomTimetable
   assignClassToRoom = service.assignClassToRoom
   rescheduleRoomSession = service.rescheduleRoomSession
+  cancelRoomSessions = service.cancelRoomSessions
+  cancelSessionsForClass = (await server.ssrLoadModule('/src/services/classSessionCancellationService.js')).cancelSessionsForClass
   classService = await server.ssrLoadModule('/src/services/sportClassService.js')
 })
 after(async () => {
@@ -38,6 +42,119 @@ const room = { id: 1, name: 'Studio Yoga 01', capacity: 25, isActive: true }
 const sportClass = { id: 10, roomId: 1, coachId: 5, className: 'Yoga', sportId: 1, price: 0, maxCapacity: 20, startDate: '2099-10-19', endDate: '2099-11-19', isActive: true }
 const sessions = ['2099-10-26', '2099-10-28', '2099-10-30'].map(date => ({ date, startsAt: `${date}T11:00:00.000Z`, endsAt: `${date}T12:30:00.000Z` }))
 const options = { room, rooms: [room], sportClass, coachId: 5, cancellationPolicyId: 1, capacity: 20, sessions }
+
+test('class cancellation loads every session page and only cancels selected sessions of the chosen class', async () => {
+  const saved = sessions.map((item, index) => ({ ...item, id: index + 100, classId: 10, status: 'Scheduled' }))
+  const writes = [], reads = []
+  api.defaults.adapter = async config => {
+    if (config.method === 'post') {
+      writes.push(config.url)
+      return { data: '', status: 204, statusText: 'No Content', headers: {}, config }
+    }
+    assert.equal(config.url, '/classes/10/sessions')
+    const page = Number(config.params.page)
+    reads.push(page)
+    return { data: { items: saved.slice(page - 1, page), total: saved.length, page }, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const result = await cancelSessionsForClass({ classId: 10, sessions: [saved[0], saved[2]], reason: 'HLV nghỉ' })
+  assert.deepEqual(reads, [1, 2, 3])
+  assert.deepEqual(writes, ['/class-sessions/100/cancel', '/class-sessions/102/cancel'])
+  assert.deepEqual(result.cancelled.map(item => item.id), [100, 102])
+  assert.deepEqual(result.failed, [])
+})
+
+test('class cancellation rejects foreign, missing or rescheduled sessions before any mutation', async () => {
+  const selected = { ...sessions[0], id: 100, classId: 10, status: 'Scheduled' }
+  for (const items of [[], [{ ...selected, classId: 20 }], [{ ...selected, startsAt: '2099-10-27T11:00:00Z' }]]) {
+    const writes = []
+    api.defaults.adapter = async config => {
+      if (config.method === 'post') writes.push(config.url)
+      return { data: { items, total: items.length, page: 1 }, status: 200, statusText: 'OK', headers: {}, config }
+    }
+    await assert.rejects(cancelSessionsForClass({ classId: 10, sessions: [selected], reason: 'HLV nghỉ' }), /thuộc lớp|đã thay đổi/)
+    assert.deepEqual(writes, [])
+  }
+})
+
+test('class cancellation uses the latest status and never cancels a session already completed', async () => {
+  const selected = { ...sessions[0], id: 100, classId: 10, status: 'Scheduled' }
+  const writes = []
+  api.defaults.adapter = async config => {
+    if (config.method === 'post') writes.push(config.url)
+    return { data: { items: [{ ...selected, status: 'Completed' }], total: 1, page: 1 }, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const result = await cancelSessionsForClass({ classId: 10, sessions: [selected], reason: 'HLV nghỉ' })
+  assert.deepEqual(result.cancelled, [])
+  assert.equal(result.failed[0].session.id, 100)
+  assert.deepEqual(writes, [])
+})
+
+test('class cancellation aborts when the latest schedule cannot be read', async () => {
+  let writes = 0
+  api.defaults.adapter = async config => {
+    if (config.method === 'post') writes += 1
+    throw new Error('Lỗi tải lịch lớp')
+  }
+  await assert.rejects(cancelSessionsForClass({ classId: 10, sessions: [{ ...sessions[0], id: 100, classId: 10 }], reason: 'HLV nghỉ' }), /Lỗi tải lịch lớp/)
+  assert.equal(writes, 0)
+})
+
+test('bulk cancellation sends one request per selected ID, continues on failure, and retries only failed sessions', async () => {
+  const writes = [], progress = []
+  let fail = true, active = 0, maxActive = 0
+  api.defaults.adapter = async config => {
+    assert.equal(config.method, 'post')
+    writes.push({ url: config.url, reason: JSON.parse(config.data).reason })
+    active += 1
+    maxActive = Math.max(maxActive, active)
+    await new Promise(resolve => setTimeout(resolve, 2))
+    active -= 1
+    if (fail && config.url === '/class-sessions/102/cancel') throw new Error('Buổi 102 không thể hủy')
+    return { data: '', status: 204, statusText: 'No Content', headers: {}, config }
+  }
+  const selected = [101, 102, 103, 101].map(id => ({ id, ...sessions[0], status: 'Scheduled' }))
+  const result = await cancelRoomSessions({ sessions: selected, reason: '  Bảo trì phòng  ' }, value => progress.push(value))
+  assert.deepEqual(result.cancelled.map(item => item.id), [101, 103])
+  assert.deepEqual(result.failed.map(item => item.session.id), [102])
+  assert.match(result.failed[0].message, /102/)
+  assert.equal(writes.length, 3)
+  assert.ok(writes.every(item => item.reason === 'Bảo trì phòng'))
+  assert.equal(maxActive, 1)
+  assert.deepEqual(progress, [{ completed: 1, total: 3 }, { completed: 2, total: 3 }, { completed: 3, total: 3 }])
+  fail = false
+  const retry = await cancelRoomSessions({ sessions: result.failed.map(item => item.session), reason: 'Bảo trì phòng' })
+  assert.deepEqual(retry.cancelled.map(item => item.id), [102])
+  assert.deepEqual(retry.failed, [])
+  assert.deepEqual(writes.slice(3).map(item => item.url), ['/class-sessions/102/cancel'])
+})
+
+test('bulk cancellation rejects missing reasons and empty selections before sending any request', async () => {
+  let calls = 0
+  api.defaults.adapter = async () => { calls += 1; throw new Error('Unexpected API call') }
+  for (const reason of ['', '   ', 'a'.repeat(501)]) {
+    await assert.rejects(cancelRoomSessions({ sessions: [{ id: 101, ...sessions[0] }], reason }), /lý do/)
+  }
+  await assert.rejects(cancelRoomSessions({ sessions: [], reason: 'Bảo trì' }), /ít nhất một buổi/)
+  assert.equal(calls, 0)
+})
+
+test('bulk cancellation excludes completed, cancelled and started sessions while processing valid selections', async () => {
+  const writes = []
+  api.defaults.adapter = async config => {
+    writes.push(config.url)
+    return { data: '', status: 204, statusText: 'No Content', headers: {}, config }
+  }
+  const selected = [
+    { id: 101, ...sessions[0], status: 'Completed' },
+    { id: 102, ...sessions[0], status: 'Cancelled' },
+    { id: 103, startsAt: '2000-01-01T00:00:00Z', status: 'Scheduled' },
+    { id: 104, ...sessions[0], status: 'Scheduled' },
+  ]
+  const result = await cancelRoomSessions({ sessions: selected, reason: 'Bảo trì' })
+  assert.deepEqual(writes, ['/class-sessions/104/cancel'])
+  assert.deepEqual(result.cancelled.map(item => item.id), [104])
+  assert.deepEqual(result.failed.map(item => item.session.id), [101, 102, 103])
+})
 
 function mockApi({ conflictAt, unavailableResponse, availabilityError, failAt, loseResponseAt, saved = [], course = sportClass, failAssignment, ignoreAssignment, serverRoom = room, otherClasses = [], otherSaved = {}, roomReadError = false } = {}) {
   const state = { course: { ...course }, serverRoom: { ...serverRoom }, saved: [...saved], posts: [], puts: [], reads: [], availability: [] }
@@ -92,6 +209,39 @@ test('a dated session is saved once and a repeated submission reuses the saved s
   assert.equal(retry.created.length, 0)
   assert.equal(retry.existing.length, 1)
   assert.equal(state.posts.length, 1)
+})
+
+test('cancelling one session and reloading the room preserves all twelve other scheduled sessions', async () => {
+  const stored = [
+    { id: 100, ...sessions[0], coachId: 5, capacity: 20, status: 'Scheduled' },
+    ...Array.from({ length: 12 }, (_, index) => ({ id: index + 101, ...sessions[index % 3], coachId: 5, capacity: 20, status: 'Scheduled' })),
+  ]
+  const writes = []
+  api.defaults.adapter = async config => {
+    let data
+    if (config.method === 'post') {
+      writes.push(config.url)
+      assert.equal(config.url, '/class-sessions/100/cancel')
+      stored[0] = { ...stored[0], status: 'Cancelled', cancellationReason: JSON.parse(config.data).reason }
+      return { data: '', status: 204, statusText: 'No Content', headers: {}, config }
+    }
+    if (config.url === '/classes/manage') data = { items: [sportClass], total: 1 }
+    else {
+      assert.equal(config.url, '/classes/10/sessions')
+      const page = Number(config.params.page)
+      data = { items: stored.slice((page - 1) * 5, page * 5), total: stored.length, page, pageSize: 5 }
+    }
+    return { data, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const before = await getRoomTimetable(room, [room])
+  await classService.cancelClassSession(100, ' Bảo trì phòng ')
+  const after = await getRoomTimetable(room, [room])
+  assert.deepEqual(writes, ['/class-sessions/100/cancel'])
+  assert.equal(after.items.length, 13)
+  assert.equal(after.items[0].status, 'Cancelled')
+  assert.equal(after.items[0].cancellationReason, 'Bảo trì phòng')
+  assert.deepEqual(after.items.slice(1), before.items.slice(1))
+  assert.equal(after.items.filter(item => item.status === 'Scheduled').length, 12)
 })
 
 test('a dated session is rejected if the class period changes after the form was filled', async () => {

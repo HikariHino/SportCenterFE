@@ -5,6 +5,7 @@ import {
   Ban,
   BookOpen,
   Calendar,
+  CalendarX2,
   CheckCircle2,
   Clock,
   DoorOpen,
@@ -38,7 +39,6 @@ import {
   completeClassSession,
   createClassSession,
   createSportClass,
-  deactivateSportClass,
   getClassErrorMessage,
   getAllClassSessions,
   getManagedClassesWithSessionDates,
@@ -49,10 +49,15 @@ import {
 } from '../../services/sportClassService'
 import { validateSessionWrite } from '../../services/sessionSchedulingService'
 import { assignClassToRoom } from '../../services/roomTimetableService'
+import { SESSION_COMPLETION_EVENT } from '../../services/sessionCompletionService'
 import { getClassSessionDateRange } from '../../utils/classSessionDates'
 import { classDateInput } from '../../utils/classForm'
 import { shiftTimetableDate, timetableDateKey } from '../../utils/memberTimetable'
 import ClassCourseFields from './ClassCourseFields'
+import ClassSessionGroups from './ClassSessionGroups'
+import CancelClassSessionsDialog from './CancelClassSessionsDialog'
+import CloseClassDialog from './CloseClassDialog'
+import { applyRoomSessionCancellations } from '../../utils/roomTimetable'
 import '../../style/CenterManager/ClassManagement.css'
 
 // Sport icon helper based on keywords
@@ -221,6 +226,7 @@ export default function ClassManagement() {
   const [cancellingSession, setCancellingSession] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [submittingSession, setSubmittingSession] = useState(false)
+  const [cancellingClass, setCancellingClass] = useState(null)
 
   // Session Form
   const [sessionForm, setSessionForm] = useState({
@@ -309,6 +315,17 @@ export default function ClassManagement() {
   }
 
   // Initial load
+  useEffect(() => {
+    const refresh = event => {
+      const classId = selectedClassForSessions?.id
+      if (classId != null && event.detail.some(session => String(session.classId) === String(classId))) {
+        void loadClassSessions(classId)
+      }
+    }
+    window.addEventListener(SESSION_COMPLETION_EVENT, refresh)
+    return () => window.removeEventListener(SESSION_COMPLETION_EVENT, refresh)
+  }, [selectedClassForSessions?.id])
+
   useEffect(() => {
     loadMasterData()
     loadClasses()
@@ -547,24 +564,19 @@ export default function ClassManagement() {
     }
   }
 
-  const handleDeactivateClass = async (cls) => {
-    try {
-      await deactivateSportClass(cls.id)
-      await loadClasses()
-      setDeactivatingClass(null)
-      setSuccess(`Đã đóng / ngừng hoạt động lớp học "${cls.className}".`)
-    } catch (err) {
-      setDeactivatingClass(null)
-      setError(getClassErrorMessage(err, 'Không thể đóng lớp học.'))
-    }
-  }
-
   // ==========================================
   // CLASS SESSIONS LOGIC
   // ==========================================
   const handleOpenSessions = (cls) => {
     setSelectedClassForSessions(cls)
     loadClassSessions(cls.id)
+  }
+
+  const handleClassSessionsCancelled = result => {
+    if (String(selectedClassForSessions?.id) === String(cancellingClass?.id)) {
+      setSessionsList(previous => applyRoomSessionCancellations(previous, result.cancelled))
+    }
+    loadClasses()
   }
 
   const handleOpenAddSession = () => {
@@ -765,7 +777,7 @@ export default function ClassManagement() {
       {/* Module Header */}
       <section className="class-mgmt-header manager-card">
         <div>
-          <h2>Quản lý danh mục & Lớp học</h2>
+          <h2>Bộ môn & Lớp học</h2>
           <p>
             Cấu hình danh mục thể thao, thiết lập khóa học, gán huấn luyện viên và điều phối buổi học chi tiết.
           </p>
@@ -789,7 +801,7 @@ export default function ClassManagement() {
               className="class-btn class-btn-primary"
               onClick={handleOpenCreateSport}
             >
-              <Plus size={16} /> Thêm bộ môn mới
+              <Plus size={16} /> Thêm bộ môn
             </button>
           ) : (
             <button
@@ -797,7 +809,7 @@ export default function ClassManagement() {
               className="class-btn class-btn-primary"
               onClick={handleOpenCreateClass}
             >
-              <Plus size={16} /> Tạo lớp học mới
+              <Plus size={16} /> Tạo lớp học
             </button>
           )}
         </div>
@@ -844,23 +856,25 @@ export default function ClassManagement() {
       </section>
 
       {/* Tabs */}
-      <div className="class-tabs">
+      <div className="class-tabs" role="group" aria-label="Danh mục quản lý">
         <button
           type="button"
           className={`class-tab ${activeTab === 'classes' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'classes'}
           onClick={() => setActiveTab('classes')}
         >
           <BookOpen size={16} />
-          Quản lý lớp học & Buổi học (Sport Classes)
+          Lớp học
           <span className="class-tab-badge">{classes.length}</span>
         </button>
         <button
           type="button"
           className={`class-tab ${activeTab === 'sports' ? 'active' : ''}`}
+          aria-pressed={activeTab === 'sports'}
           onClick={() => setActiveTab('sports')}
         >
           <Trophy size={16} />
-          Danh mục bộ môn (Sports Catalog)
+          Bộ môn
           <span className="class-tab-badge">{sports.length}</span>
         </button>
       </div>
@@ -904,13 +918,15 @@ export default function ClassManagement() {
       {/* TAB 1: SPORT CLASSES MANAGEMENT */}
       {/* ======================================================== */}
       {activeTab === 'classes' && (
-        <>
+        <section className="manager-card class-content-card" aria-labelledby="class-list-title">
+          <div className="class-content-heading"><div><h3 id="class-list-title">Danh sách lớp học</h3><p>Xem thông tin lớp, quản lý buổi học và lịch giảng dạy.</p></div><span className="class-result-count" role="status">{classesLoading ? 'Đang tải...' : `${filteredClasses.length} / ${classes.length} lớp`}</span></div>
           {/* Toolbar */}
           <div className="class-toolbar">
             <div className="class-search-box">
               <Search size={16} />
               <input
-                type="text"
+                type="search"
+                aria-label="Tìm lớp học"
                 className="class-search-input"
                 placeholder="Tìm kiếm lớp học, môn, HLV..."
                 value={classSearch}
@@ -920,6 +936,7 @@ export default function ClassManagement() {
             <div className="class-filter-group">
               <select
                 className="class-select"
+                aria-label="Lọc bộ môn của lớp"
                 value={classSportFilter}
                 onChange={(e) => setClassSportFilter(e.target.value)}
               >
@@ -933,6 +950,7 @@ export default function ClassManagement() {
 
               <select
                 className="class-select"
+                aria-label="Lọc huấn luyện viên"
                 value={classCoachFilter}
                 onChange={(e) => setClassCoachFilter(e.target.value)}
               >
@@ -946,6 +964,7 @@ export default function ClassManagement() {
 
               <select
                 className="class-select"
+                aria-label="Lọc trạng thái lớp"
                 value={classStatusFilter}
                 onChange={(e) => setClassStatusFilter(e.target.value)}
               >
@@ -976,19 +995,17 @@ export default function ClassManagement() {
               </button>
             </div>
           ) : (
-            <div className="class-table-container">
+            <div className="class-table-container" role="region" aria-label="Danh sách lớp học" tabIndex={0}>
               <table className="class-table">
                 <thead>
                   <tr>
-                    <th>MÃ LỚP</th>
-                    <th>TÊN LỚP HỌC</th>
+                    <th>LỚP HỌC</th>
                     <th>BỘ MÔN</th>
                     <th>HLV PHỤ TRÁCH</th>
-                    <th>NGÀY BẮT ĐẦU</th>
-                    <th>NGÀY KẾT THÚC</th>
+                    <th>THỜI GIAN HỌC</th>
                     <th>SĨ SỐ TỐI ĐA</th>
                     <th>TRẠNG THÁI</th>
-                    <th style={{ textAlign: 'right' }}>THAO TÁC</th>
+                    <th className="class-actions-heading">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -997,10 +1014,8 @@ export default function ClassManagement() {
                     return (
                       <tr key={cls.id}>
                         <td>
-                          <strong>#{cls.id}</strong>
-                        </td>
-                        <td>
                           <div className="class-item-name">{cls.className}</div>
+                          <div className="class-item-meta">Mã lớp #{cls.id}</div>
                         </td>
                         <td>
                           <span className="class-tag sport">{cls.sportName}</span>
@@ -1008,15 +1023,15 @@ export default function ClassManagement() {
                         <td>
                           <span className="class-tag coach">{cls.coachName || 'Chưa gán HLV'}</span>
                         </td>
-                        <td title={cls.sessionDatesError || 'Ngày của buổi học đầu tiên chưa bị hủy'}>
+                        <td className="class-date-cell" title={cls.sessionDatesError || 'Từ buổi học đầu tiên đến buổi cuối cùng chưa bị hủy'}>
+                          <span className="class-date-line"><small>Từ</small>
                           {cls.sessionDatesError ? 'Không tải được' : cls.sessionDateRange?.startDate
                             ? <time dateTime={cls.sessionDateRange.startDate}>{formatSessionDate(cls.sessionDateRange.startDate)}</time>
-                            : <span style={{ color: 'var(--manager-muted)', fontSize: 12 }}>Chưa có buổi học</span>}
-                        </td>
-                        <td title={cls.sessionDatesError || 'Ngày kết thúc của buổi học cuối cùng chưa bị hủy'}>
+                            : <span>Chưa có buổi học</span>}</span>
+                          <span className="class-date-line"><small>Đến</small>
                           {cls.sessionDatesError ? 'Không tải được' : cls.sessionDateRange?.endDate
                             ? <time dateTime={cls.sessionDateRange.endDate}>{formatSessionDate(cls.sessionDateRange.endDate)}</time>
-                            : '—'}
+                            : '—'}</span>
                         </td>
                         <td>
                           <strong>{cls.maxCapacity} học viên</strong>
@@ -1027,15 +1042,15 @@ export default function ClassManagement() {
                             {isActive ? 'Đang mở' : 'Đã đóng'}
                           </span>
                         </td>
-                        <td>
-                          <div className="class-action-group">
+                        <td className="class-actions-cell">
+                          <div className="class-action-group" role="group" aria-label={`Thao tác lớp ${cls.className} #${cls.id}`}>
                             <button
                               type="button"
                               className="class-row-btn primary"
                               title="Xem và điều phối các buổi học trong lớp"
                               onClick={() => handleOpenSessions(cls)}
                             >
-                              <Calendar size={13} /> Buổi học
+                              <Calendar size={14} /> Buổi học
                             </button>
                             <button
                               type="button"
@@ -1043,8 +1058,9 @@ export default function ClassManagement() {
                               title="Chỉnh sửa thông tin chung của lớp học"
                               onClick={() => handleOpenEditClass(cls)}
                             >
-                              <Edit size={13} /> Sửa
+                              <Edit size={14} /> Chỉnh sửa
                             </button>
+                            <button type="button" className="class-row-btn danger" title="Hủy các buổi học chưa bắt đầu của lớp này" onClick={() => setCancellingClass(cls)}><CalendarX2 size={14} />Hủy buổi</button>
                             {isActive && (
                               <button
                                 type="button"
@@ -1052,7 +1068,7 @@ export default function ClassManagement() {
                                 title="Đóng lớp học hoặc ngừng hoạt động"
                                 onClick={() => setDeactivatingClass(cls)}
                               >
-                                <Ban size={13} /> Đóng lớp
+                                <Power size={14} /> Đóng lớp
                               </button>
                             )}
                           </div>
@@ -1064,22 +1080,24 @@ export default function ClassManagement() {
               </table>
             </div>
           )}
-        </>
+        </section>
       )}
 
       {/* ======================================================== */}
       {/* TAB 2: SPORTS CATALOG MANAGEMENT */}
       {/* ======================================================== */}
       {activeTab === 'sports' && (
-        <>
+        <section className="manager-card class-content-card" aria-labelledby="sport-list-title">
+          <div className="class-content-heading"><div><h3 id="sport-list-title">Danh mục bộ môn</h3><p>Quản lý các môn thể thao và lớp học liên kết.</p></div><span className="class-result-count" role="status">{loading ? 'Đang tải...' : `${filteredSports.length} / ${sports.length} bộ môn`}</span></div>
           {/* Toolbar */}
           <div className="class-toolbar">
             <div className="class-search-box">
               <Search size={16} />
               <input
-                type="text"
+                type="search"
+                aria-label="Tìm bộ môn"
                 className="class-search-input"
-                placeholder="Tìm kiếm môn thể thao (Gym, Yoga, Boxing...)..."
+                placeholder="Tìm tên bộ môn..."
                 value={sportSearch}
                 onChange={(e) => setSportSearch(e.target.value)}
               />
@@ -1087,6 +1105,7 @@ export default function ClassManagement() {
             <div className="class-filter-group">
               <select
                 className="class-select"
+                aria-label="Lọc trạng thái bộ môn"
                 value={sportFilterStatus}
                 onChange={(e) => setSportFilterStatus(e.target.value)}
               >
@@ -1166,7 +1185,7 @@ export default function ClassManagement() {
               })}
             </div>
           )}
-        </>
+        </section>
       )}
 
       {/* ======================================================== */}
@@ -1174,7 +1193,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {selectedClassForSessions && (
         <div className="class-modal-overlay" onClick={() => setSelectedClassForSessions(null)}>
-          <div className="class-modal wide" onClick={(e) => e.stopPropagation()}>
+          <div className="class-modal wide class-session-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
               <div>
                 <h3>Quản lý buổi học chi tiết</h3>
@@ -1201,6 +1220,7 @@ export default function ClassManagement() {
                     <strong>{selectedClassForSessions.coachName || 'Chưa gán'}</strong>
                   </p>
                 </div>
+                <button type="button" className="class-btn class-btn-danger" disabled={sessionsLoading || submittingSession} onClick={() => setCancellingClass(selectedClassForSessions)}><Ban size={15} />Hủy buổi theo lớp</button>
                 <button
                   type="button"
                   className="class-btn class-btn-primary"
@@ -1223,9 +1243,10 @@ export default function ClassManagement() {
                   <p>Bấm nút "Thêm buổi học" để tạo buổi đầu tiên cho khóa này.</p>
                 </div>
               ) : (
-                <div className="sessions-list">
-                  {sessionsList.map((session) => {
-                    const statusClass = (session.Status || session.status || 'scheduled').toLowerCase()
+                <ClassSessionGroups items={sessionsList}>
+                  {(session) => {
+                    const rawStatus = String(session.Status || session.status || 'scheduled').trim().toLowerCase()
+                    const statusClass = rawStatus === 'canceled' ? 'cancelled' : rawStatus
                     const isScheduled = statusClass === 'scheduled'
                     const isCompleted = statusClass === 'completed'
                     const isCancelled = statusClass === 'cancelled'
@@ -1268,11 +1289,11 @@ export default function ClassManagement() {
                         <div>
                           <span className={`session-status-badge ${statusClass}`}>
                             <i />
-                            {isScheduled ? 'Đang lên lịch' : isCompleted ? 'Đã hoàn thành' : 'Đã hủy'}
+                            {isScheduled ? 'Đã lên lịch' : isCompleted ? 'Đã hoàn thành' : isCancelled ? 'Đã hủy' : session.Status || session.status}
                           </span>
-                          {isCancelled && session.cancellationReason && (
-                            <div style={{ fontSize: 11, color: 'var(--manager-danger, #b91c1c)', marginTop: 2, maxWidth: 160 }}>
-                              Lý do: {session.cancellationReason}
+                          {isCancelled && (
+                            <div className="class-session-cancel-reason">
+                              Lý do: {session.cancellationReason || 'Chưa cập nhật'}
                             </div>
                           )}
                         </div>
@@ -1326,8 +1347,8 @@ export default function ClassManagement() {
                         </div>
                       </article>
                     )
-                  })}
-                </div>
+                  }}
+                </ClassSessionGroups>
               )}
             </div>
 
@@ -1775,7 +1796,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {rosterSession && (
         <div className="class-modal-overlay" onClick={() => setRosterSession(null)}>
-          <div className="class-modal wide" onClick={(e) => e.stopPropagation()}>
+          <div className="class-modal wide class-session-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
               <div>
                 <h3>Danh sách học viên đăng ký</h3>
@@ -2134,47 +2155,13 @@ export default function ClassManagement() {
       {/* MODAL: DEACTIVATE / CLOSE CLASS */}
       {/* ======================================================== */}
       {deactivatingClass && (
-        <div className="class-modal-overlay" onClick={() => setDeactivatingClass(null)}>
-          <div className="class-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="class-modal-header">
-              <h3>Đóng / Hủy lớp học</h3>
-              <button
-                type="button"
-                className="class-modal-close"
-                onClick={() => setDeactivatingClass(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="class-modal-body">
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>
-                Bạn có chắc chắn muốn đóng lớp học <strong>"{deactivatingClass.className}"</strong> (Mã: #{deactivatingClass.id})?
-              </p>
-              <div className="class-alert class-alert-error" style={{ margin: '10px 0 0' }}>
-                <AlertCircle size={18} />
-                <span>
-                  Lưu ý: Tất cả các buổi học trong lớp phải được hoàn thành hoặc hủy trước khi đóng lớp. Nếu vẫn còn buổi học Scheduled, hệ thống sẽ từ chối thao tác.
-                </span>
-              </div>
-            </div>
-            <div className="class-modal-footer">
-              <button
-                type="button"
-                className="class-btn class-btn-secondary"
-                onClick={() => setDeactivatingClass(null)}
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                className="class-btn class-btn-danger"
-                onClick={() => handleDeactivateClass(deactivatingClass)}
-              >
-                Xác nhận đóng lớp
-              </button>
-            </div>
-          </div>
-        </div>
+        <CloseClassDialog sportClass={deactivatingClass} onClose={() => setDeactivatingClass(null)}
+          onViewSessions={() => { handleOpenSessions(deactivatingClass); setDeactivatingClass(null) }}
+          onClosed={() => {
+            setSuccess(`Đã đóng / ngừng hoạt động lớp học "${deactivatingClass.className}".`)
+            setDeactivatingClass(null)
+            void loadClasses()
+          }} />
       )}
 
       {/* ======================================================== */}
@@ -2386,6 +2373,7 @@ export default function ClassManagement() {
           </div>
         </div>
       )}
+      {cancellingClass && <CancelClassSessionsDialog sportClass={cancellingClass} onClose={() => setCancellingClass(null)} onUpdated={handleClassSessionsCancelled} />}
     </div>
   )
 }

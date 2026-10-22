@@ -58,18 +58,15 @@
 .room-timetable-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 300px; color: var(--theme-muted); text-align: center; }
 .room-timetable-state[role='alert'] { color: var(--theme-red, #b42318); }
 .room-timetable-note { margin: 14px 0 0; color: var(--theme-muted); font-size: 12px; }
+.room-timetable-other-week { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 14px; padding: 12px 16px; border: 1px solid var(--theme-border); border-radius: 10px; background: var(--theme-bg); }
+.room-timetable-other-week p { margin: 0; color: var(--theme-muted); }
+.room-timetable-other-week button { padding: 8px 12px; border: 1px solid var(--theme-accent); border-radius: 8px; background: var(--theme-surface); color: var(--theme-accent); font: inherit; }
+.room-timetable-other-week button:hover { background: var(--theme-raised); }
 .room-cancelled-sessions { margin-top: 20px; padding: 16px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-surface); }
 .room-cancelled-sessions summary { cursor: pointer; font-size: 14px; font-weight: 700; }
 .room-cancelled-sessions summary span { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 20px; color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fff0f2); font-size: 12px; }
 .room-cancelled-sessions > p { margin: 12px 0 0; color: var(--theme-muted); font-size: 12px; }
-.room-cancelled-sessions-scroll { max-height: 360px; overflow: auto; margin-top: 12px; border: 1px solid var(--theme-border); border-radius: 8px; }
-.room-cancelled-sessions table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 12px; }
-.room-cancelled-sessions th, .room-cancelled-sessions td { padding: 10px 12px; border-bottom: 1px solid var(--theme-border); text-align: left; overflow-wrap: anywhere; }
-.room-cancelled-sessions thead th { position: sticky; top: 0; background: var(--theme-bg); }
-.room-cancelled-sessions tbody th { min-width: 140px; }
-.room-cancelled-sessions tbody tr:last-child > * { border-bottom: 0; }
-.room-cancelled-sessions button { padding: 7px 10px; border: 1px solid var(--theme-border); border-radius: 7px; color: var(--theme-accent); background: var(--theme-surface); font: inherit; white-space: nowrap; }
-.room-cancelled-sessions button:hover { background: var(--theme-raised); }
+.room-cancelled-timetable { margin-top: 16px; }
 .room-timetable-detail { margin-top: 20px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-bg); }
 .room-timetable-detail header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .room-timetable-detail h3 { margin: 4px 0 0; font-size: 17px; }
@@ -116,9 +113,33 @@
 .room-reschedule-dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 13px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
 .room-reschedule-dialog footer { justify-content: flex-end; }
 .room-reschedule-dialog .room-reschedule-save { background: #1557d5; color: #fff; border-color: #1557d5; }
+.room-timetable-detail .room-session-cancel, .room-cancel-dialog .room-session-cancel { color: var(--theme-red, #b42318); border-color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fff0f2); }
+.room-timetable-detail .room-session-cancel:hover:not(:disabled), .room-cancel-dialog .room-session-cancel:hover:not(:disabled) { background: var(--theme-red, #b42318); color: #fff; }
+.room-cancel-dialog textarea { width: 100%; min-width: 0; box-sizing: border-box; resize: vertical; padding: 10px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.room-cancel-dialog footer { flex-wrap: wrap; }
+.room-bulk-toolbar { position: sticky; top: 0; z-index: 2; display: grid; gap: 12px; margin-bottom: 18px; padding: 16px; border: 1px solid var(--theme-accent); border-radius: 12px; background: var(--theme-surface); box-shadow: 0 4px 16px #17243c12; }
+.room-bulk-toolbar strong { color: var(--theme-accent); font-size: 15px; }
+.room-bulk-toolbar p { margin: 4px 0 0; color: var(--theme-muted); font-size: 12px; }
+.room-bulk-class-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-weight: 600; }
+.room-bulk-class-filter select { width: min(380px, 100%); min-width: 0; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-text); background: var(--theme-surface); font: inherit; }
+.room-bulk-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.room-bulk-actions button, .room-timetable-refresh-error button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
+.room-bulk-actions button:hover:not(:disabled) { background: var(--theme-raised); }
+.room-bulk-actions .room-bulk-confirm { margin-left: auto; color: #fff; background: #b42318; border-color: #b42318; }
+.room-bulk-actions .room-bulk-confirm:hover:not(:disabled) { background: #8f1b13; }
+.room-timetable-header-actions .room-bulk-toggle[aria-pressed='true'] { color: var(--theme-accent); border-color: var(--theme-accent); background: var(--theme-raised); }
+.room-cancel-preview { display: grid; gap: 10px; max-height: 230px; overflow-y: auto; list-style: none; margin: 0; padding: 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-bg); }
+.room-cancel-preview li { display: grid; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--theme-border); }
+.room-cancel-preview li:last-child { padding-bottom: 0; border-bottom: 0; }
+.room-cancel-preview span { color: var(--theme-muted); font-size: 12px; }
+.room-cancel-success { color: var(--theme-green, #096445); }
+.room-timetable-refresh-error { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; padding: 12px; border-radius: 8px; color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fff0f2); }
+.room-timetable-refresh-error p { flex: 1; margin: 0; }
 .room-reschedule-dialog button:disabled { opacity: .55; cursor: not-allowed; }
 .room-reschedule-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 2px; }
 @media (max-width: 650px) {
+  .room-bulk-actions > button { flex: 1 1 140px; }
+  .room-bulk-actions .room-bulk-confirm { margin-left: 0; }
   .room-timetable-dialog { width: calc(100% - 16px); max-height: calc(100dvh - 16px); }
   .room-timetable-header { flex-wrap: wrap; padding: 16px; }
   .room-timetable-header-actions { width: 100%; flex-wrap: wrap; justify-content: flex-end; }

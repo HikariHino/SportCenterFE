@@ -1,43 +1,32 @@
-import { useId, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
 import { isCancelledSession, isScheduledSession } from '../../utils/sessionScheduling'
+import { getRoomTimetableWeek, roomSessionStatusLabel } from '../../utils/roomTimetable'
+import CancelledRoomSessionsTimetable from './CancelledRoomSessionsTimetable'
 
-const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', {
-  timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short',
-}) : 'Chưa cập nhật'
-
-export default function RoomSessionTimetable({ items, onSelect, ...timetableProps }) {
-  const headingId = useId()
-  const { scheduled, cancelled } = useMemo(() => {
-    const scheduled = [], cancelled = []
+export default function RoomSessionTimetable({ items, onSelect, onSelectCancelled = onSelect, weekStart, onWeekChange, ...timetableProps }) {
+  const [cancelledOpen, setCancelledOpen] = useState(false)
+  const { timetableSessions, cancelled } = useMemo(() => {
+    const timetableSessions = [], cancelled = []
     for (const item of items) {
       if (isCancelledSession(item)) cancelled.push(item)
-      else if (isScheduledSession(item)) scheduled.push(item)
+      else if (isScheduledSession(item) || String(item.status || item.Status).trim().toLowerCase() === 'completed') timetableSessions.push(item)
     }
     cancelled.sort((left, right) => Date.parse(right.startsAt) - Date.parse(left.startsAt))
-    return { scheduled, cancelled }
+    return { timetableSessions, cancelled }
   }, [items])
+  const populatedWeek = getRoomTimetableWeek(timetableSessions, weekStart)
 
   return <>
-    <WeeklyTimetable {...timetableProps} items={scheduled} totalCount={scheduled.length} onSelect={onSelect} />
-    <p className="room-timetable-note">Các ô trống là khung giờ chưa có buổi học trong lịch. Các buổi đã hủy được liệt kê ở mục riêng bên dưới và không chiếm lịch phòng.</p>
-    <details className="room-cancelled-sessions">
-      <summary id={headingId}>Buổi học đã hủy <span>{cancelled.length} buổi</span></summary>
-      <p>Toàn bộ buổi học đã hủy của phòng, sắp xếp theo ngày học từ mới đến cũ.</p>
-      {cancelled.length ? <div className="room-cancelled-sessions-scroll" role="region" aria-labelledby={headingId} tabIndex={0}>
-        <table>
-          <caption className="member-timetable-sr-only">Danh sách buổi học đã hủy của phòng</caption>
-          <thead><tr><th scope="col">Lớp học</th><th scope="col">Bắt đầu</th><th scope="col">Kết thúc</th><th scope="col">Huấn luyện viên</th><th scope="col">Lý do hủy</th><th scope="col">Thao tác</th></tr></thead>
-          <tbody>{cancelled.map(item => <tr key={item.id}>
-            <th scope="row">{item.className || `Buổi học #${item.id}`}</th>
-            <td>{formatDateTime(item.startsAt)}</td>
-            <td>{formatDateTime(item.endsAt)}</td>
-            <td>{item.coachName || 'Chưa phân công'}</td>
-            <td>{item.cancellationReason || 'Chưa cập nhật'}</td>
-            <td><button type="button" onClick={() => onSelect(item.id)}>Xem chi tiết<span className="member-timetable-sr-only"> buổi học #{item.id}</span></button></td>
-          </tr>)}</tbody>
-        </table>
-      </div> : <p role="status">Phòng chưa có buổi học nào bị hủy.</p>}
+    <WeeklyTimetable {...timetableProps} weekStart={weekStart} onWeekChange={onWeekChange} items={timetableSessions} totalCount={timetableSessions.length} onSelect={onSelect} getStatusLabel={roomSessionStatusLabel} />
+    {populatedWeek !== weekStart && <div className="room-timetable-other-week" role="status">
+      <p>Tuần đang xem không có buổi học. Phòng còn {timetableSessions.length} buổi học ở các tuần khác.</p>
+      <button type="button" onClick={() => onWeekChange(populatedWeek)}>Xem tuần từ {populatedWeek.split('-').reverse().join('/')}</button>
+    </div>}
+    <p className="room-timetable-note">Các ô trống là khung giờ chưa có buổi học trong lịch. Bấm “Buổi học đã hủy” để mở thời khóa biểu riêng của các buổi đã hủy; các buổi này không chiếm lịch phòng.</p>
+    <details className="room-cancelled-sessions" onToggle={event => setCancelledOpen(event.currentTarget.open)}>
+      <summary>Buổi học đã hủy <span>{cancelled.length} buổi</span></summary>
+      {cancelledOpen && (cancelled.length ? <CancelledRoomSessionsTimetable items={cancelled} initialWeek={weekStart} onSelect={onSelectCancelled} now={timetableProps.now} /> : <p role="status">Phòng chưa có buổi học nào bị hủy.</p>)}
     </details>
   </>
 }
