@@ -127,6 +127,8 @@
 .room-bulk-toolbar { position: sticky; top: 0; z-index: 2; display: grid; gap: 12px; margin-bottom: 18px; padding: 16px; border: 1px solid var(--theme-accent); border-radius: 12px; background: var(--theme-surface); box-shadow: 0 4px 16px #17243c12; }
 .room-bulk-toolbar strong { color: var(--theme-accent); font-size: 15px; }
 .room-bulk-toolbar p { margin: 4px 0 0; color: var(--theme-muted); font-size: 12px; }
+.room-bulk-class-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-weight: 600; }
+.room-bulk-class-filter select { width: min(380px, 100%); min-width: 0; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-text); background: var(--theme-surface); font: inherit; }
 .room-bulk-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .room-bulk-actions button, .room-timetable-refresh-error button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-surface); color: var(--theme-text); font: inherit; }
 .room-bulk-actions button:hover:not(:disabled) { background: var(--theme-raised); }

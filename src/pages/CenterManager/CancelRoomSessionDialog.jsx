@@ -7,7 +7,7 @@ const formatDateTime = value => new Date(value).toLocaleString('vi-VN', {
   timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short',
 })
 
-export default function CancelRoomSessionDialog({ session, sessions, room, onClose, onBusyChange, onCancelled }) {
+export default function CancelRoomSessionDialog({ session, sessions, room, contextLabel = room?.name, cancelSessions = cancelRoomSessions, onClose, onBusyChange, onCancelled }) {
   const id = useId()
   const dialogRef = useRef(null)
   const actionLock = useRef(false)
@@ -42,7 +42,7 @@ export default function CancelRoomSessionDialog({ session, sessions, room, onClo
     setProgress({ completed: 0, total: pending.length })
     onBusyChange(true)
     try {
-      const result = await cancelRoomSessions({ sessions: pending, reason }, setProgress)
+      const result = await cancelSessions({ sessions: pending, reason }, setProgress)
       setSucceeded(previous => [...previous, ...result.cancelled])
       setFailures(result.failed)
       setPending(result.failed.map(item => item.session))
@@ -66,7 +66,7 @@ export default function CancelRoomSessionDialog({ session, sessions, room, onClo
     if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) close()
   }}>
     <form onSubmit={submit} aria-busy={busy}>
-      <header><div><h3 id={`${id}-title`}><Ban size={20} />{requested.length === 1 ? 'Hủy buổi học' : `Hủy ${requested.length} buổi học`}</h3><p>{room.name} · {requested.length} buổi đã chọn</p></div><button type="button" aria-label="Đóng hủy buổi học" disabled={busy} onClick={close}><X size={19} /></button></header>
+      <header><div><h3 id={`${id}-title`}><Ban size={20} />{requested.length === 1 ? 'Hủy buổi học' : `Hủy ${requested.length} buổi học`}</h3><p>{contextLabel} · {requested.length} buổi đã chọn</p></div><button type="button" aria-label="Đóng hủy buổi học" disabled={busy} onClick={close}><X size={19} /></button></header>
       <ul className="room-cancel-preview" aria-label="Các buổi học sẽ hủy">{requested.map(item => <li key={item.id}>
         <strong>{item.className} · #{item.id}</strong><span>{formatDateTime(item.startsAt)} – {formatDateTime(item.endsAt)}</span>
         {succeededIds.has(String(item.id)) && <small className="room-cancel-success">Đã hủy thành công</small>}

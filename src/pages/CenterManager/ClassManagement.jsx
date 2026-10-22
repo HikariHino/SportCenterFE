@@ -54,6 +54,8 @@ import { classDateInput } from '../../utils/classForm'
 import { shiftTimetableDate, timetableDateKey } from '../../utils/memberTimetable'
 import ClassCourseFields from './ClassCourseFields'
 import ClassSessionGroups from './ClassSessionGroups'
+import CancelClassSessionsDialog from './CancelClassSessionsDialog'
+import { applyRoomSessionCancellations } from '../../utils/roomTimetable'
 import '../../style/CenterManager/ClassManagement.css'
 
 // Sport icon helper based on keywords
@@ -222,6 +224,7 @@ export default function ClassManagement() {
   const [cancellingSession, setCancellingSession] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [submittingSession, setSubmittingSession] = useState(false)
+  const [cancellingClass, setCancellingClass] = useState(null)
 
   // Session Form
   const [sessionForm, setSessionForm] = useState({
@@ -566,6 +569,13 @@ export default function ClassManagement() {
   const handleOpenSessions = (cls) => {
     setSelectedClassForSessions(cls)
     loadClassSessions(cls.id)
+  }
+
+  const handleClassSessionsCancelled = result => {
+    if (String(selectedClassForSessions?.id) === String(cancellingClass?.id)) {
+      setSessionsList(previous => applyRoomSessionCancellations(previous, result.cancelled))
+    }
+    loadClasses()
   }
 
   const handleOpenAddSession = () => {
@@ -1041,6 +1051,7 @@ export default function ClassManagement() {
                             >
                               <Calendar size={13} /> Buổi học
                             </button>
+                            <button type="button" className="class-row-btn danger" title="Hủy các buổi học chưa bắt đầu của lớp này" onClick={() => setCancellingClass(cls)}><Ban size={13} />Hủy buổi theo lớp</button>
                             <button
                               type="button"
                               className="class-row-btn"
@@ -1208,6 +1219,7 @@ export default function ClassManagement() {
                     <strong>{selectedClassForSessions.coachName || 'Chưa gán'}</strong>
                   </p>
                 </div>
+                <button type="button" className="class-btn class-btn-danger" disabled={sessionsLoading || submittingSession} onClick={() => setCancellingClass(selectedClassForSessions)}><Ban size={15} />Hủy buổi theo lớp</button>
                 <button
                   type="button"
                   className="class-btn class-btn-primary"
@@ -2394,6 +2406,7 @@ export default function ClassManagement() {
           </div>
         </div>
       )}
+      {cancellingClass && <CancelClassSessionsDialog sportClass={cancellingClass} onClose={() => setCancellingClass(null)} onUpdated={handleClassSessionsCancelled} />}
     </div>
   )
 }

@@ -11,6 +11,7 @@ let getRoomTimetable
 let assignClassToRoom
 let rescheduleRoomSession
 let cancelRoomSessions
+let cancelSessionsForClass
 let classService
 const storageDescriptors = new Map()
 before(async () => {
@@ -26,6 +27,7 @@ before(async () => {
   assignClassToRoom = service.assignClassToRoom
   rescheduleRoomSession = service.rescheduleRoomSession
   cancelRoomSessions = service.cancelRoomSessions
+  cancelSessionsForClass = (await server.ssrLoadModule('/src/services/classSessionCancellationService.js')).cancelSessionsForClass
   classService = await server.ssrLoadModule('/src/services/sportClassService.js')
 })
 after(async () => {
@@ -40,6 +42,62 @@ const room = { id: 1, name: 'Studio Yoga 01', capacity: 25, isActive: true }
 const sportClass = { id: 10, roomId: 1, coachId: 5, className: 'Yoga', sportId: 1, price: 0, maxCapacity: 20, startDate: '2099-10-19', endDate: '2099-11-19', isActive: true }
 const sessions = ['2099-10-26', '2099-10-28', '2099-10-30'].map(date => ({ date, startsAt: `${date}T11:00:00.000Z`, endsAt: `${date}T12:30:00.000Z` }))
 const options = { room, rooms: [room], sportClass, coachId: 5, cancellationPolicyId: 1, capacity: 20, sessions }
+
+test('class cancellation loads every session page and only cancels selected sessions of the chosen class', async () => {
+  const saved = sessions.map((item, index) => ({ ...item, id: index + 100, classId: 10, status: 'Scheduled' }))
+  const writes = [], reads = []
+  api.defaults.adapter = async config => {
+    if (config.method === 'post') {
+      writes.push(config.url)
+      return { data: '', status: 204, statusText: 'No Content', headers: {}, config }
+    }
+    assert.equal(config.url, '/classes/10/sessions')
+    const page = Number(config.params.page)
+    reads.push(page)
+    return { data: { items: saved.slice(page - 1, page), total: saved.length, page }, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const result = await cancelSessionsForClass({ classId: 10, sessions: [saved[0], saved[2]], reason: 'HLV nghỉ' })
+  assert.deepEqual(reads, [1, 2, 3])
+  assert.deepEqual(writes, ['/class-sessions/100/cancel', '/class-sessions/102/cancel'])
+  assert.deepEqual(result.cancelled.map(item => item.id), [100, 102])
+  assert.deepEqual(result.failed, [])
+})
+
+test('class cancellation rejects foreign, missing or rescheduled sessions before any mutation', async () => {
+  const selected = { ...sessions[0], id: 100, classId: 10, status: 'Scheduled' }
+  for (const items of [[], [{ ...selected, classId: 20 }], [{ ...selected, startsAt: '2099-10-27T11:00:00Z' }]]) {
+    const writes = []
+    api.defaults.adapter = async config => {
+      if (config.method === 'post') writes.push(config.url)
+      return { data: { items, total: items.length, page: 1 }, status: 200, statusText: 'OK', headers: {}, config }
+    }
+    await assert.rejects(cancelSessionsForClass({ classId: 10, sessions: [selected], reason: 'HLV nghỉ' }), /thuộc lớp|đã thay đổi/)
+    assert.deepEqual(writes, [])
+  }
+})
+
+test('class cancellation uses the latest status and never cancels a session already completed', async () => {
+  const selected = { ...sessions[0], id: 100, classId: 10, status: 'Scheduled' }
+  const writes = []
+  api.defaults.adapter = async config => {
+    if (config.method === 'post') writes.push(config.url)
+    return { data: { items: [{ ...selected, status: 'Completed' }], total: 1, page: 1 }, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const result = await cancelSessionsForClass({ classId: 10, sessions: [selected], reason: 'HLV nghỉ' })
+  assert.deepEqual(result.cancelled, [])
+  assert.equal(result.failed[0].session.id, 100)
+  assert.deepEqual(writes, [])
+})
+
+test('class cancellation aborts when the latest schedule cannot be read', async () => {
+  let writes = 0
+  api.defaults.adapter = async config => {
+    if (config.method === 'post') writes += 1
+    throw new Error('Lỗi tải lịch lớp')
+  }
+  await assert.rejects(cancelSessionsForClass({ classId: 10, sessions: [{ ...sessions[0], id: 100, classId: 10 }], reason: 'HLV nghỉ' }), /Lỗi tải lịch lớp/)
+  assert.equal(writes, 0)
+})
 
 test('bulk cancellation sends one request per selected ID, continues on failure, and retries only failed sessions', async () => {
   const writes = [], progress = []

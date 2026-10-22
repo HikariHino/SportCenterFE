@@ -1,0 +1,28 @@
+.class-cancel-sessions-dialog { position: fixed; inset: 0; width: min(820px, calc(100% - 24px)); max-height: calc(100dvh - 32px); box-sizing: border-box; margin: auto; padding: 0; border: 1px solid var(--theme-border); border-radius: 16px; overflow-y: auto; color: var(--theme-text); background: var(--theme-surface); font: 13px/1.6 'Be Vietnam Pro', sans-serif; }
+.class-cancel-sessions-dialog::backdrop { background: #0f172a80; backdrop-filter: blur(3px); }
+.class-cancel-sessions-dialog > header, .class-cancel-sessions-dialog > footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; }
+.class-cancel-sessions-dialog > header { border-bottom: 1px solid var(--theme-border); }
+.class-cancel-sessions-dialog h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 20px; }
+.class-cancel-sessions-dialog header p { margin: 6px 0 0; color: var(--theme-muted); }
+.class-cancel-sessions-dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-text); background: var(--theme-surface); font: inherit; cursor: pointer; }
+.class-cancel-sessions-dialog button:hover:not(:disabled) { background: var(--theme-raised); }
+.class-cancel-sessions-dialog button:disabled { opacity: .55; cursor: not-allowed; }
+.class-cancel-sessions-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+.class-cancel-body { padding: 20px 24px; }
+.class-cancel-help { margin: 0 0 18px; color: var(--theme-muted); }
+.class-cancel-filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.class-cancel-filters label { display: grid; gap: 5px; color: var(--theme-muted); }
+.class-cancel-filters input { min-width: 0; padding: 9px 12px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-text); background: var(--theme-surface); font: inherit; }
+.class-cancel-selection { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 20px 0 12px; }
+.class-cancel-selection > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.class-cancel-selection > strong { color: var(--theme-accent); }
+.class-cancel-list { display: grid; gap: 10px; max-height: 360px; overflow-y: auto; list-style: none; margin: 0; padding: 3px; }
+.class-cancel-list label { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--theme-border); border-radius: 10px; cursor: pointer; }
+.class-cancel-list label:has(input:checked) { border-color: var(--theme-accent); background: var(--theme-raised); }
+.class-cancel-list input { flex-shrink: 0; width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--theme-accent); }
+.class-cancel-list label > span { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.class-cancel-list span > span, .class-cancel-list small, .class-cancel-empty { color: var(--theme-muted); }
+.class-cancel-sessions-dialog > footer { position: sticky; bottom: 0; justify-content: flex-end; flex-wrap: wrap; border-top: 1px solid var(--theme-border); background: var(--theme-surface); }
+.class-cancel-sessions-dialog .class-cancel-confirm { color: #fff; background: #b42318; border-color: #b42318; }
+.class-cancel-sessions-dialog .class-cancel-confirm:hover:not(:disabled) { background: #8f1b13; }
+@media (max-width: 600px) { .class-cancel-body, .class-cancel-sessions-dialog > header, .class-cancel-sessions-dialog > footer { padding: 16px; } .class-cancel-sessions-dialog h2 { font-size: 18px; } .class-cancel-filters label { flex: 1 1 130px; min-width: 0; } .class-cancel-selection > div { width: 100%; } .class-cancel-selection button { flex: 1; } .class-cancel-sessions-dialog > footer > button { flex: 1; } }
