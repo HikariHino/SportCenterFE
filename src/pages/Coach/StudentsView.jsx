@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, Clock3, PencilLine, Plus, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
 import { checkInCoachRegistration, getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
-import { createTrainingPlan, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
+import { createTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, ViewLoader } from './CoachViewShared'
 
 const toDateInput = date => {
@@ -40,8 +40,29 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
     endDate: toDateInput(defaultEndDate),
   })
   const [exercises, setExercises] = useState([])
+  const [exerciseCatalog, setExerciseCatalog] = useState([])
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState('')
+  const [catalogRequestKey, setCatalogRequestKey] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    setCatalogLoading(true)
+    setCatalogError('')
+    getExerciseCatalog().then(result => {
+      if (active) setExerciseCatalog(result)
+    }).catch(requestError => {
+      if (active) {
+        setExerciseCatalog([])
+        setCatalogError(requestError.response?.data?.message || requestError.message || 'Không thể tải kho bài tập.')
+      }
+    }).finally(() => {
+      if (active) setCatalogLoading(false)
+    })
+    return () => { active = false }
+  }, [catalogRequestKey])
 
   const updateExercise = (index, field, value) => {
     setExercises(current => current.map((exercise, exerciseIndex) => exerciseIndex === index ? { ...exercise, [field]: value } : exercise))
@@ -60,7 +81,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
     }
     const invalidExercise = exercises.some(exercise => Number(exercise.exerciseId) < 1 || Number(exercise.sets) < 1 || Number(exercise.reps) < 1)
     if (invalidExercise) {
-      setError('Mỗi bài tập cần mã bài tập, số hiệp và số lần lớn hơn 0.')
+      setError('Mỗi bài tập cần chọn tên bài tập, số hiệp và số lần lớn hơn 0.')
       return
     }
 
@@ -94,7 +115,11 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
       <header><div><span>TẠO GIÁO ÁN</span><h2 id="coach-plan-title">{student.name}</h2><p>Member #{student.memberId}</p></div><button type="button" aria-label="Đóng tạo giáo án" disabled={saving} onClick={onClose}><X size={19} /></button></header>
       <form onSubmit={handleSubmit}>
         <div className="coach-plan-form-grid"><label><span>Tên giáo án</span><input value={form.planName} maxLength={150} onChange={event => setForm(current => ({ ...current, planName: event.target.value }))} /></label><label><span>Mục tiêu</span><select value={form.goal} onChange={event => setForm(current => ({ ...current, goal: event.target.value }))}>{trainingGoals.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>Ngày bắt đầu</span><input type="date" value={form.startDate} onChange={event => setForm(current => ({ ...current, startDate: event.target.value }))} /></label><label><span>Ngày kết thúc</span><input type="date" min={form.startDate} value={form.endDate} onChange={event => setForm(current => ({ ...current, endDate: event.target.value }))} /></label></div>
-        <div className="coach-plan-exercises"><div className="coach-plan-exercises-head"><div><strong>Bài tập</strong><span>Không bắt buộc · nhập mã bài tập từ hệ thống</span></div><button type="button" onClick={() => setExercises(current => [...current, newPlanExercise()])}><Plus size={15} />Thêm bài tập</button></div>{exercises.length ? exercises.map((exercise, index) => <article key={index}><div className="coach-plan-exercise-title"><strong>Bài tập {index + 1}</strong><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div><div><label><span>Mã bài tập</span><input type="number" min="1" value={exercise.exerciseId} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} /></label><label><span>Số hiệp</span><input type="number" min="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} /></label><label><span>Số lần</span><input type="number" min="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={500} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article>) : <p className="coach-plan-exercises-empty">Có thể tạo giáo án trước và bổ sung bài tập khi đã có mã bài tập.</p>}</div>
+        <div className="coach-plan-exercises">
+          <div className="coach-plan-exercises-head"><div><strong>Bài tập</strong><span>Không bắt buộc · chọn bài tập theo tên từ kho hiện có</span></div><button type="button" disabled={catalogLoading || !exerciseCatalog.length} onClick={() => setExercises(current => [...current, newPlanExercise()])}><Plus size={15} />Thêm bài tập</button></div>
+          {catalogLoading ? <div className="coach-exercise-catalog-state">Đang tải kho bài tập...</div> : catalogError ? <div className="coach-exercise-catalog-state error"><span>{catalogError}</span><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : !exerciseCatalog.length ? <div className="coach-exercise-catalog-state">Kho bài tập chưa có dữ liệu.</div> : null}
+          {exercises.length ? exercises.map((exercise, index) => <article key={index}><div className="coach-plan-exercise-title"><strong>Bài tập {index + 1}</strong><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div><div><label className="exercise-picker"><span>Tên bài tập</span><select value={exercise.exerciseId} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} required><option value="">Chọn bài tập</option>{exerciseCatalog.map(option => <option value={option.id} key={option.id}>{option.exerciseName}{option.muscleGroup ? ` · ${option.muscleGroup}` : ''}</option>)}</select></label><label><span>Số hiệp</span><input type="number" min="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} required /></label><label><span>Số lần</span><input type="number" min="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} required /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={500} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article>) : !catalogLoading && !catalogError && exerciseCatalog.length ? <p className="coach-plan-exercises-empty">Nhấn “Thêm bài tập” để chọn bài tập theo tên từ kho.</p> : null}
+        </div>
         {error && <div className="coach-plan-form-error" role="alert">{error}</div>}
         <footer><button type="button" disabled={saving} onClick={onClose}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang tạo...' : 'Tạo giáo án'}</button></footer>
       </form>
