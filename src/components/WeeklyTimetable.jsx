@@ -6,7 +6,7 @@ import '../style/WeeklyTimetable.css'
 import { sessionEnrollmentCount } from '../utils/sessionEnrollment'
 import AttendanceStatus from './AttendanceStatus'
 
-export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSelect, totalCount, onReschedule, canReschedule = () => true, getStatusLabel = item => classStatusLabel(item.status), interactionDisabled = false, selectionMode = false, selectedSessionIds = [], canSelectSession = () => true, showAttendance = false, now = Date.now(), title = 'Thời khóa biểu hàng tuần', description = 'Lịch học theo giờ Việt Nam · Chọn buổi học để xem chi tiết' }) {
+export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSelect, totalCount, onReschedule, canReschedule = () => true, getStatusLabel = item => classStatusLabel(item.status), interactionDisabled = false, selectionMode = false, selectedSessionIds = [], canSelectSession = () => true, showAttendance = false, showCancellationReason = false, now = Date.now(), title = 'Thời khóa biểu hàng tuần', description = 'Lịch học theo giờ Việt Nam · Chọn buổi học để xem chi tiết' }) {
   const titleId = useId()
   const dragged = useRef(null)
   const suppressClickUntil = useRef(0)
@@ -64,7 +64,7 @@ export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSele
           <th scope="row"><Clock3 size={15} /><span>{row.start}</span><small>{row.end}{row.nextDay && ' (+1 ngày)'}</small></th>
           {row.cells.map((items, index) => <td key={days[index].key} {...dropProps({ date: days[index].key, startTime: row.start, endTime: row.end, nextDay: row.nextDay })} className={`${days[index].key === today ? 'is-today' : ''}${dropTarget === targetKey({ date: days[index].key, startTime: row.start, endTime: row.end, nextDay: row.nextDay }) ? ' is-drop-target' : ''}`}>
             {items.length ? items.map(item => {
-              const isCancelled = ['cancelled', 'canceled'].includes(String(item.status).toLowerCase()) || ['cancelled', 'canceled'].includes(String(item.sessionStatus).toLowerCase())
+              const isCancelled = ['cancelled', 'canceled'].includes(String(item.status || item.Status).trim().toLowerCase()) || ['cancelled', 'canceled'].includes(String(item.sessionStatus).trim().toLowerCase())
               const movable = Boolean(onReschedule && !interactionDisabled && !selectionMode && canReschedule(item))
               const selected = selectedIds.has(String(item.id))
               return <button type="button" className={`member-timetable-session${isCancelled ? ' is-cancelled' : ''}${movable ? ' is-movable' : ''}${selectionMode && selected ? ' is-selected' : ''}${draggedId === item.id ? ' is-dragging' : ''}`} key={item.id} data-session-id={item.id} aria-pressed={selectionMode ? selected : undefined} disabled={selectionMode && (interactionDisabled || !canSelectSession(item, now))} draggable={movable} onDragStart={event => {
@@ -80,6 +80,7 @@ export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSele
                 <span><MapPin size={14} />{item.roomName || 'Chưa cập nhật phòng'}</span>
                 <span><User size={14} />{item.coachName || 'Chưa phân công HLV'}</span>
                 <small>{isCancelled ? 'Đã hủy' : getStatusLabel(item, now)}</small>
+                {showCancellationReason && isCancelled && <small className="member-timetable-cancellation-reason">Lý do hủy: {item.cancellationReason?.trim() || 'Chưa cập nhật'}</small>}
                 {showAttendance && <AttendanceStatus item={item} />}
                 {movable && <small className="member-timetable-drag-hint">Kéo để đổi lịch</small>}
                 {onReschedule && !isCancelled && sessionEnrollmentCount(item) > 0 && <small>{sessionEnrollmentCount(item)} học viên đã đăng ký</small>}

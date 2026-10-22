@@ -66,14 +66,7 @@
 .room-cancelled-sessions summary { cursor: pointer; font-size: 14px; font-weight: 700; }
 .room-cancelled-sessions summary span { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 20px; color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fff0f2); font-size: 12px; }
 .room-cancelled-sessions > p { margin: 12px 0 0; color: var(--theme-muted); font-size: 12px; }
-.room-cancelled-sessions-scroll { max-height: 360px; overflow: auto; margin-top: 12px; border: 1px solid var(--theme-border); border-radius: 8px; }
-.room-cancelled-sessions table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 12px; }
-.room-cancelled-sessions th, .room-cancelled-sessions td { padding: 10px 12px; border-bottom: 1px solid var(--theme-border); text-align: left; overflow-wrap: anywhere; }
-.room-cancelled-sessions thead th { position: sticky; top: 0; background: var(--theme-bg); }
-.room-cancelled-sessions tbody th { min-width: 140px; }
-.room-cancelled-sessions tbody tr:last-child > * { border-bottom: 0; }
-.room-cancelled-sessions button { padding: 7px 10px; border: 1px solid var(--theme-border); border-radius: 7px; color: var(--theme-accent); background: var(--theme-surface); font: inherit; white-space: nowrap; }
-.room-cancelled-sessions button:hover { background: var(--theme-raised); }
+.room-cancelled-timetable { margin-top: 16px; }
 .room-timetable-detail { margin-top: 20px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-bg); }
 .room-timetable-detail header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .room-timetable-detail h3 { margin: 4px 0 0; font-size: 17px; }

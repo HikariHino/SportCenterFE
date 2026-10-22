@@ -1,10 +1,18 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { applyRoomSessionCancellations, canCancelRoomSession, getRoomTimetableWeek, roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
+import { applyRoomSessionCancellations, canCancelRoomSession, getCancelledRoomTimetableWeek, getRoomTimetableWeek, roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
 
 const rooms = [{ id: 1, name: 'Studio Yoga 01' }, { id: 2, name: 'Phòng Gym Đa năng' }]
 const yogaClass = { id: 10, className: 'Yoga cơ bản', roomId: 1, coachId: 5, coachName: 'Nguyễn Minh Anh', sportName: 'Yoga' }
 const session = { id: 100, startsAt: '2026-10-19T09:00:00+07:00', endsAt: '2026-10-19T10:30:00+07:00', status: 'Scheduled' }
+
+test('cancelled timetable selects a populated week independently of active sessions', () => {
+  const items = [session, { ...session, id: 101, status: 'Cancelled', startsAt: '2026-10-26T11:00:00Z' }, { ...session, id: 102, status: undefined, Status: ' CANCELED ', startsAt: '2026-11-02T11:00:00Z' }]
+  assert.equal(getCancelledRoomTimetableWeek(items, '2026-10-19'), '2026-10-26')
+  assert.equal(getCancelledRoomTimetableWeek(items, '2026-11-02'), '2026-11-02')
+  assert.equal(getCancelledRoomTimetableWeek(items, '2026-11-09'), '2026-11-02')
+  assert.equal(getCancelledRoomTimetableWeek([], '2026-10-19'), '2026-10-19')
+})
 
 test('confirmed cancellations update only successful IDs and move the empty week to the remaining schedule', () => {
   const remaining = { ...session, id: 102, startsAt: '2026-10-26T09:00:00+07:00' }

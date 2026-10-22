@@ -14,10 +14,18 @@ export function applyRoomSessionCancellations(items, cancelled) {
 }
 
 export function getRoomTimetableWeek(items, preferredWeek = timetableWeekStart()) {
+  return getSessionWeek(items, preferredWeek, ['scheduled', 'completed'])
+}
+
+export function getCancelledRoomTimetableWeek(items, preferredWeek = timetableWeekStart()) {
+  return getSessionWeek(items, preferredWeek, ['cancelled', 'canceled'])
+}
+
+function getSessionWeek(items, preferredWeek, statuses) {
   const weeks = [...new Set(items.flatMap(item => {
     const status = String(item.status || item.Status || 'Scheduled').trim().toLowerCase()
     const date = timetableDateKey(item.startsAt)
-    return date && ['scheduled', 'completed'].includes(status) ? [timetableWeekStart(date)] : []
+    return date && statuses.includes(status) ? [timetableWeekStart(date)] : []
   }))].sort()
   // Keep a populated week; otherwise show the next week with sessions, or the
   // latest past week when the room has no remaining future sessions.
