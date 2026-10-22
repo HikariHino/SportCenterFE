@@ -1,12 +1,31 @@
-import { getSessionRoom, roomSessionForTimetable } from '../utils/roomTimetable.js'
+import { canCancelRoomSession, getSessionRoom, roomSessionForTimetable } from '../utils/roomTimetable.js'
 import { checkRoomAvailability } from './roomService'
-import { createClassSession, getClassById, getClassErrorMessage, updateClassSession, updateSportClass } from './sportClassService'
+import { cancelClassSession, createClassSession, getClassById, getClassErrorMessage, updateClassSession, updateSportClass } from './sportClassService'
 import { buildSessionReschedule, sessionsOverlap } from '../utils/sessionReschedule.js'
 import { loadClassTimetables, loadSchedulingContext, loadSchedulingPages as loadAllPages, withSessionWriteLock } from './sessionSchedulingService'
 import { assertSessionCapacity, assertSessionSchedule } from '../utils/sessionScheduling.js'
 
 export async function getRoomTimetableClasses({ signal } = {}) {
   return loadAllPages('/classes/manage', signal)
+}
+
+export async function cancelRoomSessions({ sessions, reason }, onProgress = () => {}) {
+  const trimmedReason = reason.trim()
+  if (!trimmedReason || trimmedReason.length > 500) throw new Error('Vui lòng nhập lý do hủy từ 1 đến 500 ký tự.')
+  const unique = [...new Map(sessions.map(session => [String(session.id), session])).values()]
+  if (!unique.length) throw new Error('Vui lòng chọn ít nhất một buổi học để hủy.')
+  const cancelled = [], failed = []
+  for (const session of unique) {
+    try {
+      if (!canCancelRoomSession(session)) throw new Error('Buổi học đã bắt đầu, đã hủy hoặc đã hoàn thành.')
+      await cancelClassSession(session.id, trimmedReason)
+      cancelled.push(session)
+    } catch (error) {
+      failed.push({ session, message: getClassErrorMessage(error, 'Không thể hủy buổi học. Vui lòng thử lại.') })
+    }
+    onProgress({ completed: cancelled.length + failed.length, total: unique.length })
+  }
+  return { cancelled, failed }
 }
 
 export async function getRoomTimetable(room, rooms, { signal } = {}) {

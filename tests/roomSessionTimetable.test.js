@@ -105,3 +105,18 @@ test('empty rooms and weeks already containing sessions do not offer an unrelate
     assert.doesNotMatch(render(items), /room-timetable-other-week/)
   }
 })
+
+test('bulk selection marks chosen sessions, disables completed sessions and turns off dragging', () => {
+  const html = render([
+    session,
+    { ...session, id: 2, className: 'Completed Yoga', status: 'Completed' },
+  ], {
+    selectionMode: true, selectedSessionIds: ['1'], now: Date.parse('2026-10-19T00:00:00Z'),
+    canSelectSession: item => item.status === 'Scheduled', onReschedule: () => {},
+  })
+  assert.match(html, /is-selected[^>]*data-session-id="1" aria-pressed="true"[^>]*draggable="false"/)
+  assert.match(html, /data-session-id="2" aria-pressed="false" disabled="" draggable="false"/)
+  assert.match(html, /Đã chọn/)
+  assert.match(html, /Không thể hủy/)
+  assert.doesNotMatch(html, /Kéo để đổi lịch/)
+})

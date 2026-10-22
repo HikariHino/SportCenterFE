@@ -8,6 +8,11 @@ export function canCancelRoomSession(session, now = Date.now()) {
     && Date.parse(session?.startsAt) > now
 }
 
+export function applyRoomSessionCancellations(items, cancelled) {
+  const ids = new Set(cancelled.map(item => String(item.id)))
+  return items.map(item => ids.has(String(item.id)) ? { ...item, status: 'Cancelled' } : item)
+}
+
 export function getRoomTimetableWeek(items, preferredWeek = timetableWeekStart()) {
   const weeks = [...new Set(items.flatMap(item => {
     const status = String(item.status || item.Status || 'Scheduled').trim().toLowerCase()

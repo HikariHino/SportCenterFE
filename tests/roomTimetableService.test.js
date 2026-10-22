@@ -10,6 +10,7 @@ let createRecurringRoomSessions
 let getRoomTimetable
 let assignClassToRoom
 let rescheduleRoomSession
+let cancelRoomSessions
 let classService
 const storageDescriptors = new Map()
 before(async () => {
@@ -24,6 +25,7 @@ before(async () => {
   getRoomTimetable = service.getRoomTimetable
   assignClassToRoom = service.assignClassToRoom
   rescheduleRoomSession = service.rescheduleRoomSession
+  cancelRoomSessions = service.cancelRoomSessions
   classService = await server.ssrLoadModule('/src/services/sportClassService.js')
 })
 after(async () => {
@@ -38,6 +40,63 @@ const room = { id: 1, name: 'Studio Yoga 01', capacity: 25, isActive: true }
 const sportClass = { id: 10, roomId: 1, coachId: 5, className: 'Yoga', sportId: 1, price: 0, maxCapacity: 20, startDate: '2099-10-19', endDate: '2099-11-19', isActive: true }
 const sessions = ['2099-10-26', '2099-10-28', '2099-10-30'].map(date => ({ date, startsAt: `${date}T11:00:00.000Z`, endsAt: `${date}T12:30:00.000Z` }))
 const options = { room, rooms: [room], sportClass, coachId: 5, cancellationPolicyId: 1, capacity: 20, sessions }
+
+test('bulk cancellation sends one request per selected ID, continues on failure, and retries only failed sessions', async () => {
+  const writes = [], progress = []
+  let fail = true, active = 0, maxActive = 0
+  api.defaults.adapter = async config => {
+    assert.equal(config.method, 'post')
+    writes.push({ url: config.url, reason: JSON.parse(config.data).reason })
+    active += 1
+    maxActive = Math.max(maxActive, active)
+    await new Promise(resolve => setTimeout(resolve, 2))
+    active -= 1
+    if (fail && config.url === '/class-sessions/102/cancel') throw new Error('Buổi 102 không thể hủy')
+    return { data: '', status: 204, statusText: 'No Content', headers: {}, config }
+  }
+  const selected = [101, 102, 103, 101].map(id => ({ id, ...sessions[0], status: 'Scheduled' }))
+  const result = await cancelRoomSessions({ sessions: selected, reason: '  Bảo trì phòng  ' }, value => progress.push(value))
+  assert.deepEqual(result.cancelled.map(item => item.id), [101, 103])
+  assert.deepEqual(result.failed.map(item => item.session.id), [102])
+  assert.match(result.failed[0].message, /102/)
+  assert.equal(writes.length, 3)
+  assert.ok(writes.every(item => item.reason === 'Bảo trì phòng'))
+  assert.equal(maxActive, 1)
+  assert.deepEqual(progress, [{ completed: 1, total: 3 }, { completed: 2, total: 3 }, { completed: 3, total: 3 }])
+  fail = false
+  const retry = await cancelRoomSessions({ sessions: result.failed.map(item => item.session), reason: 'Bảo trì phòng' })
+  assert.deepEqual(retry.cancelled.map(item => item.id), [102])
+  assert.deepEqual(retry.failed, [])
+  assert.deepEqual(writes.slice(3).map(item => item.url), ['/class-sessions/102/cancel'])
+})
+
+test('bulk cancellation rejects missing reasons and empty selections before sending any request', async () => {
+  let calls = 0
+  api.defaults.adapter = async () => { calls += 1; throw new Error('Unexpected API call') }
+  for (const reason of ['', '   ', 'a'.repeat(501)]) {
+    await assert.rejects(cancelRoomSessions({ sessions: [{ id: 101, ...sessions[0] }], reason }), /lý do/)
+  }
+  await assert.rejects(cancelRoomSessions({ sessions: [], reason: 'Bảo trì' }), /ít nhất một buổi/)
+  assert.equal(calls, 0)
+})
+
+test('bulk cancellation excludes completed, cancelled and started sessions while processing valid selections', async () => {
+  const writes = []
+  api.defaults.adapter = async config => {
+    writes.push(config.url)
+    return { data: '', status: 204, statusText: 'No Content', headers: {}, config }
+  }
+  const selected = [
+    { id: 101, ...sessions[0], status: 'Completed' },
+    { id: 102, ...sessions[0], status: 'Cancelled' },
+    { id: 103, startsAt: '2000-01-01T00:00:00Z', status: 'Scheduled' },
+    { id: 104, ...sessions[0], status: 'Scheduled' },
+  ]
+  const result = await cancelRoomSessions({ sessions: selected, reason: 'Bảo trì' })
+  assert.deepEqual(writes, ['/class-sessions/104/cancel'])
+  assert.deepEqual(result.cancelled.map(item => item.id), [104])
+  assert.deepEqual(result.failed.map(item => item.session.id), [101, 102, 103])
+})
 
 function mockApi({ conflictAt, unavailableResponse, availabilityError, failAt, loseResponseAt, saved = [], course = sportClass, failAssignment, ignoreAssignment, serverRoom = room, otherClasses = [], otherSaved = {}, roomReadError = false } = {}) {
   const state = { course: { ...course }, serverRoom: { ...serverRoom }, saved: [...saved], posts: [], puts: [], reads: [], availability: [] }

@@ -1,10 +1,24 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { canCancelRoomSession, getRoomTimetableWeek, roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
+import { applyRoomSessionCancellations, canCancelRoomSession, getRoomTimetableWeek, roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
 
 const rooms = [{ id: 1, name: 'Studio Yoga 01' }, { id: 2, name: 'Phòng Gym Đa năng' }]
 const yogaClass = { id: 10, className: 'Yoga cơ bản', roomId: 1, coachId: 5, coachName: 'Nguyễn Minh Anh', sportName: 'Yoga' }
 const session = { id: 100, startsAt: '2026-10-19T09:00:00+07:00', endsAt: '2026-10-19T10:30:00+07:00', status: 'Scheduled' }
+
+test('confirmed cancellations update only successful IDs and move the empty week to the remaining schedule', () => {
+  const remaining = { ...session, id: 102, startsAt: '2026-10-26T09:00:00+07:00' }
+  const items = [session, { ...session, id: 101 }, remaining]
+  const updated = applyRoomSessionCancellations(items, [{ id: '100' }, { id: 101 }])
+  assert.equal(updated.length, 3)
+  assert.deepEqual(updated.slice(0, 2).map(item => item.status), ['Cancelled', 'Cancelled'])
+  assert.equal(updated[2], remaining)
+  assert.equal(session.status, 'Scheduled')
+  assert.equal(getRoomTimetableWeek(updated, '2026-10-19'), '2026-10-26')
+  const partial = applyRoomSessionCancellations(items, [{ id: 100 }])
+  assert.equal(partial[1], items[1], 'failed or unselected sessions keep their original data')
+  assert.equal(getRoomTimetableWeek(partial, '2026-10-19'), '2026-10-19')
+})
 
 test('room cancellations are limited to scheduled sessions that have not started', () => {
   const now = Date.parse(session.startsAt) - 1
