@@ -3,6 +3,11 @@ import { timetableDateKey, timetableWeekStart } from './memberTimetable.js'
 
 const normalizedName = value => String(value || '').trim().toLocaleLowerCase('vi-VN')
 
+export function canCancelRoomSession(session, now = Date.now()) {
+  return String(session?.status || session?.Status || 'Scheduled').trim().toLowerCase() === 'scheduled'
+    && Date.parse(session?.startsAt) > now
+}
+
 export function getRoomTimetableWeek(items, preferredWeek = timetableWeekStart()) {
   const weeks = [...new Set(items.flatMap(item => {
     const status = String(item.status || item.Status || 'Scheduled').trim().toLowerCase()

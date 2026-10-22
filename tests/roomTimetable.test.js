@@ -1,10 +1,23 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { getRoomTimetableWeek, roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
+import { canCancelRoomSession, getRoomTimetableWeek, roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
 
 const rooms = [{ id: 1, name: 'Studio Yoga 01' }, { id: 2, name: 'Phòng Gym Đa năng' }]
 const yogaClass = { id: 10, className: 'Yoga cơ bản', roomId: 1, coachId: 5, coachName: 'Nguyễn Minh Anh', sportName: 'Yoga' }
 const session = { id: 100, startsAt: '2026-10-19T09:00:00+07:00', endsAt: '2026-10-19T10:30:00+07:00', status: 'Scheduled' }
+
+test('room cancellations are limited to scheduled sessions that have not started', () => {
+  const now = Date.parse(session.startsAt) - 1
+  assert.equal(canCancelRoomSession(session, now), true)
+  assert.equal(canCancelRoomSession({ ...session, status: undefined, Status: ' SCHEDULED ' }, now), true)
+  for (const status of ['Cancelled', ' CANCELED ', 'Completed', 'Other']) {
+    assert.equal(canCancelRoomSession({ ...session, status }, now), false)
+  }
+  assert.equal(canCancelRoomSession(session, Date.parse(session.startsAt)), false)
+  assert.equal(canCancelRoomSession(session, Date.parse(session.endsAt)), false)
+  assert.equal(canCancelRoomSession({ ...session, startsAt: 'invalid' }, now), false)
+  assert.equal(canCancelRoomSession(undefined, now), false)
+})
 
 test('opening a room after cancelling its only session this week selects the next populated week', () => {
   const items = [
