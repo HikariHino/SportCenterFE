@@ -147,6 +147,8 @@ export default function CancellationPolicyManagement() {
   const inactiveCount = policies.length - activeCount
   const minHours = policies.length > 0 ? Math.min(...policies.map((p) => p.minimumHoursBeforeStart)) : 2
   const maxHours = policies.length > 0 ? Math.max(...policies.map((p) => p.minimumHoursBeforeStart)) : 24
+  const hasFilters = Boolean(searchQuery.trim() || timeFilter !== 'ALL' || statusFilter !== 'ALL')
+  const clearFilters = () => { setSearchQuery(''); setTimeFilter('ALL'); setStatusFilter('ALL') }
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -293,7 +295,7 @@ export default function CancellationPolicyManagement() {
         <div>
           <h2>Quản lý chính sách hủy lịch</h2>
           <p>
-            Thiết lập quy định thời hạn hủy buổi học (học viên phải hủy trước tối thiểu bao nhiêu tiếng để không bị trừ buổi hoặc phạt phí), và bật/tắt áp dụng cho các lớp học.
+            Quản lý thời hạn hủy buổi học và trạng thái áp dụng của từng chính sách.
           </p>
         </div>
         <div className="policy-mgmt-actions">
@@ -301,6 +303,7 @@ export default function CancellationPolicyManagement() {
             type="button"
             className="policy-btn policy-btn-secondary"
             onClick={handleExportCSV}
+            disabled={loading || !filteredPolicies.length}
             title="Xuất file CSV danh sách chính sách"
           >
             <ArrowDownToLine size={15} /> Xuất CSV
@@ -332,7 +335,7 @@ export default function CancellationPolicyManagement() {
           </div>
           <div className="policy-metric-info">
             <span>Tổng số chính sách</span>
-            <strong>{policies.length}</strong>
+            <strong>{loading ? '—' : policies.length}</strong>
           </div>
         </article>
 
@@ -342,7 +345,7 @@ export default function CancellationPolicyManagement() {
           </div>
           <div className="policy-metric-info">
             <span>Đang áp dụng</span>
-            <strong>{activeCount}</strong>
+            <strong>{loading ? '—' : activeCount}</strong>
           </div>
         </article>
 
@@ -352,7 +355,7 @@ export default function CancellationPolicyManagement() {
           </div>
           <div className="policy-metric-info">
             <span>Tạm dừng áp dụng</span>
-            <strong>{inactiveCount}</strong>
+            <strong>{loading ? '—' : inactiveCount}</strong>
           </div>
         </article>
 
@@ -361,8 +364,8 @@ export default function CancellationPolicyManagement() {
             <Clock3 size={22} />
           </div>
           <div className="policy-metric-info">
-            <span>Thời hạn linh hoạt nhất</span>
-            <strong>{minHours} giờ <small style={{ fontSize: 11, fontWeight: 500 }}>(tối đa {maxHours}h)</small></strong>
+            <span>Khoảng thời hạn hủy</span>
+            <strong>{loading || !policies.length ? '—' : `${minHours} – ${maxHours} giờ`}</strong>
           </div>
         </article>
       </section>
@@ -402,14 +405,25 @@ export default function CancellationPolicyManagement() {
         </div>
       )}
 
-      {/* Filter Toolbar */}
-      <div className="policy-toolbar">
+      <section className="policy-catalog manager-card" aria-labelledby="policy-catalog-title" aria-busy={loading}>
+        <header className="policy-catalog-heading">
+          <div><h3 id="policy-catalog-title">Danh sách chính sách hủy</h3><p>Tra cứu thời hạn và cập nhật chính sách áp dụng cho buổi học.</p></div>
+          <div className="policy-catalog-tools">
+            <span className="policy-result-count">{loading ? 'Đang tải…' : `${filteredPolicies.length} / ${policies.length} chính sách`}</span>
+            <div className="policy-view-toggle" role="group" aria-label="Cách hiển thị chính sách">
+              <button type="button" className={viewMode === 'grid' ? 'active' : ''} aria-pressed={viewMode === 'grid'} aria-label="Xem dạng thẻ" title="Xem dạng thẻ" onClick={() => setViewMode('grid')}><Grid size={16} /></button>
+              <button type="button" className={viewMode === 'table' ? 'active' : ''} aria-pressed={viewMode === 'table'} aria-label="Xem dạng bảng" title="Xem dạng bảng" onClick={() => setViewMode('table')}><List size={16} /></button>
+            </div>
+          </div>
+        </header>
+      <div className="policy-toolbar" role="search" aria-label="Lọc chính sách hủy">
         <div className="policy-search-box">
           <Search size={16} />
           <input
             type="text"
             className="policy-search-input"
-            placeholder="Tìm theo tên chính sách hủy lịch..."
+            aria-label="Tìm chính sách hủy"
+            placeholder="Tìm tên chính sách…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -418,17 +432,19 @@ export default function CancellationPolicyManagement() {
         <div className="policy-filter-group">
           <select
             className="policy-select"
+            aria-label="Lọc theo thời hạn hủy"
             value={timeFilter}
             onChange={(e) => setTimeFilter(e.target.value)}
           >
             <option value="ALL">Tất cả khung thời gian</option>
-            <option value="FLEXIBLE">Linh hoạt (Dưới hoặc bằng 4 giờ)</option>
-            <option value="STANDARD">Tiêu chuẩn (Từ 4 đến 12 giờ)</option>
+            <option value="FLEXIBLE">Linh hoạt (Tối đa 4 giờ)</option>
+            <option value="STANDARD">Tiêu chuẩn (Trên 4 đến 12 giờ)</option>
             <option value="STRICT">Nghiêm ngặt (Trên 12 giờ)</option>
           </select>
 
           <select
             className="policy-select"
+            aria-label="Lọc theo trạng thái"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -437,35 +453,18 @@ export default function CancellationPolicyManagement() {
             <option value="INACTIVE">Tạm dừng áp dụng</option>
           </select>
 
-          <div className="view-mode-toggle">
-            <button
-              type="button"
-              className={`view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              title="Xem dạng thẻ"
-            >
-              <Grid size={16} />
-            </button>
-            <button
-              type="button"
-              className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
-              onClick={() => setViewMode('table')}
-              title="Xem dạng bảng"
-            >
-              <List size={16} />
-            </button>
-          </div>
         </div>
       </div>
+      {hasFilters && <div className="policy-filter-summary"><span>Đang áp dụng bộ lọc</span><button type="button" onClick={clearFilters}>Xóa bộ lọc <X size={13} /></button></div>}
 
       {/* Body: Loading / Empty / Grid / Table */}
       {loading ? (
-        <div className="policy-loading">
+        <div className="policy-loading" role="status">
           <div className="policy-spinner" />
           <span>Đang tải danh sách chính sách hủy...</span>
         </div>
       ) : filteredPolicies.length === 0 ? (
-        <div className="policy-empty">
+        <div className="policy-empty" role="status">
           <Ban size={40} />
           <strong>Không tìm thấy chính sách hủy nào</strong>
           <p>Thử điều chỉnh bộ lọc hoặc tạo chính sách hủy mới cho trung tâm.</p>
@@ -487,48 +486,36 @@ export default function CancellationPolicyManagement() {
                 className={`policy-card ${policy.isActive ? '' : 'inactive'}`}
               >
                 <div className="policy-card-top">
-                  <div className="policy-card-title">
-                    <h3>{policy.name}</h3>
-                    <small>Mã chính sách: #{policy.id}</small>
-                  </div>
+                  <span className="policy-code">Mã chính sách #{policy.id}</span>
                   <span className={`policy-badge ${policy.isActive ? 'active' : 'inactive'}`}>
                     <i />
                     {policy.isActive ? 'Đang áp dụng' : 'Tạm dừng'}
                   </span>
                 </div>
+                <div className="policy-card-title"><h3>{policy.name}</h3></div>
 
                 <div className="policy-rule-box">
                   <div className="policy-rule-info">
-                    <span>Hạn chót hủy trước giờ học:</span>
-                    <strong>Tối thiểu {formatHours(policy.minimumHoursBeforeStart)}</strong>
+                    <span>Hủy trước ít nhất</span>
+                    <strong>{formatHours(policy.minimumHoursBeforeStart)}</strong>
                   </div>
                   <Clock size={24} style={{ color: 'var(--manager-blue)', opacity: 0.8 }} />
                 </div>
 
                 <p className="policy-rule-example">
                   <Info size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 5 }} />
-                  Ví dụ: Buổi học bắt đầu lúc 18:00, học viên được phép hủy trước{' '}
-                  <strong>
-                    {18 - policy.minimumHoursBeforeStart >= 0
-                      ? `${18 - policy.minimumHoursBeforeStart}:00 cùng ngày`
-                      : `${24 + (18 - policy.minimumHoursBeforeStart)}:00 ngày hôm trước`}
-                  </strong>{' '}
-                  để bảo toàn lượt học.
+                  Học viên cần gửi yêu cầu hủy ít nhất <strong>{formatHours(policy.minimumHoursBeforeStart)}</strong> trước khi buổi học bắt đầu.
                 </p>
 
                 <div className="policy-card-footer">
-                  <span style={{ fontSize: 11, color: 'var(--manager-muted)' }}>
-                    Quy định: {policy.minimumHoursBeforeStart} giờ
-                  </span>
-
-                  <div className="policy-actions">
+                  <div className="policy-actions" role="group" aria-label={`Thao tác chính sách ${policy.name}`}>
                     <button
                       type="button"
                       className="policy-action-btn"
                       title="Xem chi tiết & Mô phỏng thời gian chốt"
                       onClick={() => setSelectedPolicyForDetail(policy)}
                     >
-                      <Info size={15} />
+                      <Info size={14} />Chi tiết
                     </button>
                     <button
                       type="button"
@@ -536,7 +523,7 @@ export default function CancellationPolicyManagement() {
                       title="Chỉnh sửa chính sách hủy"
                       onClick={() => handleOpenEdit(policy)}
                     >
-                      <Edit2 size={15} />
+                      <Edit2 size={14} />Sửa
                     </button>
                     <button
                       type="button"
@@ -544,7 +531,7 @@ export default function CancellationPolicyManagement() {
                       title={policy.isActive ? 'Tạm dừng áp dụng' : 'Kích hoạt lại'}
                       onClick={() => setTogglingPolicy(policy)}
                     >
-                      <Power size={15} />
+                      <Power size={14} />{policy.isActive ? 'Tạm dừng' : 'Kích hoạt'}
                     </button>
                   </div>
                 </div>
@@ -554,14 +541,14 @@ export default function CancellationPolicyManagement() {
         </div>
       ) : (
         /* TABLE VIEW */
-        <div className="policy-table-container manager-card" style={{ margin: '0 24px', padding: '16px' }}>
+        <div className="policy-table-container" role="region" aria-label="Bảng chính sách hủy" tabIndex={0}>
           <table className="policy-table">
             <thead>
               <tr>
                 <th>MÃ CS</th>
                 <th>TÊN CHÍNH SÁCH HỦY</th>
                 <th>THỜI HẠN TỐI THIỂU</th>
-                <th>VÍ DỤ ÁP DỤNG</th>
+                <th>QUY ĐỊNH HỦY</th>
                 <th>TRẠNG THÁI</th>
                 <th style={{ textAlign: 'right' }}>THAO TÁC</th>
               </tr>
@@ -593,14 +580,14 @@ export default function CancellationPolicyManagement() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <div className="policy-actions" role="group" aria-label={`Thao tác chính sách ${policy.name}`}>
                         <button
                           type="button"
                           className="policy-action-btn"
                           title="Xem chi tiết"
                           onClick={() => setSelectedPolicyForDetail(policy)}
                         >
-                          <Info size={14} />
+                          <Info size={14} />Chi tiết
                         </button>
                         <button
                           type="button"
@@ -608,7 +595,7 @@ export default function CancellationPolicyManagement() {
                           title="Chỉnh sửa"
                           onClick={() => handleOpenEdit(policy)}
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={14} />Sửa
                         </button>
                         <button
                           type="button"
@@ -616,7 +603,7 @@ export default function CancellationPolicyManagement() {
                           title={policy.isActive ? 'Tạm dừng' : 'Kích hoạt'}
                           onClick={() => setTogglingPolicy(policy)}
                         >
-                          <Power size={14} />
+                          <Power size={14} />{policy.isActive ? 'Tạm dừng' : 'Kích hoạt'}
                         </button>
                       </div>
                     </td>
@@ -627,13 +614,14 @@ export default function CancellationPolicyManagement() {
           </table>
         </div>
       )}
+      </section>
 
       {/* ======================================================== */}
       {/* MODAL: CREATE POLICY */}
       {/* ======================================================== */}
       {showCreateModal && (
         <div className="policy-modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="policy-modal" role="dialog" aria-modal="true" aria-label="Tạo chính sách hủy lịch" onClick={(e) => e.stopPropagation()}>
             <div className="policy-modal-header">
               <h3>Tạo chính sách hủy lịch mới</h3>
               <button
@@ -784,7 +772,7 @@ export default function CancellationPolicyManagement() {
       {/* ======================================================== */}
       {editingPolicy && (
         <div className="policy-modal-overlay" onClick={() => setEditingPolicy(null)}>
-          <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="policy-modal" role="dialog" aria-modal="true" aria-label="Chỉnh sửa chính sách hủy" onClick={(e) => e.stopPropagation()}>
             <div className="policy-modal-header">
               <h3>Chỉnh sửa chính sách: #{editingPolicy.id}</h3>
               <button
@@ -918,7 +906,7 @@ export default function CancellationPolicyManagement() {
       {/* ======================================================== */}
       {selectedPolicyForDetail && (
         <div className="policy-modal-overlay" onClick={() => setSelectedPolicyForDetail(null)}>
-          <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="policy-modal" role="dialog" aria-modal="true" aria-label="Chi tiết chính sách hủy" onClick={(e) => e.stopPropagation()}>
             <div className="policy-modal-header">
               <h3>Chi tiết chính sách: {selectedPolicyForDetail.name}</h3>
               <button
@@ -1019,7 +1007,7 @@ export default function CancellationPolicyManagement() {
       {/* ======================================================== */}
       {togglingPolicy && (
         <div className="policy-modal-overlay" onClick={() => setTogglingPolicy(null)}>
-          <div className="policy-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="policy-modal" role="dialog" aria-modal="true" aria-label="Thay đổi trạng thái chính sách" onClick={(e) => e.stopPropagation()}>
             <div className="policy-modal-header">
               <h3>
                 {togglingPolicy.isActive

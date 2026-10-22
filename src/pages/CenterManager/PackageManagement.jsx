@@ -173,6 +173,8 @@ export default function PackageManagement() {
   const activeCount = packages.filter((p) => p.isActive).length
   const inactiveCount = packages.length - activeCount
   const maxPrice = packages.reduce((max, p) => Math.max(max, Number(p.price) || 0), 0)
+  const hasFilters = Boolean(searchQuery.trim() || durationFilter !== 'ALL' || statusFilter !== 'ALL')
+  const clearFilters = () => { setSearchQuery(''); setDurationFilter('ALL'); setStatusFilter('ALL') }
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -356,7 +358,7 @@ export default function PackageManagement() {
         <div>
           <h2>Quản lý gói thẻ hội viên</h2>
           <p>
-            Thiết lập danh sách các gói thành viên (1 tháng, 6 tháng, 1 năm, VIP,...), quản lý giá tiền, thời hạn và trạng thái mở bán.
+            Quản lý giá bán, thời hạn sử dụng và quyền lợi của từng gói hội viên.
           </p>
         </div>
         <div className="pkg-mgmt-actions">
@@ -364,6 +366,7 @@ export default function PackageManagement() {
             type="button"
             className="pkg-btn pkg-btn-secondary"
             onClick={handleExportCSV}
+            disabled={loading || !filteredPackages.length}
             title="Xuất file CSV danh sách gói thẻ"
           >
             <ArrowDownToLine size={15} /> Xuất CSV
@@ -395,7 +398,7 @@ export default function PackageManagement() {
           </div>
           <div className="pkg-metric-info">
             <span>Tổng số gói hội viên</span>
-            <strong>{packages.length}</strong>
+            <strong>{loading ? '—' : packages.length}</strong>
           </div>
         </article>
 
@@ -405,7 +408,7 @@ export default function PackageManagement() {
           </div>
           <div className="pkg-metric-info">
             <span>Đang mở bán</span>
-            <strong>{activeCount}</strong>
+            <strong>{loading ? '—' : activeCount}</strong>
           </div>
         </article>
 
@@ -415,7 +418,7 @@ export default function PackageManagement() {
           </div>
           <div className="pkg-metric-info">
             <span>Tạm dừng mở bán</span>
-            <strong>{inactiveCount}</strong>
+            <strong>{loading ? '—' : inactiveCount}</strong>
           </div>
         </article>
 
@@ -424,8 +427,8 @@ export default function PackageManagement() {
             <Sparkles size={22} />
           </div>
           <div className="pkg-metric-info">
-            <span>Gói cao cấp nhất</span>
-            <strong>{formatCurrency(maxPrice)}</strong>
+            <span>Giá bán cao nhất</span>
+            <strong>{loading ? '—' : formatCurrency(maxPrice)}</strong>
           </div>
         </article>
       </section>
@@ -465,14 +468,25 @@ export default function PackageManagement() {
         </div>
       )}
 
-      {/* Filter Toolbar */}
-      <div className="pkg-toolbar">
+      <section className="pkg-catalog manager-card" aria-labelledby="pkg-catalog-title" aria-busy={loading}>
+        <header className="pkg-catalog-heading">
+          <div><h3 id="pkg-catalog-title">Danh sách gói hội viên</h3><p>Tìm kiếm, so sánh và cập nhật các gói thẻ của trung tâm.</p></div>
+          <div className="pkg-catalog-tools">
+            <span className="pkg-result-count">{loading ? 'Đang tải…' : `${filteredPackages.length} / ${packages.length} gói`}</span>
+            <div className="pkg-view-toggle" role="group" aria-label="Cách hiển thị gói hội viên">
+              <button type="button" className={viewMode === 'grid' ? 'active' : ''} aria-pressed={viewMode === 'grid'} aria-label="Xem dạng thẻ" title="Xem dạng thẻ" onClick={() => setViewMode('grid')}><Grid size={16} /></button>
+              <button type="button" className={viewMode === 'table' ? 'active' : ''} aria-pressed={viewMode === 'table'} aria-label="Xem dạng bảng" title="Xem dạng bảng" onClick={() => setViewMode('table')}><List size={16} /></button>
+            </div>
+          </div>
+        </header>
+      <div className="pkg-toolbar" role="search" aria-label="Lọc gói hội viên">
         <div className="pkg-search-box">
           <Search size={16} />
           <input
             type="text"
             className="pkg-search-input"
-            placeholder="Tìm theo tên gói thẻ hoặc mô tả quyền lợi..."
+            aria-label="Tìm gói hội viên"
+            placeholder="Tìm tên gói hoặc quyền lợi…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -481,6 +495,7 @@ export default function PackageManagement() {
         <div className="pkg-filter-group">
           <select
             className="pkg-select"
+            aria-label="Lọc theo thời hạn"
             value={durationFilter}
             onChange={(e) => setDurationFilter(e.target.value)}
           >
@@ -493,6 +508,7 @@ export default function PackageManagement() {
 
           <select
             className="pkg-select"
+            aria-label="Lọc theo trạng thái"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -501,35 +517,18 @@ export default function PackageManagement() {
             <option value="INACTIVE">Tạm dừng bán</option>
           </select>
 
-          <div className="view-mode-toggle">
-            <button
-              type="button"
-              className={`view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              title="Xem dạng thẻ"
-            >
-              <Grid size={16} />
-            </button>
-            <button
-              type="button"
-              className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
-              onClick={() => setViewMode('table')}
-              title="Xem dạng bảng"
-            >
-              <List size={16} />
-            </button>
-          </div>
         </div>
       </div>
+      {hasFilters && <div className="pkg-filter-summary"><span>Đang áp dụng bộ lọc</span><button type="button" onClick={clearFilters}>Xóa bộ lọc <X size={13} /></button></div>}
 
       {/* Body: Loading / Empty / Grid / Table */}
       {loading ? (
-        <div className="pkg-loading">
+        <div className="pkg-loading" role="status">
           <div className="pkg-spinner" />
           <span>Đang tải danh sách gói thẻ hội viên...</span>
         </div>
       ) : filteredPackages.length === 0 ? (
-        <div className="pkg-empty">
+        <div className="pkg-empty" role="status">
           <Package size={40} />
           <strong>Không tìm thấy gói thẻ phù hợp</strong>
           <p>Thử điều chỉnh bộ lọc hoặc tạo gói thẻ hội viên mới cho trung tâm.</p>
@@ -555,38 +554,33 @@ export default function PackageManagement() {
                 className={`package-card ${pkg.isActive ? '' : 'inactive'} ${isVip ? 'vip' : ''}`}
               >
                 <div className="package-card-top">
-                  <div className="package-card-title">
-                    <h3>{pkg.packageName}</h3>
-                    <small>Mã gói: #{pkg.id}</small>
-                  </div>
+                  <span className="package-code">Mã gói #{pkg.id}</span>
                   <span className={`package-badge ${pkg.isActive ? 'active' : 'inactive'}`}>
                     <i />
                     {pkg.isActive ? 'Đang mở bán' : 'Tạm dừng'}
                   </span>
                 </div>
+                <div className="package-card-title"><h3>{pkg.packageName}</h3>{isVip && <span className="package-vip-label"><Crown size={13} />VIP</span>}</div>
 
                 <div className="package-pricing">
                   <strong>{formatCurrency(pkg.price)}</strong>
-                  <span>/ {formatDuration(pkg.durationInDays)}</span>
+                  <span><Calendar size={14} />{formatDuration(pkg.durationInDays)}</span>
                 </div>
+                <span className="package-per-day">Khoảng {formatCurrency(perDayPrice)} / ngày</span>
 
                 <p className="package-desc">
                   {pkg.description || 'Chưa có mô tả chi tiết quyền lợi cho gói này.'}
                 </p>
 
                 <div className="package-card-footer">
-                  <span style={{ fontSize: 11, color: 'var(--manager-muted)' }}>
-                    ~ {formatCurrency(perDayPrice)} / ngày
-                  </span>
-
-                  <div className="package-actions">
+                  <div className="package-actions" role="group" aria-label={`Thao tác gói ${pkg.packageName}`}>
                     <button
                       type="button"
                       className="package-action-btn"
                       title="Xem chi tiết quyền lợi"
                       onClick={() => setSelectedPackageForDetail(pkg)}
                     >
-                      <Info size={15} />
+                      <Info size={14} />Chi tiết
                     </button>
                     <button
                       type="button"
@@ -594,7 +588,7 @@ export default function PackageManagement() {
                       title="Chỉnh sửa giá bán, quyền lợi hoặc thời hạn"
                       onClick={() => handleOpenEdit(pkg)}
                     >
-                      <Edit2 size={15} />
+                      <Edit2 size={14} />Sửa
                     </button>
                     <button
                       type="button"
@@ -602,7 +596,7 @@ export default function PackageManagement() {
                       title={pkg.isActive ? 'Tạm dừng bán gói này' : 'Mở bán lại gói này'}
                       onClick={() => setTogglingPackage(pkg)}
                     >
-                      <Power size={15} />
+                      <Power size={14} />{pkg.isActive ? 'Tạm dừng' : 'Mở bán'}
                     </button>
                   </div>
                 </div>
@@ -612,7 +606,7 @@ export default function PackageManagement() {
         </div>
       ) : (
         /* TABLE VIEW */
-        <div className="package-table-container manager-card" style={{ margin: '0 24px', padding: '16px' }}>
+        <div className="package-table-container" role="region" aria-label="Bảng gói hội viên" tabIndex={0}>
           <table className="package-table">
             <thead>
               <tr>
@@ -650,14 +644,14 @@ export default function PackageManagement() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <div className="package-actions" role="group" aria-label={`Thao tác gói ${pkg.packageName}`}>
                         <button
                           type="button"
                           className="package-action-btn"
                           title="Xem chi tiết"
                           onClick={() => setSelectedPackageForDetail(pkg)}
                         >
-                          <Info size={14} />
+                          <Info size={14} />Chi tiết
                         </button>
                         <button
                           type="button"
@@ -665,7 +659,7 @@ export default function PackageManagement() {
                           title="Chỉnh sửa"
                           onClick={() => handleOpenEdit(pkg)}
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={14} />Sửa
                         </button>
                         <button
                           type="button"
@@ -673,7 +667,7 @@ export default function PackageManagement() {
                           title={pkg.isActive ? 'Tạm dừng bán' : 'Mở bán lại'}
                           onClick={() => setTogglingPackage(pkg)}
                         >
-                          <Power size={14} />
+                          <Power size={14} />{pkg.isActive ? 'Tạm dừng' : 'Mở bán'}
                         </button>
                       </div>
                     </td>
@@ -684,13 +678,14 @@ export default function PackageManagement() {
           </table>
         </div>
       )}
+      </section>
 
       {/* ======================================================== */}
       {/* MODAL: CREATE PACKAGE */}
       {/* ======================================================== */}
       {showCreateModal && (
         <div className="pkg-modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="pkg-modal wide" onClick={(e) => e.stopPropagation()}>
+          <div className="pkg-modal wide" role="dialog" aria-modal="true" aria-label="Tạo gói thẻ hội viên mới" onClick={(e) => e.stopPropagation()}>
             <div className="pkg-modal-header">
               <h3>Tạo gói thẻ hội viên mới</h3>
               <button
@@ -843,7 +838,7 @@ export default function PackageManagement() {
       {/* ======================================================== */}
       {editingPackage && (
         <div className="pkg-modal-overlay" onClick={() => setEditingPackage(null)}>
-          <div className="pkg-modal wide" onClick={(e) => e.stopPropagation()}>
+          <div className="pkg-modal wide" role="dialog" aria-modal="true" aria-label="Chỉnh sửa gói hội viên" onClick={(e) => e.stopPropagation()}>
             <div className="pkg-modal-header">
               <h3>Chỉnh sửa gói thẻ: #{editingPackage.id}</h3>
               <button
@@ -992,7 +987,7 @@ export default function PackageManagement() {
       {/* ======================================================== */}
       {selectedPackageForDetail && (
         <div className="pkg-modal-overlay" onClick={() => setSelectedPackageForDetail(null)}>
-          <div className="pkg-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="pkg-modal" role="dialog" aria-modal="true" aria-label="Chi tiết gói hội viên" onClick={(e) => e.stopPropagation()}>
             <div className="pkg-modal-header">
               <h3>Chi tiết gói thẻ: {selectedPackageForDetail.packageName}</h3>
               <button
@@ -1086,7 +1081,7 @@ export default function PackageManagement() {
       {/* ======================================================== */}
       {togglingPackage && (
         <div className="pkg-modal-overlay" onClick={() => setTogglingPackage(null)}>
-          <div className="pkg-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="pkg-modal" role="dialog" aria-modal="true" aria-label="Thay đổi trạng thái gói hội viên" onClick={(e) => e.stopPropagation()}>
             <div className="pkg-modal-header">
               <h3>
                 {togglingPackage.isActive ? 'Tạm dừng bán gói hội viên' : 'Mở bán lại gói hội viên'}
