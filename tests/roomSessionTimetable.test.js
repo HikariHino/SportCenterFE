@@ -45,7 +45,7 @@ test('cancelled sessions stay out of the active grid and their calendar is not r
   assert.equal(items[0], session, 'Rendering preserves the source array and session data')
 })
 
-test('room grid shows completed labels for ended and explicitly completed sessions while future sessions remain scheduled', () => {
+test('room grid distinguishes unsaved ended sessions from confirmed completion and future sessions', () => {
   const now = Date.parse('2026-10-21T12:30:00Z')
   const items = [
     session,
@@ -53,7 +53,8 @@ test('room grid shows completed labels for ended and explicitly completed sessio
     { ...session, id: 3, className: 'Completed Yoga', status: undefined, Status: ' COMPLETED ' },
   ]
   const { timetable } = sections(render(items, { now }))
-  assert.equal((timetable.match(/<small>Đã hoàn thành<\/small>/g) || []).length, 2)
+  assert.equal((timetable.match(/<small>Đã hoàn thành<\/small>/g) || []).length, 1)
+  assert.equal((timetable.match(/<small>Đã kết thúc · chờ cập nhật<\/small>/g) || []).length, 1)
   assert.equal((timetable.match(/<small>Đã lên lịch<\/small>/g) || []).length, 1)
   assert.match(timetable, /3 buổi tuần này · 3 buổi tổng cộng/)
   assert.equal(session.status, 'Scheduled')

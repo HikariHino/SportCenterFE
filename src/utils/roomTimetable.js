@@ -36,7 +36,8 @@ export function roomSessionStatusLabel(session, now = Date.now()) {
   const status = session.status || session.Status || 'Scheduled'
   const normalizedStatus = String(status).trim().toLowerCase()
   if (['cancelled', 'canceled'].includes(normalizedStatus)) return 'Đã hủy'
-  if (normalizedStatus === 'completed' || (normalizedStatus === 'scheduled' && Date.parse(session.endsAt) <= now)) return 'Đã hoàn thành'
+  if (normalizedStatus === 'completed') return 'Đã hoàn thành'
+  if (normalizedStatus === 'scheduled' && Date.parse(session.endsAt) <= now) return 'Đã kết thúc · chờ cập nhật'
   return classStatusLabel(status)
 }
 

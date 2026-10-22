@@ -37,6 +37,9 @@
 .manager-account button { border: 0; background: transparent; color: #95a9c5; padding: 6px; }
 .manager-account button:hover { color: white; }
 .manager-workspace { min-width: 0; }
+.manager-session-sync-error { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 16px; padding: 12px 16px; border: 1px solid var(--theme-border); border-radius: 8px; color: var(--theme-red, #b42318); background: var(--theme-surface, #fff); font-size: 12px; }
+.manager-session-sync-error button { padding: 7px 12px; border: 1px solid var(--theme-border); border-radius: 7px; color: var(--theme-text); background: var(--theme-surface); cursor: pointer; }
+.manager-session-sync-error button:disabled { opacity: .6; cursor: wait; }
 .manager-topbar { min-height: 79px; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 32px; border-bottom: 1px solid var(--manager-line); background: var(--manager-surface, white); }
 .manager-topbar > div, .manager-topbar-right, .manager-breadcrumb { display: flex; align-items: center; gap: 14px; }
 .manager-breadcrumb { font-size: 11px; color: var(--manager-muted); }

@@ -12,6 +12,7 @@ import { canRescheduleSession } from '../../utils/sessionReschedule'
 import SessionRosterDialog from './SessionRosterDialog'
 import CancelRoomSessionDialog from './CancelRoomSessionDialog'
 import { cancelSessionsForClass } from '../../services/classSessionCancellationService'
+import { SESSION_COMPLETION_EVENT } from '../../services/sessionCompletionService'
 
 const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật'
 
@@ -44,6 +45,12 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
   const selectedOutsideWeek = selectedCancellations.filter(item => timetableWeekStart(item.startsAt) !== weekStart).length
 
   useEffect(() => { if (selected) detailRef.current?.scrollIntoView({ block: 'nearest' }) }, [selected])
+
+  useEffect(() => {
+    const refresh = () => setRevision(value => value + 1)
+    window.addEventListener(SESSION_COMPLETION_EVENT, refresh)
+    return () => window.removeEventListener(SESSION_COMPLETION_EVENT, refresh)
+  }, [])
 
   useEffect(() => {
     const dialog = dialogRef.current

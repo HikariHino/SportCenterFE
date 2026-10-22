@@ -591,6 +591,7 @@
 }
 
 .class-modal.class-session-modal { max-width: 960px; }
+.class-close-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .class-modal > form { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
 .class-modal-header {

@@ -38,7 +38,6 @@ import {
   completeClassSession,
   createClassSession,
   createSportClass,
-  deactivateSportClass,
   getClassErrorMessage,
   getAllClassSessions,
   getManagedClassesWithSessionDates,
@@ -49,12 +48,14 @@ import {
 } from '../../services/sportClassService'
 import { validateSessionWrite } from '../../services/sessionSchedulingService'
 import { assignClassToRoom } from '../../services/roomTimetableService'
+import { SESSION_COMPLETION_EVENT } from '../../services/sessionCompletionService'
 import { getClassSessionDateRange } from '../../utils/classSessionDates'
 import { classDateInput } from '../../utils/classForm'
 import { shiftTimetableDate, timetableDateKey } from '../../utils/memberTimetable'
 import ClassCourseFields from './ClassCourseFields'
 import ClassSessionGroups from './ClassSessionGroups'
 import CancelClassSessionsDialog from './CancelClassSessionsDialog'
+import CloseClassDialog from './CloseClassDialog'
 import { applyRoomSessionCancellations } from '../../utils/roomTimetable'
 import '../../style/CenterManager/ClassManagement.css'
 
@@ -314,6 +315,17 @@ export default function ClassManagement() {
 
   // Initial load
   useEffect(() => {
+    const refresh = event => {
+      const classId = selectedClassForSessions?.id
+      if (classId != null && event.detail.some(session => String(session.classId) === String(classId))) {
+        void loadClassSessions(classId)
+      }
+    }
+    window.addEventListener(SESSION_COMPLETION_EVENT, refresh)
+    return () => window.removeEventListener(SESSION_COMPLETION_EVENT, refresh)
+  }, [selectedClassForSessions?.id])
+
+  useEffect(() => {
     loadMasterData()
     loadClasses()
   }, [])
@@ -548,18 +560,6 @@ export default function ClassManagement() {
       setError(getClassErrorMessage(err, 'Không thể cập nhật thông tin lớp học.'))
     } finally {
       setSubmittingClass(false)
-    }
-  }
-
-  const handleDeactivateClass = async (cls) => {
-    try {
-      await deactivateSportClass(cls.id)
-      await loadClasses()
-      setDeactivatingClass(null)
-      setSuccess(`Đã đóng / ngừng hoạt động lớp học "${cls.className}".`)
-    } catch (err) {
-      setDeactivatingClass(null)
-      setError(getClassErrorMessage(err, 'Không thể đóng lớp học.'))
     }
   }
 
@@ -2154,47 +2154,13 @@ export default function ClassManagement() {
       {/* MODAL: DEACTIVATE / CLOSE CLASS */}
       {/* ======================================================== */}
       {deactivatingClass && (
-        <div className="class-modal-overlay" onClick={() => setDeactivatingClass(null)}>
-          <div className="class-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="class-modal-header">
-              <h3>Đóng / Hủy lớp học</h3>
-              <button
-                type="button"
-                className="class-modal-close"
-                onClick={() => setDeactivatingClass(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="class-modal-body">
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>
-                Bạn có chắc chắn muốn đóng lớp học <strong>"{deactivatingClass.className}"</strong> (Mã: #{deactivatingClass.id})?
-              </p>
-              <div className="class-alert class-alert-error" style={{ margin: '10px 0 0' }}>
-                <AlertCircle size={18} />
-                <span>
-                  Lưu ý: Tất cả các buổi học trong lớp phải được hoàn thành hoặc hủy trước khi đóng lớp. Nếu vẫn còn buổi học Scheduled, hệ thống sẽ từ chối thao tác.
-                </span>
-              </div>
-            </div>
-            <div className="class-modal-footer">
-              <button
-                type="button"
-                className="class-btn class-btn-secondary"
-                onClick={() => setDeactivatingClass(null)}
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                className="class-btn class-btn-danger"
-                onClick={() => handleDeactivateClass(deactivatingClass)}
-              >
-                Xác nhận đóng lớp
-              </button>
-            </div>
-          </div>
-        </div>
+        <CloseClassDialog sportClass={deactivatingClass} onClose={() => setDeactivatingClass(null)}
+          onViewSessions={() => { handleOpenSessions(deactivatingClass); setDeactivatingClass(null) }}
+          onClosed={() => {
+            setSuccess(`Đã đóng / ngừng hoạt động lớp học "${deactivatingClass.className}".`)
+            setDeactivatingClass(null)
+            void loadClasses()
+          }} />
       )}
 
       {/* ======================================================== */}

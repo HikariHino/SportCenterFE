@@ -15,6 +15,7 @@ import PackageManagement from './PackageManagement'
 import CancellationPolicyManagement from './CancellationPolicyManagement'
 import ReportManagement from './ReportManagement'
 import FrontDeskOperations from './FrontDeskOperations'
+import SessionCompletionSync from './SessionCompletionSync'
 import {
   getDashboardOverview,
   getRevenueByYear,
@@ -354,6 +355,7 @@ export default function CenterManager() {
       </aside>
 
       <div className="manager-workspace">
+        <SessionCompletionSync />
         <header className="manager-topbar">
           <div>
             <button

@@ -77,15 +77,15 @@ test('past-only room schedules open the latest week and empty rooms keep the req
   }
 })
 
-test('room session status becomes completed at the end time, including sessions across midnight', () => {
+test('ended sessions await server confirmation instead of displaying unsaved completion', () => {
   const end = Date.parse(session.endsAt)
   assert.equal(roomSessionStatusLabel(session, Date.parse(session.startsAt) - 1), 'Đã lên lịch')
   assert.equal(roomSessionStatusLabel(session, end - 1), 'Đã lên lịch')
-  assert.equal(roomSessionStatusLabel(session, end), 'Đã hoàn thành')
-  assert.equal(roomSessionStatusLabel(session, end + 1), 'Đã hoàn thành')
+  assert.equal(roomSessionStatusLabel(session, end), 'Đã kết thúc · chờ cập nhật')
+  assert.equal(roomSessionStatusLabel(session, end + 1), 'Đã kết thúc · chờ cập nhật')
   const overnight = { ...session, startsAt: '2026-10-19T23:00:00+07:00', endsAt: '2026-10-20T01:00:00+07:00' }
   assert.equal(roomSessionStatusLabel(overnight, Date.parse('2026-10-20T00:00:00+07:00')), 'Đã lên lịch')
-  assert.equal(roomSessionStatusLabel(overnight, Date.parse(overnight.endsAt)), 'Đã hoàn thành')
+  assert.equal(roomSessionStatusLabel(overnight, Date.parse(overnight.endsAt)), 'Đã kết thúc · chờ cập nhật')
   assert.equal(session.status, 'Scheduled')
 })
 
