@@ -14,6 +14,22 @@ export function getTrainingPlanErrorMessage(error) {
   return body?.message || body?.detail || error?.message || 'Không thể tải lộ trình tập luyện. Vui lòng thử lại.'
 }
 
+/** GET /api/Exercises — danh mục bài tập dùng khi lập giáo án. */
+export async function getExerciseCatalog() {
+  const response = await api.get('/Exercises')
+  const body = response.data
+
+  if (body?.success === false) {
+    throw new Error(body.message || 'Không thể tải kho bài tập.')
+  }
+
+  const payload = body?.data ?? body
+  if (!Array.isArray(payload)) throw new Error('Dữ liệu kho bài tập không hợp lệ. Vui lòng thử lại.')
+  return payload
+    .filter(exercise => Number(exercise.id) > 0 && String(exercise.exerciseName || '').trim())
+    .sort((left, right) => String(left.exerciseName).localeCompare(String(right.exerciseName), 'vi'))
+}
+
 export async function createTrainingPlan({ planName, goal, memberId, startDate, endDate, exercises = [] }) {
   const response = await api.post('/TrainingPlans', {
     planName,
