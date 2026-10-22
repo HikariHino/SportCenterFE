@@ -5,6 +5,7 @@ import {
   Ban,
   BookOpen,
   Calendar,
+  CalendarX2,
   CheckCircle2,
   Clock,
   DoorOpen,
@@ -1004,7 +1005,7 @@ export default function ClassManagement() {
                     <th>THỜI GIAN HỌC</th>
                     <th>SĨ SỐ TỐI ĐA</th>
                     <th>TRẠNG THÁI</th>
-                    <th style={{ textAlign: 'right' }}>THAO TÁC</th>
+                    <th className="class-actions-heading">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1041,25 +1042,25 @@ export default function ClassManagement() {
                             {isActive ? 'Đang mở' : 'Đã đóng'}
                           </span>
                         </td>
-                        <td>
-                          <div className="class-action-group">
+                        <td className="class-actions-cell">
+                          <div className="class-action-group" role="group" aria-label={`Thao tác lớp ${cls.className} #${cls.id}`}>
                             <button
                               type="button"
                               className="class-row-btn primary"
                               title="Xem và điều phối các buổi học trong lớp"
                               onClick={() => handleOpenSessions(cls)}
                             >
-                              <Calendar size={13} /> Buổi học
+                              <Calendar size={14} /> Buổi học
                             </button>
-                            <button type="button" className="class-row-btn danger" title="Hủy các buổi học chưa bắt đầu của lớp này" onClick={() => setCancellingClass(cls)}><Ban size={13} />Hủy buổi theo lớp</button>
                             <button
                               type="button"
                               className="class-row-btn"
                               title="Chỉnh sửa thông tin chung của lớp học"
                               onClick={() => handleOpenEditClass(cls)}
                             >
-                              <Edit size={13} /> Sửa
+                              <Edit size={14} /> Chỉnh sửa
                             </button>
+                            <button type="button" className="class-row-btn danger" title="Hủy các buổi học chưa bắt đầu của lớp này" onClick={() => setCancellingClass(cls)}><CalendarX2 size={14} />Hủy buổi</button>
                             {isActive && (
                               <button
                                 type="button"
@@ -1067,7 +1068,7 @@ export default function ClassManagement() {
                                 title="Đóng lớp học hoặc ngừng hoạt động"
                                 onClick={() => setDeactivatingClass(cls)}
                               >
-                                <Ban size={13} /> Đóng lớp
+                                <Power size={14} /> Đóng lớp
                               </button>
                             )}
                           </div>

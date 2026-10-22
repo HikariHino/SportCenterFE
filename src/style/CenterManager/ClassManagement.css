@@ -1078,20 +1078,25 @@
   color: var(--manager-danger, #b91c1c);
 }
 
-/* Class action pills */
+/* Keep actions in the same positions for open and closed classes. */
+.class-table .class-actions-heading { width: 236px; text-align: center; }
+.class-table .class-actions-cell { width: 236px; }
 .class-action-group {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, 36px);
   gap: 6px;
-  justify-content: flex-end;
+  width: 236px;
+  margin-left: auto;
 }
 
 .class-row-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: 6px;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 7px;
   font-size: 11px;
   font-weight: 600;
   border: 1px solid var(--manager-control-border, #d1d9e6);
@@ -1210,8 +1215,7 @@ details.class-session-group { padding-top: 16px; border-top: 1px solid var(--man
 .class-date-line { display: flex; align-items: baseline; gap: 8px; margin-block: 3px; white-space: nowrap; font-size: 12px; }
 .class-date-line small { min-width: 24px; color: var(--manager-secondary, #536179); font-size: 10px; }
 .class-mgmt :is(.class-btn, .class-tab, .class-row-btn, .class-alert, .sport-badge) svg { flex-shrink: 0; }
-.class-mgmt .class-action-group { flex-wrap: nowrap; }
-.class-mgmt .class-row-btn { min-height: 36px; white-space: nowrap; }
+.class-mgmt .class-row-btn { min-height: 36px; white-space: nowrap; font-size: 12px; font-weight: 500; line-height: 1.4; }
 .class-modal :is(.class-modal-header, .sessions-header-info) { overflow-wrap: anywhere; }
 .class-modal .roster-container { max-width: 100%; }
 .class-modal .roster-table { min-width: 650px; }
