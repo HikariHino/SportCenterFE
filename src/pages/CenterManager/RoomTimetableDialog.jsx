@@ -3,7 +3,7 @@ import { AlertCircle, Calendar, CalendarClock, CalendarPlus, MapPin, RefreshCw, 
 import RoomSessionTimetable from './RoomSessionTimetable'
 import { assignClassToRoom, getRoomTimetable } from '../../services/roomTimetableService'
 import { getRoomErrorMessage } from '../../services/roomService'
-import { roomSessionStatusLabel } from '../../utils/roomTimetable'
+import { getRoomTimetableWeek, roomSessionStatusLabel } from '../../utils/roomTimetable'
 import { timetableWeekStart } from '../../utils/memberTimetable'
 import '../../style/CenterManager/RoomTimetable.css'
 import RecurringRoomSessionsForm from './RecurringRoomSessionsForm'
@@ -16,7 +16,7 @@ const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', 
 export default function RoomTimetableDialog({ room, rooms, onClose }) {
   const dialogRef = useRef(null)
   const detailRef = useRef(null)
-  const [weekStart, setWeekStart] = useState(() => timetableWeekStart())
+  const [weekStart, setWeekStart] = useState(null)
   const [revision, setRevision] = useState(0)
   const [state, setState] = useState({ items: [], unassignedClasses: [], loading: true, error: '' })
   const [selectedId, setSelectedId] = useState(null)
@@ -43,7 +43,10 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
     const controller = new AbortController()
     setState({ items: [], unassignedClasses: [], loading: true, error: '' })
     getRoomTimetable(room, rooms, { signal: controller.signal }).then(result => {
-      if (!controller.signal.aborted) setState({ ...result, loading: false, error: '' })
+      if (!controller.signal.aborted) {
+        setWeekStart(current => current ?? getRoomTimetableWeek(result.items))
+        setState({ ...result, loading: false, error: '' })
+      }
     }).catch(error => {
       if (!controller.signal.aborted) setState({ items: [], unassignedClasses: [], loading: false, error: getRoomErrorMessage(error, 'Không thể tải thời khóa biểu của phòng.') })
     })

@@ -1,13 +1,13 @@
 import { useId, useMemo } from 'react'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
 import { isCancelledSession, isScheduledSession } from '../../utils/sessionScheduling'
-import { roomSessionStatusLabel } from '../../utils/roomTimetable'
+import { getRoomTimetableWeek, roomSessionStatusLabel } from '../../utils/roomTimetable'
 
 const formatDateTime = value => value ? new Date(value).toLocaleString('vi-VN', {
   timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short',
 }) : 'Chưa cập nhật'
 
-export default function RoomSessionTimetable({ items, onSelect, ...timetableProps }) {
+export default function RoomSessionTimetable({ items, onSelect, weekStart, onWeekChange, ...timetableProps }) {
   const headingId = useId()
   const { timetableSessions, cancelled } = useMemo(() => {
     const timetableSessions = [], cancelled = []
@@ -18,9 +18,14 @@ export default function RoomSessionTimetable({ items, onSelect, ...timetableProp
     cancelled.sort((left, right) => Date.parse(right.startsAt) - Date.parse(left.startsAt))
     return { timetableSessions, cancelled }
   }, [items])
+  const populatedWeek = getRoomTimetableWeek(timetableSessions, weekStart)
 
   return <>
-    <WeeklyTimetable {...timetableProps} items={timetableSessions} totalCount={timetableSessions.length} onSelect={onSelect} getStatusLabel={roomSessionStatusLabel} />
+    <WeeklyTimetable {...timetableProps} weekStart={weekStart} onWeekChange={onWeekChange} items={timetableSessions} totalCount={timetableSessions.length} onSelect={onSelect} getStatusLabel={roomSessionStatusLabel} />
+    {populatedWeek !== weekStart && <div className="room-timetable-other-week" role="status">
+      <p>Tuần đang xem không có buổi học. Phòng còn {timetableSessions.length} buổi học ở các tuần khác.</p>
+      <button type="button" onClick={() => onWeekChange(populatedWeek)}>Xem tuần từ {populatedWeek.split('-').reverse().join('/')}</button>
+    </div>}
     <p className="room-timetable-note">Các ô trống là khung giờ chưa có buổi học trong lịch. Các buổi đã hủy được liệt kê ở mục riêng bên dưới và không chiếm lịch phòng.</p>
     <details className="room-cancelled-sessions">
       <summary id={headingId}>Buổi học đã hủy <span>{cancelled.length} buổi</span></summary>

@@ -1,6 +1,18 @@
 import { classStatusLabel, getRoomForClass } from './memberClasses.js'
+import { timetableDateKey, timetableWeekStart } from './memberTimetable.js'
 
 const normalizedName = value => String(value || '').trim().toLocaleLowerCase('vi-VN')
+
+export function getRoomTimetableWeek(items, preferredWeek = timetableWeekStart()) {
+  const weeks = [...new Set(items.flatMap(item => {
+    const status = String(item.status || item.Status || 'Scheduled').trim().toLowerCase()
+    const date = timetableDateKey(item.startsAt)
+    return date && ['scheduled', 'completed'].includes(status) ? [timetableWeekStart(date)] : []
+  }))].sort()
+  // Keep a populated week; otherwise show the next week with sessions, or the
+  // latest past week when the room has no remaining future sessions.
+  return weeks.find(week => week >= preferredWeek) ?? weeks.at(-1) ?? preferredWeek
+}
 
 export function roomSessionStatusLabel(session, now = Date.now()) {
   const status = session.status || session.Status || 'Scheduled'

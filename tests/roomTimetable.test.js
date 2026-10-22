@@ -1,10 +1,46 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
+import { getRoomTimetableWeek, roomSessionForTimetable, roomSessionStatusLabel } from '../src/utils/roomTimetable.js'
 
 const rooms = [{ id: 1, name: 'Studio Yoga 01' }, { id: 2, name: 'Phòng Gym Đa năng' }]
 const yogaClass = { id: 10, className: 'Yoga cơ bản', roomId: 1, coachId: 5, coachName: 'Nguyễn Minh Anh', sportName: 'Yoga' }
 const session = { id: 100, startsAt: '2026-10-19T09:00:00+07:00', endsAt: '2026-10-19T10:30:00+07:00', status: 'Scheduled' }
+
+test('opening a room after cancelling its only session this week selects the next populated week', () => {
+  const items = [
+    { ...session, status: 'Cancelled' },
+    { ...session, id: 101, startsAt: '2026-10-26T09:00:00+07:00' },
+    { ...session, id: 102, startsAt: '2026-11-02T09:00:00+07:00' },
+  ]
+  assert.equal(getRoomTimetableWeek(items, '2026-10-19'), '2026-10-26')
+  assert.equal(items[1].status, 'Scheduled')
+})
+
+test('room week selection keeps this week when another scheduled or completed session remains', () => {
+  for (const status of ['Scheduled', 'Completed']) {
+    assert.equal(getRoomTimetableWeek([
+      { ...session, status: 'Cancelled' },
+      { ...session, id: 101, status, startsAt: '2026-10-21T11:00:00Z' },
+    ], '2026-10-19'), '2026-10-19')
+  }
+})
+
+test('room week selection uses Vietnam dates and picks the nearest populated week regardless of API order', () => {
+  assert.equal(getRoomTimetableWeek([
+    { ...session, id: 103, startsAt: '2026-11-03T11:00:00Z' },
+    { ...session, id: 102, startsAt: '2026-10-25T18:00:00Z' },
+  ], '2026-10-19'), '2026-10-26')
+})
+
+test('past-only room schedules open the latest week and empty rooms keep the requested week', () => {
+  assert.equal(getRoomTimetableWeek([
+    { ...session, id: 101, startsAt: '2026-10-12T09:00:00+07:00', status: 'Completed' },
+    { ...session, id: 102, startsAt: '2026-10-05T09:00:00+07:00', status: 'Completed' },
+  ], '2026-10-19'), '2026-10-12')
+  for (const items of [[], [{ ...session, status: 'Cancelled' }], [{ ...session, startsAt: 'invalid' }]]) {
+    assert.equal(getRoomTimetableWeek(items, '2026-10-19'), '2026-10-19')
+  }
+})
 
 test('room session status becomes completed at the end time, including sessions across midnight', () => {
   const end = Date.parse(session.endsAt)

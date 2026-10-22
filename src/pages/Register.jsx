@@ -1,10 +1,11 @@
 import ThemeToggle from '../components/ThemeToggle'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Bell, Building2, CalendarCheck, CreditCard, Eye, EyeOff, Gift, LockKeyhole, Mail, MapPin, MessageCircle, Phone, Trophy, UserRound } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bell, CalendarCheck, CreditCard, Eye, EyeOff, Gift, LockKeyhole, Mail, MapPin, MessageCircle, Phone, Trophy, UserRound } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { sendRegisterOtp, verifyRegisterOtp } from '../services/authService'
 import { getAuthDestination, getAuthErrorMessage } from '../utils/auth'
+import { getRegistrationError } from '../utils/registration'
 import '../style/Register.css'
 
 const benefits = [
@@ -14,8 +15,8 @@ const benefits = [
   [Bell, 'Nhận nhắc nhở lịch tập', 'thông minh đa kênh qua Zalo/SMS'],
 ]
 
-function Field({ id, label, icon: Icon, ...props }) {
-  return <div className="register-field"><label htmlFor={id}>{label} <span>*</span></label><div className="register-input"><Icon size={18} /><input id={id} name={id} required {...props} /></div></div>
+function Field({ id, label, icon: Icon, error, ...props }) {
+  return <div className="register-field"><label htmlFor={id}>{label} <span>*</span></label><div className={`register-input${error ? ' register-input-error' : ''}`}><Icon size={18} /><input id={id} name={id} required aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} {...props} /></div>{error && <p id={`${id}-error`} className="register-field-error" role="alert">{error}</p>}</div>
 }
 
 function PasswordField({ id, label, ...props }) {
@@ -29,15 +30,33 @@ export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSendingOtp, setIsSendingOtp] = useState(false)
   const submitting = useRef(false)
+  const formRef = useRef(null)
   const [password, setPassword] = useState('')
   const [otp, setOtp] = useState('')
   const [message, setMessage] = useState('')
+  const [emailError, setEmailError] = useState('')
   const [pendingRegistration, setPendingRegistration] = useState(null)
   const strength = password ? [password.length >= 8, /[a-z]/.test(password) && /[A-Z]/.test(password), /\d/.test(password), /[^\w\s]/.test(password)].filter(Boolean).length : 0
 
+  useEffect(() => {
+    if (emailError) formRef.current?.elements.namedItem('email')?.focus()
+  }, [emailError])
+
+  function handleRegistrationError(error, fallback) {
+    const result = getRegistrationError(error, fallback)
+    if (result.field === 'email') {
+      setEmailError(result.message)
+      setPendingRegistration(null)
+      setOtp('')
+      setMessage('')
+    } else {
+      setMessage(result.message)
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
-    if (submitting.current) return
+    if (submitting.current || emailError) return
     const form = event.currentTarget
     if (!pendingRegistration) {
       setMessage('Vui lòng nhấn Gửi OTP để nhận mã xác minh trước khi đăng ký.')
@@ -63,7 +82,7 @@ export default function Register() {
         navigate('/login', { replace: true, state: { message: 'Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.' } })
       }
     } catch (error) {
-      setMessage(getAuthErrorMessage(error, 'Xác minh OTP không thành công. Vui lòng kiểm tra mã và thử lại.'))
+      handleRegistrationError(error, 'Xác minh OTP không thành công. Vui lòng kiểm tra mã và thử lại.')
     } finally {
       submitting.current = false
       setIsSubmitting(false)
@@ -71,7 +90,7 @@ export default function Register() {
   }
 
   async function handleSendOtp(event) {
-    if (submitting.current) return
+    if (submitting.current || emailError) return
     const form = event.currentTarget.form
     // Sending a code needs the registration details, but not the code itself.
     for (const field of Array.from(form.elements)) {
@@ -121,7 +140,7 @@ export default function Register() {
       setOtp('')
       setMessage(result.message || `Mã OTP đã được gửi đến ${registration.email}.`)
     } catch (error) {
-      setMessage(getAuthErrorMessage(error, 'Không thể gửi mã OTP đăng ký. Vui lòng thử lại.'))
+      handleRegistrationError(error, 'Không thể gửi mã OTP đăng ký. Vui lòng thử lại.')
     } finally {
       submitting.current = false
       setIsSendingOtp(false)
@@ -142,9 +161,9 @@ export default function Register() {
       <div className="register-topbar"><ThemeToggle /><Link to="/"><ArrowLeft size={16} /> Trở về trang chủ</Link><span><MapPin size={15} /> Cơ sở 1 - Cầu Giấy, Hà Nội <b>06:00 - 22:00</b></span></div>
       <div className="register-content">
         <header><h2 id="register-title">Đăng ký tài khoản Hội viên</h2><p>Tạo tài khoản nhanh chóng chỉ trong 1 phút để bắt đầu đặt sân và nhận trọn vẹn đặc quyền thể thao.</p></header>
-        <div className="register-tabs" role="group" aria-label="Loại tài khoản"><button type="button" aria-pressed="true"><UserRound size={18} /> Hội viên cá nhân</button><button type="button" aria-pressed="false" disabled title="Chưa hỗ trợ đăng ký tổ chức"><Building2 size={18} /> CLB / Đội nhóm / Doanh nghiệp (Chưa hỗ trợ)</button></div>
-        <form className="register-form" noValidate onSubmit={handleSubmit} onChange={(event) => {
+        <form ref={formRef} className="register-form" noValidate onSubmit={handleSubmit} onChange={(event) => {
           setMessage('')
+          if (event.target.name === 'email') setEmailError('')
           if (pendingRegistration && !['otp', 'terms'].includes(event.target.name)) {
             setPendingRegistration(null)
             setOtp('')
@@ -153,7 +172,7 @@ export default function Register() {
         }} aria-busy={isSubmitting || isSendingOtp}>
           <fieldset className="register-fields" disabled={isSubmitting || isSendingOtp}>
           <Field id="fullname" label="Họ và tên đầy đủ" icon={UserRound} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
-          <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" autoComplete="email" placeholder="name@olympus.vn" /></div>
+          <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" autoComplete="email" placeholder="name@olympus.vn" error={emailError} /></div>
           <div className="register-row">
             <Field id="dateOfBirth" label="Ngày sinh" icon={CalendarCheck} type="date" autoComplete="bday" max={new Date().toISOString().slice(0, 10)} />
             <div className="register-field"><label htmlFor="gender">Giới tính <span>*</span></label><div className="register-input"><UserRound size={18} /><select id="gender" name="gender" autoComplete="sex" required defaultValue=""><option value="" disabled>Chọn giới tính</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></div></div>
@@ -167,11 +186,11 @@ export default function Register() {
             <label htmlFor="otp">Mã OTP <span>*</span></label>
             <div className="register-otp-row">
               <div className="register-input"><MessageCircle size={18} /><input id="otp" name="otp" autoComplete="one-time-code" inputMode="numeric" placeholder="Nhập mã OTP" required value={otp} onChange={event => setOtp(event.target.value)} aria-describedby="register-otp-hint" /></div>
-              <button type="button" name="send-otp" className="register-send-otp" onClick={handleSendOtp} disabled={isSubmitting || isSendingOtp}>{isSendingOtp ? 'Đang gửi...' : pendingRegistration ? 'Gửi lại OTP' : 'Gửi OTP'}</button>
+              <button type="button" name="send-otp" className="register-send-otp" onClick={handleSendOtp} disabled={isSubmitting || isSendingOtp || !!emailError}>{isSendingOtp ? 'Đang gửi...' : pendingRegistration ? 'Gửi lại OTP' : 'Gửi OTP'}</button>
             </div>
             <p className="register-otp-hint" id="register-otp-hint">{pendingRegistration ? `Mã OTP đã gửi đến ${pendingRegistration.email}.` : 'Nhấn Gửi OTP để nhận mã xác minh qua email.'}</p>
           </div>
-          <button type="submit" className="register-submit" disabled={isSubmitting || isSendingOtp}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'} <ArrowRight size={19} /></button>
+          <button type="submit" className="register-submit" disabled={isSubmitting || isSendingOtp || !!emailError}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'} <ArrowRight size={19} /></button>
           </fieldset>
           <p className="register-feedback" role="status" aria-live="polite">{message}</p>
         </form>

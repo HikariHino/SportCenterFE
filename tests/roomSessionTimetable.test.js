@@ -81,3 +81,27 @@ test('rooms with no cancellations expose a separate empty state without removing
   assert.match(cancellations, /0 buổi/)
   assert.match(cancellations, /Phòng chưa có buổi học nào bị hủy/)
 })
+
+test('an empty selected week points to remaining sessions in other weeks after a cancellation', () => {
+  const items = [
+    { ...session, className: 'Cancelled Yoga', status: 'Cancelled' },
+    ...Array.from({ length: 12 }, (_, index) => ({
+      ...session, id: index + 2, startsAt: '2026-10-26T11:00:00Z', endsAt: '2026-10-26T12:30:00Z',
+    })),
+  ]
+  const { timetable, cancellations } = sections(render(items))
+  assert.match(timetable, /0 buổi tuần này · 12 buổi tổng cộng/)
+  assert.match(timetable, /Phòng còn 12 buổi học ở các tuần khác/)
+  assert.match(timetable, /Xem tuần từ 26\/10\/2026/)
+  assert.match(cancellations, /Cancelled Yoga/)
+  const nextWeek = sections(render(items, { weekStart: '2026-10-26' })).timetable
+  assert.match(nextWeek, /12 buổi tuần này · 12 buổi tổng cộng/)
+  assert.equal((nextWeek.match(/<strong><svg[^]*?Scheduled Yoga<\/strong>/g) || []).length, 12)
+  assert.doesNotMatch(nextWeek, /room-timetable-other-week|Cancelled Yoga/)
+})
+
+test('empty rooms and weeks already containing sessions do not offer an unrelated week', () => {
+  for (const items of [[], [session], [{ ...session, status: 'Cancelled' }]]) {
+    assert.doesNotMatch(render(items), /room-timetable-other-week/)
+  }
+})

@@ -58,6 +58,10 @@
 .room-timetable-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 300px; color: var(--theme-muted); text-align: center; }
 .room-timetable-state[role='alert'] { color: var(--theme-red, #b42318); }
 .room-timetable-note { margin: 14px 0 0; color: var(--theme-muted); font-size: 12px; }
+.room-timetable-other-week { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 14px; padding: 12px 16px; border: 1px solid var(--theme-border); border-radius: 10px; background: var(--theme-bg); }
+.room-timetable-other-week p { margin: 0; color: var(--theme-muted); }
+.room-timetable-other-week button { padding: 8px 12px; border: 1px solid var(--theme-accent); border-radius: 8px; background: var(--theme-surface); color: var(--theme-accent); font: inherit; }
+.room-timetable-other-week button:hover { background: var(--theme-raised); }
 .room-cancelled-sessions { margin-top: 20px; padding: 16px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-surface); }
 .room-cancelled-sessions summary { cursor: pointer; font-size: 14px; font-weight: 700; }
 .room-cancelled-sessions summary span { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 20px; color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fff0f2); font-size: 12px; }

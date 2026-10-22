@@ -94,6 +94,39 @@ test('a dated session is saved once and a repeated submission reuses the saved s
   assert.equal(state.posts.length, 1)
 })
 
+test('cancelling one session and reloading the room preserves all twelve other scheduled sessions', async () => {
+  const stored = [
+    { id: 100, ...sessions[0], coachId: 5, capacity: 20, status: 'Scheduled' },
+    ...Array.from({ length: 12 }, (_, index) => ({ id: index + 101, ...sessions[index % 3], coachId: 5, capacity: 20, status: 'Scheduled' })),
+  ]
+  const writes = []
+  api.defaults.adapter = async config => {
+    let data
+    if (config.method === 'post') {
+      writes.push(config.url)
+      assert.equal(config.url, '/class-sessions/100/cancel')
+      stored[0] = { ...stored[0], status: 'Cancelled', cancellationReason: JSON.parse(config.data).reason }
+      return { data: '', status: 204, statusText: 'No Content', headers: {}, config }
+    }
+    if (config.url === '/classes/manage') data = { items: [sportClass], total: 1 }
+    else {
+      assert.equal(config.url, '/classes/10/sessions')
+      const page = Number(config.params.page)
+      data = { items: stored.slice((page - 1) * 5, page * 5), total: stored.length, page, pageSize: 5 }
+    }
+    return { data, status: 200, statusText: 'OK', headers: {}, config }
+  }
+  const before = await getRoomTimetable(room, [room])
+  await classService.cancelClassSession(100, ' Bảo trì phòng ')
+  const after = await getRoomTimetable(room, [room])
+  assert.deepEqual(writes, ['/class-sessions/100/cancel'])
+  assert.equal(after.items.length, 13)
+  assert.equal(after.items[0].status, 'Cancelled')
+  assert.equal(after.items[0].cancellationReason, 'Bảo trì phòng')
+  assert.deepEqual(after.items.slice(1), before.items.slice(1))
+  assert.equal(after.items.filter(item => item.status === 'Scheduled').length, 12)
+})
+
 test('a dated session is rejected if the class period changes after the form was filled', async () => {
   const item = buildDatedSession({ date: '2099-10-26', startTime: '18:00', endTime: '19:30' }, { sportClass })
   const state = mockApi({ course: { ...sportClass, endDate: '2099-10-26T12:00:00Z' } })

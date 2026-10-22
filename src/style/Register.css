@@ -43,13 +43,16 @@
 .register-tabs button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 7px; border: 0; background: transparent; border-radius: 8px; color: #626879; font-size: 12px; }
 .register-tabs svg { flex-shrink: 0; }
 .register-tabs button[aria-pressed='true'] { background: white; color: #004ac6; box-shadow: 0 2px 5px #18243a10; font-weight: 600; }
-.register-form { display: grid; gap: 18px; }
+.register-form { display: grid; gap: 18px; margin-top: 24px; }
 .register-fields { display: grid; gap: 18px; min-width: 0; margin: 0; padding: 0; border: 0; }
 .register-field { min-width: 0; }
 .register-field > label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 7px; }
 .register-field > label > span { color: #ba1a1a; }
 .register-input { display: flex; align-items: center; gap: 10px; border: 1px solid #c3c6d7; border-radius: 8px; padding: 0 12px; background: white; color: #737686; }
 .register-input:focus-within { border-color: #2563eb; box-shadow: 0 0 0 3px #2563eb18; }
+.register-input.register-input-error { border-color: var(--theme-red, #b42318); }
+.register-input.register-input-error:focus-within { box-shadow: 0 0 0 3px var(--theme-red-bg, #fef2f2); }
+.register-field-error { margin: 7px 0 0; color: var(--theme-red, #b42318); font-size: 11px; line-height: 1.6; }
 .register-input > svg { flex-shrink: 0; }
 .register-input input, .register-input select { width: 100%; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: #131b2e; font-size: 12px; }
 .register-input button { border: 0; background: transparent; color: #737686; display: flex; padding: 7px 0; }
