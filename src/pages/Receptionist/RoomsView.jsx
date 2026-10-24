@@ -222,10 +222,10 @@ export function RoomsView({ query = '', onOpenSessions, onSelectSession }) {
 
   return <div className="reception-facility-rooms">
     <section className="reception-facility-metrics" aria-label="Thống kê phòng tập">
-      <article><span className="blue"><DoorOpen size={22} /></span><div><small>Tổng số phòng & sân tập</small><strong>{rooms.length}</strong></div></article>
-      <article><span className="green"><CheckCircle2 size={22} /></span><div><small>Đang hoạt động (Sẵn sàng)</small><strong>{activeCount}</strong></div></article>
-      <article><span className="amber"><Power size={22} /></span><div><small>Đã khóa / Ngừng sử dụng</small><strong>{inactiveCount}</strong></div></article>
-      <article><span className="purple"><UsersRound size={22} /></span><div><small>Tổng sức chứa trung tâm</small><strong>{totalCapacity} <i>chỗ</i></strong></div></article>
+      <article><span className="blue"><DoorOpen size={20} /></span><div><small>Tổng số phòng</small><strong>{rooms.length}</strong></div></article>
+      <article><span className="green"><CheckCircle2 size={20} /></span><div><small>Sẵn sàng</small><strong>{activeCount}</strong></div></article>
+      <article><span className="amber"><Power size={20} /></span><div><small>Ngừng hoạt động</small><strong>{inactiveCount}</strong></div></article>
+      <article><span className="purple"><UsersRound size={20} /></span><div><small>Tổng sức chứa</small><strong>{totalCapacity} <i>chỗ</i></strong></div></article>
     </section>
 
     <section className="reception-card reception-room-catalog reception-facility-catalog">
@@ -236,7 +236,7 @@ export function RoomsView({ query = '', onOpenSessions, onSelectSession }) {
       </div>
       {error && <div className="reception-filter-error"><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={12} />Thử lại</button></div>}
       {loading ? <ViewLoader /> : !filteredRooms.length ? <div className="reception-empty"><span><DoorOpen size={24} /></span><strong>Không tìm thấy phòng</strong><p>Thử đổi trạng thái, loại phòng hoặc từ khóa tìm kiếm.</p></div> : <div className="reception-facility-room-grid">{filteredRooms.map(room => <article key={room.id} className={room.isActive === false ? 'inactive' : ''}>
-        <header><span><DoorOpen size={21} /></span><div><h3>{room.name}</h3><small>Mã phòng: #{room.id} · Xem lịch tuần</small></div><b className={room.isActive !== false ? 'active' : 'inactive'}><i />{room.isActive !== false ? 'Hoạt động' : 'Đã khóa'}</b></header>
+        <header><span><DoorOpen size={21} /></span><div><h3>{room.name}</h3><small>Mã phòng #{room.id}</small></div><b className={room.isActive !== false ? 'active' : 'inactive'}><i />{room.isActive !== false ? 'Hoạt động' : 'Đã khóa'}</b></header>
         <dl><div><dt><Layers3 size={14} />Loại</dt><dd>{room.roomType || 'General'}</dd></div><div><dt><UsersRound size={14} />Sức chứa</dt><dd>{room.capacity} học viên</dd></div><div><dt><MapPin size={14} />Vị trí</dt><dd>{room.location || 'Chưa cập nhật'}</dd></div></dl>
         <footer><button type="button" className="primary" onClick={() => setScheduleRoom(room)}><CalendarDays size={15} />Xem lịch tuần</button><button type="button" onClick={() => setSelectedRoomId(room.id)}><CalendarClock size={15} />Kiểm tra lịch</button></footer>
       </article>)}</div>}
