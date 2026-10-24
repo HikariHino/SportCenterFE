@@ -95,13 +95,6 @@ const sessionPresentation = session => {
   }
 }
 
-const quickActions = [
-  { label: 'Lịch huấn luyện', text: 'Xem toàn bộ lịch được phân công', icon: CalendarRange, tone: 'blue' },
-  { label: 'Học viên', text: 'Theo dõi học viên theo từng buổi', icon: Users, tone: 'green' },
-  { label: 'Điểm danh', text: 'Cập nhật trạng thái tham gia', icon: UserCheck, tone: 'amber' },
-  { label: 'Phòng tập', text: 'Kiểm tra phòng và thời gian trống', icon: DoorOpen, tone: 'purple' },
-]
-
 export function OverviewView({ onNavigate }) {
   const [metrics, setMetrics] = useState([])
   const [sessions, setSessions] = useState([])
@@ -197,7 +190,6 @@ export function OverviewView({ onNavigate }) {
   const completedSessions = sessions.filter(session => session.tone === 'done').length
   const dayProgress = percentage(completedSessions, sessions.length)
   const attendanceTotal = attendance.present + attendance.absent + attendance.excused + attendance.pending
-  const nextCapacity = nextSession ? percentage(nextSession.enrollment, nextSession.capacity) : 0
   const nextSessionIsToday = nextSession && sameDay(new Date(nextSession.startsAt), new Date())
   const primaryAction = attendance.pending > 0 && nextSessionIsToday
     ? { label: 'Điểm danh ngay', target: 'Điểm danh', icon: UserCheck }
@@ -233,20 +225,11 @@ export function OverviewView({ onNavigate }) {
       })}
     </section>
 
-    <div className="coach-overview-insights">
-      <section className="coach-card coach-next-session-card">
-        <div className="coach-card-head"><div><span>BUỔI TIẾP THEO</span><h2>Kế hoạch gần nhất</h2></div><CalendarCheck2 size={21} /></div>
-        {nextSession ? <div className="coach-next-session-body">
-          <div className="coach-next-date"><strong>{new Date(nextSession.startsAt).getDate()}</strong><span>THÁNG {new Date(nextSession.startsAt).getMonth() + 1}</span></div>
-          <div className="coach-next-session-main">
-            <div className="coach-next-session-title"><div><small>{longDateFormatter.format(new Date(nextSession.startsAt))}</small><h3>{nextSession.className}</h3></div><span className={`coach-status ${nextSession.tone}`}>{nextSession.statusLabel}</span></div>
-            <div className="coach-next-session-meta"><span><Clock3 size={15} />{nextSession.time} · {nextSession.duration}</span><span><Users size={15} />{nextSession.enrollment}/{nextSession.capacity || '--'} học viên</span></div>
-            <div className="coach-capacity"><div><span>Mức đăng ký</span><strong>{nextCapacity}%</strong></div><span><i style={{ width: `${nextCapacity}%` }} /></span></div>
-          </div>
-          <button type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Mở lịch chi tiết <ChevronRight size={15} /></button>
-        </div> : <EmptyState title="Chưa có buổi sắp tới" text="Lịch 7 ngày tới chưa có buổi huấn luyện được phân công." actionLabel="Xem toàn bộ lịch" onAction={() => onNavigate('Lịch huấn luyện')} />}
+    <div className="coach-overview-workspace">
+      <section className="coach-card coach-schedule">
+        <div className="coach-card-head"><div><span>ƯU TIÊN HÔM NAY</span><h2>Lịch huấn luyện hôm nay</h2></div><button type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem toàn bộ lịch <ChevronRight size={16} /></button></div>
+        {sessions.length ? <div className="coach-session-list">{sessions.map(session => <SessionRow key={session.id} session={session} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
       </section>
-
       <section className="coach-card coach-day-progress-card">
         <div className="coach-card-head"><div><span>TIẾN ĐỘ HÔM NAY</span><h2>Tình hình hoạt động</h2></div><UserCheck size={21} /></div>
         <div className="coach-day-progress-body">
@@ -263,27 +246,15 @@ export function OverviewView({ onNavigate }) {
       </section>
     </div>
 
-    <div className="coach-primary-grid coach-api-grid">
-      <section className="coach-card coach-schedule">
-        <div className="coach-card-head"><div><span>LỊCH TRÌNH</span><h2>Lịch huấn luyện hôm nay</h2></div><button type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem lịch <ChevronRight size={16} /></button></div>
-        {sessions.length ? <div className="coach-session-list">{sessions.map(session => <SessionRow key={session.id} session={session} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
-      </section>
+    <div className="coach-overview-secondary">
       <section className="coach-card coach-students">
         <div className="coach-card-head"><div><span>HỌC VIÊN</span><h2>Học viên trong lịch hôm nay</h2></div><button type="button" onClick={() => onNavigate('Học viên')}>Xem học viên <ChevronRight size={16} /></button></div>
         {students.length ? <div className="coach-student-list">{students.map(student => <article key={student.id}><span className={`coach-student-avatar ${student.color}`}>{student.initials}</span><div className="coach-student-name"><strong>{student.name}</strong><small>{student.program}</small></div><div className="coach-student-progress"><span><i style={{ width: `${student.progress}%` }} /></span><small>{student.progress}% điểm danh</small></div><b>{student.completedSessions}/{student.totalSessions} buổi</b></article>)}</div> : <EmptyState title="Hôm nay chưa có học viên" text="Danh sách sẽ cập nhật khi lịch hôm nay có hội viên đăng ký." actionLabel="Xem danh sách học viên" onAction={() => onNavigate('Học viên')} />}
       </section>
-    </div>
-
-    <div className="coach-overview-bottom">
       <section className="coach-card coach-week-card">
         <div className="coach-card-head"><div><span>7 NGÀY TỚI</span><h2>Lịch huấn luyện sắp tới</h2></div><strong>{weekSessions.length} buổi</strong></div>
-        {weekSessions.length ? <div className="coach-week-list">{weekSessions.slice(0, 6).map(session => <WeekSessionRow key={session.id} session={session} />)}</div> : <EmptyState title="Tuần này chưa có lịch" text="Các buổi mới được phân công sẽ xuất hiện tại đây." />}
-        {weekSessions.length > 6 && <button className="coach-week-more" type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem thêm {weekSessions.length - 6} buổi <ChevronRight size={15} /></button>}
-      </section>
-
-      <section className="coach-card coach-overview-actions">
-        <div className="coach-card-head"><div><span>TRUY CẬP NHANH</span><h2>Công việc thường dùng</h2></div><ArrowUpRight size={21} /></div>
-        <div>{quickActions.map(({ label, text, icon: Icon, tone }) => <button key={label} type="button" onClick={() => onNavigate(label)}><span className={tone}><Icon size={18} /></span><span><strong>{label}</strong><small>{text}</small></span><ChevronRight size={16} /></button>)}</div>
+        {weekSessions.length ? <div className="coach-week-list">{weekSessions.slice(0, 5).map(session => <WeekSessionRow key={session.id} session={session} />)}</div> : <EmptyState title="Tuần này chưa có lịch" text="Các buổi mới được phân công sẽ xuất hiện tại đây." />}
+        {weekSessions.length > 5 && <button className="coach-week-more" type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem thêm {weekSessions.length - 5} buổi <ChevronRight size={15} /></button>}
       </section>
     </div>
   </>

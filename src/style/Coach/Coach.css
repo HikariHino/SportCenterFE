@@ -415,27 +415,9 @@
 .coach-focus-shortcuts small { margin-top:2px; color:var(--coach-muted); font-size:9px; }
 .coach-focus-shortcuts>button>svg { color:#9ba8bb; }
 .coach-focus-panel+.coach-metrics { margin-top:12px; }
-.coach-overview-insights { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(320px,.8fr); gap:16px; margin-top:16px; }
-.coach-next-session-card,.coach-day-progress-card,.coach-week-card,.coach-overview-actions { overflow:hidden; }
-.coach-next-session-card>.coach-card-head>svg,.coach-day-progress-card>.coach-card-head>svg,.coach-overview-actions>.coach-card-head>svg { color:var(--coach-blue); }
-.coach-next-session-body { display:grid; grid-template-columns:64px minmax(0,1fr) auto; align-items:center; gap:16px; min-height:166px; padding:20px; background:linear-gradient(120deg,#f8fbff,#fff 62%); }
-.coach-next-date { width:64px; height:68px; display:grid; place-content:center; border:1px solid #cfe0fd; border-radius:12px; color:var(--coach-blue); background:#edf4ff; text-align:center; box-shadow:inset 0 1px #fff; }
-.coach-next-date strong { font-size:27px; line-height:1; }
-.coach-next-date span { margin-top:5px; font-size:9px; font-weight:800; letter-spacing:.8px; }
-.coach-next-session-main { min-width:0; }
-.coach-next-session-title { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-.coach-next-session-title small { display:block; color:var(--coach-blue); font-size:11px; font-weight:800; text-transform:capitalize; }
-.coach-next-session-title h3 { overflow:hidden; margin:5px 0 0; font-size:20px; letter-spacing:-.3px; text-overflow:ellipsis; white-space:nowrap; }
-.coach-next-session-meta { display:flex; flex-wrap:wrap; gap:9px 18px; margin-top:13px; color:var(--coach-muted); font-size:12px; font-weight:600; }
-.coach-next-session-meta span { display:flex; align-items:center; gap:5px; }
-.coach-next-session-meta svg { color:var(--coach-blue); }
-.coach-capacity { margin-top:15px; }
-.coach-capacity>div { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; color:var(--coach-muted); font-size:11px; }
-.coach-capacity>div strong { color:var(--coach-ink); }
-.coach-capacity>span { height:6px; display:block; overflow:hidden; border-radius:8px; background:#e7edf7; }
-.coach-capacity>span i { height:100%; display:block; border-radius:inherit; background:linear-gradient(90deg,#1a59d6,#5a91f2); transition:width .45s ease; }
-.coach-next-session-body>button { display:flex; align-items:center; gap:4px; padding:9px 11px; border:1px solid #cbdaf5; border-radius:8px; color:var(--coach-blue); background:#f1f6ff; font-size:11px; font-weight:800; white-space:nowrap; }
-.coach-next-session-body>button:hover { border-color:#8cafed; background:#e6efff; transform:translateX(2px); }
+.coach-overview-workspace { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(320px,.8fr); align-items:start; gap:16px; margin-top:16px; }
+.coach-day-progress-card,.coach-week-card { overflow:hidden; }
+.coach-day-progress-card>.coach-card-head>svg { color:var(--coach-blue); }
 .coach-overview-empty { min-height:166px; padding:24px; }
 .coach-overview-empty>button { display:flex; align-items:center; gap:3px; margin-top:4px; padding:7px 10px; border:1px solid #cbdaf5; border-radius:7px; color:var(--coach-blue); background:#f3f7ff; font-size:11px; font-weight:800; }
 .coach-day-progress-body { display:grid; grid-template-columns:100px minmax(0,1fr); align-items:center; gap:16px; padding:19px 19px 13px; }
@@ -453,7 +435,7 @@
 .coach-attendance-breakdown strong { color:var(--coach-ink); font-size:12px; }
 .coach-attendance-breakdown .present i { background:#12a873; }.coach-attendance-breakdown .absent i { background:#e34b5c; }.coach-attendance-breakdown .excused i { background:#e3a02c; }.coach-attendance-breakdown .pending i { background:#8792a5; }
 .coach-day-progress-card>footer { padding:10px 19px; border-top:1px solid #edf0f5; color:var(--coach-muted); background:#fafbfd; font-size:10px; font-weight:700; text-align:center; }
-.coach-overview-bottom { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(320px,.65fr); align-items:start; gap:16px; margin-top:16px; }
+.coach-overview-secondary { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr); align-items:start; gap:16px; margin-top:16px; }
 .coach-week-card>.coach-card-head>strong { padding:5px 8px; border-radius:18px; color:var(--coach-blue); background:#edf3ff; font-size:11px; }
 .coach-week-list { padding:3px 19px 8px; }
 .coach-week-session { display:grid; grid-template-columns:50px minmax(0,1fr) auto; align-items:center; gap:12px; min-height:70px; border-bottom:1px solid #edf0f5; }
@@ -466,20 +448,9 @@
 .coach-week-session>div strong { font-size:13px; }
 .coach-week-session>div span { margin-top:5px; color:var(--coach-muted); font-size:11px; text-transform:capitalize; }
 .coach-week-more { width:100%; display:flex; align-items:center; justify-content:center; gap:4px; padding:11px; border:0; border-top:1px solid #edf0f5; color:var(--coach-blue); background:#fafcff; font-size:11px; font-weight:800; }
-.coach-overview-actions>div:last-child { padding:4px 16px 9px; }
-.coach-overview-actions>div:last-child>button { width:100%; display:grid; grid-template-columns:38px minmax(0,1fr) 16px; align-items:center; gap:11px; padding:12px 2px; border:0; border-bottom:1px solid #edf0f5; color:var(--coach-ink); background:transparent; text-align:left; }
-.coach-overview-actions>div:last-child>button:last-child { border-bottom:0; }
-.coach-overview-actions>div:last-child>button:hover { color:var(--coach-blue); transform:translateX(2px); }
-.coach-overview-actions button>span:first-child { width:38px; height:38px; display:grid; place-items:center; border-radius:9px; }
-.coach-overview-actions .blue { color:#1557d5; background:#e7efff; }.coach-overview-actions .green { color:#08795a; background:#dff8ed; }.coach-overview-actions .amber { color:#a3600a; background:#fff0d6; }.coach-overview-actions .purple { color:#7354cc; background:#f0ebff; }
-.coach-overview-actions button strong,.coach-overview-actions button small { display:block; }
-.coach-overview-actions button strong { font-size:13px; }
-.coach-overview-actions button small { margin-top:4px; color:var(--coach-muted); font-size:10px; line-height:1.45; }
-.coach-overview-actions button>svg { color:#9aa4b5; }
-
 @media(max-width:1100px) {
   .coach-focus-panel { grid-template-columns:1fr; }
-  .coach-overview-insights,.coach-overview-bottom { grid-template-columns:1fr; }
+  .coach-overview-workspace,.coach-overview-secondary { grid-template-columns:1fr; }
   .coach-day-progress-body { grid-template-columns:92px minmax(0,1fr); }
 }
 @media(max-width:700px) {
@@ -489,18 +460,13 @@
   .coach-focus-shortcuts { grid-template-columns:1fr; }
   .coach-focus-shortcuts>button { border-right:0; border-bottom:1px solid #e6ebf3; }
   .coach-focus-shortcuts>button:last-child { border-bottom:0; }
-  .coach-next-session-body { grid-template-columns:56px minmax(0,1fr); gap:12px; padding:15px; }
-  .coach-next-date { width:56px; height:60px; }
-  .coach-next-session-body>button { grid-column:1/-1; justify-content:center; }
-  .coach-next-session-title { display:block; }
-  .coach-next-session-title>.coach-status { display:inline-block; margin-top:8px; }
   .coach-attendance-breakdown { grid-template-columns:1fr; }
 }
 @media(max-width:520px) {
   .coach-focus-panel { margin-top:18px; padding:9px; }
   .coach-focus-main { padding:6px; }
   .coach-focus-main p { white-space:normal; }
-  .coach-overview-insights,.coach-overview-bottom { gap:11px; margin-top:11px; }
+  .coach-overview-workspace,.coach-overview-secondary { gap:11px; margin-top:11px; }
   .coach-day-progress-body { grid-template-columns:82px minmax(0,1fr); padding-inline:14px; }
   .coach-progress-ring { width:78px; height:78px; }
   .coach-progress-ring::before { width:59px; height:59px; }
