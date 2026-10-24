@@ -383,7 +383,7 @@ export default function CenterManager() {
         </header>
 
         <main className={`manager-main${section === 'overview' ? ' manager-overview' : ''}`} id="manager-content">
-          {!['rooms', 'packages', 'cancellation'].includes(section) && <>
+          {!['rooms', 'packages', 'cancellation', 'reports'].includes(section) && <>
           <section className="manager-welcome">
             <div>
               <p className="manager-eyebrow">VẬN HÀNH HIỆU QUẢ, KẾT NỐI ĐAM MÊ</p>
