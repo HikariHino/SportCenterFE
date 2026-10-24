@@ -97,7 +97,12 @@ export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSele
             }) : onCreate ? <button type="button" className="member-timetable-create-slot" data-create-date={days[index].key} data-create-time={row.start} disabled={!canCreate({ date: days[index].key, startTime: row.start })} aria-label={`Tạo buổi học ngày ${days[index].dateLabel}/${days[index].key.slice(0, 4)}, ${row.start} đến ${row.end}${row.nextDay ? ' ngày hôm sau' : ''}`} onClick={() => createSession({ date: days[index].key, startTime: row.start, endTime: row.end, nextDay: row.nextDay })}><Plus size={17} /><span>Thêm buổi học</span></button>
               : <span className="member-timetable-empty" aria-label="Không có buổi học">—</span>}
           </td>)}
-        </tr>) : <tr><td className="member-timetable-no-sessions" colSpan={8}>Không có buổi học trong tuần này. {onCreate ? 'Bấm vào ngày ở đầu cột để thêm buổi học.' : 'Bạn có thể chuyển tuần hoặc chọn ngày khác.'}</td></tr>}</tbody>
+        </tr>) : onCreate ? <tr>
+          <th scope="row">Chọn giờ</th>
+          {days.map(day => <td key={day.key} {...dropProps({ date: day.key })} className={`${day.key === today ? 'is-today' : ''}${dropTarget === targetKey({ date: day.key }) ? ' is-drop-target' : ''}`}>
+            <button type="button" className="member-timetable-create-slot" data-create-date={day.key} disabled={!canCreate({ date: day.key })} aria-label={`Tạo buổi học ngày ${day.dateLabel}/${day.key.slice(0, 4)}`} onClick={() => createSession({ date: day.key })}><Plus size={17} /><span>Thêm buổi học</span></button>
+          </td>)}
+        </tr> : <tr><td className="member-timetable-no-sessions" colSpan={8}>Không có buổi học trong tuần này. Bạn có thể chuyển tuần hoặc chọn ngày khác.</td></tr>}</tbody>
       </table>
     </div>
   </section>

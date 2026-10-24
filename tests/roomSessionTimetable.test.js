@@ -151,16 +151,37 @@ test('room calendars offer creation from day headings and empty slots, while occ
   assert.doesNotMatch(sections(html).cancellations, /data-create-date/)
 })
 
-test('empty weeks can create from headings, and read-only calendars expose no creation controls', () => {
+test('empty weeks retain seven creation cells as well as day headings, and read-only calendars expose no creation controls', () => {
   const props = { weekStart: '2099-10-26', now: Date.parse('2099-10-25T00:00:00Z') }
   const html = render([], { ...props, onCreate: () => {} })
   assert.equal((html.match(/class="member-timetable-create-day"/g) || []).length, 7)
-  assert.match(html, /Bấm vào ngày ở đầu cột để thêm buổi học/)
+  assert.equal((html.match(/class="member-timetable-create-slot"/g) || []).length, 7)
+  assert.match(html, /class="member-timetable-create-slot" data-create-date="2099-10-26" aria-label="Tạo buổi học ngày 26\/10\/2099"/)
+  assert.match(html, /class="member-timetable-create-slot" data-create-date="2099-11-01"/)
+  assert.match(html, /0 buổi tuần này · 0 buổi tổng cộng/)
+  assert.doesNotMatch(html, /member-timetable-no-sessions|data-session-id|data-create-time/)
   assert.doesNotMatch(render([], props), /data-create-date/)
   const cancelled = renderToStaticMarkup(createElement(CancelledRoomSessionsTimetable, {
     items: [{ ...session, status: 'Cancelled' }], initialWeek: '2026-10-19', onSelect: () => {},
   }))
   assert.doesNotMatch(cancelled, /data-create-date/)
+})
+
+test('creation cells remain visible in an empty week without inventing sessions or moving sessions from other weeks', () => {
+  const items = Array.from({ length: 9 }, (_, index) => ({ ...session, id: index + 1, startsAt: '2099-10-26T11:00:00Z', endsAt: '2099-10-26T12:30:00Z' }))
+  const props = { weekStart: '2099-11-23', now: Date.parse('2099-10-25T00:00:00Z'), onCreate: () => {} }
+  const html = render(items, props)
+  assert.equal((html.match(/class="member-timetable-create-slot"/g) || []).length, 7)
+  assert.match(html, /0 buổi tuần này · 9 buổi tổng cộng/)
+  assert.match(html, /class="member-timetable-create-slot" data-create-date="2099-11-23"/)
+  assert.doesNotMatch(html, /data-session-id|data-create-time|Scheduled Yoga/)
+  for (const lock of [{ interactionDisabled: true }, { selectionMode: true }, { now: Date.parse('2100-01-01T00:00:00Z') }]) {
+    const disabled = render(items, { ...props, ...lock }).match(/<button[^>]*class="member-timetable-create-slot"[^>]*>/g)
+    assert.equal(disabled.length, 7)
+    assert.ok(disabled.every(button => button.includes('disabled=""')))
+  }
+  assert.equal(items.length, 9)
+  assert.equal(items[0].startsAt, '2099-10-26T11:00:00Z')
 })
 
 test('creation controls disable past days, elapsed slots and every slot during selection or locked interactions', () => {
