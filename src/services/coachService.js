@@ -1,5 +1,16 @@
 import api from './api'
 
+export async function getCoachClasses({ page = 1, pageSize = 100 } = {}) {
+  const response = await api.get('/classes', { params: { page, pageSize } })
+  const body = response.data
+  if (body?.success === false) throw new Error(body.message || 'Không thể tải danh sách lớp huấn luyện.')
+  const payload = body?.data ?? body
+  return {
+    items: Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : [],
+    total: Number(payload?.total || 0),
+  }
+}
+
 export async function getMyCoachSessions({ from, to, page = 1, pageSize = 100 }) {
   const response = await api.get('/class-sessions/mine', {
     params: { from, to, page, pageSize },

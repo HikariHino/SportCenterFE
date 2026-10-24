@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, Clock3, PencilLine, Plus, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
-import { checkInCoachRegistration, getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
+import { checkInCoachRegistration, getCoachClasses, getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
 import { createTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, ViewLoader } from './CoachViewShared'
 
@@ -225,6 +225,9 @@ function TrainingPlanListDialog({ student, onClose }) {
 export function StudentsView({ query, showNotice, selectedSessionId, onSelectSession }) {
   const [status, setStatus] = useState('Tất cả')
   const [sessions, setSessions] = useState([])
+  const [classCatalog, setClassCatalog] = useState([])
+  const [selectedSportId, setSelectedSportId] = useState('')
+  const [selectedClassId, setSelectedClassId] = useState('')
   const [students, setStudents] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [sessionsLoading, setSessionsLoading] = useState(true)
@@ -242,13 +245,22 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
       setSessionsLoading(true)
       setError('')
       try {
-        const result = await getMyCoachSessions({ pageSize: 100 })
+        const [sessionResult, classResult] = await Promise.allSettled([
+          getMyCoachSessions({ pageSize: 100 }),
+          getCoachClasses({ page: 1, pageSize: 100 }),
+        ])
+        if (sessionResult.status === 'rejected') throw sessionResult.reason
+        const result = sessionResult.value
         if (!active) return
         setSessions(result.items)
-        if (!selectedSessionId || !result.items.some(session => String(session.id) === String(selectedSessionId))) {
-          const upcoming = result.items.find(session => new Date(session.endsAt) >= new Date())
-          const fallback = upcoming ?? result.items[0]
-          if (fallback) onSelectSession?.(fallback)
+        setClassCatalog(classResult.status === 'fulfilled' ? classResult.value.items : [])
+        const restoredSession = result.items.find(session => String(session.id) === String(selectedSessionId))
+        if (restoredSession) {
+          const restoredClass = classResult.status === 'fulfilled'
+            ? classResult.value.items.find(item => String(item.id) === String(restoredSession.classId))
+            : null
+          setSelectedClassId(String(restoredSession.classId))
+          setSelectedSportId(restoredClass?.sportId ? String(restoredClass.sportId) : 'unknown')
         }
       } catch (requestError) {
         if (active) {
@@ -263,9 +275,34 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
     return () => { active = false }
   }, [onSelectSession, requestKey])
 
+  const classes = useMemo(() => {
+    const catalogById = new Map(classCatalog.map(item => [String(item.id), item]))
+    const values = new Map()
+    sessions.forEach(session => {
+      const classId = String(session.classId)
+      const catalogClass = catalogById.get(classId)
+      if (!values.has(classId)) values.set(classId, {
+        id: classId,
+        className: session.className || catalogClass?.className || `Lớp #${classId}`,
+        sportId: catalogClass?.sportId ? String(catalogClass.sportId) : 'unknown',
+        sportName: catalogClass?.sportName || 'Chưa xác định môn',
+      })
+    })
+    return [...values.values()].sort((left, right) => left.className.localeCompare(right.className, 'vi'))
+  }, [classCatalog, sessions])
+
+  const sports = useMemo(() => {
+    const values = new Map()
+    classes.forEach(item => values.set(item.sportId, item.sportName))
+    return [...values].map(([id, name]) => ({ id, name })).sort((left, right) => left.name.localeCompare(right.name, 'vi'))
+  }, [classes])
+
+  const visibleClasses = selectedSportId ? classes.filter(item => item.sportId === selectedSportId) : []
+  const visibleSessions = selectedClassId ? sessions.filter(session => String(session.classId) === selectedClassId) : []
+
   useEffect(() => {
     let active = true
-    if (!selectedSessionId) {
+    if (!selectedSessionId || !sessions.some(session => String(session.id) === String(selectedSessionId))) {
       setStudents([])
       setSelectedId(null)
       setRosterLoading(false)
@@ -275,6 +312,8 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
     const loadRoster = async () => {
       setRosterLoading(true)
       setError('')
+      setStudents([])
+      setSelectedId(null)
       try {
         const result = await getCoachSessionRoster(selectedSessionId)
         if (!active) return
@@ -293,7 +332,7 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
     }
     loadRoster()
     return () => { active = false }
-  }, [requestKey, selectedSessionId])
+  }, [requestKey, selectedSessionId, sessions])
 
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
   const filtered = students.filter(student => {
@@ -329,16 +368,20 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
     }
   }
 
-  if (sessionsLoading || rosterLoading) return <ViewLoader />
+  if (sessionsLoading) return <ViewLoader />
   if (!sessions.length) return <section className="coach-card coach-roster-state"><EmptyState title={error ? 'Không thể tải buổi huấn luyện' : 'Chưa có buổi huấn luyện'} text={error || 'Huấn luyện viên chưa được phân công buổi học nào, nên chưa có danh sách học viên để hiển thị.'} />{error && <button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button>}</section>
 
   return <div className="coach-section-view">
-    <section className="coach-card coach-session-picker">
-      <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>BUỔI ĐANG XEM</small><strong>{selectedSession?.className || 'Buổi huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn một buổi để xem học viên'}</p></div></div>
-      <label><span>Chọn buổi huấn luyện</span><select value={selectedSessionId} onChange={event => { const session = sessions.find(item => String(item.id) === event.target.value); if (session) onSelectSession?.(session); setStatus('Tất cả') }}>{sessions.map(session => <option key={session.id} value={session.id}>{formatSessionOption(session)}</option>)}</select></label>
+    <section className="coach-card coach-session-picker coach-student-session-picker">
+      <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>CHỌN THEO THỨ TỰ</small><strong>{selectedSession?.className || 'Tìm học viên theo buổi huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn môn, lớp và buổi trước khi xem danh sách học viên.'}</p></div></div>
+      <div className="coach-student-selection-steps">
+        <label><span><b>1</b>Chọn môn</span><select value={selectedSportId} onChange={event => { setSelectedSportId(event.target.value); setSelectedClassId(''); onSelectSession?.(null); setStatus('Tất cả') }}><option value="">Chọn môn thể thao</option>{sports.map(sport => <option value={sport.id} key={sport.id}>{sport.name}</option>)}</select></label>
+        <label><span><b>2</b>Chọn lớp</span><select value={selectedClassId} disabled={!selectedSportId} onChange={event => { setSelectedClassId(event.target.value); onSelectSession?.(null); setStatus('Tất cả') }}><option value="">Chọn lớp huấn luyện</option>{visibleClasses.map(item => <option value={item.id} key={item.id}>{item.className}</option>)}</select></label>
+        <label><span><b>3</b>Chọn buổi</span><select value={selectedSession?.id || ''} disabled={!selectedClassId} onChange={event => { const session = visibleSessions.find(item => String(item.id) === event.target.value); if (session) onSelectSession?.({ ...session, sportId: selectedSportId, sportName: sports.find(sport => sport.id === selectedSportId)?.name }); setStatus('Tất cả') }}><option value="">Chọn buổi huấn luyện</option>{visibleSessions.map(session => <option key={session.id} value={session.id}>{formatSessionOption(session)}</option>)}</select></label>
+      </div>
     </section>
 
-    <section className="coach-student-kpis">
+    {!selectedSession ? <section className="coach-card coach-roster-state coach-student-selection-empty"><EmptyState title="Chọn buổi huấn luyện" text="Hoàn tất lần lượt ba bước phía trên để tải đúng danh sách học viên của buổi." /></section> : <><section className="coach-student-kpis">
       <article><span className="blue"><Users size={21} /></span><div><small>Học viên trong buổi</small><strong>{students.length}</strong><p>Dữ liệu trực tiếp từ roster</p></div></article>
       <article><span className="green"><UserCheck size={21} /></span><div><small>Đã điểm danh</small><strong>{checkedInCount}</strong><p>Bao gồm đúng giờ và đi trễ</p></div></article>
       <article><span className="purple"><UserRound size={21} /></span><div><small>Vắng mặt</small><strong>{absentCount}</strong><p>Theo trạng thái chuyên cần</p></div></article>
@@ -359,6 +402,7 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
         {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div>{checkInError && <p className="coach-profile-action-error" role="alert">{checkInError}</p>}<div className="coach-profile-actions"><button type="button" disabled={selected.attendanceTone !== 'pending' || checkingInRegistrationId !== null} onClick={() => handleCheckIn(selected)}><UserCheck size={15} />{checkingInRegistrationId === selected.registrationId ? 'Đang check-in...' : selected.attendanceTone === 'pending' ? 'Check-in học viên' : 'Đã check-in'}</button><button type="button" onClick={() => setPlanStudent(selected)}><Plus size={15} />Tạo giáo án</button><button type="button" onClick={() => setPlansStudent(selected)}><BookOpen size={15} />Xem giáo án</button></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </aside>
     </div>
+    </>}
     {planStudent && <TrainingPlanDialog student={planStudent} onClose={() => setPlanStudent(null)} onCreated={plan => showNotice?.(`Đã tạo giáo án “${plan.planName}” cho ${planStudent.name}.`)} />}
     {plansStudent && <TrainingPlanListDialog student={plansStudent} onClose={() => setPlansStudent(null)} />}
   </div>

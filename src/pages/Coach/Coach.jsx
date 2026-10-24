@@ -144,9 +144,15 @@ export default function Coach() {
   }
 
   const selectCoachSession = useCallback(session => {
-    if (!session?.id) return
+    if (!session?.id) {
+      setSelectedCoachSession(null)
+      return
+    }
     setSelectedCoachSession({
       id: String(session.id),
+      classId: session.classId ? String(session.classId) : null,
+      sportId: session.sportId ? String(session.sportId) : null,
+      sportName: session.sportName || null,
       startsAt: session.startsAt || null,
       endsAt: session.endsAt || null,
       className: session.className || session.studentName || 'Buổi huấn luyện',
