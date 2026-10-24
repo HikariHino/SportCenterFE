@@ -55,7 +55,7 @@ function App() {
           <Route path="/receptionist" element={<ReceptionistRoute />} />
           <Route path="/member" element={<MemberRoute><Member /></MemberRoute>} />
           <Route path="/payment/success" element={<MemberRoute><PaymentResult /></MemberRoute>} />
-          <Route path="/payment/cancel" element={<MemberRoute><PaymentResult cancelled /></MemberRoute>} />
+          <Route path="/payment/cancel" element={<MemberRoute><PaymentResult /></MemberRoute>} />
         </Routes>
       </Suspense>
     </BrowserRouter>
