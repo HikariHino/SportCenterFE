@@ -31,7 +31,8 @@ export async function createReceptionistMemberSubscription(memberId, packageId) 
 export async function getReceptionistMemberSubscriptions(memberId) {
   const response = await api.get(`/member-subscriptions/members/${memberId}`)
   const payload = unwrap(response.data, 'Không thể tải các gói của hội viên.')
-  return Array.isArray(payload) ? payload : []
+  if (!Array.isArray(payload)) throw new Error('Dữ liệu gói của hội viên không hợp lệ. Vui lòng tải lại.')
+  return payload
 }
 
 /** GET /api/member-subscriptions/{id} */

@@ -326,7 +326,8 @@ test('new schedules persist room metadata when the session API ignores roomId', 
   assert.equal(result.created.length, 3)
   assert.equal(state.puts.length, 1)
   assert.equal(state.course.schedule, '[Phòng: Studio Yoga 01] Lịch cũ')
-  for (const key of ['className', 'sportId', 'coachId', 'maxCapacity', 'price', 'isActive']) assert.equal(state.puts[0][key], course[key])
+  for (const key of ['className', 'sportId', 'coachId', 'maxCapacity', 'isActive']) assert.equal(state.puts[0][key], course[key])
+  assert.equal(Object.hasOwn(state.puts[0], 'price'), false)
   assert.ok(state.saved.every(item => item.roomId == null))
   const reloaded = await getRoomTimetable(room, [room])
   assert.equal(reloaded.items.length, 3)
@@ -608,7 +609,7 @@ test('a stale coach and conflicts for a substitute coach block the update', asyn
   assert.equal(conflict.puts.length, 0)
 })
 
-test('class creation sends the course dates and fee required by the backend', async () => {
+test('class creation sends course dates and omits the retired fee field', async () => {
   let payload
   api.defaults.adapter = async config => {
     payload = JSON.parse(config.data)
@@ -616,12 +617,12 @@ test('class creation sends the course dates and fee required by the backend', as
   }
   await classService.createSportClass({ className: ' Yoga ', sportId: 1, coachId: 5, maxCapacity: 20, isActive: true, price: '500000.25', startDate: '2099-10-19', endDate: '2099-11-19' })
   assert.equal(payload.className, 'Yoga')
-  assert.equal(payload.price, 500000.25)
+  assert.equal(Object.hasOwn(payload, 'price'), false)
   assert.equal(payload.startDate, '2099-10-19T00:00:00+07:00')
   assert.equal(payload.endDate, '2099-11-19T23:59:59.999+07:00')
 })
 
-test('class updates preserve provided fees, dates and legacy scheduling data', async () => {
+test('class updates preserve dates and legacy scheduling data while omitting price', async () => {
   let payload
   api.defaults.adapter = async config => {
     payload = JSON.parse(config.data)
@@ -629,14 +630,15 @@ test('class updates preserve provided fees, dates and legacy scheduling data', a
   }
   const original = { className: 'Yoga', sportId: 1, coachId: 5, maxCapacity: 20, isActive: true, price: 0, startDate: '2099-10-19T00:00:00Z', endDate: '2099-11-19T00:00:00Z', schedule: '[Phòng: Studio Yoga 01] Thứ 2, 4, 6' }
   await classService.updateSportClass(10, { ...original, className: 'Updated Yoga' })
-  for (const key of ['price', 'startDate', 'endDate', 'schedule']) assert.equal(payload[key], original[key])
+  for (const key of ['startDate', 'endDate', 'schedule']) assert.equal(payload[key], original[key])
+  assert.equal(Object.hasOwn(payload, 'price'), false)
 })
 
-test('missing or invalid class dates and fees are rejected before POST or PUT', async () => {
+test('missing or invalid class dates are rejected before POST or PUT', async () => {
   let requests = 0
   api.defaults.adapter = async () => { requests += 1; throw new Error('Unexpected API call') }
   const valid = { className: 'Yoga', sportId: 1, coachId: 5, maxCapacity: 20, price: 0, startDate: '2099-10-19', endDate: '2099-11-19' }
-  for (const overrides of [{ startDate: '' }, { endDate: '' }, { startDate: '2099-12-01' }, { endDate: '2001-01-01' }, { price: '' }, { price: '100.123' }]) {
+  for (const overrides of [{ startDate: '' }, { endDate: '' }, { startDate: '2099-12-01' }, { endDate: '2001-01-01' }]) {
     await assert.rejects(classService.createSportClass({ ...valid, ...overrides }))
     await assert.rejects(classService.updateSportClass(10, { ...valid, ...overrides }))
   }

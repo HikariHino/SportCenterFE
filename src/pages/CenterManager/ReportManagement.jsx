@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
-  ArrowDownToLine,
   Award,
   BarChart3,
   Calendar,
@@ -11,22 +10,13 @@ import {
   Clock3,
   CreditCard,
   DollarSign,
-  Download,
-  ExternalLink,
-  Eye,
-  FileCheck,
   FileDown,
-  FileSpreadsheet,
   FileText,
-  Filter,
   Layers,
-  LineChart,
   Percent,
-  PieChart,
   Printer,
   RefreshCw,
   Search,
-  Sparkles,
   TrendingDown,
   TrendingUp,
   UserCheck,
@@ -48,6 +38,13 @@ import '../../style/CenterManager/ReportManagement.css'
 function formatVND(value) {
   const number = Number(value) || 0
   return number.toLocaleString('vi-VN') + ' ₫'
+}
+
+function formatChartValue(value) {
+  return new Intl.NumberFormat('vi-VN', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value)
 }
 
 function formatDate(dateString) {
@@ -85,6 +82,8 @@ export default function ReportManagement() {
 
   // Feedback states
   const [errorMessage, setErrorMessage] = useState(null)
+  const [hasReportError, setHasReportError] = useState(false)
+  const [classReportError, setClassReportError] = useState('')
   const [successMessage, setSuccessMessage] = useState(null)
 
   // Filter states - Class status
@@ -109,6 +108,7 @@ export default function ReportManagement() {
     if (showSpinner) setLoading(true)
     else setRefreshing(true)
     setErrorMessage(null)
+    setHasReportError(false)
 
     try {
       const [overviewRes, revenueRes] = await Promise.all([
@@ -118,6 +118,7 @@ export default function ReportManagement() {
       setOverview(overviewRes)
       setRevenueData(revenueRes)
     } catch (err) {
+      setHasReportError(true)
       setErrorMessage(getReportErrorMessage(err))
     } finally {
       setLoading(false)
@@ -126,13 +127,15 @@ export default function ReportManagement() {
   }
 
   // Load class status data
-  async function loadClassStatus(showSpinner = true) {
-    if (showSpinner) setLoadingClasses(true)
+  async function loadClassStatus() {
+    setLoadingClasses(true)
+    setClassReportError('')
     try {
       const data = await getClassStatusReport()
       setClassStatusList(data)
     } catch (err) {
-      setErrorMessage(getReportErrorMessage(err, 'Không thể tải báo cáo lớp học.'))
+      setClassStatusList([])
+      setClassReportError(getReportErrorMessage(err, 'Không thể tải đủ dữ liệu để thống kê sĩ số lớp học.'))
     } finally {
       setLoadingClasses(false)
     }
@@ -154,7 +157,7 @@ export default function ReportManagement() {
   // Refresh current view data
   function handleRefresh() {
     loadInitialData(false)
-    if (activeTab === 'class-status') loadClassStatus(false)
+    if (activeTab === 'class-status') loadClassStatus()
     if (activeTab === 'payments') loadPayments(false)
   }
 
@@ -166,7 +169,7 @@ export default function ReportManagement() {
   // Effect when switching tabs
   useEffect(() => {
     if (activeTab === 'class-status' && classStatusList.length === 0) {
-      loadClassStatus(true)
+      loadClassStatus()
     } else if (activeTab === 'payments' && paymentsList.length === 0) {
       loadPayments(true)
     }
@@ -312,24 +315,25 @@ export default function ReportManagement() {
   }, [paymentsList, paymentSearch, paymentStatusFilter])
 
   const availableYears = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3]
+  const chartMax = yearStats.maxRevenue * 1.15
+  const revenueReady = !loading && !hasReportError
+  const hasRevenue = yearStats.totalYear > 0
 
   return (
     <div className="report-mgmt">
       {/* Header */}
       <div className="report-mgmt-header">
         <div>
-          <h2>
-            <TrendingUp size={22} color="var(--manager-blue, #2463eb)" />
-            Báo cáo thống kê & Doanh thu
-          </h2>
-          <p>Dữ liệu thời gian thực từ hệ thống thanh toán, gói hội viên và tình trạng lớp học.</p>
+          <span className="report-eyebrow">HIỆU QUẢ KINH DOANH</span>
+          <h1>Báo cáo & doanh thu</h1>
+          <p>Theo dõi doanh thu, hoạt động lớp học và giao dịch của trung tâm.</p>
         </div>
         <div className="report-mgmt-actions">
           <button
             type="button"
             className="report-btn report-btn-secondary"
             onClick={handleRefresh}
-            disabled={loading || refreshing}
+            disabled={loading || refreshing || loadingClasses || loadingPayments}
             title="Làm mới dữ liệu từ máy chủ"
           >
             <RefreshCw size={15} className={refreshing ? 'report-spin' : ''} />
@@ -342,14 +346,14 @@ export default function ReportManagement() {
             title="In hoặc lưu PDF trang báo cáo tổng hợp"
           >
             <Printer size={15} />
-            In / Xuất PDF báo cáo
+            <span>In / Xuất PDF</span>
           </button>
         </div>
       </div>
 
       {/* Notification Alerts */}
       {errorMessage && (
-        <div className="report-alert report-alert-danger">
+        <div className="report-alert report-alert-danger" role="alert">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <AlertCircle size={18} />
             <span>{errorMessage}</span>
@@ -366,7 +370,7 @@ export default function ReportManagement() {
       )}
 
       {successMessage && (
-        <div className="report-alert report-alert-success">
+        <div className="report-alert report-alert-success" role="status">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircle2 size={18} />
             <span>{successMessage}</span>
@@ -384,7 +388,7 @@ export default function ReportManagement() {
 
       {/* Overview Metric Cards */}
       <div className="report-metrics-grid">
-        <div className="report-metric-card">
+        <div className="report-metric-card report-metric-featured">
           <div className="report-metric-top">
             <span className="report-metric-label">Tổng doanh thu hệ thống</span>
             <span className="report-metric-icon green">
@@ -392,7 +396,7 @@ export default function ReportManagement() {
             </span>
           </div>
           <div className="report-metric-value">
-            {overview ? formatVND(overview.totalRevenue) : '...'}
+            {overview ? formatVND(overview.totalRevenue) : loading ? 'Đang tải...' : '—'}
           </div>
           <p className="report-metric-note">
             <CheckCircle2 size={13} color="var(--manager-success, #059669)" />
@@ -408,7 +412,7 @@ export default function ReportManagement() {
             </span>
           </div>
           <div className="report-metric-value">
-            {overview ? formatVND(overview.currentMonthRevenue) : '...'}
+            {overview ? formatVND(overview.currentMonthRevenue) : loading ? 'Đang tải...' : '—'}
           </div>
           <p className="report-metric-note">
             <Clock3 size={13} color="var(--manager-info, #2563eb)" />
@@ -424,12 +428,12 @@ export default function ReportManagement() {
             </span>
           </div>
           <div className="report-metric-value">
-            {overview ? overview.totalActiveMembers : '...'}
+            {overview ? overview.totalActiveMembers : loading ? '...' : '—'}
             <small>thành viên</small>
           </div>
           <p className="report-metric-note">
             <CheckCircle2 size={13} color="var(--manager-purple, #7c3aed)" />
-            Tài khoản hội viên Active
+            Hội viên có tài khoản hoạt động
           </p>
         </div>
 
@@ -441,7 +445,7 @@ export default function ReportManagement() {
             </span>
           </div>
           <div className="report-metric-value">
-            {overview ? overview.totalActiveClasses : '...'}
+            {overview ? overview.totalActiveClasses : loading ? '...' : '—'}
             <small>lớp học</small>
           </div>
           <p className="report-metric-note">
@@ -452,23 +456,24 @@ export default function ReportManagement() {
       </div>
 
       {/* Tabs */}
-      <div className="report-tabs">
+      <div className="report-tabs" aria-label="Loại báo cáo">
         <button
           type="button"
           className={`report-tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
           onClick={() => setActiveTab('revenue')}
+          aria-pressed={activeTab === 'revenue'}
         >
           <BarChart3 size={16} />
-          Báo cáo doanh thu theo tháng
-          <span className="report-tab-badge">Năm {selectedYear}</span>
+          Doanh thu
         </button>
         <button
           type="button"
           className={`report-tab-btn ${activeTab === 'class-status' ? 'active' : ''}`}
           onClick={() => setActiveTab('class-status')}
+          aria-pressed={activeTab === 'class-status'}
         >
           <Percent size={16} />
-          Tỷ lệ lấp đầy & Sĩ số lớp
+          Hoạt động lớp học
           {classStatusList.length > 0 && (
             <span className="report-tab-badge">{classStatusList.length}</span>
           )}
@@ -477,9 +482,10 @@ export default function ReportManagement() {
           type="button"
           className={`report-tab-btn ${activeTab === 'payments' ? 'active' : ''}`}
           onClick={() => setActiveTab('payments')}
+          aria-pressed={activeTab === 'payments'}
         >
           <FileText size={16} />
-          Lịch sử giao dịch & Hóa đơn PDF
+          Giao dịch & hóa đơn
           {paymentsList.length > 0 && (
             <span className="report-tab-badge">{paymentsList.length}</span>
           )}
@@ -488,11 +494,16 @@ export default function ReportManagement() {
 
       {/* Tab 1: Báo cáo Doanh thu */}
       {activeTab === 'revenue' && (
-        <div className="report-section">
+        <div className="report-section report-revenue-section" aria-busy={loading || refreshing}>
           {/* Toolbar */}
           <div className="report-revenue-toolbar">
+            <div>
+              <h2>Tổng quan doanh thu</h2>
+              <p>Phân tích kết quả kinh doanh theo từng tháng trong năm.</p>
+            </div>
             <div className="report-year-picker">
-              <label htmlFor="revenue-year-select">Chọn năm báo cáo:</label>
+              <Calendar size={16} aria-hidden="true" />
+              <label htmlFor="revenue-year-select">Năm báo cáo</label>
               <select
                 id="revenue-year-select"
                 className="report-select"
@@ -506,203 +517,233 @@ export default function ReportManagement() {
                 ))}
               </select>
             </div>
+          </div>
 
-            <div className="report-summary-chips">
-              <span className="report-chip blue">
-                Tổng năm {selectedYear}: <strong>{formatVND(yearStats.totalYear)}</strong>
-              </span>
-              <span className="report-chip green">
-                Tháng cao nhất:{' '}
-                <strong>
-                  {yearStats.maxMonth ? `T${yearStats.maxMonth.month} (${formatVND(yearStats.maxMonth.revenue)})` : 'N/A'}
-                </strong>
-              </span>
-              <span className="report-chip amber">
-                Trung bình:{' '}
-                <strong>{formatVND(Math.round(yearStats.avgMonth))}/tháng</strong>
-              </span>
-            </div>
+          <div className="report-year-summary">
+            <article className="report-year-stat">
+              <span className="report-year-stat-label"><BarChart3 size={16} /> Doanh thu năm {selectedYear}</span>
+              <strong>{revenueReady ? formatVND(yearStats.totalYear) : '—'}</strong>
+              <small>Tổng doanh thu ghi nhận trong năm</small>
+            </article>
+            <article className="report-year-stat">
+              <span className="report-year-stat-label"><Calendar size={16} /> Trung bình mỗi tháng</span>
+              <strong>{revenueReady ? formatVND(Math.round(yearStats.avgMonth)) : '—'}</strong>
+              <small>Tính trên {revenueReady ? revenueData.length : '—'} tháng có dữ liệu báo cáo</small>
+            </article>
+            <article className="report-year-stat report-year-stat-peak">
+              <span className="report-year-stat-label"><Award size={16} /> Tháng có doanh thu cao nhất</span>
+              <strong>{revenueReady && hasRevenue ? formatVND(yearStats.maxMonth.revenue) : '—'}</strong>
+              <small>{!revenueReady ? 'Đang chờ dữ liệu báo cáo' : hasRevenue ? `Tháng ${yearStats.maxMonth.month}/${selectedYear}` : 'Chưa ghi nhận doanh thu'}</small>
+            </article>
           </div>
 
           {/* Biểu đồ cột 12 tháng */}
           <div className="report-chart-card">
             <div className="report-chart-header">
               <div>
-                <h3>Biểu đồ dòng tiền 12 tháng — Năm {selectedYear}</h3>
-                <p>Mức thu thực tế ghi nhận từ các giao dịch thanh toán gói tập và dịch vụ.</p>
+                <h3>Doanh thu theo tháng</h3>
+                <p>Doanh thu từ các giao dịch thanh toán gói tập và dịch vụ · {selectedYear}</p>
               </div>
-              <span className="report-badge info">
-                Đơn vị: VNĐ
-              </span>
+              <div className="report-chart-legend">
+                <span><i /> Doanh thu</span>
+                <span><i className="report-legend-peak" /> Cao nhất</span>
+              </div>
             </div>
 
             {loading ? (
-              <div className="report-loading-box">
+              <div className="report-loading-box" role="status">
                 <RefreshCw size={28} className="report-spin" />
                 <span>Đang tổng hợp dữ liệu doanh thu năm {selectedYear}...</span>
               </div>
-            ) : revenueData.length === 0 ? (
+            ) : hasReportError ? (
+              <div className="report-empty-box">
+                <AlertCircle size={32} />
+                <p>Chưa thể hiển thị báo cáo. Vui lòng thử làm mới dữ liệu.</p>
+              </div>
+            ) : !hasRevenue ? (
               <div className="report-empty-box">
                 <BarChart3 size={32} />
                 <p>Không có dữ liệu giao dịch cho năm {selectedYear}.</p>
               </div>
             ) : (
-              <div className="report-chart-bars-wrap">
-                <div className="report-bars-container">
-                  {revenueData.map((item) => {
-                    const rev = Number(item.revenue) || 0
-                    const heightPercent = yearStats.maxRevenue > 0
-                      ? Math.max(Math.round((rev / yearStats.maxRevenue) * 100), rev > 0 ? 6 : 0)
-                      : 0
-                    const isMax = yearStats.maxMonth && yearStats.maxMonth.month === item.month && rev > 0
-                    const isCurrentMonth =
-                      selectedYear === currentYear && item.month === new Date().getMonth() + 1
+              <div className="report-chart-scroll" role="region" aria-label={`Biểu đồ doanh thu năm ${selectedYear}, cuộn ngang để xem đủ các tháng`} tabIndex={0}>
+                <div className="report-chart-bars-wrap">
+                  <div className="report-chart-axis" aria-hidden="true">
+                    {[1, 0.75, 0.5, 0.25, 0].map((step) => <span key={step}>{formatChartValue(chartMax * step)}</span>)}
+                  </div>
+                  <div className="report-bars-container">
+                    {revenueData.map((item) => {
+                      const rev = Number(item.revenue) || 0
+                      const heightPercent = (rev / chartMax) * 100
+                      const isMax = yearStats.maxMonth && yearStats.maxMonth.month === item.month && rev > 0
+                      const isCurrentMonth =
+                        selectedYear === currentYear && item.month === new Date().getMonth() + 1
 
-                    return (
-                      <div
-                        key={item.month}
-                        className={`report-bar-col ${isCurrentMonth ? 'current' : ''}`}
-                      >
-                        <div className="report-bar-tooltip">
-                          Tháng {item.month}: {formatVND(rev)}
-                          {yearStats.totalYear > 0 && (
-                            <span> ({Math.round((rev / yearStats.totalYear) * 100)}%)</span>
-                          )}
+                      return (
+                        <div
+                          key={item.month}
+                          className={`report-bar-col ${isCurrentMonth ? 'current' : ''}`}
+                          tabIndex={0}
+                          aria-label={`Tháng ${item.month}: ${formatVND(rev)}${isMax ? ', doanh thu cao nhất' : ''}`}
+                        >
+                          <div className="report-bar-tooltip" aria-hidden="true">
+                            Tháng {item.month}: {formatVND(rev)}
+                            {yearStats.totalYear > 0 && (
+                              <span> ({Math.round((rev / yearStats.totalYear) * 100)}%)</span>
+                            )}
+                          </div>
+                          <div className="report-bar-col-track">
+                            <div
+                              className={`report-bar-fill ${isMax ? 'highlight' : ''} ${rev === 0 ? 'zero' : ''}`}
+                              style={{ height: `${heightPercent}%` }}
+                            />
+                          </div>
+                          <span className="report-bar-label">
+                            T{item.month}
+                            {isCurrentMonth && ' •'}
+                          </span>
                         </div>
-                        <div className="report-bar-col-track">
-                          <div
-                            className={`report-bar-fill ${isMax ? 'highlight' : ''} ${rev === 0 ? 'zero' : ''}`}
-                            style={{ height: `${heightPercent}%` }}
-                          />
-                        </div>
-                        <span className="report-bar-label">
-                          T{item.month}
-                          {isCurrentMonth && ' •'}
-                        </span>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
+            <div className="report-chart-footer">
+              <span>Đơn vị: VNĐ</span>
+              <span>Chi tiết từng tháng được liệt kê bên dưới</span>
+            </div>
           </div>
 
           {/* Bảng chi tiết 12 tháng */}
-          <div className="report-table-card">
+          <div className="report-table-card report-revenue-table-card">
             <div className="report-table-header">
-              <h4>Bảng kê khai chi tiết doanh thu theo tháng</h4>
-              <span className="report-badge info">{revenueData.length} tháng</span>
+              <div>
+                <h3>Chi tiết doanh thu</h3>
+                <p>So sánh doanh thu và tỷ trọng đóng góp của từng tháng.</p>
+              </div>
+              <span className="report-badge info">Năm {selectedYear}</span>
             </div>
-            <div className="report-table-scroll">
-              <table className="report-table">
-                <thead>
-                  <tr>
-                    <th>Tháng / Năm</th>
-                    <th>Doanh thu ghi nhận</th>
-                    <th>Tỷ trọng đóng góp</th>
-                    <th>So với trung bình tháng</th>
-                    <th>Đánh giá</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {revenueData.map((item) => {
-                    const rev = Number(item.revenue) || 0
-                    const share = yearStats.totalYear > 0
-                      ? Math.round((rev / yearStats.totalYear) * 100)
-                      : 0
-                    const diffFromAvg = yearStats.avgMonth > 0
-                      ? Math.round(((rev - yearStats.avgMonth) / yearStats.avgMonth) * 100)
-                      : 0
+            {loading ? (
+              <div className="report-loading-box" role="status"><RefreshCw size={24} className="report-spin" /><span>Đang tải chi tiết doanh thu...</span></div>
+            ) : hasReportError || revenueData.length === 0 ? (
+              <div className="report-empty-box"><FileText size={28} /><p>Chưa có dữ liệu chi tiết để hiển thị.</p></div>
+            ) : (
+              <div className="report-table-scroll" role="region" aria-label="Chi tiết doanh thu theo tháng, cuộn ngang để xem đầy đủ" tabIndex={0}>
+                <table className="report-table report-revenue-table">
+                  <thead>
+                    <tr>
+                      <th>Tháng / Năm</th>
+                      <th className="report-numeric">Doanh thu</th>
+                      <th>Tỷ trọng trong năm</th>
+                      <th className="report-numeric">So với trung bình</th>
+                      <th>Đánh giá</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revenueData.map((item) => {
+                      const rev = Number(item.revenue) || 0
+                      const share = yearStats.totalYear > 0
+                        ? Math.round((rev / yearStats.totalYear) * 100)
+                        : 0
+                      const diffFromAvg = yearStats.avgMonth > 0
+                        ? Math.round(((rev - yearStats.avgMonth) / yearStats.avgMonth) * 100)
+                        : 0
 
-                    return (
-                      <tr key={item.month}>
-                        <td>
-                          <strong>Tháng {String(item.month).padStart(2, '0')}/{item.year}</strong>
-                        </td>
-                        <td>
-                          <span style={{ fontWeight: 600, color: rev > 0 ? 'var(--manager-ink, #18263e)' : 'var(--manager-secondary, #94a3b8)' }}>
-                            {formatVND(rev)}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="report-progress-track">
-                            <div
-                              className="report-progress-fill blue"
-                              style={{ width: `${Math.min(share, 100)}%` }}
-                            />
-                          </div>
-                          <span style={{ fontSize: 12, fontWeight: 600 }}>{share}%</span>
-                        </td>
-                        <td>
-                          {rev === 0 ? (
-                            <span style={{ color: 'var(--manager-secondary, #94a3b8)', fontSize: 12 }}>Chưa có thu</span>
-                          ) : diffFromAvg >= 0 ? (
-                            <span style={{ color: 'var(--manager-success, #059669)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              <TrendingUp size={13} /> +{diffFromAvg}%
+                      return (
+                        <tr key={item.month} className={item === yearStats.maxMonth && rev > 0 ? 'report-peak-row' : ''}>
+                          <td>
+                            <strong>Tháng {String(item.month).padStart(2, '0')}/{item.year}</strong>
+                          </td>
+                          <td className="report-numeric">
+                            <span style={{ fontWeight: 600, color: rev > 0 ? 'var(--manager-ink, #18263e)' : 'var(--manager-secondary, #94a3b8)' }}>
+                              {formatVND(rev)}
                             </span>
-                          ) : (
-                            <span style={{ color: 'var(--manager-danger, #dc2626)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              <TrendingDown size={13} /> {diffFromAvg}%
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          {item === yearStats.maxMonth && rev > 0 ? (
-                            <span className="report-badge success">Tháng cao điểm</span>
-                          ) : rev >= yearStats.avgMonth && rev > 0 ? (
-                            <span className="report-badge info">Đạt kỳ vọng</span>
-                          ) : rev > 0 ? (
-                            <span className="report-badge warning">Dưới trung bình</span>
-                          ) : (
-                            <span className="report-badge" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #64748b)' }}>
-                              Không có dữ liệu
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td>TỔNG DOANH THU NĂM {selectedYear}</td>
-                    <td colSpan={2} style={{ color: 'var(--manager-success, #059669)', fontSize: 15 }}>
-                      {formatVND(yearStats.totalYear)}
-                    </td>
-                    <td colSpan={2} style={{ color: 'var(--manager-muted, #748096)' }}>
-                      Trung bình: {formatVND(Math.round(yearStats.avgMonth))}/tháng
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                          </td>
+                          <td>
+                            <div className="report-share-cell">
+                              <div className="report-progress-track">
+                                <div
+                                  className="report-progress-fill blue"
+                                  style={{ width: `${Math.min(share, 100)}%` }}
+                                />
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 600 }}>{share}%</span>
+                            </div>
+                          </td>
+                          <td className="report-numeric">
+                            {rev === 0 ? (
+                              <span style={{ color: 'var(--manager-secondary, #94a3b8)', fontSize: 12 }}>Chưa có thu</span>
+                            ) : diffFromAvg >= 0 ? (
+                              <span style={{ color: 'var(--manager-success, #059669)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <TrendingUp size={13} /> +{diffFromAvg}%
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--manager-danger, #dc2626)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <TrendingDown size={13} /> {diffFromAvg}%
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {item === yearStats.maxMonth && rev > 0 ? (
+                              <span className="report-badge success">Tháng cao điểm</span>
+                            ) : rev >= yearStats.avgMonth && rev > 0 ? (
+                              <span className="report-badge info">Trên / bằng trung bình</span>
+                            ) : rev > 0 ? (
+                              <span className="report-badge warning">Dưới trung bình</span>
+                            ) : (
+                              <span className="report-badge" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #64748b)' }}>
+                                Không có dữ liệu
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>TỔNG DOANH THU NĂM {selectedYear}</td>
+                      <td className="report-numeric" style={{ color: 'var(--manager-success, #059669)', fontSize: 15 }}>
+                        {formatVND(yearStats.totalYear)}
+                      </td>
+                      <td colSpan={3} style={{ color: 'var(--manager-muted, #748096)' }}>
+                        Trung bình: {formatVND(Math.round(yearStats.avgMonth))}/tháng
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Tab 2: Hoạt động lớp học & Tỷ lệ lấp đầy */}
       {activeTab === 'class-status' && (
-        <div className="report-section">
+        <div className="report-section" aria-busy={loadingClasses}>
           {/* Summary insights chips */}
-          <div className="report-revenue-toolbar">
-            <div className="report-summary-chips" style={{ width: '100%', justifyContent: 'space-between' }}>
-              <span className="report-chip blue">
-                Tỷ lệ lấp đầy trung bình: <strong>{classOverallStats.avgFill}%</strong>
-              </span>
-              <span className="report-chip green">
-                Lớp đầy / Tốt (≥80%): <strong>{classOverallStats.highCount} lớp</strong>
-              </span>
-              <span className="report-chip amber">
-                Lớp ổn định (50-79%): <strong>{classOverallStats.mediumCount} lớp</strong>
-              </span>
-              <span className="report-chip" style={{ background: 'var(--manager-danger-bg, #fef2f2)', color: 'var(--manager-danger, #b91c1c)' }}>
-                Cần tối ưu (&lt;50%): <strong>{classOverallStats.lowCount} lớp</strong>
-              </span>
-              <span className="report-chip" style={{ background: 'var(--manager-raised, #f8fafc)', color: 'var(--manager-ink, #18263e)' }}>
-                Tổng học viên: <strong>{classOverallStats.totalRegistered} / {classOverallStats.totalCapacity} chỗ</strong>
-              </span>
+          {!loadingClasses && !classReportError && (
+            <div className="report-revenue-toolbar">
+              <div className="report-summary-chips" style={{ width: '100%', justifyContent: 'space-between' }}>
+                <span className="report-chip blue">
+                  Tỷ lệ lấp đầy trung bình: <strong>{classOverallStats.avgFill}%</strong>
+                </span>
+                <span className="report-chip green">
+                  Lớp đầy / Tốt (≥80%): <strong>{classOverallStats.highCount} lớp</strong>
+                </span>
+                <span className="report-chip amber">
+                  Lớp ổn định (50-79%): <strong>{classOverallStats.mediumCount} lớp</strong>
+                </span>
+                <span className="report-chip" style={{ background: 'var(--manager-danger-bg, #fef2f2)', color: 'var(--manager-danger, #b91c1c)' }}>
+                  Cần tối ưu (&lt;50%): <strong>{classOverallStats.lowCount} lớp</strong>
+                </span>
+                <span className="report-chip" style={{ background: 'var(--manager-raised, #f8fafc)', color: 'var(--manager-ink, #18263e)' }}>
+                  Tổng sĩ số theo lớp: <strong>{classOverallStats.totalRegistered} / {classOverallStats.totalCapacity} chỗ</strong>
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Search & Filter Toolbar */}
           <div className="report-class-filter-bar">
@@ -744,16 +785,29 @@ export default function ReportManagement() {
           {/* Table */}
           <div className="report-table-card">
             <div className="report-table-header">
-              <h4>Báo cáo hoạt động & Tỷ lệ lấp đầy từng lớp học</h4>
-              <span className="report-badge info">
-                {filteredClasses.length} / {classStatusList.length} lớp học
-              </span>
+              <div>
+                <h4>Báo cáo hoạt động & Tỷ lệ lấp đầy từng lớp học</h4>
+                <p>Mỗi hội viên được tính một lần trong mỗi lớp; không tính đăng ký và buổi học đã hủy.</p>
+              </div>
+              {!loadingClasses && !classReportError && (
+                <span className="report-badge info">
+                  {filteredClasses.length} / {classStatusList.length} lớp học
+                </span>
+              )}
             </div>
 
             {loadingClasses ? (
-              <div className="report-loading-box">
+              <div className="report-loading-box" role="status">
                 <RefreshCw size={28} className="report-spin" />
                 <span>Đang thống kê sĩ số và tỷ lệ lấp đầy các lớp học...</span>
+              </div>
+            ) : classReportError ? (
+              <div className="report-empty-box" role="alert">
+                <AlertCircle size={32} />
+                <p>{classReportError}</p>
+                <button type="button" className="report-btn report-btn-secondary" onClick={loadClassStatus}>
+                  <RefreshCw size={15} /> Thử lại
+                </button>
               </div>
             ) : filteredClasses.length === 0 ? (
               <div className="report-empty-box">
@@ -767,7 +821,7 @@ export default function ReportManagement() {
                     <tr>
                       <th>Lớp học</th>
                       <th>Huấn luyện viên</th>
-                      <th>Đăng ký / Sức chứa</th>
+                      <th>Học viên / Sức chứa</th>
                       <th>Tỷ lệ lấp đầy</th>
                       <th>Trạng thái</th>
                       <th>Đề xuất tối ưu hóa lịch học</th>
@@ -812,7 +866,7 @@ export default function ReportManagement() {
                             </div>
                           </td>
                           <td>
-                            {rate >= 90 ? (
+                            {Number(cls.totalRegistration) >= Number(cls.maxCapacity) ? (
                               <span className="report-badge success">Đã đầy lớp</span>
                             ) : rate >= 80 ? (
                               <span className="report-badge success">Gần kín</span>
@@ -847,7 +901,7 @@ export default function ReportManagement() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={2}>TỔNG SỐ HỌC VIÊN ĐANG THEO HỌC</td>
+                      <td colSpan={2}>TỔNG SĨ SỐ THEO LỚP</td>
                       <td style={{ fontWeight: 700, color: 'var(--manager-ink, #18263e)' }}>
                         {classOverallStats.totalRegistered} / {classOverallStats.totalCapacity}
                       </td>
@@ -899,7 +953,7 @@ export default function ReportManagement() {
               <div>
                 <h4>Danh sách giao dịch thanh toán</h4>
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
-                  Xuất hóa đơn PDF chuyên nghiệp trực tiếp thông qua công cụ QuestPDF backend.
+                  Tra cứu thanh toán và tải hóa đơn PDF cho các giao dịch đã hoàn tất.
                 </p>
               </div>
               <span className="report-badge info">
@@ -928,7 +982,7 @@ export default function ReportManagement() {
                       <th>Thực thu</th>
                       <th>Phương thức</th>
                       <th>Trạng thái</th>
-                      <th style={{ textAlign: 'right' }}>Hóa đơn QuestPDF</th>
+                      <th style={{ textAlign: 'right' }}>Hóa đơn PDF</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -994,7 +1048,7 @@ export default function ReportManagement() {
                               onClick={() => handleExportInvoice(p)}
                               title={
                                 isCompleted
-                                  ? 'Xuất hóa đơn PDF chất lượng cao từ QuestPDF'
+                                  ? 'Tải hóa đơn PDF của giao dịch'
                                   : 'Chỉ xuất hóa đơn cho giao dịch hoàn tất'
                               }
                             >

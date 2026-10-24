@@ -144,7 +144,7 @@ export default function FrontDeskClassBooking({ members, membersLoading = false,
               <strong>{item.className}</strong><span><UserRound size={14} />{item.coachName || 'Chưa phân công HLV'}</span>
               <span><CalendarDays size={14} />{formatDate(item.startDate)} – {formatDate(item.endDate)}</span>
               <span><MapPin size={14} />{classRoom?.name || item.roomName || 'Chưa cập nhật phòng'}</span>
-              <span className="fdesk-booking-class-bottom"><span><Users size={14} />Tối đa {item.maxCapacity ?? '—'} học viên</span><b>{Number(item.price) > 0 ? `${Number(item.price).toLocaleString('vi-VN')} ₫` : 'Miễn phí'}</b></span>
+              <span className="fdesk-booking-class-bottom"><span><Users size={14} />Tối đa {item.maxCapacity ?? '—'} học viên</span><b>Trong gói hội viên</b></span>
               {booked > 0 && <span className="fdesk-booking-registered"><CheckCircle2 size={14} />Học viên đã đăng ký {booked} buổi</span>}
             </button>
           })}</div>}

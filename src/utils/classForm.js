@@ -30,17 +30,12 @@ export function buildClassPayload(data, now = Date.now()) {
   if (!Number.isInteger(coachId) || coachId < 1) throw new Error('Vui lòng chọn huấn luyện viên phụ trách.')
   if (!Number.isInteger(maxCapacity) || maxCapacity < 1 || maxCapacity > 10000) throw new Error('Sĩ số tối đa phải là số nguyên từ 1 đến 10.000.')
 
-  if (data.price == null || String(data.price).trim() === '') throw new Error('Vui lòng nhập học phí khóa học.')
-  const price = Number(data.price)
-  if (!Number.isFinite(price) || price < 0 || price > 10000000000000000) throw new Error('Học phí phải là số không âm và không vượt quá 10.000.000.000.000.000 VND.')
-  if (!/^\d+(?:\.\d{1,2})?$/.test(String(price))) throw new Error('Học phí chỉ được có tối đa 2 chữ số thập phân.')
-
   const startDate = classDate(data.startDate)
   const endDate = classDate(data.endDate, true)
   if (Date.parse(startDate) >= Date.parse(endDate)) throw new Error('Ngày kết thúc phải sau ngày bắt đầu khóa học.')
   if (Date.parse(endDate) <= now) throw new Error('Ngày kết thúc khóa học phải sau thời điểm hiện tại.')
 
-  const payload = { className, sportId, coachId, maxCapacity, price, startDate, endDate, schedule: data.schedule ? data.schedule.trim() : null, isActive: data.isActive !== false }
+  const payload = { className, sportId, coachId, maxCapacity, startDate, endDate, schedule: data.schedule ? data.schedule.trim() : null, isActive: data.isActive !== false }
   if (data.roomId) payload.roomId = Number(data.roomId)
   if (data.roomName) payload.roomName = data.roomName
   return payload
