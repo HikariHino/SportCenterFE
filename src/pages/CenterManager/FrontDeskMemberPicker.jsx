@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, UserRound } from 'lucide-react'
 import { filterFrontDeskMembers } from '../../utils/frontDeskBooking'
+import '../../style/CenterManager/FrontDeskMemberPicker.css'
 
-export default function FrontDeskMemberPicker({ id, members, loading, disabled, value, onChange }) {
+export default function FrontDeskMemberPicker({ id, members, loading, disabled, value, onChange, label: fieldLabel = 'Học viên', required = false }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
-  const selected = members.find(member => String(member.memberId) === value)
-  const matches = filterFrontDeskMembers(members, query)
+  const listRef = useRef(null)
+  const selected = members.find(member => String(member.memberId) === String(value))
+  const matches = useMemo(() => filterFrontDeskMembers(members, query), [members, query])
   const results = matches.slice(0, 20)
   const label = member => `${member.fullName} · ${member.phone || 'Chưa có SĐT'} · #${member.memberId}`
   const choose = member => {
@@ -19,14 +21,21 @@ export default function FrontDeskMemberPicker({ id, members, loading, disabled, 
   }
   const move = direction => {
     const enabled = results.map((member, index) => member.isActive !== false ? index : -1).filter(index => index >= 0)
+    if (!enabled.length) { setActive(-1); return }
     const position = enabled.indexOf(active)
-    setActive(enabled.length ? enabled[(position + direction + enabled.length) % enabled.length] : -1)
+    const next = position < 0 ? (direction > 0 ? 0 : enabled.length - 1) : (position + direction + enabled.length) % enabled.length
+    setActive(enabled[next])
   }
 
+  useEffect(() => {
+    if (open && active >= 0) listRef.current?.children[active]?.scrollIntoView({ block: 'nearest' })
+  }, [open, active])
+
   return <div className="fdesk-input-group fdesk-member-picker">
-    <label htmlFor={id}><UserRound size={16} /> Học viên</label>
+    <label htmlFor={id}><UserRound size={16} /> {fieldLabel}{required && ' (*)'}</label>
     <div className="fdesk-booking-search"><Search size={16} /><input id={id} type="search" role="combobox"
       autoComplete="off" aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-results`}
+      aria-required={required} required={required}
       aria-activedescendant={open && active >= 0 ? `${id}-option-${active}` : undefined}
       placeholder={loading ? 'Đang tải học viên...' : 'Tìm theo tên hoặc số điện thoại'}
       value={open ? query : selected ? label(selected) : query} disabled={disabled || loading}
@@ -38,7 +47,7 @@ export default function FrontDeskMemberPicker({ id, members, loading, disabled, 
         if (event.key === 'Enter' && open) { event.preventDefault(); choose(results[active]) }
       }} /></div>
     {open && <div className="fdesk-member-dropdown">
-      <div id={`${id}-results`} role="listbox" aria-label="Học viên phù hợp">{results.map((member, index) => <div
+      <div ref={listRef} id={`${id}-results`} role="listbox" aria-label="Học viên phù hợp">{results.map((member, index) => <div
         key={member.memberId} id={`${id}-option-${index}`} role="option" aria-selected={index === active}
         aria-disabled={member.isActive === false} className={`fdesk-member-option${index === active ? ' is-active' : ''}`}
         onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => choose(member)}>
