@@ -126,13 +126,14 @@ function ClassDetailDialog({ classId, onClose, onSelectSession }) {
 }
 
 
-export function SessionsView({ showNotice }) {
-  const [sessionId, setSessionId] = useState('')
+export function SessionsView({ showNotice, selectedSession, onSelectSession }) {
+  const selectedSessionId = selectedSession?.id ? String(selectedSession.id) : ''
+  const [sessionId, setSessionId] = useState(selectedSessionId)
   const [memberId, setMemberId] = useState('')
   const [registration, setRegistration] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [rosterSessionId, setRosterSessionId] = useState('')
+  const [rosterSessionId, setRosterSessionId] = useState(selectedSessionId)
   const [roster, setRoster] = useState([])
   const [rosterLoading, setRosterLoading] = useState(false)
   const [rosterError, setRosterError] = useState('')
@@ -159,6 +160,12 @@ export function SessionsView({ showNotice }) {
   const [coachesError, setCoachesError] = useState('')
   const [coachesRequestKey, setCoachesRequestKey] = useState(0)
   const [selectedCoachId, setSelectedCoachId] = useState('')
+
+  useEffect(() => {
+    if (!selectedSessionId) return
+    setSessionId(selectedSessionId)
+    setRosterSessionId(selectedSessionId)
+  }, [selectedSessionId])
 
   useEffect(() => {
     let active = true
@@ -247,6 +254,7 @@ export function SessionsView({ showNotice }) {
   const selectCatalogSession = session => {
     setSessionId(String(session.id))
     setRosterSessionId(String(session.id))
+    onSelectSession?.(session)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
