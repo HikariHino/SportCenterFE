@@ -1,7 +1,11 @@
-.member-classes-view { color: var(--theme-text); }
+.member-classes-view { display: grid; gap: 24px; min-width: 0; color: var(--theme-text); container: member-classes / inline-size; }
+.member-classes-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid var(--theme-border); }
+.member-classes-view .member-classes-page-heading h2 { margin: 6px 0 8px; font-size: 28px; }
+.member-classes-page-heading .member-classes-muted { font-size: 12px; line-height: 1.8; }
+.member-classes-page-heading > button { flex-shrink: 0; }
 .member-classes-view button, .member-classes-dialog button {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 10px 14px; border: 1px solid var(--theme-border); border-radius: 9px;
+  min-height: 40px; padding: 10px 14px; border: 1px solid var(--theme-border); border-radius: 9px;
   color: var(--theme-text); background: var(--theme-surface); font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1.5; cursor: pointer;
 }
 .member-classes-view button:hover:not(:disabled), .member-classes-dialog button:hover:not(:disabled) { border-color: var(--theme-accent); background: var(--theme-raised); }
@@ -10,9 +14,11 @@
 .member-classes-view button:disabled, .member-classes-dialog button:disabled { opacity: .55; cursor: not-allowed; }
 .member-classes-view :focus-visible, .member-classes-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
 .member-classes-muted, .member-classes-card small { color: var(--theme-muted); }
-.member-classes-tabs { display: flex; flex-wrap: wrap; gap: 10px; }
-.member-classes-tabs button[aria-pressed='true'] { color: var(--theme-accent); border-color: var(--theme-accent); background: var(--theme-raised); }
-.member-classes-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 22px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); }
+.member-classes-tabs { display: flex; flex-wrap: wrap; gap: 8px; width: fit-content; max-width: 100%; padding: 5px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-surface); }
+.member-classes-tabs > button { border-color: transparent; background: transparent; padding: 11px 18px; color: var(--theme-muted); }
+.member-classes-tabs > button[aria-pressed='true'] { color: var(--theme-accent); border-color: var(--theme-border); background: var(--theme-raised); }
+.member-classes-navigation { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
+.member-classes-filters { display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr)); align-items: end; gap: 16px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); }
 .member-classes-filters label, .member-classes-dialog form > label { display: grid; gap: 6px; font-size: 12px; font-weight: 600; }
 .member-classes-filters input, .member-classes-filters select, .member-classes-dialog textarea { min-width: 0; width: 100%; padding: 10px 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-bg); color: var(--theme-text); font: inherit; }
 .member-classes-filters .member-classes-checkbox { display: flex; align-items: center; gap: 8px; }
@@ -59,8 +65,16 @@
 .member-classes-stars input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
 .member-classes-stars label:focus-within { outline: 3px solid var(--theme-accent); outline-offset: 4px; border-radius: 4px; }
 
-.member-classes-layout-toggle { display: flex; gap: 8px; margin-block: 16px; }
+.member-classes-view .member-schedule-list-heading h3 { font-size: 18px; margin: 0 0 4px; }
+.member-schedule-list-heading p { color: var(--theme-muted); font-size: 12px; line-height: 1.8; }
+.member-classes-layout-toggle { display: flex; gap: 4px; flex-shrink: 0; padding: 4px; border: 1px solid var(--theme-border); background: var(--theme-surface); border-radius: 10px; }
+.member-classes-layout-toggle > button { padding: 7px 10px; min-height: 36px; border-color: transparent; font-size: 11px; color: var(--theme-muted); }
 .member-classes-layout-toggle button[aria-pressed='true'] { color: var(--theme-accent); border-color: var(--theme-accent); background: var(--theme-raised); }
+.member-my-registrations { min-width: 0; display: grid; gap: 16px; }
+.member-browser-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.member-classes-view .member-browser-heading h3 { font-size: 18px; margin: 0 0 4px; }
+.member-browser-heading p { color: var(--theme-muted); font-size: 12px; line-height: 1.8; }
+.member-browser-heading > span { flex-shrink: 0; border: 1px solid var(--theme-border); border-radius: 8px; padding: 5px 10px; font-size: 11px; color: var(--theme-muted); background: var(--theme-surface); }
 .member-registration-dialog-content { display: grid; gap: 16px; }
 .member-registration-dialog-content > .member-classes-badge { justify-self: start; }
 .member-course-browser, .member-course-sessions { display: grid; gap: 20px; min-width: 0; }
@@ -68,32 +82,27 @@
 .member-course-card > strong { color: var(--theme-text); font-size: 18px; overflow-wrap: anywhere; }
 .member-course-card > span { display: flex; align-items: center; gap: 8px; color: var(--theme-muted); text-align: left; }
 .member-course-card > span.member-classes-badge { color: var(--theme-accent); }
+.member-course-card > .member-course-card-top { width: 100%; justify-content: space-between; }
+.member-course-card-top > small { color: var(--theme-muted); font-size: 10px; }
 .member-course-card svg { flex-shrink: 0; }
-.member-course-card > .member-course-view-sessions { margin-top: auto; color: var(--theme-accent); font-weight: 600; }
+.member-course-card > .member-course-view-sessions { width: 100%; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--theme-border); color: var(--theme-accent); font-weight: 600; }
+.member-course-view-sessions > svg:last-child { margin-left: auto; }
+.member-course-card > span { min-width: 0; overflow-wrap: anywhere; }
+.member-classes-view .member-course-card:hover { box-shadow: 0 4px 18px #17243c0c; }
 .member-course-heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
 .member-course-heading h3 { margin: 14px 0 6px; font-size: 23px; }
 .member-course-heading p { margin: 0; }
 .member-classes-view .member-course-back { padding: 0; border: 0; background: transparent; color: var(--theme-accent); }
-.member-course-book-all { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-raised); }
-.member-course-book-all > div { flex: 1; min-width: min(100%, 240px); }
-.member-course-book-all p { margin: 6px 0 0; color: var(--theme-muted); font-size: 12px; }
-.member-course-book-all button { flex-shrink: 0; }
 .member-course-sessions h4 { margin: 0; font-size: 16px; }
 .member-class-booking-preview { max-height: 220px; overflow-y: auto; margin: 0; padding: 12px 12px 12px 32px; border-radius: 8px; background: var(--theme-bg); }
 .member-class-booking-preview li + li { margin-top: 8px; }
-@media (max-width: 1100px) {
-  .member-classes-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .member-classes-grid { grid-template-columns: minmax(0, 1fr); }
-}
+.member-class-booking-preview li > strong, .member-class-booking-preview li > span { display: block; }
+.member-class-booking-preview li > span { color: var(--theme-muted); font-size: 12px; }
 @media (max-width: 600px) {
-  .member-classes-filters { grid-template-columns: minmax(0, 1fr); padding: 16px; }
-  .member-classes-card { padding: 16px; }
-  .member-classes-details > div { flex-direction: column; gap: 3px; }
-  .member-classes-details dd { text-align: left; }
   .member-classes-dialog { padding: 18px; }
   .member-classes-dialog form > footer > button { flex: 1 1 130px; }
-  .member-classes-no-sub-banner { flex-direction: column; align-items: flex-start; }
-  .member-classes-no-sub-btn { width: 100%; }
+  .member-classes-dialog .member-classes-details > div { flex-direction: column; gap: 3px; }
+  .member-classes-dialog .member-classes-details dd { text-align: left; }
 }
 
 /* No Subscription Warning Banner & Modal Alert */
@@ -141,8 +150,8 @@
 .member-classes-no-sub-btn {
   white-space: nowrap;
   flex-shrink: 0;
-  background: #d97706 !important;
-  border-color: #d97706 !important;
+  background: #92400e !important;
+  border-color: #92400e !important;
   color: #fff !important;
 }
 .member-classes-no-sub-btn:hover:not(:disabled) {
@@ -253,5 +262,141 @@
   gap: 10px;
   width: 100%;
   margin-top: 8px;
+}
+
+/* Member schedule: week grid on desktop, daily agenda on smaller screens. */
+.member-weekly-schedule { min-width: 0; border: 1px solid var(--theme-border); border-radius: 16px; background: var(--theme-surface); overflow: hidden; }
+.member-weekly-schedule .member-timetable { border: 0; border-radius: 0; box-shadow: none; }
+.member-weekly-schedule .member-timetable-heading { background: var(--theme-surface); padding: 18px 22px; }
+.member-weekly-schedule .member-timetable-heading h3 { font-size: 16px; }
+.member-weekly-schedule .member-timetable-toolbar { padding: 18px 22px; background: var(--theme-bg); border-bottom: 1px solid var(--theme-border); }
+.member-weekly-schedule .member-timetable-scroll { margin: 20px 22px; }
+.member-weekly-schedule .member-timetable-table { min-width: 1020px; }
+.member-weekly-schedule .member-timetable-table thead th { padding: 14px 6px; font-size: 12px; }
+.member-weekly-schedule .member-timetable-table thead th:first-child { width: 82px; }
+.member-weekly-schedule .member-timetable-table thead th.is-today { color: var(--theme-green, #096445); background: var(--theme-green-bg, #e1f6ee); }
+.member-weekly-schedule .member-timetable-table td { padding: 8px; }
+.member-weekly-schedule .member-timetable-table td.is-today { background: var(--theme-bg); }
+.member-weekly-schedule .member-timetable .member-timetable-session { display: flex; align-items: stretch; justify-content: flex-start; gap: 8px; padding: 10px 8px; border: 1px solid var(--theme-border); border-left: 3px solid var(--theme-accent); border-radius: 9px; background: var(--theme-raised); font-weight: 400; }
+.member-weekly-schedule .member-timetable-session > strong { font-size: 12px; }
+.member-weekly-schedule .member-timetable-session > .member-timetable-session-time { color: var(--theme-text); font-size: 10px; }
+.member-weekly-schedule .member-timetable-session.is-cancelled { background: var(--theme-bg); border-left-color: var(--theme-red, #b42318); }
+.member-schedule-agenda { display: none; }
+.member-schedule-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 22px; border-top: 1px solid var(--theme-border); }
+.member-schedule-footer > p { display: flex; align-items: center; gap: 7px; color: var(--theme-muted); font-size: 11px; }
+.member-schedule-footer > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.member-schedule-footer button { font-size: 11px; padding: 7px 10px; }
+.member-agenda-day h4 { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; color: var(--theme-text); font-size: 13px; }
+.member-agenda-day h4 > span { margin-left: auto; color: var(--theme-muted); font-size: 11px; font-weight: 500; }
+.member-agenda-day h4[aria-current='date'], .member-agenda-day h4[aria-current='date'] > span { color: var(--theme-accent); }
+.member-classes-view .member-agenda-session { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 9px; width: 100%; text-align: left; font-weight: 400; border: 1px solid var(--theme-border); border-left: 3px solid var(--theme-accent); background: var(--theme-bg); padding: 16px; }
+.member-agenda-session + .member-agenda-session { margin-top: 12px; }
+.member-agenda-session > span, .member-agenda-session > strong { display: flex; align-items: flex-start; gap: 7px; color: var(--theme-muted); font-size: 11px; overflow-wrap: anywhere; }
+.member-agenda-session > strong { color: var(--theme-text); font-size: 15px; }
+.member-agenda-session > .member-agenda-time { color: var(--theme-accent); font-weight: 700; }
+.member-agenda-session > small { color: var(--theme-muted); font-size: 11px; overflow-wrap: anywhere; }
+.member-agenda-session > .member-agenda-status { align-self: flex-start; padding: 4px 8px; border-radius: 6px; background: var(--theme-raised); color: var(--theme-accent); font-size: 10px; }
+.member-classes-view .member-agenda-session.is-cancelled { border-left-color: var(--theme-red, #b42318); }
+.member-agenda-session.is-cancelled > strong { color: var(--theme-muted); text-decoration: line-through; }
+.member-agenda-session.is-cancelled > small { color: var(--theme-red, #b42318); }
+.member-agenda-empty { display: grid; justify-items: center; gap: 12px; padding: 24px 12px; text-align: center; color: var(--theme-muted); font-size: 12px; }
+.member-agenda-empty strong { color: var(--theme-text); font-size: 15px; }
+@container member-classes (max-width: 900px) {
+  .member-classes-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .member-classes-filters > label:first-child { grid-column: 1 / -1; }
+}
+@container member-classes (max-width: 700px) {
+  .member-classes-grid { grid-template-columns: minmax(0, 1fr); }
+  .member-weekly-schedule .member-timetable-scroll { display: none; }
+  .member-schedule-agenda { display: grid; gap: 24px; padding: 18px; }
+  .member-weekly-schedule .member-timetable-heading { flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px; }
+  .member-weekly-schedule .member-timetable-toolbar { padding: 16px 18px; }
+  .member-weekly-schedule .member-timetable-navigation { width: 100%; }
+  .member-weekly-schedule .member-timetable-navigation label { flex: 1 1 180px; min-width: 0; }
+  .member-weekly-schedule .member-timetable-navigation input { width: 100%; box-sizing: border-box; }
+  .member-weekly-schedule .member-timetable-navigation button { min-height: 40px; }
+  .member-schedule-footer { padding: 16px 18px; }
+  .member-browser-heading { align-items: flex-start; }
+  .member-classes-page-heading { align-items: flex-start; }
+  .member-classes-view .member-classes-page-heading h2 { font-size: 24px; }
+  .member-classes-no-sub-banner { flex-direction: column; align-items: flex-start; }
+  .member-classes-no-sub-btn { width: 100%; white-space: normal; }
+  .member-classes-no-sub-banner-content { align-items: flex-start; }
+}
+@container member-classes (max-width: 450px) {
+  .member-classes-page-heading { flex-direction: column; gap: 14px; }
+  .member-classes-view .member-classes-page-heading h2 { font-size: 22px; }
+  .member-classes-tabs { width: 100%; gap: 4px; box-sizing: border-box; }
+  .member-classes-tabs > button { flex: 1; min-width: 0; padding: 10px 8px; font-size: 11px; }
+  .member-classes-filters { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .member-classes-card { padding: 16px; }
+  .member-classes-details > div { flex-direction: column; gap: 3px; }
+  .member-classes-details dd { text-align: left; }
+  .member-classes-view .member-course-card { padding: 18px; }
+  .member-browser-heading { flex-direction: column; gap: 10px; }
+  .member-weekly-schedule .member-timetable-navigation label { flex-basis: 100%; }
+  .member-weekly-schedule .member-timetable-navigation label { white-space: nowrap; }
+  .member-weekly-schedule .member-timetable-navigation button { flex: 1; }
+  .member-schedule-agenda { padding: 16px; }
+  .member-classes-view .member-agenda-session { padding: 14px; }
+}
+
+/* Select individual sessions before confirming a batch registration. */
+.member-session-selection-tools { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); }
+.member-session-selection-tools > div > strong { font-size: 14px; }
+.member-session-selection-tools > div > strong > span { font-weight: 400; color: var(--theme-muted); }
+.member-session-selection-tools p { color: var(--theme-muted); font-size: 11px; line-height: 1.8; }
+.member-session-selection-tools > div > p { margin-top: 4px; }
+.member-session-select-all { display: flex; align-items: center; gap: 10px; width: fit-content; padding: 4px 0; font-size: 12px; font-weight: 600; cursor: pointer; }
+.member-session-selection-tools input, .member-session-choice > input { width: 18px; height: 18px; margin: 0; flex-shrink: 0; accent-color: var(--theme-accent); cursor: pointer; }
+.member-session-selection-tools input:disabled, .member-session-choice > input:disabled { cursor: not-allowed; }
+.member-session-list { --member-session-columns: 22px minmax(160px, 1.15fr) minmax(180px, 1.4fr) minmax(70px, .6fr) minmax(140px, 1fr); border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); overflow: hidden; min-width: 0; }
+.member-session-list-heading, .member-session-choice { display: grid; grid-template-columns: var(--member-session-columns); align-items: center; gap: 16px; padding: 18px 20px; }
+.member-session-list-heading { background: var(--theme-raised); color: var(--theme-muted); font-size: 11px; }
+.member-session-list-heading > span:first-child { grid-column: 1 / 3; }
+.member-session-list > ul { padding: 0; margin: 0; list-style: none; }
+.member-session-list-row + .member-session-list-row { border-top: 1px solid var(--theme-border); }
+.member-session-list-row[data-selected='true'] { background: var(--theme-raised); box-shadow: inset 3px 0 0 var(--theme-accent); }
+.member-session-list-row:focus-within { outline: 2px solid var(--theme-accent); outline-offset: -3px; }
+.member-session-choice { cursor: pointer; }
+.member-session-list-row[data-unavailable='true'] .member-session-choice { cursor: default; }
+.member-session-choice > span { min-width: 0; overflow-wrap: anywhere; }
+.member-session-date { display: grid; gap: 5px; }
+.member-session-date > strong { font-size: 13px; }
+.member-session-date > span, .member-session-location > span, .member-session-enrollment { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--theme-muted); }
+.member-session-date > small { color: var(--theme-muted); font-size: 10px; }
+.member-session-location { display: grid; gap: 8px; }
+.member-session-availability { display: grid; justify-items: start; gap: 8px; }
+.member-session-availability > small { color: var(--theme-green, #096445); font-size: 10px; }
+.member-session-list-row[data-unavailable='true'] .member-session-availability > small { color: var(--theme-muted); }
+.member-session-list-row[data-unavailable='true'] .member-session-date > strong { color: var(--theme-muted); }
+.member-session-list-row[data-unavailable='true'] .member-classes-badge { color: var(--theme-muted); background: var(--theme-bg); }
+.member-course-sessions .member-session-row-note { margin: 0 20px 14px 58px; color: var(--theme-muted); font-size: 10px; line-height: 1.8; overflow-wrap: anywhere; }
+.member-session-selection-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; position: sticky; bottom: 12px; z-index: 3; padding: 18px 20px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); box-shadow: 0 4px 24px #0d14221a; }
+.member-session-selection-footer > div:first-child { display: grid; gap: 3px; }
+.member-session-selection-footer strong { font-size: 14px; }
+.member-session-selection-footer span { color: var(--theme-muted); font-size: 11px; }
+.member-session-selection-footer > div:last-child { display: flex; flex-wrap: wrap; gap: 10px; }
+@container member-classes (max-width: 900px) {
+  .member-session-list-heading { display: none; }
+  .member-session-choice { grid-template-columns: 22px minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; gap: 14px; }
+  .member-session-choice > input { grid-column: 1; grid-row: 1; margin-top: 3px; }
+  .member-session-date { grid-column: 2; grid-row: 1; }
+  .member-session-availability { grid-column: 3; grid-row: 1; }
+  .member-session-location { grid-column: 2; grid-row: 2; }
+  .member-session-enrollment { grid-column: 3; grid-row: 2; }
+}
+@container member-classes (max-width: 450px) {
+  .member-session-selection-tools { padding: 16px; }
+  .member-session-selection-tools > div > strong > span { display: block; margin-top: 4px; }
+  .member-session-select-all { align-items: flex-start; font-size: 11px; }
+  .member-session-choice { grid-template-columns: 22px minmax(0, 1fr); padding: 16px; gap: 12px; }
+  .member-session-availability { grid-column: 2; grid-row: 4; }
+  .member-session-enrollment { grid-column: 2; grid-row: 3; }
+  .member-session-availability { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .member-course-sessions .member-session-row-note { margin-inline: 50px 16px; }
+  .member-session-selection-footer { padding: 14px 16px; gap: 12px; bottom: 8px; }
+  .member-session-selection-footer > div:last-child { width: 100%; gap: 8px; }
+  .member-session-selection-footer > div:last-child > button { flex: 1 1 auto; padding: 10px; font-size: 11px; }
 }
 

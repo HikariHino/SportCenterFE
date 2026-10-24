@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, LoaderCircle, RefreshCw, Search, ShieldAlert, Star, X } from 'lucide-react'
+import { AlertCircle, CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, List, LoaderCircle, RefreshCw, Search, ShieldAlert, Star, X } from 'lucide-react'
 import { getSports, getCoaches } from '../../services/classCatalogService'
 import { getAllAvailableSessions, getAllMemberClasses, getAllMyRegistrations, bookClassSessions, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
 import { getMySubscriptions } from '../../services/memberSubscriptionService'
 import { getRooms } from '../../services/roomService'
 import { bookingUnavailableReason, checkInUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../../utils/memberClasses'
 import { timetableWeekStart } from '../../utils/memberTimetable'
-import WeeklyTimetable from '../../components/WeeklyTimetable'
+import MemberWeeklySchedule from './MemberWeeklySchedule'
 import '../../style/member/ClassesView.css'
 import useResource from '../../hooks/useClassResource'
 import SessionDetails, { formatClassDateTime as formatDate } from './MemberSessionDetails'
@@ -69,7 +69,7 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
     dialog.showModal()
     return () => dialog.close()
   }, [])
-  const titles = { book: 'Xác nhận đặt lịch', bookClass: 'Đăng ký các buổi học của lớp', cancel: 'Hủy đăng ký buổi học', checkIn: 'Điểm danh buổi học', review: 'Đánh giá buổi học' }
+  const titles = { book: 'Xác nhận đặt lịch', bookClass: 'Đăng ký các buổi đã chọn', cancel: 'Hủy đăng ký buổi học', checkIn: 'Điểm danh buổi học', review: 'Đánh giá buổi học' }
   const isBooking = action.type === 'book' || action.type === 'bookClass'
   const isBookBlocked = isBooking && hasActiveSubscription !== true
   const checkInReason = action.type === 'checkIn' ? checkInUnavailableReason(action.item, now) : ''
@@ -79,8 +79,8 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
       <header><h2 id="member-class-dialog-title">{titles[action.type]}</h2><button type="button" aria-label="Đóng" disabled={busy} onClick={onClose}><X size={20} /></button></header>
       <h3>{action.item.className || `Buổi học #${action.item.sessionId || action.item.id}`}</h3>
       {action.type === 'bookClass' ? <>
-        <p>Đăng ký {bulkResult?.remaining.length || action.item.sessions.length} buổi còn mở của lớp. Mỗi buổi được đăng ký riêng theo điều kiện của gói tập.</p>
-        <ul className="member-class-booking-preview">{action.item.sessions.filter(item => !bulkResult?.remaining.length || bulkResult.remaining.includes(String(item.id))).map(item => <li key={item.id}>{formatDate(item.startsAt)} – {formatDate(item.endsAt)}</li>)}</ul>
+        <p>Xác nhận đăng ký {bulkResult?.remaining.length || action.item.sessions.length} buổi bạn đã chọn bên dưới. Mỗi buổi được kiểm tra lại trước khi đăng ký.</p>
+        <ul className="member-class-booking-preview">{action.item.sessions.filter(item => !bulkResult?.remaining.length || bulkResult.remaining.includes(String(item.id))).map(item => <li key={item.id}><strong>Buổi #{item.id}</strong><span>{formatDate(item.startsAt)} – {formatDate(item.endsAt)}</span></li>)}</ul>
         {bulkResult && <p className="member-classes-notice" role="status">Đã đăng ký {bulkResult.registered.length} buổi; {bulkResult.existing.length} buổi đã có sẵn; bỏ qua {bulkResult.skipped.length} buổi.</p>}
         {bulkResult?.skipped.length > 0 && <ul>{bulkResult.skipped.map(item => <li key={item.id}>Buổi #{item.id}: {item.reason}</li>)}</ul>}
         {bulkProgress && <p role="status">Đang xử lý {bulkProgress.completed}/{bulkProgress.total} buổi...</p>}
@@ -136,7 +136,7 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
   </dialog>
 }
 
-export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', notificationSessionId }) {
+export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', notificationSessionId }) {
   const [tab, setTab] = useState(initialTab)
   const [browseRevision, setBrowseRevision] = useState(0)
   const [bulkResult, setBulkResult] = useState(null)
@@ -387,16 +387,22 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
     }
   }
 
-  return <div className="member-view-stack member-classes-view">
-    <div className="member-section-heading">
-      <div><p className="member-eyebrow"><CalendarDays size={16} /> LỊCH TẬP CỦA BẠN</p><h2>Lớp học & Đặt lịch buổi học</h2><p className="member-classes-muted">Chọn lớp để xem các buổi học, đăng ký cả lớp hoặc từng buổi và quản lý lịch đã đặt.</p></div>
+  return <div className="member-classes-view">
+    <header className="member-classes-page-heading">
+      <div><p className="member-eyebrow"><CalendarDays size={16} /> LỊCH TẬP CỦA BẠN</p><h2>Lớp học & Đặt lịch</h2><p className="member-classes-muted">Theo dõi lịch học, quản lý các buổi đã đặt và tìm lớp phù hợp với bạn.</p></div>
       <button type="button" disabled={current.loading || busy} onClick={refreshBookingData}><RefreshCw size={16} /> Làm mới</button>
-    </div>
+    </header>
     {notice && <p className="member-classes-notice" role="status"><Check size={18} />{notice}</p>}
     {!action && bulkResult?.skipped.length > 0 && <details className="member-class-booking-skipped"><summary>Các buổi được bỏ qua ({bulkResult.skipped.length})</summary><ul>{bulkResult.skipped.map(item => <li key={item.id}>Buổi #{item.id}: {item.reason}</li>)}</ul></details>}
-    <div className="member-classes-tabs" role="group" aria-label="Chọn danh sách buổi học">
-      <button type="button" aria-pressed={tab === 'browse'} onClick={() => setTab('browse')}><Search size={16} /> Tìm lớp học</button>
-      <button type="button" aria-pressed={tab === 'mine'} onClick={() => setTab('mine')}><CalendarDays size={16} /> Lịch đã đặt</button>
+    <div className="member-classes-navigation">
+      <div className="member-classes-tabs" role="group" aria-label="Chọn danh sách buổi học">
+        <button type="button" aria-pressed={tab === 'mine'} onClick={() => setTab('mine')}><CalendarDays size={17} /> Thời khóa biểu</button>
+        <button type="button" aria-pressed={tab === 'browse'} onClick={() => setTab('browse')}><Search size={16} /> Tìm lớp học</button>
+      </div>
+      {tab === 'mine' && <div className="member-classes-layout-toggle" role="group" aria-label="Cách hiển thị lịch đã đặt">
+        <button type="button" aria-pressed={mineLayout === 'timetable'} onClick={() => setMineLayout('timetable')}><CalendarDays size={15} /> Theo tuần</button>
+        <button type="button" aria-pressed={mineLayout === 'list'} onClick={() => setMineLayout('list')}><List size={15} /> Danh sách</button>
+      </div>}
     </div>
 
     {tab === 'browse' && hasActiveSubscription === false && (
@@ -420,18 +426,14 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'browse', 
       </div>
     )}
 
-    {tab === 'mine' && <div className="member-classes-layout-toggle" role="group" aria-label="Cách hiển thị lịch đã đặt">
-      <button type="button" aria-pressed={mineLayout === 'timetable'} onClick={() => setMineLayout('timetable')}><CalendarDays size={16} /> Thời khóa biểu</button>
-      <button type="button" aria-pressed={mineLayout === 'list'} onClick={() => setMineLayout('list')}>Danh sách</button>
-    </div>}
-
     {tab === 'browse' && <MemberClassBrowser sports={sports} coaches={coaches} rooms={roomsList} registered={registeredSessions} busy={busy} now={now} refreshKey={browseRevision}
       bookingState={{ loading: mine.loading || subscriptions.loading, error: mine.error || subscriptions.error, reload: () => { mine.reload(); subscriptions.reload() } }}
-      onBook={session => openAction('book', session)} onBookClass={course => openAction('bookClass', course)} />}
+      onBookClass={course => openAction('bookClass', course)} />}
 
-    {tab === 'mine' && <section aria-label="Các lượt đăng ký" aria-busy={mine.loading}>
+    {tab === 'mine' && <section className="member-my-registrations" aria-label="Các lượt đăng ký" aria-busy={mine.loading}>
+      {mineLayout === 'list' && <header className="member-schedule-list-heading"><h3>Lịch đã đặt</h3><p>Xem thông tin, điểm danh và quản lý từng buổi học bạn đã đăng ký.</p></header>}
       {mine.backgroundError && <p className="member-classes-checkin-notice" role="status">Chưa thể đồng bộ điểm danh mới: {mine.backgroundError} Dữ liệu đang hiển thị là lần tải gần nhất.</p>}
-      {tab === 'mine' && mineLayout === 'timetable' && !mine.loading && !mine.error ? <WeeklyTimetable items={registrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} showAttendance /> : mine.loading || mine.error || !mine.data?.items.length ? <ResourceState resource={mine} emptyText={'Bạn chưa đăng ký buổi học nào.'} /> : <div className="member-classes-grid">
+      {mineLayout === 'timetable' && !mine.loading && !mine.error ? <MemberWeeklySchedule items={registrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} onBrowse={() => setTab('browse')} /> : mine.loading || mine.error || !mine.data?.items.length ? <ResourceState resource={mine} emptyText={'Bạn chưa đăng ký buổi học nào.'} /> : <div className="member-classes-grid">
         {listedRegistrations.map(registration => {
           const allowed = registrationActions(registration, now)
           return <article className="member-classes-card" key={registration.id}>

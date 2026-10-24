@@ -249,7 +249,7 @@ export default function Member() {
       case 'checkin':
         return <GymCheckInView showNotice={showNotice} />
       case 'classes':
-        return <ClassesView key={scheduleRequest?.revision || 'classes'} showNotice={showNotice} onNavigateTab={selectNav} initialTab={scheduleRequest ? 'mine' : 'browse'} notificationSessionId={scheduleRequest?.sessionId} />
+        return <ClassesView key={scheduleRequest?.revision || 'classes'} showNotice={showNotice} onNavigateTab={selectNav} notificationSessionId={scheduleRequest?.sessionId} />
       case 'training-plans':
         return <TrainingPlansView user={user} showNotice={showNotice} />
       case 'support':
