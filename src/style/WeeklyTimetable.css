@@ -22,11 +22,9 @@
 .member-timetable-table thead th:first-child { width: 94px; }
 .member-timetable-table thead th > span { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; }
 .member-timetable-table thead th.is-today { color: var(--theme-green, #087e70); background: var(--theme-green-bg, #d5ece4); }
-.member-timetable .member-timetable-create-day { flex-direction: column; gap: 3px; width: 100%; min-height: 70px; padding: 6px; border-color: transparent; color: inherit; background: transparent; font-size: inherit; }
+.member-timetable .member-timetable-create-day { flex-direction: column; gap: 3px; width: 100%; min-height: 48px; padding: 6px; border-color: transparent; color: inherit; background: transparent; font-size: inherit; }
 .member-timetable-create-day > span { font-size: 11px; font-weight: 500; }
-.member-timetable-create-day > small { display: flex; align-items: center; gap: 4px; margin-top: 4px; color: var(--theme-accent); font-size: 10px; }
 .member-timetable .member-timetable-create-slot { flex-direction: column; gap: 8px; width: 100%; min-height: 125px; padding: 12px 6px; border-style: dashed; color: var(--theme-muted); background: transparent; }
-.member-timetable-create-slot > small { font-size: 10px; font-weight: 400; }
 .member-timetable-table tbody th { padding: 20px 8px; background: var(--theme-surface); color: var(--theme-muted); text-align: center; vertical-align: middle; }
 .member-timetable-table tbody th > span { display: block; margin-top: 5px; color: var(--theme-text); font-size: 13px; }
 .member-timetable-table tbody th > small { display: block; margin-top: 2px; font-size: 11px; font-weight: 500; }

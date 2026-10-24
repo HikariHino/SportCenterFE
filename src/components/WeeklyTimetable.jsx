@@ -66,7 +66,7 @@ export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSele
         <caption className="member-timetable-sr-only">Thời khóa biểu tuần {weekLabel}</caption>
         <thead><tr><th scope="col">Khung giờ</th>{days.map(day => <th key={day.key} scope="col" {...dropProps({ date: day.key })} className={`${day.key === today ? 'is-today' : ''}${dropTarget === targetKey({ date: day.key }) ? ' is-drop-target' : ''}`} aria-current={day.key === today ? 'date' : undefined}>
           {onCreate ? <button type="button" className="member-timetable-create-day" data-create-date={day.key} disabled={!canCreate({ date: day.key })} aria-label={`Tạo buổi học ${day.label}, ngày ${day.dateLabel}/${day.key.slice(0, 4)}`} onClick={() => createSession({ date: day.key })}>
-            {day.label}<span>{day.dateLabel}{day.key === today && ' · Hôm nay'}</span><small><Plus size={12} />Thêm buổi</small>
+            {day.label}<span>{day.dateLabel}{day.key === today && ' · Hôm nay'}</span>
           </button> : <>{day.label}<span>{day.dateLabel}{day.key === today && ' · Hôm nay'}</span></>}
         </th>)}</tr></thead>
         <tbody>{rows.length ? rows.map(row => <tr key={row.key}>
@@ -94,7 +94,7 @@ export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSele
                 {movable && <small className="member-timetable-drag-hint">Kéo để đổi lịch</small>}
                 {onReschedule && !isCancelled && sessionEnrollmentCount(item) > 0 && <small>{sessionEnrollmentCount(item)} học viên đã đăng ký</small>}
               </button>
-            }) : onCreate ? <button type="button" className="member-timetable-create-slot" data-create-date={days[index].key} data-create-time={row.start} disabled={!canCreate({ date: days[index].key, startTime: row.start })} aria-label={`Tạo buổi học ngày ${days[index].dateLabel}/${days[index].key.slice(0, 4)}, ${row.start} đến ${row.end}${row.nextDay ? ' ngày hôm sau' : ''}`} onClick={() => createSession({ date: days[index].key, startTime: row.start, endTime: row.end, nextDay: row.nextDay })}><Plus size={17} /><span>Thêm buổi học</span><small>{row.start} – {row.end}{row.nextDay && ' (+1 ngày)'}</small></button>
+            }) : onCreate ? <button type="button" className="member-timetable-create-slot" data-create-date={days[index].key} data-create-time={row.start} disabled={!canCreate({ date: days[index].key, startTime: row.start })} aria-label={`Tạo buổi học ngày ${days[index].dateLabel}/${days[index].key.slice(0, 4)}, ${row.start} đến ${row.end}${row.nextDay ? ' ngày hôm sau' : ''}`} onClick={() => createSession({ date: days[index].key, startTime: row.start, endTime: row.end, nextDay: row.nextDay })}><Plus size={17} /><span>Thêm buổi học</span></button>
               : <span className="member-timetable-empty" aria-label="Không có buổi học">—</span>}
           </td>)}
         </tr>) : <tr><td className="member-timetable-no-sessions" colSpan={8}>Không có buổi học trong tuần này. {onCreate ? 'Bấm vào ngày ở đầu cột để thêm buổi học.' : 'Bạn có thể chuyển tuần hoặc chọn ngày khác.'}</td></tr>}</tbody>
