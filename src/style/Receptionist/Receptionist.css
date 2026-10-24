@@ -611,3 +611,53 @@
   .reception-overview-grid { gap:11px; margin-top:11px; }
   .reception-overview-checkins article,.reception-overview-rooms article { padding-inline:14px; }
 }
+
+/* Keep large class and session catalogs inside a predictable workspace. */
+.reception-class-catalog-list,
+.reception-session-catalog-list {
+  height:420px;
+  min-height:0;
+  align-content:start;
+  grid-auto-rows:max-content;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  scrollbar-width:thin;
+  scrollbar-color:#a9b7ca transparent;
+}
+
+.reception-class-catalog-list::-webkit-scrollbar,
+.reception-session-catalog-list::-webkit-scrollbar {
+  width:8px;
+}
+
+.reception-class-catalog-list::-webkit-scrollbar-track,
+.reception-session-catalog-list::-webkit-scrollbar-track {
+  background:transparent;
+}
+
+.reception-class-catalog-list::-webkit-scrollbar-thumb,
+.reception-session-catalog-list::-webkit-scrollbar-thumb {
+  border:2px solid transparent;
+  border-radius:999px;
+  background:#a9b7ca;
+  background-clip:padding-box;
+}
+
+[data-theme='dark'] .reception-class-catalog-list,
+[data-theme='dark'] .reception-session-catalog-list {
+  scrollbar-color:#4d6486 transparent;
+}
+
+[data-theme='dark'] .reception-class-catalog-list::-webkit-scrollbar-thumb,
+[data-theme='dark'] .reception-session-catalog-list::-webkit-scrollbar-thumb {
+  background:#4d6486;
+  background-clip:padding-box;
+}
+
+@media(max-width:760px) {
+  .reception-class-catalog-list,
+  .reception-session-catalog-list {
+    height:360px;
+  }
+}
