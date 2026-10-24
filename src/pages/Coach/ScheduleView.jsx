@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Star, Users } from 'lucide-react'
 import { completeCoachSession, getCoachSessionReviews, getMyCoachSessions } from '../../services/coachService'
 import { EmptyState, timeFormatter, ViewLoader } from './CoachViewShared'
+import ScheduleSessionDetail from './ScheduleSessionDetail'
 
 const toDateKey = date => {
   const year = date.getFullYear()
@@ -108,6 +109,7 @@ export function ScheduleView({ showNotice, selectedSession, onSelectSession }) {
   const [reviewPage, setReviewPage] = useState({ items: [], total: 0, page: 1, pageSize: 5 })
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState('')
+  const [detailSession, setDetailSession] = useState(null)
   const selectedDay = weekDays.find(day => day.key === selectedDate) || weekDays[0]
   const daySessions = sessions.filter(item => item.date === selectedDate && (filter === 'Tất cả' || item.status === filter))
   const allDaySessions = sessions.filter(item => item.date === selectedDate)
@@ -164,6 +166,7 @@ export function ScheduleView({ showNotice, selectedSession, onSelectSession }) {
       endsAt: session.endsAt,
       className: session.studentName,
     })
+    setDetailSession(session)
   }
 
   const handleCompleteSession = async session => {
@@ -204,6 +207,8 @@ export function ScheduleView({ showNotice, selectedSession, onSelectSession }) {
   const reviewPageCount = Math.max(1, Math.ceil(reviewPage.total / reviewPage.pageSize))
 
   if (loading) return <ViewLoader />
+
+  if (detailSession) return <ScheduleSessionDetail session={detailSession} showNotice={showNotice} onBack={() => setDetailSession(null)} />
 
   return <div className="coach-section-view">
     <section className="coach-calendar-strip coach-card">
