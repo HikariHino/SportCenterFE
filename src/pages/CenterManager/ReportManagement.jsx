@@ -83,6 +83,7 @@ export default function ReportManagement() {
   // Feedback states
   const [errorMessage, setErrorMessage] = useState(null)
   const [hasReportError, setHasReportError] = useState(false)
+  const [classReportError, setClassReportError] = useState('')
   const [successMessage, setSuccessMessage] = useState(null)
 
   // Filter states - Class status
@@ -126,13 +127,15 @@ export default function ReportManagement() {
   }
 
   // Load class status data
-  async function loadClassStatus(showSpinner = true) {
-    if (showSpinner) setLoadingClasses(true)
+  async function loadClassStatus() {
+    setLoadingClasses(true)
+    setClassReportError('')
     try {
       const data = await getClassStatusReport()
       setClassStatusList(data)
     } catch (err) {
-      setErrorMessage(getReportErrorMessage(err, 'Không thể tải báo cáo lớp học.'))
+      setClassStatusList([])
+      setClassReportError(getReportErrorMessage(err, 'Không thể tải đủ dữ liệu để thống kê sĩ số lớp học.'))
     } finally {
       setLoadingClasses(false)
     }
@@ -154,7 +157,7 @@ export default function ReportManagement() {
   // Refresh current view data
   function handleRefresh() {
     loadInitialData(false)
-    if (activeTab === 'class-status') loadClassStatus(false)
+    if (activeTab === 'class-status') loadClassStatus()
     if (activeTab === 'payments') loadPayments(false)
   }
 
@@ -166,7 +169,7 @@ export default function ReportManagement() {
   // Effect when switching tabs
   useEffect(() => {
     if (activeTab === 'class-status' && classStatusList.length === 0) {
-      loadClassStatus(true)
+      loadClassStatus()
     } else if (activeTab === 'payments' && paymentsList.length === 0) {
       loadPayments(true)
     }
@@ -330,7 +333,7 @@ export default function ReportManagement() {
             type="button"
             className="report-btn report-btn-secondary"
             onClick={handleRefresh}
-            disabled={loading || refreshing}
+            disabled={loading || refreshing || loadingClasses || loadingPayments}
             title="Làm mới dữ liệu từ máy chủ"
           >
             <RefreshCw size={15} className={refreshing ? 'report-spin' : ''} />
@@ -718,27 +721,29 @@ export default function ReportManagement() {
 
       {/* Tab 2: Hoạt động lớp học & Tỷ lệ lấp đầy */}
       {activeTab === 'class-status' && (
-        <div className="report-section">
+        <div className="report-section" aria-busy={loadingClasses}>
           {/* Summary insights chips */}
-          <div className="report-revenue-toolbar">
-            <div className="report-summary-chips" style={{ width: '100%', justifyContent: 'space-between' }}>
-              <span className="report-chip blue">
-                Tỷ lệ lấp đầy trung bình: <strong>{classOverallStats.avgFill}%</strong>
-              </span>
-              <span className="report-chip green">
-                Lớp đầy / Tốt (≥80%): <strong>{classOverallStats.highCount} lớp</strong>
-              </span>
-              <span className="report-chip amber">
-                Lớp ổn định (50-79%): <strong>{classOverallStats.mediumCount} lớp</strong>
-              </span>
-              <span className="report-chip" style={{ background: 'var(--manager-danger-bg, #fef2f2)', color: 'var(--manager-danger, #b91c1c)' }}>
-                Cần tối ưu (&lt;50%): <strong>{classOverallStats.lowCount} lớp</strong>
-              </span>
-              <span className="report-chip" style={{ background: 'var(--manager-raised, #f8fafc)', color: 'var(--manager-ink, #18263e)' }}>
-                Tổng học viên: <strong>{classOverallStats.totalRegistered} / {classOverallStats.totalCapacity} chỗ</strong>
-              </span>
+          {!loadingClasses && !classReportError && (
+            <div className="report-revenue-toolbar">
+              <div className="report-summary-chips" style={{ width: '100%', justifyContent: 'space-between' }}>
+                <span className="report-chip blue">
+                  Tỷ lệ lấp đầy trung bình: <strong>{classOverallStats.avgFill}%</strong>
+                </span>
+                <span className="report-chip green">
+                  Lớp đầy / Tốt (≥80%): <strong>{classOverallStats.highCount} lớp</strong>
+                </span>
+                <span className="report-chip amber">
+                  Lớp ổn định (50-79%): <strong>{classOverallStats.mediumCount} lớp</strong>
+                </span>
+                <span className="report-chip" style={{ background: 'var(--manager-danger-bg, #fef2f2)', color: 'var(--manager-danger, #b91c1c)' }}>
+                  Cần tối ưu (&lt;50%): <strong>{classOverallStats.lowCount} lớp</strong>
+                </span>
+                <span className="report-chip" style={{ background: 'var(--manager-raised, #f8fafc)', color: 'var(--manager-ink, #18263e)' }}>
+                  Tổng sĩ số theo lớp: <strong>{classOverallStats.totalRegistered} / {classOverallStats.totalCapacity} chỗ</strong>
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Search & Filter Toolbar */}
           <div className="report-class-filter-bar">
@@ -780,16 +785,29 @@ export default function ReportManagement() {
           {/* Table */}
           <div className="report-table-card">
             <div className="report-table-header">
-              <h4>Báo cáo hoạt động & Tỷ lệ lấp đầy từng lớp học</h4>
-              <span className="report-badge info">
-                {filteredClasses.length} / {classStatusList.length} lớp học
-              </span>
+              <div>
+                <h4>Báo cáo hoạt động & Tỷ lệ lấp đầy từng lớp học</h4>
+                <p>Mỗi hội viên được tính một lần trong mỗi lớp; không tính đăng ký và buổi học đã hủy.</p>
+              </div>
+              {!loadingClasses && !classReportError && (
+                <span className="report-badge info">
+                  {filteredClasses.length} / {classStatusList.length} lớp học
+                </span>
+              )}
             </div>
 
             {loadingClasses ? (
-              <div className="report-loading-box">
+              <div className="report-loading-box" role="status">
                 <RefreshCw size={28} className="report-spin" />
                 <span>Đang thống kê sĩ số và tỷ lệ lấp đầy các lớp học...</span>
+              </div>
+            ) : classReportError ? (
+              <div className="report-empty-box" role="alert">
+                <AlertCircle size={32} />
+                <p>{classReportError}</p>
+                <button type="button" className="report-btn report-btn-secondary" onClick={loadClassStatus}>
+                  <RefreshCw size={15} /> Thử lại
+                </button>
               </div>
             ) : filteredClasses.length === 0 ? (
               <div className="report-empty-box">
@@ -803,7 +821,7 @@ export default function ReportManagement() {
                     <tr>
                       <th>Lớp học</th>
                       <th>Huấn luyện viên</th>
-                      <th>Đăng ký / Sức chứa</th>
+                      <th>Học viên / Sức chứa</th>
                       <th>Tỷ lệ lấp đầy</th>
                       <th>Trạng thái</th>
                       <th>Đề xuất tối ưu hóa lịch học</th>
@@ -848,7 +866,7 @@ export default function ReportManagement() {
                             </div>
                           </td>
                           <td>
-                            {rate >= 90 ? (
+                            {Number(cls.totalRegistration) >= Number(cls.maxCapacity) ? (
                               <span className="report-badge success">Đã đầy lớp</span>
                             ) : rate >= 80 ? (
                               <span className="report-badge success">Gần kín</span>
@@ -883,7 +901,7 @@ export default function ReportManagement() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={2}>TỔNG SỐ HỌC VIÊN ĐANG THEO HỌC</td>
+                      <td colSpan={2}>TỔNG SĨ SỐ THEO LỚP</td>
                       <td style={{ fontWeight: 700, color: 'var(--manager-ink, #18263e)' }}>
                         {classOverallStats.totalRegistered} / {classOverallStats.totalCapacity}
                       </td>
