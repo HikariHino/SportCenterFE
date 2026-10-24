@@ -481,3 +481,33 @@
   .coach-week-session { grid-template-columns:45px minmax(0,1fr); }
   .coach-week-session>.coach-status { display:none; }
 }
+
+/* Keep supporting Coach copy readable on laptop and mobile screens. */
+.coach-dashboard :is(
+  small,
+  .coach-breadcrumb,
+  .coach-nav-title,
+  .coach-status,
+  .coach-attendance,
+  .coach-attendance-heading,
+  .coach-roster-heading,
+  .coach-focus-main > button,
+  .coach-overview-empty > button,
+  .coach-attendance-breakdown > span,
+  .coach-day-progress-card > footer,
+  .coach-week-more,
+  .coach-room-detail-trigger
+) {
+  font-size: 12px !important;
+}
+
+.coach-dashboard :is(
+  .coach-page-heading p,
+  .coach-focus-main p,
+  .coach-progress-copy p,
+  .coach-member-plan-exercises p,
+  .coach-exercise-result-form label,
+  .coach-room-availability label
+) {
+  font-size: 12px;
+}
