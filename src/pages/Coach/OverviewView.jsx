@@ -203,15 +203,16 @@ export function OverviewView({ onNavigate }) {
         </div>
         <button type="button" onClick={() => onNavigate(primaryAction.target, focusSession)}><PrimaryActionIcon size={17} />{primaryAction.label}<ChevronRight size={15} /></button>
       </div>
-      <div className="coach-focus-shortcuts">
-        {metricSlots.map(({ icon: Icon, label, tone, target }, index) => {
-          const metric = metrics[index]
-          return <button type="button" key={label} onClick={() => onNavigate(target, focusSession)} aria-label={`${label}: ${metric?.value ?? 0}. Mở ${target}`}>
-            <span className={tone}><Icon size={17} /></span>
-            <span><strong>{metric?.value ?? 0}</strong><small>{label}</small></span>
-          </button>
-        })}
-      </div>
+    </section>
+
+    <section className="coach-focus-shortcuts coach-overview-metrics" aria-label="Thống kê hôm nay">
+      {metricSlots.map(({ icon: Icon, label, tone, target }, index) => {
+        const metric = metrics[index]
+        return <button type="button" key={label} onClick={() => onNavigate(target, focusSession)} aria-label={`${label}: ${metric?.value ?? 0}. Mở ${target}`}>
+          <span className={tone}><Icon size={17} /></span>
+          <span><strong>{metric?.value ?? 0}</strong><small>{label}</small></span>
+        </button>
+      })}
     </section>
 
     <div className="coach-overview-workspace">

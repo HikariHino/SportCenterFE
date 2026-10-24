@@ -424,7 +424,7 @@
 .coach-dashboard button:active:not(:disabled) { filter: brightness(.96); }
 
 /* Detailed Coach overview */
-.coach-focus-panel { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(470px,1fr); gap:12px; margin-top:25px; padding:12px; border:1px solid #c9d9f3; border-radius:14px; background:linear-gradient(115deg,#eaf2ff,#f7faff 60%,#fff); box-shadow:0 8px 24px #174a9f0d; }
+.coach-focus-panel { margin-top:25px; padding:12px; border:1px solid #c9d9f3; border-radius:14px; background:linear-gradient(115deg,#eaf2ff,#f7faff 60%,#fff); box-shadow:0 8px 24px #174a9f0d; }
 .coach-focus-main { min-width:0; display:grid; grid-template-columns:46px minmax(0,1fr) auto; align-items:center; gap:13px; padding:8px 9px; }
 .coach-focus-icon { width:46px; height:46px; display:grid; place-items:center; border-radius:12px; color:#fff; background:linear-gradient(145deg,#2e72e8,#1552c5); box-shadow:0 7px 17px #1557d535; }
 .coach-focus-main>div { min-width:0; }
@@ -435,7 +435,8 @@
 .coach-focus-main>button { min-height:38px; display:flex; align-items:center; justify-content:center; gap:6px; padding:0 13px; border:0; border-radius:8px; color:#fff; background:var(--coach-blue); font-size:11px; font-weight:800; white-space:nowrap; box-shadow:0 5px 13px #1557d52b; }
 .coach-focus-main>button:hover { background:#104abb; transform:translateY(-1px); }
 .coach-focus-shortcuts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); overflow:hidden; border:1px solid #dbe5f4; border-radius:10px; background:#fff; }
-.coach-focus-shortcuts>button { min-width:0; display:grid; grid-template-columns:30px minmax(0,1fr); align-items:center; gap:7px; padding:9px; border:0; border-right:1px solid #e6ebf3; color:var(--coach-ink); background:transparent; text-align:left; }
+.coach-overview-metrics { margin-top:12px; border-radius:12px; box-shadow:0 7px 20px #174a9f0a; }
+.coach-focus-shortcuts>button { min-width:0; min-height:64px; display:grid; grid-template-columns:30px minmax(0,1fr); align-items:center; gap:9px; padding:10px 13px; border:0; border-right:1px solid #e6ebf3; color:var(--coach-ink); background:transparent; text-align:left; }
 .coach-focus-shortcuts>button:last-child { border-right:0; }
 .coach-focus-shortcuts>button:hover { background:#f1f6ff; }
 .coach-focus-shortcuts>button>span:first-child { width:30px; height:30px; display:grid; place-items:center; border-radius:8px; color:var(--coach-blue); background:#eaf1ff; }
