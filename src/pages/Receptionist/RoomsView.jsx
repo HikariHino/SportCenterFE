@@ -110,7 +110,7 @@ async function loadRoomSchedule(room, rooms) {
 
 const sessionDateTime = value => value ? new Date(value).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật'
 
-function RoomSchedule({ room, rooms, onClose, onOpenSessions }) {
+function RoomSchedule({ room, rooms, onClose, onOpenSessions, onSelectSession }) {
   const [weekStart, setWeekStart] = useState(() => timetableWeekStart())
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -118,6 +118,11 @@ function RoomSchedule({ room, rooms, onClose, onOpenSessions }) {
   const [requestKey, setRequestKey] = useState(0)
   const [selectedId, setSelectedId] = useState(null)
   const selected = items.find(item => String(item.id) === String(selectedId))
+  const selectSession = id => {
+    setSelectedId(id)
+    const session = items.find(item => String(item.id) === String(id))
+    if (session) onSelectSession?.(session)
+  }
   const { scheduledItems, cancelledItems } = useMemo(() => {
     const scheduled = []
     const cancelled = []
@@ -148,14 +153,14 @@ function RoomSchedule({ room, rooms, onClose, onOpenSessions }) {
   return <section className="reception-room-schedule" aria-label={`Lịch sử dụng ${room.name}`}>
     <header className="reception-room-schedule-header">
       <div><span><CalendarDays size={16} />LỊCH SỬ DỤNG PHÒNG</span><h2>{room.name}</h2><p><MapPin size={15} />{room.location || 'Chưa cập nhật vị trí'}<i>·</i><UsersRound size={15} />{room.capacity} học viên</p></div>
-      <div><button type="button" className="primary" onClick={onOpenSessions}><CalendarDays size={17} />Nghiệp vụ buổi học</button><button type="button" disabled={loading} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={17} />Làm mới</button><button type="button" aria-label="Đóng lịch phòng" onClick={onClose}><X size={21} /></button></div>
+      <div><button type="button" className="primary" onClick={() => onOpenSessions(selected)}><CalendarDays size={17} />Nghiệp vụ buổi học</button><button type="button" disabled={loading} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={17} />Làm mới</button><button type="button" aria-label="Đóng lịch phòng" onClick={onClose}><X size={21} /></button></div>
     </header>
 
     {loading ? <div className="reception-room-schedule-state"><ViewLoader /></div> : error ? <div className="reception-room-schedule-state" role="alert"><AlertCircle size={30} /><strong>Không thể tải lịch phòng</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : <>
-      <WeeklyTimetable items={scheduledItems} weekStart={weekStart} onWeekChange={value => { setWeekStart(value); setSelectedId(null) }} onSelect={setSelectedId} totalCount={scheduledItems.length} title="Thời khóa biểu của phòng" description="Chỉ hiển thị các buổi đang sử dụng lịch phòng · Chọn buổi học để xem chi tiết" />
+      <WeeklyTimetable items={scheduledItems} weekStart={weekStart} onWeekChange={value => { setWeekStart(value); setSelectedId(null) }} onSelect={selectSession} totalCount={scheduledItems.length} title="Thời khóa biểu của phòng" description="Chỉ hiển thị các buổi đang sử dụng lịch phòng · Chọn buổi học để xem chi tiết" />
       <section className="reception-room-cancelled" aria-labelledby="reception-room-cancelled-title">
         <header><div><span><Ban size={15} />LỊCH ĐÃ HỦY</span><h3 id="reception-room-cancelled-title">Buổi học đã hủy</h3><p>Các buổi đã hủy không còn chiếm thời gian sử dụng phòng.</p></div><strong>{cancelledItems.length} buổi</strong></header>
-        {cancelledItems.length ? <div className="reception-room-cancelled-list">{cancelledItems.map(item => <button type="button" key={item.id} onClick={() => setSelectedId(item.id)}>
+        {cancelledItems.length ? <div className="reception-room-cancelled-list">{cancelledItems.map(item => <button type="button" key={item.id} onClick={() => selectSession(item.id)}>
           <span><small>BUỔI #{item.id}</small><b>{item.className || `Buổi học #${item.id}`}</b></span>
           <span><small>THỜI GIAN</small><b>{sessionDateTime(item.startsAt)}</b></span>
           <span><small>HUẤN LUYỆN VIÊN</small><b>{item.coachName || 'Chưa phân công'}</b></span>
@@ -170,7 +175,7 @@ function RoomSchedule({ room, rooms, onClose, onOpenSessions }) {
   </section>
 }
 
-export function RoomsView({ query = '', onOpenSessions }) {
+export function RoomsView({ query = '', onOpenSessions, onSelectSession }) {
   const [rooms, setRooms] = useState([])
   const [status, setStatus] = useState('all')
   const [roomType, setRoomType] = useState('all')
@@ -213,7 +218,7 @@ export function RoomsView({ query = '', onOpenSessions }) {
   const inactiveCount = rooms.length - activeCount
   const totalCapacity = rooms.reduce((total, room) => total + Number(room.capacity || 0), 0)
 
-  if (scheduleRoom) return <RoomSchedule room={scheduleRoom} rooms={rooms} onClose={() => setScheduleRoom(null)} onOpenSessions={onOpenSessions} />
+  if (scheduleRoom) return <RoomSchedule room={scheduleRoom} rooms={rooms} onClose={() => setScheduleRoom(null)} onOpenSessions={onOpenSessions} onSelectSession={onSelectSession} />
 
   return <div className="reception-facility-rooms">
     <section className="reception-facility-metrics" aria-label="Thống kê phòng tập">

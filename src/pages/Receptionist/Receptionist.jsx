@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Bell, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
@@ -28,6 +28,17 @@ const navigation = [
   [UserRound, 'Hồ sơ'],
 ]
 
+const selectedSessionStorageKey = 'receptionist:selected-session'
+
+const storedSelectedSession = () => {
+  try {
+    const value = window.sessionStorage.getItem(selectedSessionStorageKey)
+    return value ? JSON.parse(value) : null
+  } catch {
+    return null
+  }
+}
+
 const pageMeta = {
   'Buổi học & Phòng tập': ['VẬN HÀNH CƠ SỞ', 'Phòng tập & Buổi học', 'Theo dõi phòng, lịch sử dụng và xử lý nghiệp vụ buổi học tại quầy.'],
   'Check-in': ['TIẾP NHẬN KHÁCH', 'Check-in tại quầy', 'Xác minh mã đặt sân hoặc tài khoản hội viên trước khi sử dụng dịch vụ.'],
@@ -44,6 +55,7 @@ export default function Receptionist() {
   const [query, setQuery] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [selectedReceptionSession, setSelectedReceptionSession] = useState(storedSelectedSession)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notificationPage, setNotificationPage] = useState({ items: [], total: 0, page: 1, pageSize: 6 })
   const [notificationsLoading, setNotificationsLoading] = useState(false)
@@ -56,6 +68,11 @@ export default function Receptionist() {
   const initials = staffName.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase() || 'LT'
   const today = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date())
   const notificationPageCount = Math.max(1, Math.ceil(notificationPage.total / notificationPage.pageSize))
+
+  useEffect(() => {
+    if (selectedReceptionSession?.id) window.sessionStorage.setItem(selectedSessionStorageKey, JSON.stringify(selectedReceptionSession))
+    else window.sessionStorage.removeItem(selectedSessionStorageKey)
+  }, [selectedReceptionSession])
 
   useEffect(() => {
     let active = true
@@ -121,7 +138,12 @@ export default function Receptionist() {
     window.setTimeout(() => setNotice(''), 2600)
   }
 
-  const selectNavigation = label => {
+  const selectReceptionSession = useCallback(session => {
+    if (session?.id) setSelectedReceptionSession(session)
+  }, [])
+
+  const selectNavigation = (label, session) => {
+    if (session?.id) selectReceptionSession(session)
     setActiveNav(label)
     setQuery('')
     setSidebarOpen(false)
@@ -129,12 +151,13 @@ export default function Receptionist() {
   }
 
   const handleLogout = async () => {
+    window.sessionStorage.removeItem(selectedSessionStorageKey)
     await logout()
     navigate('/login', { replace: true })
   }
 
   const renderView = () => {
-    if (activeNav === 'Buổi học & Phòng tập') return <FacilitiesView showNotice={showNotice} />
+    if (activeNav === 'Buổi học & Phòng tập') return <FacilitiesView showNotice={showNotice} selectedSession={selectedReceptionSession} onSelectSession={selectReceptionSession} />
     if (activeNav === 'Check-in') return <CheckInView showNotice={showNotice} />
     if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
     if (activeNav === 'Thanh toán') return <PaymentsView query={query} showNotice={showNotice} />
