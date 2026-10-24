@@ -446,7 +446,7 @@
 .coach-focus-shortcuts strong,.coach-focus-shortcuts small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .coach-focus-shortcuts strong { font-size:12px; }
 .coach-focus-shortcuts small { margin-top:2px; color:var(--coach-muted); font-size:9px; }
-.coach-overview-workspace { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(320px,.8fr); align-items:start; gap:16px; margin-top:12px; }
+.coach-overview-workspace { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:16px; margin-top:12px; }
 .coach-day-progress-card,.coach-week-card { overflow:hidden; }
 .coach-day-progress-card>.coach-card-head>svg { color:var(--coach-blue); }
 .coach-overview-empty { min-height:166px; padding:24px; }
