@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bookingUnavailableReason, cancellationDeadline, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions } from '../src/utils/memberClasses.js'
+import { bookingUnavailableReason, cancellationDeadline, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../src/utils/memberClasses.js'
 
 const now = Date.parse('2026-10-19T10:00:00+07:00')
 const upcoming = { id: 1, status: 'Confirmed', startsAt: '2026-10-19T14:00:00+07:00', endsAt: '2026-10-19T15:00:00+07:00' }
@@ -69,10 +69,12 @@ test('cancelled sessions and attended registrations cannot be cancelled or check
   }
 })
 
-test('review is available after the end and is blocked for duplicates and absent members', () => {
-  const ended = { ...upcoming, startsAt: '2026-10-19T08:00:00+07:00', endsAt: '2026-10-19T09:00:00+07:00', attendanceStatus: 'Present' }
+test('review requires a completed registration and session with confirmed participation and no previous review', () => {
+  const ended = { ...upcoming, sessionId: 10, status: 'Completed', sessionStatus: 'Completed', startsAt: '2026-10-19T08:00:00+07:00', endsAt: '2026-10-19T09:00:00+07:00', attendanceStatus: 'Present' }
   assert.equal(registrationActions(upcoming, now).review, false)
   assert.equal(registrationActions(ended, now).review, true)
+  assert.equal(registrationActions({ ...ended, attendanceStatus: 'Late' }, now).review, true)
+  assert.equal(registrationActions({ ...ended, status: ' completed ', sessionStatus: ' COMPLETED ', attendanceStatus: ' late ' }, now).review, true)
   for (const overrides of [{ hasReviewed: true }, { review: { rating: 4 } }, { rating: 3 }, { attendanceStatus: 'Absent' }, { status: 'Cancelled' }, { canReview: false }]) {
     assert.equal(registrationActions({ ...ended, ...overrides }, now).review, false)
   }
@@ -83,7 +85,29 @@ test('review is available after the end and is blocked for duplicates and absent
 test('missing or invalid end time does not permit an early review', () => {
   assert.equal(registrationActions({ ...upcoming, endsAt: undefined }, now).review, false)
   assert.equal(registrationActions({ ...upcoming, endsAt: 'invalid' }, now).review, false)
-  assert.equal(registrationActions({ ...upcoming, sessionStatus: 'Completed' }, now).review, true)
+  assert.equal(registrationActions({ ...upcoming, sessionStatus: 'Completed' }, now).review, false)
+})
+
+test('elapsed time, completed status, a check-in timestamp or canReview cannot replace Present or Late attendance', () => {
+  const ended = { ...upcoming, sessionId: 10, status: 'Completed', sessionStatus: 'Completed', endsAt: '2026-10-19T09:00:00+07:00', canReview: true, checkInTime: '2026-10-19T08:00:00+07:00' }
+  for (const attendanceStatus of [undefined, null, '', 'Unknown', 'Absent', 'Excused', 'NoShow', 'CheckedIn', 'Attended']) {
+    const actions = registrationActions({ ...ended, attendanceStatus }, now)
+    assert.equal(actions.review, false)
+    assert.ok(actions.reviewReason)
+  }
+  assert.match(reviewUnavailableReason({ ...ended, attendanceStatus: 'Absent' }, now), /không tham gia/)
+  assert.match(reviewUnavailableReason(ended, now), /Chưa có điểm danh/)
+})
+
+test('recorded participation alone cannot bypass incomplete statuses or an invalid or future ending time', () => {
+  const ended = { id: 1, sessionId: 10, status: 'Completed', sessionStatus: 'Completed', attendanceStatus: 'Present', endsAt: new Date(now).toISOString() }
+  assert.equal(registrationActions(ended, now).review, true)
+  for (const changes of [{ status: 'Registered' }, { sessionStatus: 'Scheduled' }, { sessionStatus: null }, { sessionId: null }, { endsAt: null }, { endsAt: 'invalid' }, { endsAt: new Date(now + 1).toISOString() }]) {
+    assert.equal(registrationActions({ ...ended, ...changes }, now).review, false)
+  }
+  assert.equal(registrationActions({ ...upcoming, attendanceStatus: 'Present' }, now).reviewReason, '')
+  assert.equal(registrationActions({ ...ended, hasReviewed: true }, now).reviewReason, '')
+  assert.equal(registrationActions({ ...ended, sessionStatus: 'Cancelled' }, now).reviewReason, '')
 })
 
 test('actual session DTO capacity fields and invalid start times cannot offer registration', () => {

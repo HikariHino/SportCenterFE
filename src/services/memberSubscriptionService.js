@@ -1,7 +1,7 @@
 import api from './api'
 
 function unwrap(body, fallback) {
-  if (body?.success === false) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
     throw new Error(body.message || fallback)
   }
 
@@ -12,7 +12,8 @@ function unwrap(body, fallback) {
 export async function getMySubscriptions() {
   const response = await api.get('/member-subscriptions/mine')
   const payload = unwrap(response.data, 'Không thể tải danh sách đăng ký gói.')
-  return Array.isArray(payload) ? payload : []
+  if (!Array.isArray(payload)) throw new Error('Dữ liệu gói đã đăng ký không hợp lệ. Vui lòng tải lại.')
+  return payload
 }
 
 /** POST /api/member-subscriptions */

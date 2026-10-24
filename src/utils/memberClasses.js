@@ -31,8 +31,7 @@ export function registrationAttendance(item) {
   if (!recorded && ['attendanceStatus', 'checkInTime', 'checkedInAt'].some(field => Object.hasOwn(item, field) && (item[field] === null || item[field] === ''))) {
     return { code: 'pending', label: 'Chưa điểm danh', tone: 'neutral' }
   }
-  // RegistrationDTO currently omits attendance. Missing data is not evidence
-  // that the student was absent, even after the session has ended.
+  // Missing data is not evidence of absence or participation, even after completion.
   return { code: 'unknown', label: 'Chưa cập nhật điểm danh', tone: 'neutral' }
 }
 
@@ -55,6 +54,23 @@ export function checkInUnavailableReason(item, now = Date.now()) {
   return now >= end ? 'Buổi học đã kết thúc, không thể điểm danh.' : ''
 }
 
+export function reviewUnavailableReason(item, now = Date.now()) {
+  if (item.hasReviewed || item.review || item.reviewedAt || item.rating) return 'Bạn đã đánh giá buổi học này.'
+  if (cancelled(item.status) || cancelled(item.sessionStatus)) return 'Không thể đánh giá buổi học đã hủy.'
+  const attendance = normalized(item.attendanceStatus)
+  if (!['present', 'late'].includes(attendance)) {
+    if (['absent', 'excused', 'noshow'].includes(attendance) || ['absent', 'excused', 'noshow'].includes(normalized(item.status))) {
+      return 'Bạn không tham gia buổi học này nên không thể đánh giá.'
+    }
+    return 'Chưa có điểm danh Có mặt hoặc Đi trễ. Bạn chưa thể đánh giá buổi học này.'
+  }
+  const end = Date.parse(item.endsAt)
+  if (!Number.isSafeInteger(Number(item.sessionId)) || Number(item.sessionId) <= 0
+    || normalized(item.status) !== 'completed' || normalized(item.sessionStatus) !== 'completed'
+    || !Number.isFinite(end) || end > now) return 'Chỉ đánh giá khi buổi học và đăng ký đã hoàn thành, sau giờ kết thúc.'
+  return item.canReview === false ? 'Buổi học này hiện không cho phép đánh giá.' : ''
+}
+
 export function registrationActions(item, now = Date.now()) {
   const status = normalized(item.status)
   const isCancelled = cancelled(item.status) || cancelled(item.sessionStatus)
@@ -68,13 +84,14 @@ export function registrationActions(item, now = Date.now()) {
   const beforeStart = !(Date.parse(item.startsAt) <= now)
   const checkInEligible = !isCancelled && active && !checkedIn && !ended && item.canCheckIn !== false
   const checkInReason = checkInEligible ? checkInUnavailableReason(item, now) : ''
+  const reviewReason = reviewUnavailableReason(item, now)
   return {
     checkedIn, reviewed, ended,
     cancel: !isCancelled && active && !checkedIn && !ended && beforeStart && beforeDeadline && item.canCancel !== false,
     checkIn: checkInEligible && !checkInReason,
     checkInReason,
-    review: !isCancelled && ended && !reviewed && !['noshow', 'absent'].includes(status)
-      && !['absent', 'excused'].includes(normalized(item.attendanceStatus)) && item.canReview !== false,
+    review: !reviewReason,
+    reviewReason: ended && !reviewed && !isCancelled ? reviewReason : '',
   }
 }
 

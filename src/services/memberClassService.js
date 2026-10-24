@@ -1,5 +1,5 @@
 import api from './api'
-import { bookingUnavailableReason, hasActiveMembership, registeredSessionIds } from '../utils/memberClasses.js'
+import { bookingUnavailableReason, hasActiveMembership, registeredSessionIds, reviewUnavailableReason } from '../utils/memberClasses.js'
 import { getMySubscriptions } from './memberSubscriptionService'
 
 function readPage(body, page, pageSize, fallback) {
@@ -201,6 +201,10 @@ export async function reviewRegistration(registrationId, { rating, comment = '' 
     throw new Error('Vui lòng chọn điểm đánh giá từ 1 đến 5 sao.')
   }
   if (comment.trim().length > 2000) throw new Error('Nhận xét không được vượt quá 2.000 ký tự.')
+  const current = (await getAllMyRegistrations()).items.find(item => String(item.id) === String(registrationId))
+  if (!current) throw new Error('Không tìm thấy đăng ký buổi học của bạn. Vui lòng làm mới lịch đã đặt.')
+  const reason = reviewUnavailableReason(current)
+  if (reason) throw new Error(reason)
   const response = await api.post(`/class-registrations/${registrationId}/review`, {
     rating, comment: comment.trim() || null,
   })

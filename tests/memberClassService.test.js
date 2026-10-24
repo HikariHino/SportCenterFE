@@ -124,3 +124,67 @@ test('only consented sessions from the selected class are booked even if the cla
   assert.deepEqual(state.posts, [1])
   assert.deepEqual(result.skipped.map(item => item.id), ['90', '999'])
 })
+
+const completedRegistration = { id: 101, sessionId: 10, classId: 1, status: 'Completed', sessionStatus: 'Completed', attendanceStatus: 'Present', startsAt: '2020-10-19T11:00:00Z', endsAt: '2020-10-19T12:30:00Z', hasReviewed: false }
+
+function mockReview(registrations, { readError = false, failPost = false } = {}) {
+  const calls = [], posts = []
+  api.defaults.adapter = async config => {
+    calls.push(config.url)
+    let data
+    if (config.method === 'post') {
+      posts.push({ url: config.url, payload: JSON.parse(config.data) })
+      if (failPost) throw new Error('Điểm danh vừa được cập nhật trên máy chủ.')
+      data = { id: 200, registrationId: 101, ...JSON.parse(config.data) }
+    } else {
+      assert.equal(config.url, '/class-registrations/mine')
+      if (readError) throw new Error('Không tải được điểm danh mới nhất.')
+      const page = Number(config.params.page)
+      data = { items: registrations.slice(page - 1, page), total: registrations.length, page, pageSize: 1 }
+    }
+    return { data: { success: true, data }, status: 200, headers: {}, config }
+  }
+  return { calls, posts }
+}
+
+test('review validates fresh participation on later pages before posting a rating, including Late attendance', async () => {
+  for (const attendanceStatus of ['Present', 'Late']) {
+    const state = mockReview([{ ...completedRegistration, id: 99, attendanceStatus: 'Absent' }, { ...completedRegistration, attendanceStatus }])
+    const saved = await service.reviewRegistration(101, { rating: 5, comment: '  Buổi học tốt  ' })
+    assert.equal(saved.registrationId, 101)
+    assert.deepEqual(state.calls, ['/class-registrations/mine', '/class-registrations/mine', '/class-registrations/101/review'])
+    assert.deepEqual(state.posts[0].payload, { rating: 5, comment: 'Buổi học tốt' })
+  }
+})
+
+test('review sends no POST for missing participation, timestamp-only attendance, incomplete or already reviewed registrations', async () => {
+  for (const changes of [
+    { attendanceStatus: 'Absent', checkInTime: '2020-10-19T11:01:00Z' }, { attendanceStatus: 'Excused' },
+    { attendanceStatus: null }, { attendanceStatus: undefined }, { attendanceStatus: 'NoShow' },
+    { attendanceStatus: 'CheckedIn' }, { attendanceStatus: 'Attended' },
+    { status: 'Registered' }, { sessionStatus: 'Scheduled' }, { sessionStatus: 'Cancelled' },
+    { endsAt: '2099-10-19T12:30:00Z' }, { endsAt: null }, { hasReviewed: true }, { canReview: false },
+  ]) {
+    const state = mockReview([{ ...completedRegistration, canReview: true, ...changes }])
+    await assert.rejects(service.reviewRegistration(101, { rating: 5 }))
+    assert.equal(state.posts.length, 0)
+  }
+})
+
+test('failed attendance reads, missing registrations and server conflicts do not report a successful review', async () => {
+  for (const setup of [() => mockReview([], { readError: true }), () => mockReview([])]) {
+    const state = setup()
+    await assert.rejects(service.reviewRegistration(101, { rating: 5 }))
+    assert.equal(state.posts.length, 0)
+  }
+  const state = mockReview([completedRegistration], { failPost: true })
+  await assert.rejects(service.reviewRegistration(101, { rating: 5 }), /Điểm danh vừa được cập nhật/)
+  assert.equal(state.posts.length, 1)
+})
+
+test('invalid ratings and oversized comments are rejected before checking participation or posting', async () => {
+  const state = mockReview([completedRegistration])
+  for (const rating of [0, 6, 1.5, '5', undefined]) await assert.rejects(service.reviewRegistration(101, { rating }))
+  await assert.rejects(service.reviewRegistration(101, { rating: 5, comment: 'a'.repeat(2001) }))
+  assert.deepEqual(state.calls, [])
+})

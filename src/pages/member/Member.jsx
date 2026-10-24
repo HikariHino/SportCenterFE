@@ -396,11 +396,11 @@ export default function Member() {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="member-topbar-account">
               <span className="member-avatar">{initials}</span>
-              <div className="member-profile-info" style={{ display: 'flex', flexDirection: 'column' }}>
-                <span className="member-profile-name" style={{ fontSize: 12, fontWeight: 700 }}>{displayName}</span>
-                <small style={{ fontSize: 9.5, color: '#004ac6', fontWeight: 600 }}>Thành viên Olympus</small>
+              <div className="member-profile-info">
+                <span className="member-profile-name">{displayName}</span>
+                <small className="member-profile-role">Thành viên Olympus</small>
               </div>
             </div>
           </div>
