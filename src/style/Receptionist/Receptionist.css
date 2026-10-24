@@ -560,3 +560,52 @@
 ) {
   font-size:12px;
 }
+
+.reception-overview-focus { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(470px,1fr); gap:12px; padding:12px; border:1px solid #c9d9f3; border-radius:14px; background:linear-gradient(115deg,#eaf2ff,#f7faff 60%,#fff); box-shadow:0 8px 24px #174a9f0d; }
+.reception-overview-focus-main { min-width:0; display:grid; grid-template-columns:46px minmax(0,1fr) auto; align-items:center; gap:13px; padding:8px 9px; }
+.reception-overview-focus-main>span { width:46px; height:46px; display:grid; place-items:center; border-radius:12px; color:#fff; background:linear-gradient(145deg,#2e72e8,#1552c5); box-shadow:0 7px 17px #1557d535; }
+.reception-overview-focus-main>div { min-width:0; }
+.reception-overview-focus-main :is(small,strong,p) { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reception-overview-focus-main small { color:var(--rc-accent); font-size:12px; font-weight:800; letter-spacing:.8px; }
+.reception-overview-focus-main strong { margin-top:3px; font-size:16px; }
+.reception-overview-focus-main p { margin:3px 0 0; color:var(--rc-muted); font-size:12px; }
+.reception-overview-focus-main>button { min-height:38px; display:flex; align-items:center; justify-content:center; gap:6px; padding:0 13px; border:0; border-radius:8px; color:#fff; background:var(--rc-accent); font-size:12px; font-weight:800; white-space:nowrap; box-shadow:0 5px 13px #1557d52b; }
+.reception-overview-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); overflow:hidden; border:1px solid #dbe5f4; border-radius:10px; background:#fff; }
+.reception-overview-stats>button { min-width:0; display:grid; grid-template-columns:30px minmax(0,1fr); align-items:center; gap:7px; padding:9px; border:0; border-right:1px solid #e6ebf3; color:var(--rc-ink); background:transparent; text-align:left; }
+.reception-overview-stats>button:last-child { border-right:0; }
+.reception-overview-stats>button:hover { background:#f1f6ff; }
+.reception-overview-stats>button>span:first-child { width:30px; height:30px; display:grid; place-items:center; border-radius:8px; color:var(--rc-accent); background:#eaf1ff; }
+.reception-overview-stats>button>span:first-child.green { color:#08795a; background:#dff8ed; }
+.reception-overview-stats>button>span:first-child.purple { color:#6f4fc2; background:#eee9ff; }
+.reception-overview-stats>button>span:first-child.amber { color:#a3600a; background:#fff0d6; }
+.reception-overview-stats :is(strong,small) { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reception-overview-stats strong { font-size:12px; }
+.reception-overview-stats small { margin-top:2px; color:var(--rc-muted); font-size:12px; }
+.reception-overview-focus+.reception-overview-grid { margin-top:12px; }
+.reception-overview-more { width:100%; min-height:38px; display:flex; align-items:center; justify-content:center; gap:4px; border:0; border-top:1px solid #edf1f5; color:var(--rc-accent); background:#fafcff; font-size:12px; font-weight:800; }
+
+[data-theme='dark'] .reception-overview-focus { border-color:#34517e; background:linear-gradient(115deg,#172a49,#111e33 60%,#132138); }
+[data-theme='dark'] .reception-overview-stats { border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] .reception-overview-stats>button { color:var(--theme-text); border-color:var(--theme-border); }
+[data-theme='dark'] .reception-overview-stats>button:hover { background:var(--theme-blue-bg); }
+[data-theme='dark'] .reception-overview-more { color:var(--theme-accent); border-color:var(--theme-border); background:var(--theme-raised); }
+
+@media(max-width:1100px) {
+  .reception-overview-focus { grid-template-columns:1fr; }
+}
+@media(max-width:700px) {
+  .reception-overview-focus-main { grid-template-columns:42px minmax(0,1fr); }
+  .reception-overview-focus-main>span { width:42px; height:42px; }
+  .reception-overview-focus-main>button { grid-column:1/-1; }
+  .reception-overview-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .reception-overview-stats>button { border-bottom:1px solid #e6ebf3; }
+  .reception-overview-stats>button:nth-child(2n) { border-right:0; }
+  .reception-overview-stats>button:nth-last-child(-n+2) { border-bottom:0; }
+}
+@media(max-width:520px) {
+  .reception-overview-focus { padding:9px; }
+  .reception-overview-focus-main { padding:6px; }
+  .reception-overview-focus-main p { white-space:normal; }
+  .reception-overview-grid { gap:11px; margin-top:11px; }
+  .reception-overview-checkins article,.reception-overview-rooms article { padding-inline:14px; }
+}
