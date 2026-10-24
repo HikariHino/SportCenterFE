@@ -177,7 +177,7 @@ export default function Coach() {
     if (activeNav === 'Lịch huấn luyện') return <ScheduleView showNotice={showNotice} selectedSession={selectedCoachSession} onSelectSession={selectCoachSession} />
     if (activeNav === 'Phòng tập') return <CoachRoomsView />
     if (activeNav === 'Học viên') return <StudentsView query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
-    if (activeNav === 'Điểm danh') return <AttendanceView query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
+    if (activeNav === 'Điểm danh') return <AttendanceView query={query} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
     if (activeNav === 'Hồ sơ') return <CoachProfileView showNotice={showNotice} />
     return <OverviewView onNavigate={selectNavigation} showNotice={showNotice} />
   }
