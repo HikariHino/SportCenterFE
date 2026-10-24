@@ -56,9 +56,9 @@ export function Overview({ onNavigate }) {
         <div><small>{focus.eyebrow}</small><strong>{focus.title}</strong><p>{focus.description}</p></div>
         <button type="button" onClick={() => onNavigate(focus.target)}>{focus.action}<ArrowRight size={15} /></button>
       </div>
-      <div className="reception-overview-stats" aria-label="Thống kê lễ tân">
-        {metrics.map(([Icon, label, value, tone, target]) => <button type="button" key={label} onClick={() => onNavigate(target)} aria-label={`${label}: ${value}. Mở ${target}`}><span className={tone}><Icon size={17} /></span><span><strong>{value}</strong><small>{label}</small></span></button>)}
-      </div>
+    </section>
+    <section className="reception-overview-stats reception-overview-metrics" aria-label="Thống kê lễ tân">
+      {metrics.map(([Icon, label, value, tone, target]) => <button type="button" key={label} onClick={() => onNavigate(target)} aria-label={`${label}: ${value}. Mở ${target}`}><span className={tone}><Icon size={17} /></span><span><strong>{value}</strong><small>{label}</small></span></button>)}
     </section>
     <div className="reception-overview-grid">
       <section className="reception-card reception-queue">
