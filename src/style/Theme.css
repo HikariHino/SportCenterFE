@@ -315,6 +315,8 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
   color: var(--theme-accent);
   background: var(--theme-blue-bg);
 }
+[data-theme='dark'] .coach-agenda-list article[role='button']:hover { background:var(--theme-raised); box-shadow:0 0 0 8px var(--theme-raised); }
+[data-theme='dark'] .coach-agenda-list article.selected { background:var(--theme-blue-bg); box-shadow:0 0 0 2px #3c5f9f,0 0 0 8px var(--theme-blue-bg); }
 [data-theme='dark'] .coach-session-picker-main > span { background: var(--theme-blue-bg); color: var(--theme-accent); }
 [data-theme='dark'] .coach-roster-table > button { border-color: var(--theme-border); color: var(--theme-text); }
 [data-theme='dark'] :is(.coach-roster-table > button:hover, .coach-roster-table > button.selected) { background: var(--theme-raised); }

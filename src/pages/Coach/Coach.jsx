@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
@@ -42,10 +42,22 @@ const notificationDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   minute: '2-digit',
 })
 
+const selectedSessionStorageKey = 'coach:selected-session'
+
+const readSelectedSession = () => {
+  try {
+    const value = window.sessionStorage.getItem(selectedSessionStorageKey)
+    return value ? JSON.parse(value) : null
+  } catch {
+    return null
+  }
+}
+
 export default function Coach() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [activeNav, setActiveNav] = useState('Tổng quan')
+  const [selectedCoachSession, setSelectedCoachSession] = useState(readSelectedSession)
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -69,6 +81,11 @@ export default function Coach() {
       .catch(() => { if (active) setUnreadCount(0) })
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    if (selectedCoachSession?.id) window.sessionStorage.setItem(selectedSessionStorageKey, JSON.stringify(selectedCoachSession))
+    else window.sessionStorage.removeItem(selectedSessionStorageKey)
+  }, [selectedCoachSession])
 
   useEffect(() => {
     if (!notificationOpen) return undefined
@@ -126,7 +143,18 @@ export default function Coach() {
     window.setTimeout(() => setNotice(''), 2600)
   }
 
-  const selectNavigation = label => {
+  const selectCoachSession = useCallback(session => {
+    if (!session?.id) return
+    setSelectedCoachSession({
+      id: String(session.id),
+      startsAt: session.startsAt || null,
+      endsAt: session.endsAt || null,
+      className: session.className || session.studentName || 'Buổi huấn luyện',
+    })
+  }, [])
+
+  const selectNavigation = (label, session) => {
+    if (session) selectCoachSession(session)
     setActiveNav(label)
     setQuery('')
     setSidebarOpen(false)
@@ -134,15 +162,16 @@ export default function Coach() {
   }
 
   const handleLogout = async () => {
+    window.sessionStorage.removeItem(selectedSessionStorageKey)
     await logout()
     navigate('/login', { replace: true })
   }
 
   const renderActiveView = () => {
-    if (activeNav === 'Lịch huấn luyện') return <ScheduleView showNotice={showNotice} />
+    if (activeNav === 'Lịch huấn luyện') return <ScheduleView showNotice={showNotice} selectedSession={selectedCoachSession} onSelectSession={selectCoachSession} />
     if (activeNav === 'Phòng tập') return <CoachRoomsView />
-    if (activeNav === 'Học viên') return <StudentsView query={query} showNotice={showNotice} />
-    if (activeNav === 'Điểm danh') return <AttendanceView query={query} showNotice={showNotice} />
+    if (activeNav === 'Học viên') return <StudentsView query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
+    if (activeNav === 'Điểm danh') return <AttendanceView query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
     if (activeNav === 'Hồ sơ') return <CoachProfileView showNotice={showNotice} />
     return <OverviewView onNavigate={selectNavigation} showNotice={showNotice} />
   }

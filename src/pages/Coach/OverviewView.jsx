@@ -218,11 +218,11 @@ export function OverviewView({ onNavigate }) {
           <strong>{focusSession ? focusSession.className : 'Chưa có buổi huấn luyện sắp tới'}</strong>
           <p>{focusSession ? `${longDateFormatter.format(new Date(focusSession.startsAt))} · ${focusSession.time} · ${focusSession.enrollment}/${focusSession.capacity || '--'} học viên` : 'Kiểm tra lịch để xem các buổi đã được phân công.'}</p>
         </div>
-        <button type="button" onClick={() => onNavigate(primaryAction.target)}><PrimaryActionIcon size={17} />{primaryAction.label}<ChevronRight size={15} /></button>
+        <button type="button" onClick={() => onNavigate(primaryAction.target, focusSession)}><PrimaryActionIcon size={17} />{primaryAction.label}<ChevronRight size={15} /></button>
       </div>
       <div className="coach-focus-shortcuts">
-        <button type="button" onClick={() => onNavigate('Điểm danh')}><span className={attendance.pending ? 'attention' : 'done'}><UserCheck size={18} /></span><span><strong>{attendance.pending}</strong><small>Chờ điểm danh</small></span><ChevronRight size={15} /></button>
-        <button type="button" onClick={() => onNavigate('Học viên')}><span><Users size={18} /></span><span><strong>{students.length}</strong><small>Học viên hôm nay</small></span><ChevronRight size={15} /></button>
+        <button type="button" onClick={() => onNavigate('Điểm danh', focusSession)}><span className={attendance.pending ? 'attention' : 'done'}><UserCheck size={18} /></span><span><strong>{attendance.pending}</strong><small>Chờ điểm danh</small></span><ChevronRight size={15} /></button>
+        <button type="button" onClick={() => onNavigate('Học viên', focusSession)}><span><Users size={18} /></span><span><strong>{students.length}</strong><small>Học viên hôm nay</small></span><ChevronRight size={15} /></button>
         <button type="button" onClick={() => onNavigate('Phòng tập')}><span><DoorOpen size={18} /></span><span><strong>Kiểm tra</strong><small>Phòng tập</small></span><ChevronRight size={15} /></button>
       </div>
     </section>
@@ -230,14 +230,14 @@ export function OverviewView({ onNavigate }) {
     <section className="coach-metrics" aria-label="Thống kê huấn luyện">
       {metricSlots.map(({ icon: Icon, label, tone, target }, index) => {
         const metric = metrics[index]
-        return <button type="button" key={label} className="coach-metric-card" onClick={() => onNavigate(target)} aria-label={`${label}: ${metric?.value ?? 0}. Mở ${target}`}><span className={`coach-metric-icon ${tone}`}><Icon size={20} /></span><span><small>{label}</small><strong>{metric?.value ?? 0}</strong><p>{metric?.note ?? 'Không có dữ liệu'}</p></span><ArrowUpRight size={17} /></button>
+        return <button type="button" key={label} className="coach-metric-card" onClick={() => onNavigate(target, focusSession)} aria-label={`${label}: ${metric?.value ?? 0}. Mở ${target}`}><span className={`coach-metric-icon ${tone}`}><Icon size={20} /></span><span><small>{label}</small><strong>{metric?.value ?? 0}</strong><p>{metric?.note ?? 'Không có dữ liệu'}</p></span><ArrowUpRight size={17} /></button>
       })}
     </section>
 
     <div className="coach-overview-workspace">
       <section className="coach-card coach-schedule">
         <div className="coach-card-head"><div><span>ƯU TIÊN HÔM NAY</span><h2>Lịch huấn luyện hôm nay</h2></div><button type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem toàn bộ lịch <ChevronRight size={16} /></button></div>
-        {sessions.length ? <div className="coach-session-list">{sessions.map(session => <SessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện')} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
+        {sessions.length ? <div className="coach-session-list">{sessions.map(session => <SessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện', session)} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
       </section>
       <section className="coach-card coach-day-progress-card">
         <div className="coach-card-head"><div><span>TIẾN ĐỘ HÔM NAY</span><h2>Tình hình hoạt động</h2></div><UserCheck size={21} /></div>
@@ -262,7 +262,7 @@ export function OverviewView({ onNavigate }) {
       </section>
       <section className="coach-card coach-week-card">
         <div className="coach-card-head"><div><span>7 NGÀY TỚI</span><h2>Lịch huấn luyện sắp tới</h2></div><strong>{weekSessions.length} buổi</strong></div>
-        {weekSessions.length ? <div className="coach-week-list">{weekSessions.slice(0, 5).map(session => <WeekSessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện')} />)}</div> : <EmptyState title="Tuần này chưa có lịch" text="Các buổi mới được phân công sẽ xuất hiện tại đây." />}
+        {weekSessions.length ? <div className="coach-week-list">{weekSessions.slice(0, 5).map(session => <WeekSessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện', session)} />)}</div> : <EmptyState title="Tuần này chưa có lịch" text="Các buổi mới được phân công sẽ xuất hiện tại đây." />}
         {weekSessions.length > 5 && <button className="coach-week-more" type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem thêm {weekSessions.length - 5} buổi <ChevronRight size={15} /></button>}
       </section>
     </div>

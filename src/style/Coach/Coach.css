@@ -176,6 +176,9 @@
 .coach-agenda-list { padding: 5px 20px 13px; }
 .coach-agenda-list article { position: relative; min-height: 116px; display: grid; grid-template-columns: 52px 15px minmax(0, 1fr) 27px; gap: 11px; padding: 18px 0; border-bottom: 1px solid #edf1f6; }
 .coach-agenda-list article:last-child { border-bottom: 0; }
+.coach-agenda-list article[role='button'] { cursor:pointer; border-radius:9px; transition:background-color .2s,box-shadow .2s; }
+.coach-agenda-list article[role='button']:hover { background:#f6f9ff; box-shadow:0 0 0 8px #f6f9ff; }
+.coach-agenda-list article.selected { background:#edf4ff; box-shadow:0 0 0 2px #a9c4f5,0 0 0 8px #edf4ff; }
 .coach-agenda-time strong, .coach-agenda-time span { display: block; }.coach-agenda-time strong { font-size: 16px; }.coach-agenda-time span { margin-top: 5px; color: #8b95a7; font-size: 12px; }
 .coach-agenda-line { position: relative; display: flex; justify-content: center; }.coach-agenda-line::after { content: ''; position: absolute; top: 15px; bottom: -30px; width: 1px; background: #dfe5ef; }.coach-agenda-list article:last-child .coach-agenda-line::after { display: none; }
 .coach-agenda-line i { z-index: 1; width: 10px; height: 10px; margin-top: 3px; border: 2px solid #fff; border-radius: 50%; background: #f0a629; box-shadow: 0 0 0 2px #ffd88d; }.coach-agenda-list article.done .coach-agenda-line i { background: #2563eb; box-shadow: 0 0 0 2px #a8c5fa; }.coach-agenda-list article.live .coach-agenda-line i { background: #0dab79; box-shadow: 0 0 0 2px #8de3c4; animation: coach-live 1.7s ease-out infinite; }
