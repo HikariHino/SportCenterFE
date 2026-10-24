@@ -291,6 +291,8 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] :is(.coach-metric-icon.green, .coach-status.live, .coach-student-avatar.green, .coach-quick-actions .chat, .coach-performance .coach-card-head b, .coach-toast) { background: var(--theme-green-bg); color: var(--theme-green); border-color: #2c6554; }
 [data-theme='dark'] :is(.coach-metric-icon.purple, .coach-quick-actions .plan) { background: var(--theme-purple-bg); color: var(--theme-purple); }
 [data-theme='dark'] :is(.coach-metric-icon.amber, .coach-status.next, .coach-student-avatar.orange) { background: var(--theme-gold-bg); color: var(--theme-gold); }
+[data-theme='dark'] .coach-status.attention { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] :is(.coach-session:hover,.coach-week-session:hover) { background:var(--theme-raised); }
 [data-theme='dark'] .coach-metrics p { color: var(--theme-green); }
 [data-theme='dark'] .coach-chart { border-color: var(--theme-border); background: repeating-linear-gradient(to top, transparent 0, transparent 39px, var(--theme-border) 40px); }
 [data-theme='dark'] .coach-goal::before, [data-theme='dark'] .coach-student-progress > span { background: var(--theme-border); }

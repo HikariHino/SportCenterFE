@@ -50,21 +50,21 @@ function EmptyState({ title = 'Chưa có dữ liệu', text, actionLabel, onActi
   </div>
 }
 
-function SessionRow({ session }) {
-  return <article className={`coach-session ${session.tone}`}>
+function SessionRow({ session, onOpen }) {
+  return <button type="button" className={`coach-session ${session.tone}`} onClick={onOpen} aria-label={`Mở lịch buổi ${session.className}, ${session.time}, ${session.statusLabel}`}>
     <div className="coach-session-time"><strong>{session.time}</strong><small>{session.duration}</small></div><i />
     <div className="coach-session-info"><strong>{session.className}</strong><span>{session.enrollment}/{session.capacity || '--'} học viên</span><small><Dumbbell size={13} /> {session.coachName || 'Lịch huấn luyện của tôi'}</small></div>
     <span className={`coach-status ${session.tone}`}>{session.statusLabel}</span>
-  </article>
+  </button>
 }
 
-function WeekSessionRow({ session }) {
+function WeekSessionRow({ session, onOpen }) {
   const start = new Date(session.startsAt)
-  return <article className="coach-week-session">
+  return <button type="button" className="coach-week-session" onClick={onOpen} aria-label={`Mở lịch buổi ${session.className}, ${weekDateFormatter.format(start)}, ${session.time}`}>
     <time dateTime={session.startsAt}><strong>{start.getDate()}</strong><small>Tháng {start.getMonth() + 1}</small></time>
     <div><strong>{session.className}</strong><span>{weekDateFormatter.format(start)} · {session.time} · {session.duration}</span></div>
     <span className={`coach-status ${session.tone}`}>{session.statusLabel}</span>
-  </article>
+  </button>
 }
 
 const sessionPresentation = session => {
@@ -72,6 +72,7 @@ const sessionPresentation = session => {
   const endsAt = new Date(session.endsAt)
   const rawStatus = String(session.status || '').toLowerCase()
   const durationMinutes = Math.max(0, Math.round((endsAt - startsAt) / 60_000))
+  const now = new Date()
   let statusLabel = 'Sắp tới'
   let tone = 'next'
   if (rawStatus === 'completed') {
@@ -80,9 +81,12 @@ const sessionPresentation = session => {
   } else if (rawStatus === 'cancelled' || rawStatus === 'canceled') {
     statusLabel = 'Đã hủy'
     tone = 'cancelled'
-  } else if (startsAt <= new Date() && endsAt > new Date()) {
+  } else if (startsAt <= now && endsAt > now) {
     statusLabel = 'Đang diễn ra'
     tone = 'live'
+  } else if (endsAt <= now) {
+    statusLabel = 'Chờ hoàn thành'
+    tone = 'attention'
   }
   return {
     ...session,
@@ -117,7 +121,8 @@ export function OverviewView({ onNavigate }) {
       try {
         const result = await getMyCoachSessions({ from: from.toISOString(), to: to.toISOString(), pageSize: 100 })
         const upcomingWeek = result.items.map(sessionPresentation).sort((left, right) => new Date(left.startsAt) - new Date(right.startsAt))
-        const today = upcomingWeek.filter(session => sameDay(new Date(session.startsAt), from))
+        const activeWeek = upcomingWeek.filter(session => session.tone !== 'cancelled')
+        const today = activeWeek.filter(session => sameDay(new Date(session.startsAt), from))
         const rosterResults = await Promise.allSettled(today.map(session => getCoachSessionRoster(session.id)))
         const studentMap = new Map()
         const attendanceSummary = { present: 0, absent: 0, excused: 0, pending: 0 }
@@ -156,7 +161,7 @@ export function OverviewView({ onNavigate }) {
 
         if (active) {
           setSessions(today)
-          setWeekSessions(upcomingWeek)
+          setWeekSessions(activeWeek)
           setStudents(studentItems)
           setAttendance(attendanceSummary)
           setMetrics([
@@ -187,13 +192,17 @@ export function OverviewView({ onNavigate }) {
     const now = new Date()
     return weekSessions.find(session => session.tone !== 'cancelled' && new Date(session.endsAt) >= now)
   }, [weekSessions])
+  const overdueSession = sessions.find(session => session.tone === 'attention')
+  const focusSession = overdueSession || nextSession
   const completedSessions = sessions.filter(session => session.tone === 'done').length
   const dayProgress = percentage(completedSessions, sessions.length)
   const attendanceTotal = attendance.present + attendance.absent + attendance.excused + attendance.pending
-  const nextSessionIsToday = nextSession && sameDay(new Date(nextSession.startsAt), new Date())
-  const primaryAction = attendance.pending > 0 && nextSessionIsToday
-    ? { label: 'Điểm danh ngay', target: 'Điểm danh', icon: UserCheck }
-    : { label: 'Mở lịch huấn luyện', target: 'Lịch huấn luyện', icon: CalendarRange }
+  const focusSessionIsToday = focusSession && sameDay(new Date(focusSession.startsAt), new Date())
+  const primaryAction = overdueSession
+    ? { label: 'Xử lý buổi học', target: 'Lịch huấn luyện', icon: CheckCircle2 }
+    : attendance.pending > 0 && focusSessionIsToday
+      ? { label: 'Điểm danh ngay', target: 'Điểm danh', icon: UserCheck }
+      : { label: 'Mở lịch huấn luyện', target: 'Lịch huấn luyện', icon: CalendarRange }
   const PrimaryActionIcon = primaryAction.icon
 
   if (loading) return <ViewLoader />
@@ -205,9 +214,9 @@ export function OverviewView({ onNavigate }) {
       <div className="coach-focus-main">
         <span className="coach-focus-icon"><CalendarCheck2 size={22} /></span>
         <div>
-          <small>{nextSessionIsToday ? 'BUỔI GẦN NHẤT HÔM NAY' : 'KẾ HOẠCH GẦN NHẤT'}</small>
-          <strong>{nextSession ? nextSession.className : 'Chưa có buổi huấn luyện sắp tới'}</strong>
-          <p>{nextSession ? `${longDateFormatter.format(new Date(nextSession.startsAt))} · ${nextSession.time} · ${nextSession.enrollment}/${nextSession.capacity || '--'} học viên` : 'Kiểm tra lịch để xem các buổi đã được phân công.'}</p>
+          <small>{overdueSession ? 'CẦN HOÀN THÀNH' : focusSessionIsToday ? 'BUỔI GẦN NHẤT HÔM NAY' : 'KẾ HOẠCH GẦN NHẤT'}</small>
+          <strong>{focusSession ? focusSession.className : 'Chưa có buổi huấn luyện sắp tới'}</strong>
+          <p>{focusSession ? `${longDateFormatter.format(new Date(focusSession.startsAt))} · ${focusSession.time} · ${focusSession.enrollment}/${focusSession.capacity || '--'} học viên` : 'Kiểm tra lịch để xem các buổi đã được phân công.'}</p>
         </div>
         <button type="button" onClick={() => onNavigate(primaryAction.target)}><PrimaryActionIcon size={17} />{primaryAction.label}<ChevronRight size={15} /></button>
       </div>
@@ -228,7 +237,7 @@ export function OverviewView({ onNavigate }) {
     <div className="coach-overview-workspace">
       <section className="coach-card coach-schedule">
         <div className="coach-card-head"><div><span>ƯU TIÊN HÔM NAY</span><h2>Lịch huấn luyện hôm nay</h2></div><button type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem toàn bộ lịch <ChevronRight size={16} /></button></div>
-        {sessions.length ? <div className="coach-session-list">{sessions.map(session => <SessionRow key={session.id} session={session} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
+        {sessions.length ? <div className="coach-session-list">{sessions.map(session => <SessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện')} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
       </section>
       <section className="coach-card coach-day-progress-card">
         <div className="coach-card-head"><div><span>TIẾN ĐỘ HÔM NAY</span><h2>Tình hình hoạt động</h2></div><UserCheck size={21} /></div>
@@ -253,7 +262,7 @@ export function OverviewView({ onNavigate }) {
       </section>
       <section className="coach-card coach-week-card">
         <div className="coach-card-head"><div><span>7 NGÀY TỚI</span><h2>Lịch huấn luyện sắp tới</h2></div><strong>{weekSessions.length} buổi</strong></div>
-        {weekSessions.length ? <div className="coach-week-list">{weekSessions.slice(0, 5).map(session => <WeekSessionRow key={session.id} session={session} />)}</div> : <EmptyState title="Tuần này chưa có lịch" text="Các buổi mới được phân công sẽ xuất hiện tại đây." />}
+        {weekSessions.length ? <div className="coach-week-list">{weekSessions.slice(0, 5).map(session => <WeekSessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện')} />)}</div> : <EmptyState title="Tuần này chưa có lịch" text="Các buổi mới được phân công sẽ xuất hiện tại đây." />}
         {weekSessions.length > 5 && <button className="coach-week-more" type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem thêm {weekSessions.length - 5} buổi <ChevronRight size={15} /></button>}
       </section>
     </div>

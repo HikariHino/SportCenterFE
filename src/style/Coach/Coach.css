@@ -78,8 +78,9 @@
 .coach-card-head button:hover svg { transform: translateX(2px); }
 .coach-card-head button svg { transition: transform .2s; }
 .coach-session-list { padding: 3px 19px 8px; }
-.coach-session { position: relative; display: grid; grid-template-columns: 57px 11px minmax(0, 1fr) auto; align-items: center; gap: 11px; min-height: 72px; border-bottom: 1px solid #edf0f5; }
+.coach-session { width:100%; position: relative; display: grid; grid-template-columns: 57px 11px minmax(0, 1fr) auto; align-items: center; gap: 11px; min-height: 72px; border:0; border-bottom: 1px solid #edf0f5; color:inherit; background:transparent; text-align:left; }
 .coach-session:last-child { border-bottom: 0; }
+.coach-session:hover { margin-inline:-8px; width:calc(100% + 16px); padding-inline:8px; border-radius:8px; background:#f6f9ff; }
 .coach-session-time strong, .coach-session-time small { display: block; }
 .coach-session-time strong { font-size: 16px; }
 .coach-session-time small { margin-top: 3px; color: var(--coach-muted); font-size: 12px; }
@@ -92,7 +93,7 @@
 .coach-session-info small { margin-top: 4px; color: #8993a4; font-size: 12px; }
 .coach-session-info small svg { vertical-align: -2px; }
 .coach-status { padding: 5px 8px; border-radius: 20px; font-size: 11px; font-weight: 800; white-space: nowrap; }
-.coach-status.done { color: #1758d8; background: #e9f0ff; }.coach-status.live { color: #087251; background: #dff8ed; }.coach-status.next { color: #875b10; background: #fff2d9; }.coach-status.cancelled { color: #a63243; background: #ffeaed; }
+.coach-status.done { color: #1758d8; background: #e9f0ff; }.coach-status.live { color: #087251; background: #dff8ed; }.coach-status.next { color: #875b10; background: #fff2d9; }.coach-status.attention { color:#a04f0b; background:#fff0d6; }.coach-status.cancelled { color: #a63243; background: #ffeaed; }
 .coach-session > button { width: 25px; height: 25px; display: grid; place-items: center; border: 0; border-radius: 6px; color: #8b96a8; background: #f4f6fa; }
 .coach-session > button:hover { color: var(--coach-blue); background: #eaf0ff; }
 .coach-performance { min-width: 0; }
@@ -438,8 +439,9 @@
 .coach-overview-secondary { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr); align-items:start; gap:16px; margin-top:16px; }
 .coach-week-card>.coach-card-head>strong { padding:5px 8px; border-radius:18px; color:var(--coach-blue); background:#edf3ff; font-size:11px; }
 .coach-week-list { padding:3px 19px 8px; }
-.coach-week-session { display:grid; grid-template-columns:50px minmax(0,1fr) auto; align-items:center; gap:12px; min-height:70px; border-bottom:1px solid #edf0f5; }
+.coach-week-session { width:100%; display:grid; grid-template-columns:50px minmax(0,1fr) auto; align-items:center; gap:12px; min-height:70px; border:0; border-bottom:1px solid #edf0f5; color:inherit; background:transparent; text-align:left; }
 .coach-week-session:last-child { border-bottom:0; }
+.coach-week-session:hover { margin-inline:-8px; width:calc(100% + 16px); padding-inline:8px; border-radius:8px; background:#f6f9ff; }
 .coach-week-session time { width:45px; height:47px; display:grid; place-content:center; border-radius:9px; color:var(--coach-blue); background:#edf3ff; text-align:center; }
 .coach-week-session time strong { font-size:17px; line-height:1; }
 .coach-week-session time small { margin-top:4px; font-size:8px; font-weight:800; text-transform:uppercase; }
