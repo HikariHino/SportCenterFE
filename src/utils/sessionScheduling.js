@@ -6,6 +6,22 @@ import { sessionEnrollmentCount } from './sessionEnrollment.js'
 export const isCancelledSession = item => ['cancelled', 'canceled'].includes(String(item.status || item.Status || '').trim().toLowerCase())
 export const isScheduledSession = item => String(item.status || item.Status || '').trim().toLowerCase() === 'scheduled'
 
+export function assertCoachScheduleAvailable({ data, sportClass, rooms = [], groups, current }) {
+  for (const group of groups) {
+    for (const item of group.items) {
+      if (current && String(group.sportClass.id) === String(sportClass.id) && String(item.id) === String(current.id)) continue
+      if (isCancelledSession(item) || !sessionsOverlap(data, item)) continue
+      if (String(item.coachId ?? group.sportClass.coachId) !== String(data.coachId)) continue
+      const occupiedRoom = getSessionRoom(item, group.sportClass, rooms)
+      const roomName = occupiedRoom?.name || rooms.find(room => occupiedRoom?.id != null && String(room.id) === String(occupiedRoom.id))?.name
+      const formatTime = value => new Date(value).toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      })
+      throw new Error(`Huấn luyện viên đã có lịch dạy trùng giờ ở lớp “${item.className || group.sportClass.className || `#${group.sportClass.id}`}”${occupiedRoom ? ` tại ${roomName || `phòng #${occupiedRoom.id}`}` : ''}, từ ${formatTime(item.startsAt)} đến ${formatTime(item.endsAt)} (giờ Việt Nam). Vui lòng chọn khung giờ hoặc huấn luyện viên khác.`)
+    }
+  }
+}
+
 export function assertSessionTimeRange({ startsAt, endsAt }, sportClass, now = Date.now()) {
   const start = Date.parse(startsAt), end = Date.parse(endsAt)
   if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) throw new Error('Thời gian bắt đầu và kết thúc buổi học không hợp lệ.')
@@ -58,7 +74,7 @@ export function assertSessionSchedule({ data, sportClass, room, rooms, groups, c
       if (isCancelledSession(item) || !sessionsOverlap(data, item)) continue
       if (roomSessionForTimetable(item, group.sportClass, rooms, room)) throw new Error(`Phòng ${room.name} đã có buổi học ${item.className || group.sportClass.className} trong khung giờ này.`)
       if (String(group.sportClass.id) === String(sportClass.id)) throw new Error('Lớp đã có buổi học giao nhau với khung giờ này.')
-      if (String(item.coachId ?? group.sportClass.coachId) === String(data.coachId)) throw new Error('Huấn luyện viên đã có buổi học khác trong khung giờ này.')
     }
   }
+  assertCoachScheduleAvailable({ data, sportClass, rooms, groups, current })
 }
