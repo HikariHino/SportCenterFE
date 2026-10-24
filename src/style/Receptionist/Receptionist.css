@@ -661,3 +661,165 @@
     height:360px;
   }
 }
+
+/* Simplified Room and Session workspace. */
+.reception-facility-switcher {
+  min-height:76px;
+  margin-bottom:14px;
+  padding:12px 14px;
+}
+.reception-facility-switcher>div { padding-left:2px; }
+.reception-facility-switcher small { font-size:10px; }
+.reception-facility-switcher strong { margin-top:3px; font-size:16px; }
+.reception-facility-switcher nav { gap:4px; padding:4px; }
+.reception-facility-switcher button { min-width:132px; min-height:38px; padding-inline:16px; }
+
+.reception-facility-metrics {
+  gap:0;
+  margin-bottom:14px;
+  overflow:hidden;
+  border:1px solid var(--rc-line);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 5px 16px #17315a08;
+}
+.reception-facility-metrics article,
+.reception-facility-metrics article:nth-child(2) {
+  min-height:72px;
+  gap:10px;
+  padding:12px 15px;
+  border:0;
+  border-right:1px solid var(--rc-line);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.reception-facility-metrics article:last-child { border-right:0; }
+.reception-facility-metrics article>span,
+.reception-facility-metrics article:nth-child(2)>span {
+  width:36px;
+  height:36px;
+}
+.reception-facility-metrics small,
+.reception-facility-metrics article:nth-child(2) small {
+  font-size:12px !important;
+  letter-spacing:0;
+  overflow-wrap:normal;
+  white-space:nowrap;
+}
+.reception-facility-metrics strong { margin-top:2px; font-size:19px; }
+
+.reception-facility-catalog>.reception-card-head { min-height:61px; padding-block:13px; }
+.reception-facility-toolbar { padding:12px 14px; }
+.reception-facility-room-grid { gap:12px; padding:14px; }
+
+.reception-session-steps {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  margin-bottom:12px;
+  overflow:hidden;
+}
+.reception-session-steps>div {
+  min-width:0;
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  align-items:center;
+  gap:9px;
+  padding:11px 14px;
+  border-right:1px solid var(--rc-line);
+}
+.reception-session-steps>div:last-child { border-right:0; }
+.reception-session-steps>div>span {
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:#fff;
+  background:var(--rc-accent);
+  font-size:12px;
+  font-weight:850;
+}
+.reception-session-steps p { min-width:0; margin:0; }
+.reception-session-steps strong,
+.reception-session-steps small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reception-session-steps strong { font-size:12px; }
+.reception-session-steps small { margin-top:2px; color:var(--rc-muted); font-size:11px !important; }
+
+.reception-catalog-filters { gap:14px; margin-bottom:12px; padding:11px 14px; }
+.reception-catalog-filters>div:first-child { min-width:165px; }
+.reception-catalog-filters select { height:39px; }
+.reception-session-browser {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:start;
+  gap:12px;
+  margin-bottom:12px;
+}
+.reception-session-browser :is(.reception-class-catalog,.reception-session-catalog) { min-width:0; margin-bottom:0; }
+.reception-session-browser .reception-card-head { min-height:61px; padding:13px 15px; }
+.reception-session-browser .reception-card-head h2 { font-size:17px; }
+.reception-session-browser :is(.reception-class-catalog-list,.reception-session-catalog-list) {
+  grid-template-columns:1fr;
+  height:420px;
+  padding:12px;
+}
+.reception-session-browser .reception-class-catalog-list article { gap:9px; }
+.reception-session-browser .reception-class-catalog-list article>div:last-child { min-width:145px; }
+.reception-session-browser .reception-session-select { min-height:92px; }
+
+.reception-selected-session {
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  padding:10px 11px;
+  border:1px solid #b8ddd9;
+  border-radius:9px;
+  background:#effaf8;
+}
+.reception-selected-session>span {
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:8px;
+  color:#087e74;
+  background:#d9f5ef;
+}
+.reception-selected-session p { min-width:0; margin:0; }
+.reception-selected-session small,
+.reception-selected-session strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reception-selected-session small { color:#087e74; font-size:10px !important; font-weight:800; letter-spacing:.7px; }
+.reception-selected-session strong { margin-top:2px; font-size:12px; }
+.reception-selected-session>b { color:#087e74; font-size:12px; }
+
+[data-theme='dark'] .reception-facility-metrics { border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] .reception-facility-metrics article { border-color:var(--theme-border); background:transparent; }
+[data-theme='dark'] .reception-session-steps>div { border-color:var(--theme-border); }
+[data-theme='dark'] .reception-selected-session { border-color:#285f69; background:#16323a; }
+[data-theme='dark'] .reception-selected-session>span { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .reception-selected-session :is(small,b) { color:var(--theme-green); }
+
+@media(max-width:1050px) {
+  .reception-facility-metrics article:nth-child(2n) { border-right:0; }
+  .reception-facility-metrics article:nth-child(-n+2) { border-bottom:1px solid var(--rc-line); }
+}
+@media(max-width:900px) {
+  .reception-session-browser { grid-template-columns:1fr; }
+}
+@media(max-width:720px) {
+  .reception-facility-switcher>div { display:none; }
+  .reception-facility-switcher nav { width:100%; }
+  .reception-facility-switcher nav button { min-width:0; flex:1; }
+  .reception-session-steps { grid-template-columns:1fr; }
+  .reception-session-steps>div { border-right:0; border-bottom:1px solid var(--rc-line); }
+  .reception-session-steps>div:last-child { border-bottom:0; }
+}
+@media(max-width:520px) {
+  .reception-facility-metrics article,
+  .reception-facility-metrics article:nth-child(2) { border-right:0; border-bottom:1px solid var(--rc-line); }
+  .reception-facility-metrics article:last-child { border-bottom:0; }
+  .reception-session-browser :is(.reception-class-catalog-list,.reception-session-catalog-list) { height:360px; padding:10px; }
+  .reception-session-browser .reception-class-catalog-list article>div:last-child { min-width:130px; }
+}
