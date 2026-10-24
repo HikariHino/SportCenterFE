@@ -78,6 +78,40 @@ test('other rooms can host concurrent classes, but a shared coach cannot be doub
   assert.throws(() => check({ groups: [{ ...group, items: [{ ...group.items[0], coachId: 5 }] }] }), /Huấn luyện viên/)
 })
 
+test('a coach cannot teach overlapping classes in different rooms, including enclosing intervals and equivalent time zones', () => {
+  const otherClass = { ...sportClass, id: 20, className: 'Yoga cơ bản', roomId: 2, coachId: 9 }
+  const overlaps = [
+    { startsAt: data.startsAt, endsAt: data.endsAt },
+    { startsAt: '2099-10-21T10:00:00Z', endsAt: '2099-10-21T11:01:00Z' },
+    { startsAt: '2099-10-21T12:29:00Z', endsAt: '2099-10-21T13:30:00Z' },
+    { startsAt: '2099-10-21T10:00:00Z', endsAt: '2099-10-21T14:00:00Z' },
+    { startsAt: '2099-10-21T11:30:00Z', endsAt: '2099-10-21T12:00:00Z' },
+    { startsAt: '2099-10-21T18:00:00+07:00', endsAt: '2099-10-21T19:30:00+07:00' },
+  ]
+  for (const times of overlaps) {
+    assert.throws(() => check({ groups: [{ sportClass: otherClass, items: [{ id: 200, coachId: 5, status: 'Scheduled', ...times }] }] }),
+      error => /Huấn luyện viên/.test(error.message) && /Yoga cơ bản/.test(error.message) && /Yoga/.test(error.message) && /2099/.test(error.message))
+  }
+})
+
+test('back-to-back classes, other dates, cancelled sessions and different actual coaches remain allowed across rooms', () => {
+  const group = { sportClass: { ...sportClass, id: 20, roomId: 2, coachId: 5 }, items: [] }
+  for (const overrides of [
+    { startsAt: data.endsAt, endsAt: '2099-10-21T14:00:00Z' },
+    { startsAt: '2099-10-21T09:00:00Z', endsAt: data.startsAt },
+    { startsAt: '2099-10-22T11:00:00Z', endsAt: '2099-10-22T12:30:00Z' },
+    { status: ' Cancelled ' }, { status: ' CANCELED ' }, { coachId: 9 },
+  ]) check({ groups: [{ ...group, items: [{ id: 200, ...data, status: 'Scheduled', ...overrides }] }] })
+  assert.throws(() => check({ groups: [{ ...group, items: [{ id: 200, ...data, coachId: undefined }] }] }), /Huấn luyện viên/)
+})
+
+test('coach overlaps across Vietnam midnight are blocked while the next adjacent session is allowed', () => {
+  const planned = { ...data, startsAt: '2099-10-21T23:00:00+07:00', endsAt: '2099-10-22T01:00:00+07:00' }
+  const group = { sportClass: { ...sportClass, id: 20, roomId: 2 }, items: [{ id: 200, ...data, startsAt: '2099-10-21T17:30:00Z', endsAt: '2099-10-21T19:00:00Z' }] }
+  assert.throws(() => check({ data: planned, groups: [group] }), /Huấn luyện viên/)
+  check({ data: { ...planned, startsAt: '2099-10-21T19:00:00Z', endsAt: '2099-10-21T20:00:00Z' }, groups: [group] })
+})
+
 test('updates exclude only the selected session and still reject another session in the same class', () => {
   const current = { id: 100, ...data, status: 'Scheduled', currentEnrollment: 0 }
   check({ current, data: { ...data, startsAt: '2099-10-21T11:30:00Z' }, groups: [{ sportClass, items: [current] }] })

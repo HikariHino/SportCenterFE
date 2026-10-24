@@ -2,8 +2,8 @@ import { canCancelRoomSession, getSessionRoom, roomSessionForTimetable } from '.
 import { checkRoomAvailability } from './roomService'
 import { cancelClassSession, createClassSession, getClassById, getClassErrorMessage, updateClassSession, updateSportClass } from './sportClassService'
 import { buildSessionReschedule, sessionsOverlap } from '../utils/sessionReschedule.js'
-import { loadClassTimetables, loadSchedulingContext, loadSchedulingPages as loadAllPages, withSessionWriteLock } from './sessionSchedulingService'
-import { assertSessionCapacity, assertSessionSchedule } from '../utils/sessionScheduling.js'
+import { loadClassTimetables, loadSchedulingContext, loadSchedulingPages as loadAllPages } from './sessionSchedulingService'
+import { assertCoachScheduleAvailable, assertSessionCapacity, assertSessionSchedule } from '../utils/sessionScheduling.js'
 
 export async function getRoomTimetableClasses({ signal } = {}) {
   return loadAllPages('/classes/manage', signal)
@@ -33,7 +33,8 @@ export async function getRoomTimetable(room, rooms, { signal } = {}) {
   const sessions = []
   const unassignedClasses = []
   for (const { sportClass, items } of groups) {
-    const unassigned = items.filter(item => !getSessionRoom(item, sportClass, rooms))
+    const unassigned = items.filter(item => needsRoomPersistence(item)
+      && (!getSessionRoom(item, sportClass, rooms) || roomSessionForTimetable(item, sportClass, rooms, room)))
     if (unassigned.length) unassignedClasses.push({ ...sportClass, unassignedCount: unassigned.length })
     sessions.push(...items.map(item => roomSessionForTimetable(item, sportClass, rooms, room)).filter(Boolean))
   }
@@ -60,12 +61,17 @@ export async function rescheduleRoomSession({ room, rooms, session, draft }) {
       if (String(item.id) === String(current.id) && String(sportClass.id) === String(group.sportClass.id)) continue
       if (['cancelled', 'canceled'].includes(String(item.status || item.Status).toLowerCase()) || !sessionsOverlap(payload, item)) continue
       if (roomSessionForTimetable(item, sportClass, rooms, room)) throw new Error(`Phòng đã có buổi học ${item.className || sportClass.className} trong khung giờ này.`)
-      if (String(item.coachId ?? sportClass.coachId) === String(payload.coachId)) throw new Error('Huấn luyện viên đã có buổi học khác trong khung giờ này.')
     }
   }
+  assertCoachScheduleAvailable({ data: payload, sportClass: group.sportClass, rooms, groups, current })
   const updated = await updateClassSession(group.sportClass.id, current.id, { ...payload, roomId: room.id })
-  return { ...roomSessionForTimetable(current, group.sportClass, rooms, room), ...payload,
-    ...(updated?.id != null && String(updated.id) === String(current.id) ? updated : {}) }
+  return roomSessionForTimetable(updated, group.sportClass, rooms, room)
+}
+
+function needsRoomPersistence(session) {
+  return session.roomId == null
+    && String(session.status || session.Status || 'Scheduled').toLowerCase() === 'scheduled'
+    && Date.parse(session.startsAt) > Date.now()
 }
 
 function assertClassRoom(sportClass, room, rooms) {
@@ -83,36 +89,46 @@ function classScheduleForRoom(sportClass, room) {
 }
 
 export async function assignClassToRoom({ classId, room, rooms }) {
-  return withSessionWriteLock(async () => {
-    // SessionRequest has no room field. Persist the class room using the supported
-    // schedule metadata, so sessions still resolve after reloading or signing in elsewhere.
-    const context = await loadSchedulingContext(classId, room.id)
-    const sportClass = context.sportClass
-    room = context.room
-    rooms = context.rooms
-    if (!room) throw new Error('Phòng không còn tồn tại. Vui lòng tải lại.')
-    if (assertClassRoom(sportClass, room, rooms)) return sportClass
-    if (room.isActive === false) throw new Error('Phòng đã ngừng hoạt động, không thể gán lịch.')
-    const { items: occupied } = await getRoomTimetable(room, rooms)
-    const sessions = await loadAllPages(`/classes/${classId}/sessions`)
-    const assigning = []
-    for (const session of sessions.filter(item => !getSessionRoom(item, sportClass, rooms))) {
-      if (['cancelled', 'canceled'].includes(String(session.status || session.Status).toLowerCase())) continue
-      assertSessionCapacity(session.capacity, room, sportClass, session)
-      if (assigning.some(item => sessionsOverlap(item, session))) throw new Error('Lớp đang có các buổi học trùng giờ. Hãy xử lý lịch trùng trước khi gán phòng.')
-      assigning.push(session)
-      if (occupied.some(item => String(item.classId) !== String(classId)
-        && !['cancelled', 'canceled'].includes(String(item.status).toLowerCase())
-        && Date.parse(item.startsAt) < Date.parse(session.endsAt) && Date.parse(session.startsAt) < Date.parse(item.endsAt))) {
-        throw new Error(`Lịch lớp bị trùng với lịch đã có trong ${room.name}. Vui lòng kiểm tra lại giờ học.`)
-      }
+  // Each session update owns the write lock and rechecks the latest schedule.
+  // Class schedule metadata remains a default, not proof of a persisted RoomId.
+  const context = await loadSchedulingContext(classId, room.id)
+  const sportClass = context.sportClass
+  room = context.room
+  rooms = context.rooms
+  if (!room) throw new Error('Phòng không còn tồn tại. Vui lòng tải lại.')
+  const assigned = assertClassRoom(sportClass, room, rooms)
+  if (room.isActive === false) throw new Error('Phòng đã ngừng hoạt động, không thể gán lịch.')
+  const { items: occupied } = await getRoomTimetable(room, rooms)
+  const sessions = await loadAllPages(`/classes/${classId}/sessions`)
+  const assigning = []
+  for (const session of sessions.filter(item => needsRoomPersistence(item)
+    && (!getSessionRoom(item, sportClass, rooms) || roomSessionForTimetable(item, sportClass, rooms, room)))) {
+    assertSessionCapacity(session.capacity, room, sportClass, session)
+    if (assigning.some(item => sessionsOverlap(item, session))) throw new Error('Lớp đang có các buổi học trùng giờ. Hãy xử lý lịch trùng trước khi gán phòng.')
+    assigning.push(session)
+    if (occupied.some(item => String(item.classId) !== String(classId)
+      && !['cancelled', 'canceled'].includes(String(item.status).toLowerCase())
+      && Date.parse(item.startsAt) < Date.parse(session.endsAt) && Date.parse(session.startsAt) < Date.parse(item.endsAt))) {
+      throw new Error(`Lịch lớp bị trùng với lịch đã có trong ${room.name}. Vui lòng kiểm tra lại giờ học.`)
     }
-    const schedule = classScheduleForRoom(sportClass, room)
-    await updateSportClass(classId, { ...sportClass, schedule })
-    const saved = await getClassById(classId)
-    if (!roomSessionForTimetable({}, saved, rooms, room)) throw new Error('Máy chủ chưa lưu liên kết phòng cho lớp. Vui lòng thử lại.')
-    return saved
-  })
+    assertCoachScheduleAvailable({
+      data: { ...session, coachId: session.coachId ?? sportClass.coachId },
+      sportClass, rooms, groups: context.groups, current: session,
+    })
+  }
+  // Persist the foreign key on the existing rows; never recreate sessions or
+  // their registrations. A retry skips rows that were already assigned.
+  for (const session of assigning) {
+    await updateClassSession(classId, session.id, {
+      ...session, coachId: session.coachId ?? sportClass.coachId, roomId: room.id,
+    })
+  }
+  if (assigned) return sportClass
+  const schedule = classScheduleForRoom(sportClass, room)
+  await updateSportClass(classId, { ...sportClass, schedule })
+  const saved = await getClassById(classId)
+  if (!roomSessionForTimetable({}, saved, rooms, room)) throw new Error('Máy chủ chưa lưu liên kết phòng cho lớp. Vui lòng thử lại.')
+  return saved
 }
 
 export async function createRecurringRoomSessions({ room, rooms, sportClass, coachId, cancellationPolicyId, capacity, sessions }, onProgress = () => {}) {
@@ -158,15 +174,15 @@ export async function createRecurringRoomSessions({ room, rooms, sportClass, coa
   }
   if (conflicts.length) return { created: [], existing, remaining, conflicts, phase: 'checking' }
 
-  // Save the room before creating any sessions: the backend ignores session.roomId.
+  // Repair legacy roomless rows and save the class default before creating sessions.
   await assignClassToRoom({ classId: sportClass.id, room, rooms })
   const created = []
   for (let index = 0; index < remaining.length; index += 1) {
     const item = remaining[index]
     onProgress({ phase: 'creating', completed: index, total: remaining.length })
     try {
-      await createClassSession(sportClass.id, { coachId, cancellationPolicyId, capacity, roomId: room.id, startsAt: item.startsAt, endsAt: item.endsAt })
-      created.push(item)
+      const savedSession = await createClassSession(sportClass.id, { coachId, cancellationPolicyId, capacity, roomId: room.id, startsAt: item.startsAt, endsAt: item.endsAt })
+      created.push({ ...item, ...savedSession })
     } catch (error) {
       return { created, existing, remaining: remaining.slice(index), conflicts: [{ ...item, message: getClassErrorMessage(error, 'Không thể tạo buổi học.') }], phase: 'creating' }
     }

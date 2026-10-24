@@ -195,6 +195,22 @@ export async function getAllClassSessions(classId, { signal } = {}) {
   }
 }
 
+async function confirmSavedSession(classId, result, payload, sessionId) {
+  const id = Number(result?.id)
+  const failure = `Chưa xác nhận máy chủ đã lưu đúng buổi học, giờ học và phòng của lớp #${classId}. Vui lòng làm mới lịch và thử lại.`
+  if (!Number.isSafeInteger(id) || id <= 0 || (sessionId != null && String(id) !== String(sessionId))) throw new Error(failure)
+  // Read the persisted collection instead of treating an HTTP success or an echoed
+  // request as proof that the session was committed to the database.
+  const saved = (await getAllClassSessions(classId)).find(item => String(item.id) === String(id))
+  if (!saved || String(saved.classId) !== String(classId)
+    || Date.parse(saved.startsAt) !== Date.parse(payload.startsAt)
+    || Date.parse(saved.endsAt) !== Date.parse(payload.endsAt)
+    || ['coachId', 'cancellationPolicyId', 'capacity'].some(key => Number(saved[key]) !== payload[key])
+    || (payload.roomId != null && Number(saved.roomId) !== payload.roomId)
+    || String(saved.status).toLowerCase() !== 'scheduled') throw new Error(failure)
+  return saved
+}
+
 /**
  * POST /api/classes/{id}/sessions
  * Thêm buổi học mới vào lớp
@@ -211,13 +227,14 @@ export async function createClassSession(classId, data) {
     if (data.roomId) {
       payload.roomId = Number(data.roomId)
     }
-    await validateSessionWrite(classId, payload)
+    const context = await validateSessionWrite(classId, payload)
+    if (payload.roomId == null && context.room) payload.roomId = Number(context.room.id)
     const response = await api.post(`/classes/${classId}/sessions`, payload)
     const body = response.data
     if (body?.success === false) {
       throw new Error(body.message || 'Không thể tạo buổi học.')
     }
-    return body?.data ?? body
+    return confirmSavedSession(classId, body?.data ?? body, payload)
   })
 }
 
@@ -237,7 +254,10 @@ export async function updateClassSession(classId, sessionId, data) {
     if (data.roomId) {
       payload.roomId = Number(data.roomId)
     }
-    await validateSessionWrite(classId, payload, sessionId)
+    const context = await validateSessionWrite(classId, payload, sessionId)
+    // Omitting RoomId in SessionRequest clears the database association. Preserve
+    // the saved room (or the legacy class default) when editing time/coach only.
+    if (payload.roomId == null && context.room) payload.roomId = Number(context.room.id)
     // SaveSessionAsync notifies registered members in the same transaction when
     // time, coach or policy changes. Keep registrations; do not cancel/rebook them
     // or send a second notification from the client.
@@ -246,7 +266,7 @@ export async function updateClassSession(classId, sessionId, data) {
     if (body?.success === false) {
       throw new Error(body.message || 'Không thể cập nhật buổi học.')
     }
-    return body?.data ?? body
+    return confirmSavedSession(classId, body?.data ?? body, payload, sessionId)
   })
 }
 

@@ -143,7 +143,10 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
       await assignClassToRoom({ classId: sportClass.id, room, rooms })
       setNotice(`Đã gán lịch lớp ${sportClass.className} vào ${room.name}.`)
       setRevision(value => value + 1)
-    } catch (error) { setAssignmentError(getRoomErrorMessage(error, 'Không thể gán lịch vào phòng.')) }
+    } catch (error) {
+      setAssignmentError(getRoomErrorMessage(error, 'Không thể gán lịch vào phòng.'))
+      setRevision(value => value + 1)
+    }
     finally { assignmentLock.current = false; setCreating(false) }
   }
   const scheduleUpdated = result => {
@@ -171,9 +174,9 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
           <div className="room-bulk-actions"><button type="button" disabled={creating || state.loading || !weekCancellable.length} onClick={() => selectCancellations(weekCancellable)}>Chọn cả tuần ({weekCancellable.length})</button><button type="button" disabled={creating || state.loading || !scopedCancellable.length} onClick={() => selectCancellations(scopedCancellable)}>Chọn tất cả{cancellationClassId ? ' của lớp' : ''} ({scopedCancellable.length})</button><button type="button" disabled={creating || state.loading || !selectedCancellations.length} onClick={() => setCancellationIds([])}>Bỏ chọn</button><button type="button" className="room-bulk-confirm" disabled={creating || state.loading || !selectedCancellations.length} onClick={() => { setCancellationSessions(selectedCancellations); setNotice('') }}><Ban size={15} />Hủy {selectedCancellations.length} buổi đã chọn</button></div>
         </section>}
         {state.unassignedClasses.length > 0 && <section className="room-timetable-unassigned" aria-label="Lịch chưa có phòng">
-          <strong>Có buổi học chưa được gán phòng</strong>
-          <p>Chọn lớp thuộc {room.name} để đưa các buổi đã tạo vào thời khóa biểu của phòng.</p>
-          <ul>{state.unassignedClasses.map(sportClass => <li key={sportClass.id}><span>{sportClass.className} · {sportClass.unassignedCount} buổi chưa có phòng</span><button type="button" disabled={creating || showCreate || room.isActive === false} onClick={() => assignRoom(sportClass)}>Gán lịch vào phòng này</button></li>)}</ul>
+          <strong>Có buổi học cần xác nhận phòng</strong>
+          <p>Một số lịch cũ đang dùng phòng mặc định của lớp. Chọn lớp thuộc {room.name} để xác nhận và lưu phòng cho từng buổi học.</p>
+          <ul>{state.unassignedClasses.map(sportClass => <li key={sportClass.id}><span>{sportClass.className} · {sportClass.unassignedCount} buổi chưa lưu phòng</span><button type="button" disabled={creating || showCreate || room.isActive === false} onClick={() => assignRoom(sportClass)}>Gán lịch vào phòng này</button></li>)}</ul>
           {assignmentError && <p role="alert" className="room-recurring-error">{assignmentError}</p>}
         </section>}
         <RoomSessionTimetable items={scopedItems} weekStart={weekStart} onWeekChange={changeWeek} onSelect={selectionMode ? toggleCancellation : setSelectedId} onSelectCancelled={setSelectedId} onReschedule={openReschedule} canReschedule={canRescheduleSession} selectionMode={selectionMode} selectedSessionIds={cancellationIds} canSelectSession={canCancelRoomSession} interactionDisabled={creating || state.loading || showCreate || Boolean(reschedule) || Boolean(rosterSession) || Boolean(cancellationSessions) || (!selectionMode && room.isActive === false)} title={selectionMode && cancellationClassId ? `Lịch lớp ${cancellationClasses.find(item => item.id === cancellationClassId)?.name || `#${cancellationClassId}`}` : 'Thời khóa biểu của phòng'} description={selectionMode ? 'Chỉ chọn các buổi chưa bắt đầu trong danh sách đang xem để hủy' : 'Kéo buổi học vào ngày hoặc khung giờ khác để đổi lịch · Chọn buổi học để xem chi tiết'} />

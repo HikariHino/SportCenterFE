@@ -119,7 +119,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
       setTotals(nextTotals)
       if (result.remaining.length) {
         setConflicts(result.conflicts)
-        setError(result.phase === 'creating' ? `Đã dừng tạo lịch. ${result.remaining.length} buổi còn lại chưa được xác nhận; bạn có thể thử lại mà không tạo trùng các buổi đã lưu.` : 'Chưa tạo lịch vì có khung giờ chưa xác nhận được phòng trống. Hãy kiểm tra các ngày bên dưới.')
+        setError(result.phase === 'creating' ? `Đã dừng tạo lịch. ${result.remaining.length} buổi còn lại chưa được xác nhận; bạn có thể thử lại mà không tạo trùng các buổi đã lưu.` : 'Chưa tạo lịch vì có khung giờ bị trùng hoặc chưa xác nhận được lịch phòng và huấn luyện viên. Hãy kiểm tra các ngày bên dưới.')
         if (result.phase === 'creating' || locked) setPending(result.remaining)
       }
       if (result.created.length || result.existing.length || !result.remaining.length) {
@@ -168,7 +168,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
     </details>}
     {(totals.created > 0 || totals.existing > 0) && <p className="room-recurring-saved" role="status">Đã tạo {totals.created} buổi; {totals.existing} buổi đã có sẵn được giữ nguyên.{pending && ` Còn ${pending.length} buổi cần xử lý.`}</p>}
     {error && <div className="room-recurring-error" role="alert"><p>{error}</p>{conflicts.length > 0 && <ul>{conflicts.map(item => <li key={item.startsAt}>{dateLabel(item.date)} {form.startTime}–{form.endTime}: {item.message}</li>)}</ul>}</div>}
-    {progress && <p role="status">{progress.phase === 'checking' ? 'Đang kiểm tra phòng trống' : 'Đang tạo buổi học'}: {progress.completed}/{progress.total}...</p>}
+    {progress && <p role="status">{progress.phase === 'checking' ? 'Đang kiểm tra lịch phòng và huấn luyện viên' : 'Đang tạo buổi học'}: {progress.completed}/{progress.total}...</p>}
     <footer><button type="button" disabled={busy} onClick={onClose}>Đóng biểu mẫu</button><button type="submit" className="room-recurring-submit" disabled={busy || catalog.loading || Boolean(catalog.error) || Boolean(preview.error) || Boolean(capacityError) || !preview.items.length}>{busy ? 'Đang xử lý...' : pending ? `Thử lại ${pending.length} buổi còn lại` : `Tạo ${preview.items.length || ''} buổi học`}</button></footer>
   </form>
 }
