@@ -523,3 +523,40 @@
   .reception-room-session-detail dl { grid-template-columns:1fr; }
   .reception-room-cancelled-list>button { grid-template-columns:1fr; }
 }
+
+/* Keep supporting Receptionist copy readable on laptop and mobile screens. */
+.reception-dashboard :is(
+  small,
+  dt,
+  .reception-breadcrumb,
+  .reception-nav-title,
+  .reception-table-heading,
+  .reception-roster-heading,
+  .reception-attendance-heading,
+  .reception-gym-today-heading,
+  .reception-payment-status,
+  .reception-member-active,
+  .reception-member-inactive,
+  .reception-class-detail-trigger,
+  .reception-room-detail-trigger,
+  .reception-session-reviews,
+  .reception-registration-action-error,
+  .reception-registration-checked,
+  .reception-room-cancelled-empty
+) {
+  font-size:12px !important;
+}
+
+.reception-dashboard :is(
+  .reception-page-heading p,
+  .reception-content-search input,
+  .reception-overview-checkins time,
+  .reception-room-schedule-header p,
+  .reception-room-session-detail dd,
+  .reception-room-cancelled > header p,
+  .reception-room-cancelled-list b,
+  .reception-class-catalog-list p,
+  .reception-session-catalog-list em
+) {
+  font-size:12px;
+}
