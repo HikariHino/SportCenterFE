@@ -249,7 +249,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .manager-button:hover { background: #1d4ed8; }
 
 /* Coach workspace. */
-[data-theme='dark'] :is(.coach-topbar, .coach-card, .coach-notification, .coach-metrics article, .coach-student-kpis article) { background: var(--theme-surface); border-color: var(--theme-border); }
+[data-theme='dark'] :is(.coach-topbar, .coach-card, .coach-notification, .coach-metric-card, .coach-student-kpis article) { background: var(--theme-surface); border-color: var(--theme-border); }
 [data-theme='dark'] :is(.coach-notification-panel, .coach-notification-panel > header, .coach-notification-panel > footer) { background: var(--theme-surface); border-color: var(--theme-border); }
 [data-theme='dark'] .coach-notification { color: var(--theme-muted); }
 [data-theme='dark'] .coach-notification i { border-color: var(--theme-surface); }
@@ -474,6 +474,13 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-profile-summary dl>div { border-color:var(--theme-border); background:var(--theme-raised); }
 
 /* Detailed Coach overview. */
+[data-theme='dark'] .coach-focus-panel { border-color:#34527d; background:linear-gradient(115deg,#172945,var(--theme-surface) 68%); }
+[data-theme='dark'] .coach-focus-shortcuts { border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] .coach-focus-shortcuts>button { border-color:var(--theme-border); color:var(--theme-text); }
+[data-theme='dark'] .coach-focus-shortcuts>button:hover { background:var(--theme-raised); }
+[data-theme='dark'] .coach-focus-shortcuts>button>span:first-child { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] .coach-focus-shortcuts>button>span:first-child.attention { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] .coach-focus-shortcuts>button>span:first-child.done { color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .coach-next-session-body { background:linear-gradient(120deg,#1a2941,var(--theme-surface) 62%); }
 [data-theme='dark'] .coach-overview-empty { color:var(--theme-muted); }
 [data-theme='dark'] .coach-overview-empty strong { color:var(--theme-text); }

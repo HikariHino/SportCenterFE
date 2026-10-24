@@ -18,10 +18,10 @@ import { getCoachSessionRoster, getMyCoachSessions } from '../../services/coachS
 import { initials, timeFormatter, ViewLoader } from './CoachViewShared'
 
 const metricSlots = [
-  { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue' },
-  { icon: Users, label: 'Học viên hôm nay', tone: 'green' },
-  { icon: Clock3, label: 'Giờ huấn luyện', tone: 'purple' },
-  { icon: CheckCircle2, label: 'Buổi đã hoàn thành', tone: 'amber' },
+  { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue', target: 'Lịch huấn luyện' },
+  { icon: Users, label: 'Học viên hôm nay', tone: 'green', target: 'Học viên' },
+  { icon: Clock3, label: 'Giờ huấn luyện', tone: 'purple', target: 'Lịch huấn luyện' },
+  { icon: CheckCircle2, label: 'Buổi đã hoàn thành', tone: 'amber', target: 'Lịch huấn luyện' },
 ]
 
 const weekDateFormatter = new Intl.DateTimeFormat('vi-VN', {
@@ -198,16 +198,38 @@ export function OverviewView({ onNavigate }) {
   const dayProgress = percentage(completedSessions, sessions.length)
   const attendanceTotal = attendance.present + attendance.absent + attendance.excused + attendance.pending
   const nextCapacity = nextSession ? percentage(nextSession.enrollment, nextSession.capacity) : 0
+  const nextSessionIsToday = nextSession && sameDay(new Date(nextSession.startsAt), new Date())
+  const primaryAction = attendance.pending > 0 && nextSessionIsToday
+    ? { label: 'Điểm danh ngay', target: 'Điểm danh', icon: UserCheck }
+    : { label: 'Mở lịch huấn luyện', target: 'Lịch huấn luyện', icon: CalendarRange }
+  const PrimaryActionIcon = primaryAction.icon
 
   if (loading) return <ViewLoader />
 
   return <>
     {error && <div className="coach-attendance-error" role="alert">{error}<button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={13} />Thử lại</button></div>}
 
+    <section className="coach-focus-panel" aria-label="Công việc ưu tiên">
+      <div className="coach-focus-main">
+        <span className="coach-focus-icon"><CalendarCheck2 size={22} /></span>
+        <div>
+          <small>{nextSessionIsToday ? 'BUỔI GẦN NHẤT HÔM NAY' : 'KẾ HOẠCH GẦN NHẤT'}</small>
+          <strong>{nextSession ? nextSession.className : 'Chưa có buổi huấn luyện sắp tới'}</strong>
+          <p>{nextSession ? `${longDateFormatter.format(new Date(nextSession.startsAt))} · ${nextSession.time} · ${nextSession.enrollment}/${nextSession.capacity || '--'} học viên` : 'Kiểm tra lịch để xem các buổi đã được phân công.'}</p>
+        </div>
+        <button type="button" onClick={() => onNavigate(primaryAction.target)}><PrimaryActionIcon size={17} />{primaryAction.label}<ChevronRight size={15} /></button>
+      </div>
+      <div className="coach-focus-shortcuts">
+        <button type="button" onClick={() => onNavigate('Điểm danh')}><span className={attendance.pending ? 'attention' : 'done'}><UserCheck size={18} /></span><span><strong>{attendance.pending}</strong><small>Chờ điểm danh</small></span><ChevronRight size={15} /></button>
+        <button type="button" onClick={() => onNavigate('Học viên')}><span><Users size={18} /></span><span><strong>{students.length}</strong><small>Học viên hôm nay</small></span><ChevronRight size={15} /></button>
+        <button type="button" onClick={() => onNavigate('Phòng tập')}><span><DoorOpen size={18} /></span><span><strong>Kiểm tra</strong><small>Phòng tập</small></span><ChevronRight size={15} /></button>
+      </div>
+    </section>
+
     <section className="coach-metrics" aria-label="Thống kê huấn luyện">
-      {metricSlots.map(({ icon: Icon, label, tone }, index) => {
+      {metricSlots.map(({ icon: Icon, label, tone, target }, index) => {
         const metric = metrics[index]
-        return <article key={label}><span className={`coach-metric-icon ${tone}`}><Icon size={20} /></span><div><small>{label}</small><strong>{metric?.value ?? 0}</strong><p>{metric?.note ?? 'Không có dữ liệu'}</p></div><ArrowUpRight size={17} /></article>
+        return <button type="button" key={label} className="coach-metric-card" onClick={() => onNavigate(target)} aria-label={`${label}: ${metric?.value ?? 0}. Mở ${target}`}><span className={`coach-metric-icon ${tone}`}><Icon size={20} /></span><span><small>{label}</small><strong>{metric?.value ?? 0}</strong><p>{metric?.note ?? 'Không có dữ liệu'}</p></span><ArrowUpRight size={17} /></button>
       })}
     </section>
 
