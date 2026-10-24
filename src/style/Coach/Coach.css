@@ -199,6 +199,27 @@
 .coach-summary-stats { display: grid; grid-template-columns: repeat(3, 1fr); padding: 18px 10px; }.coach-summary-stats div { text-align: center; border-right: 1px solid #e9edf4; }.coach-summary-stats div:last-child { border: 0; }.coach-summary-stats strong, .coach-summary-stats span { display: block; }.coach-summary-stats strong { font-size: 20px; }.coach-summary-stats span { margin-top: 5px; color: #788397; font-size: 11px; }
 .coach-court-status { padding-bottom: 8px; }.coach-court-status > div:not(.coach-card-head) { display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; border-bottom: 1px solid #edf1f6; }.coach-court-status > div:last-child { border: 0; }.coach-court-status > div span { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }.coach-court-status > div i { width: 7px; height: 7px; border-radius: 50%; background: #19b47c; box-shadow: 0 0 0 3px #e0f8ef; }.coach-court-status > div i.busy { background: #eea52b; box-shadow: 0 0 0 3px #fff2db; }.coach-court-status > div b { color: #14926a; font-size: 11px; }.coach-court-status > div:has(i.busy) b { color: #b0710b; }
 .coach-session-review-panel { overflow: hidden; }
+.coach-schedule-detail-hero { overflow:hidden; padding:20px; }
+.coach-schedule-detail-back { display:inline-flex; align-items:center; gap:6px; min-height:34px; padding:0 11px; border:1px solid #dce4ef; border-radius:8px; color:var(--coach-muted); background:#fff; font-size:12px; font-weight:800; }
+.coach-schedule-detail-back:hover { border-color:#b8cdf5; color:var(--coach-blue); background:#f2f6ff; }
+.coach-schedule-detail-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-top:18px; }
+.coach-schedule-detail-heading>div>span { color:var(--coach-blue); font-size:12px; font-weight:800; letter-spacing:.9px; }
+.coach-schedule-detail-heading h2 { margin:5px 0 3px; font-size:25px; }
+.coach-schedule-detail-heading p { margin:0; color:var(--coach-muted); font-size:12px; }
+.coach-schedule-detail-heading>b { flex-shrink:0; padding:6px 10px; border-radius:20px; color:#1656cf; background:#edf3ff; font-size:12px; }
+.coach-schedule-detail-heading>b.live { color:#087251; background:#dff8ed; }
+.coach-schedule-detail-heading>b.done { color:#526078; background:#edf1f6; }
+.coach-schedule-detail-heading>b.cancelled { color:#b23b47; background:#ffeaed; }
+.coach-schedule-detail-meta { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:18px; padding-top:17px; border-top:1px solid var(--coach-line); }
+.coach-schedule-detail-meta>span { min-width:0; display:flex; align-items:flex-start; gap:9px; padding:11px 12px; border:1px solid #e4e9f1; border-radius:9px; color:var(--coach-blue); background:#fbfcfe; }
+.coach-schedule-detail-meta>span>span { min-width:0; }
+.coach-schedule-detail-meta small,.coach-schedule-detail-meta strong { display:block; }
+.coach-schedule-detail-meta small { color:var(--coach-muted); font-size:12px; }
+.coach-schedule-detail-meta strong { margin-top:3px; overflow:hidden; color:var(--coach-ink); font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.coach-schedule-detail .coach-student-kpis { margin-top:16px; }
+.coach-schedule-detail-refresh { display:flex; align-items:center; gap:6px; min-height:34px; padding:0 11px; border:1px solid #c8d7f3; border-radius:7px; color:var(--coach-blue); background:#f1f5ff; font-size:12px; font-weight:800; }
+.coach-schedule-detail-refresh:disabled { opacity:.55; cursor:wait; }
+.coach-schedule-attendance-list { margin-top:16px; }
 .coach-review-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid #e9edf4; }
 .coach-review-head span, .coach-review-head strong { display: block; }.coach-review-head span { color: #8a95a8; font-size: 11px; font-weight: 800; letter-spacing: .8px; }.coach-review-head strong { margin-top: 4px; font-size: 14px; }
 .coach-review-head b { display: flex; align-items: center; gap: 4px; color: #d59417; font-size: 15px; }
@@ -529,3 +550,17 @@
 [data-theme='dark'] .coach-student-selection-steps select { color:var(--theme-text); border-color:var(--theme-border); background:var(--theme-surface); }
 [data-theme='dark'] .coach-student-selection-steps select:disabled { color:var(--theme-muted); background:#152338; }
 @media(max-width:760px) { .coach-student-selection-steps { grid-template-columns:1fr; } }
+
+[data-theme='dark'] .coach-schedule-detail-back { color:var(--theme-muted); border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] .coach-schedule-detail-back:hover { color:var(--theme-accent); border-color:var(--theme-accent); background:var(--theme-raised); }
+[data-theme='dark'] .coach-schedule-detail-meta>span { border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] .coach-schedule-detail-heading>b { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] .coach-schedule-detail-heading>b.live { color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .coach-schedule-detail-heading>b.done { color:var(--theme-muted); background:var(--theme-raised); }
+[data-theme='dark'] .coach-schedule-detail-heading>b.cancelled { color:var(--theme-red); background:var(--theme-red-bg); }
+@media(max-width:760px) {
+  .coach-schedule-detail-heading { display:grid; gap:10px; }
+  .coach-schedule-detail-heading h2 { font-size:21px; }
+  .coach-schedule-detail-heading>b { width:max-content; }
+  .coach-schedule-detail-meta { grid-template-columns:1fr; }
+}
