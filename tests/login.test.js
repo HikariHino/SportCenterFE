@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
-import { getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getSavedUser, saveSession } from '../src/utils/auth.js'
+import { getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getSavedUser, getToken, saveSession } from '../src/utils/auth.js'
 
 function memoryStorage() {
   const values = new Map()
@@ -32,7 +32,7 @@ test('direct AuthResponse without success logs in, persists the session and sele
   assert.deepEqual(getSavedUser(), user)
   assert.equal(localStorage.getItem('token'), authResponse.token)
   assert.equal(localStorage.getItem('refreshTokenKey'), authResponse.refreshTokenKey)
-  assert.equal(sessionStorage.getItem('token'), null)
+  assert.equal(sessionStorage.getItem('token'), authResponse.token)
 })
 
 test('wrapped response keeps login compatibility and remember=false uses session storage', () => {
@@ -51,6 +51,23 @@ test('accessToken alias and wrapper without success are supported', () => {
     assert.equal(localStorage.getItem('token'), 'new-access-token')
     assert.equal(getAuthDestination(user.role), '/manager')
   }
+})
+
+test('each browser tab keeps its own account when another remembered login replaces local storage', () => {
+  const coachTabStorage = sessionStorage
+  const coach = saveSession({ ...authResponse, role: 'Coach', token: 'coach-token' }, 'coach-token', true)
+
+  const receptionistTabStorage = memoryStorage()
+  globalThis.sessionStorage = receptionistTabStorage
+  const receptionist = saveSession({ ...authResponse, userId: 15, role: 'Receptionist', token: 'receptionist-token' }, 'receptionist-token', true)
+
+  assert.equal(getToken(), 'receptionist-token')
+  assert.deepEqual(getSavedUser(), receptionist)
+
+  globalThis.sessionStorage = coachTabStorage
+  assert.equal(getToken(), 'coach-token')
+  assert.deepEqual(getSavedUser(), coach)
+  assert.equal(localStorage.getItem('token'), 'receptionist-token')
 })
 
 test('explicit API failure is rejected even if a token is present', () => {

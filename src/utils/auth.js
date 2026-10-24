@@ -8,33 +8,42 @@ export function getUserInitials(user) {
     .map(part => Array.from(part)[0]).join('').toLocaleUpperCase('vi-VN')
 }
 
+const sessionKeys = ['user', 'token', 'refreshTokenKey']
+
+function hydrateTabSession() {
+  if (sessionStorage.getItem('token') || !localStorage.getItem('token')) return
+  for (const key of sessionKeys) {
+    const value = localStorage.getItem(key)
+    if (value !== null) sessionStorage.setItem(key, value)
+  }
+}
+
 export function getToken() {
-  return localStorage.getItem('token') || sessionStorage.getItem('token')
+  hydrateTabSession()
+  return sessionStorage.getItem('token') || localStorage.getItem('token')
 }
 
 export function getRefreshTokenKey() {
-  return localStorage.getItem('refreshTokenKey') || sessionStorage.getItem('refreshTokenKey')
-}
-
-function getSessionStorage() {
-  if (localStorage.getItem('token') || localStorage.getItem('refreshTokenKey')) return localStorage
-  if (sessionStorage.getItem('token') || sessionStorage.getItem('refreshTokenKey')) return sessionStorage
-  return null
+  hydrateTabSession()
+  return sessionStorage.getItem('refreshTokenKey') || localStorage.getItem('refreshTokenKey')
 }
 
 export function clearSession() {
-  for (const storage of [localStorage, sessionStorage]) {
-    storage.removeItem('user')
-    storage.removeItem('token')
-    storage.removeItem('refreshTokenKey')
+  const tabToken = sessionStorage.getItem('token')
+  const rememberedToken = localStorage.getItem('token')
+  for (const key of sessionKeys) sessionStorage.removeItem(key)
+
+  // Logging out or expiring one tab must not remove another account's
+  // remembered login. Only clear the shared copy when it belongs to this tab.
+  if (!tabToken || !rememberedToken || tabToken === rememberedToken) {
+    for (const key of sessionKeys) localStorage.removeItem(key)
   }
 }
 
 export function getSavedUser() {
   try {
     if (!getToken()) return null
-    const storage = localStorage.getItem('token') ? localStorage : sessionStorage
-    return JSON.parse(storage.getItem('user'))
+    return JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user'))
   } catch {
     clearSession()
     return null
@@ -42,11 +51,21 @@ export function getSavedUser() {
 }
 
 export function updateSessionTokens(token, refreshTokenKey) {
-  const storage = getSessionStorage()
-  if (!storage || typeof token !== 'string' || !token.trim()) return false
-  storage.setItem('token', token.trim())
+  hydrateTabSession()
+  const currentToken = sessionStorage.getItem('token')
+  if (!currentToken || typeof token !== 'string' || !token.trim()) return false
+  const mirrorsRememberedSession = localStorage.getItem('token') === currentToken
+
+  sessionStorage.setItem('token', token.trim())
   if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
-    storage.setItem('refreshTokenKey', refreshTokenKey.trim())
+    sessionStorage.setItem('refreshTokenKey', refreshTokenKey.trim())
+  }
+
+  if (mirrorsRememberedSession) {
+    localStorage.setItem('token', token.trim())
+    if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
+      localStorage.setItem('refreshTokenKey', refreshTokenKey.trim())
+    }
   }
   return true
 }
@@ -81,12 +100,15 @@ export function saveSession(userData, token, remember = true) {
     role: String(userData.role || '').trim().toLowerCase(),
   }
   clearSession()
-  const storage = remember ? localStorage : sessionStorage
-  storage.setItem('user', JSON.stringify(user))
-  storage.setItem('token', accessToken.trim())
   const refreshTokenKey = userData?.refreshTokenKey || userData?.refreshToken
-  if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
-    storage.setItem('refreshTokenKey', refreshTokenKey.trim())
+  const storages = remember ? [sessionStorage, localStorage] : [sessionStorage]
+
+  for (const storage of storages) {
+    storage.setItem('user', JSON.stringify(user))
+    storage.setItem('token', accessToken.trim())
+    if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
+      storage.setItem('refreshTokenKey', refreshTokenKey.trim())
+    }
   }
   return user
 }
