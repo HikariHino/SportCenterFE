@@ -14,6 +14,7 @@ import { getMembershipPackages } from '../../services/membershipPackageService'
 import { getMySubscriptions, createMemberSubscription } from '../../services/memberSubscriptionService'
 import { getMyPayments, createPayment, cancelPayment, syncPayment } from '../../services/paymentService'
 import { exportInvoicePdf, triggerBlobDownload } from '../../services/reportService'
+import ChangeEmailForm from '../../components/ChangeEmailForm'
 
 function formatCurrency(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} đ`
@@ -48,6 +49,7 @@ export function ProfileView({ user, showNotice }) {
     dateOfBirth: '',
     address: '',
     fitnessGoal: '',
+    emergencyContact: '',
   })
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -62,7 +64,7 @@ export function ProfileView({ user, showNotice }) {
     setError('')
     try {
       const [profData, memData] = await Promise.all([
-        getProfile().catch(() => null),
+        getProfile(),
         getMyMemberProfile().catch(() => null),
       ])
       setProfile(profData)
@@ -72,10 +74,11 @@ export function ProfileView({ user, showNotice }) {
         fullName: profData?.fullName || memData?.fullName || user?.fullName || '',
         email: profData?.email || memData?.email || user?.email || '',
         phoneNumber: profData?.phoneNumber || memData?.phone || '',
-        gender: memData?.gender || 'Male',
-        dateOfBirth: memData?.dateOfBirth ? String(memData.dateOfBirth).slice(0, 10) : '',
-        address: memData?.address || '',
-        fitnessGoal: memData?.fitnessGoal || '',
+        gender: profData.gender ?? '',
+        dateOfBirth: profData.dateOfBirth ? String(profData.dateOfBirth).slice(0, 10) : '',
+        address: profData.address ?? '',
+        fitnessGoal: profData.fitnessGoal ?? '',
+        emergencyContact: profData.emergencyContact ?? '',
       })
     } catch (err) {
       setError(getProfileErrorMessage(err, 'Không thể tải thông tin cá nhân.'))
@@ -93,13 +96,18 @@ export function ProfileView({ user, showNotice }) {
     setSaving(true)
     setError('')
     try {
-      await updateProfile({
+      const result = await updateProfile({
         fullName: formData.fullName.trim(),
-        phoneNumber: formData.phoneNumber.trim(),
-        email: formData.email.trim(),
+        phoneNumber: formData.phoneNumber.trim() || null,
+        dateOfBirth: formData.dateOfBirth ? `${formData.dateOfBirth}T00:00:00.000Z` : undefined,
+        gender: formData.gender,
+        address: formData.address.trim(),
+        fitnessGoal: formData.fitnessGoal.trim(),
+        emergencyContact: formData.emergencyContact.trim(),
       })
+      setProfile(result)
       showNotice('Cập nhật hồ sơ cá nhân thành công!')
-      loadProfile()
+      await loadProfile()
     } catch (err) {
       setError(getProfileErrorMessage(err, 'Không thể lưu hồ sơ.'))
     } finally {
@@ -204,6 +212,7 @@ export function ProfileView({ user, showNotice }) {
                 <input
                   type="text"
                   required
+                  maxLength={200}
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
                   value={formData.fullName}
                   onChange={e => setFormData({ ...formData, fullName: e.target.value })}
@@ -213,6 +222,7 @@ export function ProfileView({ user, showNotice }) {
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 5 }}>Số điện thoại</label>
                 <input
                   type="tel"
+                  maxLength={30}
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
                   value={formData.phoneNumber}
                   onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })}
@@ -226,10 +236,9 @@ export function ProfileView({ user, showNotice }) {
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 5 }}>Email tài khoản</label>
                 <input
                   type="email"
-                  required
+                  readOnly
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
                   value={formData.email}
-                  onChange={e => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
               <div>
@@ -239,6 +248,7 @@ export function ProfileView({ user, showNotice }) {
                   value={formData.gender}
                   onChange={e => setFormData({ ...formData, gender: e.target.value })}
                 >
+                  <option value="">Chưa cập nhật</option>
                   <option value="Male">Nam</option>
                   <option value="Female">Nữ</option>
                   <option value="Other">Khác</option>
@@ -251,6 +261,8 @@ export function ProfileView({ user, showNotice }) {
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 5 }}>Ngày sinh</label>
                 <input
                   type="date"
+                  max={new Date().toISOString().slice(0, 10)}
+                  required={Boolean(profile?.dateOfBirth)}
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
                   value={formData.dateOfBirth}
                   onChange={e => setFormData({ ...formData, dateOfBirth: e.target.value })}
@@ -261,6 +273,7 @@ export function ProfileView({ user, showNotice }) {
                 <input
                   type="text"
                   placeholder="Tăng cơ, giảm mỡ, rèn thể lực..."
+                  maxLength={100}
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
                   value={formData.fitnessGoal}
                   onChange={e => setFormData({ ...formData, fitnessGoal: e.target.value })}
@@ -273,10 +286,16 @@ export function ProfileView({ user, showNotice }) {
               <input
                 type="text"
                 placeholder="Số nhà, đường, quận/huyện..."
+                maxLength={500}
                 style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
                 value={formData.address}
                 onChange={e => setFormData({ ...formData, address: e.target.value })}
               />
+            </div>
+
+            <div>
+              <label htmlFor="member-emergency-contact" style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 5 }}>Liên hệ khẩn cấp</label>
+              <input id="member-emergency-contact" type="text" maxLength={100} placeholder="Tên và số điện thoại người liên hệ" style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }} value={formData.emergencyContact} onChange={e => setFormData({ ...formData, emergencyContact: e.target.value })} />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
@@ -287,6 +306,8 @@ export function ProfileView({ user, showNotice }) {
           </form>
         </article>
       </div>
+
+      <ChangeEmailForm currentEmail={profile?.email || formData.email} disabled={saving || passwordSaving} />
 
       {/* Đổi mật khẩu tài khoản */}
       <article className="member-card" style={{ padding: 24, marginTop: 24 }}>
@@ -316,6 +337,8 @@ export function ProfileView({ user, showNotice }) {
               required
               style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
               value={passwordData.newPassword}
+              minLength={8}
+              maxLength={72}
               onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
             />
           </div>

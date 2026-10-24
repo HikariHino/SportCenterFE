@@ -14,6 +14,11 @@ export function AuthProvider({ children }) {
     return savedUser
   }
 
+  const endSession = () => {
+    clearSession()
+    setUser(null)
+  }
+
   const logout = async () => {
     const refreshTokenKey = getRefreshTokenKey()
     try {
@@ -21,13 +26,12 @@ export function AuthProvider({ children }) {
     } catch {
       // Local logout must still complete when the server session is already expired or offline.
     } finally {
-      clearSession()
-      setUser(null)
+      endSession()
     }
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, endSession }}>
       {children}
     </AuthContext.Provider>
   )

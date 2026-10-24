@@ -1,0 +1,23 @@
+.account-email-change { min-width: 0; padding: 22px; border: 1px solid var(--theme-border, #d8e0ed); border-radius: 12px; background: var(--theme-surface, #fff); color: var(--theme-text, #17243c); }
+.account-email-change header { display: flex; align-items: flex-start; gap: 10px; }
+.account-email-change header > svg { margin-top: 3px; flex-shrink: 0; color: var(--theme-accent, #1557d5); }
+.account-email-change h3 { margin: 0; font-size: 16px; }
+.account-email-change p { margin: 8px 0 14px; color: var(--theme-muted, #536179); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.account-email-change form { display: grid; gap: 8px; }
+.account-email-change label { font-size: 12px; font-weight: 600; }
+.account-email-change input { width: 100%; min-width: 0; min-height: 42px; padding: 10px 12px; border: 1px solid var(--theme-border, #d8e0ed); border-radius: 8px; color: var(--theme-text, #17243c); background: var(--theme-surface, #fff); font: inherit; font-size: 13px; }
+.account-email-change input[readonly] { background: var(--theme-raised, #edf2fa); }
+.account-email-change small { color: var(--theme-muted, #536179); font-size: 11px; }
+.account-email-change .account-email-sent { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 4px; }
+.account-email-sent svg { margin-top: 3px; flex-shrink: 0; }
+.account-email-change .account-email-error { color: var(--theme-red, #b42318); margin: 6px 0; }
+.account-email-change footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.account-email-change button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; gap: 7px; padding: 9px 14px; border: 1px solid var(--theme-border, #d8e0ed); border-radius: 8px; color: var(--theme-text, #17243c); background: var(--theme-surface, #fff); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.account-email-change .account-email-primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+.account-email-change button:disabled { opacity: .55; cursor: not-allowed; }
+.account-email-change :is(input, button):focus-visible { outline: 2px solid var(--theme-accent, #1557d5); outline-offset: 2px; }
+.coach-account-profile-details > .account-email-change, .reception-profile-details > .account-email-change { margin: 0 18px 18px; }
+.account-email-spin { animation: account-email-spin 1s linear infinite; }
+@keyframes account-email-spin { to { transform: rotate(360deg); } }
+@media (max-width: 480px) { .account-email-change { padding: 16px; } .account-email-change footer button { flex: 1 1 auto; } }
+@media (prefers-reduced-motion: reduce) { .account-email-spin { animation: none; } }

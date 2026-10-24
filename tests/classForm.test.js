@@ -8,7 +8,7 @@ const valid = { className: ' Yoga ', sportId: '1', coachId: '5', maxCapacity: '2
 test('class payload includes course dates with the full final day in Vietnam time', () => {
   const result = buildClassPayload(valid, now)
   assert.equal(result.className, 'Yoga')
-  assert.equal(result.price, 500000.25)
+  assert.equal(Object.hasOwn(result, 'price'), false)
   assert.equal(result.startDate, '2026-10-19T00:00:00+07:00')
   assert.equal(result.endDate, '2026-11-19T23:59:59.999+07:00')
   assert.equal(result.coachId, 5)
@@ -30,9 +30,10 @@ test('the exact backend end cutoff and identical timestamps are rejected', () =>
   assert.doesNotThrow(() => buildClassPayload({ ...valid, startDate: '2026-10-19', endDate: '2026-10-19' }, now))
 })
 
-test('fees allow zero and two decimals while invalid amounts are rejected', () => {
-  for (const price of [0, '0', '0.29', '500000', '500000.25', '1.2300']) assert.doesNotThrow(() => buildClassPayload({ ...valid, price }, now))
-  for (const price of ['', ' ', null, undefined, -1, Infinity, NaN, 'invalid', '100.123', '0.001', 1e17]) assert.throws(() => buildClassPayload({ ...valid, price }, now))
+test('class writes omit the retired price field, including legacy data and forms without a fee', () => {
+  for (const price of [undefined, '', 0, '500000.25', -1, 'invalid']) {
+    assert.equal(Object.hasOwn(buildClassPayload({ ...valid, price }, now), 'price'), false)
+  }
 })
 
 test('editing displays the Vietnam calendar date and requires correcting unset dates', () => {

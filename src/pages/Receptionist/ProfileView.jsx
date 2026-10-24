@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2, Edit3, IdCard, LoaderCircle, Mail, Phone, RefreshCw, Save, UserRound, X } from 'lucide-react'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
 import { ViewLoader } from './ReceptionistViewShared'
+import ChangeEmailForm from '../../components/ChangeEmailForm'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' }
@@ -47,8 +48,8 @@ export function ReceptionistProfileView({ showNotice }) {
 
   const handleSubmit = async event => {
     event.preventDefault()
-    if (!form.fullName.trim() || !form.email.trim()) {
-      setActionError('Họ tên và email không được để trống.')
+    if (!form.fullName.trim()) {
+      setActionError('Họ tên không được để trống.')
       return
     }
     if (form.password && form.password.length < 8) {
@@ -63,7 +64,7 @@ export function ReceptionistProfileView({ showNotice }) {
     setSaving(true)
     setActionError('')
     try {
-      const payload = { fullName: form.fullName.trim(), email: form.email.trim(), phoneNumber: form.phoneNumber.trim() || null }
+      const payload = { fullName: form.fullName.trim(), phoneNumber: form.phoneNumber.trim() || null }
       if (form.password) {
         payload.password = form.password
         payload.currentPassword = form.currentPassword
@@ -96,7 +97,7 @@ export function ReceptionistProfileView({ showNotice }) {
       </div>
       {editing ? <form className="reception-profile-form" onSubmit={handleSubmit}>
         <label>Họ và tên<input value={form.fullName} onChange={event => setForm(current => ({ ...current, fullName: event.target.value }))} maxLength={200} required /></label>
-        <label>Email<input type="email" value={form.email} onChange={event => setForm(current => ({ ...current, email: event.target.value }))} maxLength={254} required /></label>
+        <label>Email hiện tại<input type="email" value={profile.email} readOnly /></label>
         <label>Số điện thoại<input value={form.phoneNumber} onChange={event => setForm(current => ({ ...current, phoneNumber: event.target.value }))} maxLength={30} placeholder="Chưa cập nhật" /></label>
         <label>Mật khẩu hiện tại<input type="password" value={form.currentPassword} onChange={event => setForm(current => ({ ...current, currentPassword: event.target.value }))} autoComplete="current-password" placeholder="Chỉ nhập khi đổi mật khẩu" /></label>
         <label className="wide">Mật khẩu mới<input type="password" value={form.password} onChange={event => setForm(current => ({ ...current, password: event.target.value }))} minLength={8} maxLength={72} autoComplete="new-password" placeholder="Để trống nếu không đổi mật khẩu" /></label>
@@ -108,6 +109,7 @@ export function ReceptionistProfileView({ showNotice }) {
         <article><span><IdCard size={18} /></span><div><small>Ngày tạo</small><strong>{profile.createdAt ? dateFormatter.format(new Date(profile.createdAt)) : 'Chưa xác định'}</strong></div></article>
         <article><span><CheckCircle2 size={18} /></span><div><small>Cập nhật gần nhất</small><strong>{profile.updatedAt ? dateFormatter.format(new Date(profile.updatedAt)) : 'Chưa cập nhật'}</strong></div></article>
       </div>}
+      <ChangeEmailForm currentEmail={profile.email} disabled={saving} />
     </section>
   </div>
 }

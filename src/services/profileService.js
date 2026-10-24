@@ -31,10 +31,12 @@ export async function getProfile() {
 /**
  * Cập nhật thông tin cá nhân
  * PUT /api/profile
- * @param {{ fullName?: string, phoneNumber?: string, email?: string, password?: string, currentPassword?: string }} dto
+ * Email changes use the separate OTP endpoints.
  */
 export async function updateProfile(dto) {
-  const response = await api.put('/profile', dto)
+  const fields = ['fullName', 'phoneNumber', 'password', 'currentPassword', 'dateOfBirth', 'gender', 'address', 'fitnessGoal', 'emergencyContact']
+  const payload = Object.fromEntries(fields.filter(key => dto[key] !== undefined).map(key => [key, dto[key]]))
+  const response = await api.put('/profile', payload)
   const body = response.data
   if (body?.success === false) {
     throw new Error(body.message || 'Không thể cập nhật hồ sơ.')
@@ -42,8 +44,24 @@ export async function updateProfile(dto) {
   return body?.data ?? body
 }
 
+export async function requestChangeEmailOtp(newEmail) {
+  const response = await api.post('/profile/change-email/request-otp', { newEmail: newEmail.trim().toLowerCase() })
+  if (response.data?.success === false) throw new Error(response.data.message || 'Không thể gửi mã xác nhận email.')
+  return response.data
+}
+
+export async function verifyChangeEmailOtp(newEmail, otp) {
+  if (!/^\d{6}$/.test(otp.trim())) throw new Error('Mã OTP phải có 6 chữ số.')
+  const response = await api.post('/profile/change-email/verify-otp', { newEmail: newEmail.trim().toLowerCase(), otp: otp.trim() })
+  const body = response.data
+  if (body?.success === false) throw new Error(body.message || 'Không thể xác nhận thay đổi email.')
+  return body?.data ?? body
+}
+
 export default {
   getProfileErrorMessage,
   getProfile,
   updateProfile,
+  requestChangeEmailOtp,
+  verifyChangeEmailOtp,
 }
