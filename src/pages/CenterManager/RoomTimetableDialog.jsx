@@ -24,6 +24,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
   const [state, setState] = useState({ items: [], unassignedClasses: [], loading: true, loaded: false, error: '' })
   const [selectedId, setSelectedId] = useState(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [createSlot, setCreateSlot] = useState(null)
   const [creating, setCreating] = useState(false)
   const [notice, setNotice] = useState('')
   const [assignmentError, setAssignmentError] = useState('')
@@ -80,6 +81,13 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
 
   const changeWeek = value => { alignWeekAfterCancellation.current = false; setWeekStart(value); setSelectedId(null) }
   const closeDialog = () => { if (!creating) onClose() }
+  const openCreate = (target = {}) => {
+    if (creating || state.loading || selectionMode || showCreate || reschedule || rosterSession || cancellationSessions || room.isActive === false) return
+    setCreateSlot(target)
+    setShowCreate(true)
+    setSelectedId(null)
+    setNotice('')
+  }
   const openReschedule = (session, target) => {
     if (creating || state.loading || selectionMode || showCreate || reschedule || rosterSession || cancellationSessions || room.isActive === false || !canRescheduleSession(session)) return
     setReschedule({ session, target })
@@ -160,11 +168,11 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
   return <dialog ref={dialogRef} className="room-timetable-dialog" aria-labelledby="room-timetable-title" onCancel={event => { event.preventDefault(); if (event.target === event.currentTarget && !rosterSession && !reschedule && !cancellationSessions) closeDialog() }} onClick={event => { if (event.target === event.currentTarget) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeDialog() } }}>
     <header className="room-timetable-header">
       <div><span><Calendar size={16} /> LỊCH SỬ DỤNG PHÒNG</span><h2 id="room-timetable-title">{room.name}</h2><p><MapPin size={14} />{room.location || 'Chưa cập nhật vị trí'}<span>·</span><Users size={14} />{room.capacity} học viên{room.isActive === false && <strong>· Phòng đã ngừng hoạt động</strong>}</p></div>
-      <div className="room-timetable-header-actions"><button type="button" className="room-timetable-add" disabled={creating || selectionMode || showCreate || room.isActive === false} onClick={() => { setShowCreate(true); setSelectedId(null); setNotice('') }}><CalendarPlus size={16} /> Thêm buổi học</button><button type="button" className="room-bulk-toggle" aria-pressed={selectionMode} disabled={creating || state.loading || showCreate || (!selectionMode && !cancellable.length)} onClick={toggleSelectionMode}><Ban size={16} />{selectionMode ? 'Thoát chọn' : 'Hủy nhiều buổi'}</button><button type="button" disabled={state.loading || creating} onClick={() => { setSelectedId(null); setRevision(value => value + 1) }}><RefreshCw size={16} /> Làm mới</button><button type="button" aria-label="Đóng lịch phòng" disabled={creating} onClick={closeDialog}><X size={21} /></button></div>
+      <div className="room-timetable-header-actions"><button type="button" className="room-timetable-add" disabled={creating || state.loading || selectionMode || showCreate || Boolean(reschedule) || Boolean(rosterSession) || Boolean(cancellationSessions) || room.isActive === false} onClick={() => openCreate()}><CalendarPlus size={16} /> Thêm buổi học</button><button type="button" className="room-bulk-toggle" aria-pressed={selectionMode} disabled={creating || state.loading || showCreate || (!selectionMode && !cancellable.length)} onClick={toggleSelectionMode}><Ban size={16} />{selectionMode ? 'Thoát chọn' : 'Hủy nhiều buổi'}</button><button type="button" disabled={state.loading || creating} onClick={() => { setSelectedId(null); setRevision(value => value + 1) }}><RefreshCw size={16} /> Làm mới</button><button type="button" aria-label="Đóng lịch phòng" disabled={creating} onClick={closeDialog}><X size={21} /></button></div>
     </header>
     <div className="room-timetable-body" aria-busy={state.loading || creating}>
       {notice && <p className="room-timetable-notice" role="status">{notice}</p>}
-      {showCreate && <RecurringRoomSessionsForm room={room} rooms={rooms} onClose={() => setShowCreate(false)} onBusyChange={setCreating} onUpdate={scheduleUpdated} />}
+      {showCreate && <RecurringRoomSessionsForm room={room} rooms={rooms} initialSlot={createSlot} onClose={() => setShowCreate(false)} onBusyChange={setCreating} onUpdate={scheduleUpdated} />}
       {state.loading && !state.loaded ? <div className="room-timetable-state" role="status"><div className="room-spinner" /><p>Đang tải thời khóa biểu của phòng...</p></div> : state.error && !state.loaded ? <div className="room-timetable-state" role="alert"><AlertCircle size={28} /><p>{state.error}</p><button type="button" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div> : <>
         {state.loading && <p className="room-timetable-note" role="status">Đang cập nhật lịch…</p>}
         {state.error && <div className="room-timetable-refresh-error" role="alert"><p>{state.error} Lịch đã tải vẫn được giữ bên dưới.</p><button type="button" onClick={() => setRevision(value => value + 1)}>Thử tải lại</button></div>}
@@ -179,7 +187,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
           <ul>{state.unassignedClasses.map(sportClass => <li key={sportClass.id}><span>{sportClass.className} · {sportClass.unassignedCount} buổi chưa lưu phòng</span><button type="button" disabled={creating || showCreate || room.isActive === false} onClick={() => assignRoom(sportClass)}>Gán lịch vào phòng này</button></li>)}</ul>
           {assignmentError && <p role="alert" className="room-recurring-error">{assignmentError}</p>}
         </section>}
-        <RoomSessionTimetable items={scopedItems} weekStart={weekStart} onWeekChange={changeWeek} onSelect={selectionMode ? toggleCancellation : setSelectedId} onSelectCancelled={setSelectedId} onReschedule={openReschedule} canReschedule={canRescheduleSession} selectionMode={selectionMode} selectedSessionIds={cancellationIds} canSelectSession={canCancelRoomSession} interactionDisabled={creating || state.loading || showCreate || Boolean(reschedule) || Boolean(rosterSession) || Boolean(cancellationSessions) || (!selectionMode && room.isActive === false)} title={selectionMode && cancellationClassId ? `Lịch lớp ${cancellationClasses.find(item => item.id === cancellationClassId)?.name || `#${cancellationClassId}`}` : 'Thời khóa biểu của phòng'} description={selectionMode ? 'Chỉ chọn các buổi chưa bắt đầu trong danh sách đang xem để hủy' : 'Kéo buổi học vào ngày hoặc khung giờ khác để đổi lịch · Chọn buổi học để xem chi tiết'} />
+        <RoomSessionTimetable items={scopedItems} weekStart={weekStart} onWeekChange={changeWeek} onSelect={selectionMode ? toggleCancellation : setSelectedId} onSelectCancelled={setSelectedId} onReschedule={openReschedule} onCreate={openCreate} canReschedule={canRescheduleSession} selectionMode={selectionMode} selectedSessionIds={cancellationIds} canSelectSession={canCancelRoomSession} interactionDisabled={creating || state.loading || showCreate || Boolean(reschedule) || Boolean(rosterSession) || Boolean(cancellationSessions) || (!selectionMode && room.isActive === false)} title={selectionMode && cancellationClassId ? `Lịch lớp ${cancellationClasses.find(item => item.id === cancellationClassId)?.name || `#${cancellationClassId}`}` : 'Thời khóa biểu của phòng'} description={selectionMode ? 'Chỉ chọn các buổi chưa bắt đầu trong danh sách đang xem để hủy' : 'Bấm ngày hoặc ô giờ trống để thêm buổi học · Kéo buổi học để đổi lịch'} />
         {selected && <section ref={detailRef} className="room-timetable-detail" aria-labelledby="room-session-title" aria-live="polite">
           <header><div><small>BUỔI HỌC #{selected.id}</small><h3 id="room-session-title">{selected.className}</h3></div><button type="button" aria-label="Đóng chi tiết buổi học" onClick={() => setSelectedId(null)}><X size={18} /></button></header>
           <dl><div><dt>Bộ môn</dt><dd>{selected.sportName || 'Chưa cập nhật'}</dd></div><div><dt>Huấn luyện viên</dt><dd>{selected.coachName || 'Chưa phân công'}</dd></div><div><dt>Bắt đầu</dt><dd>{formatDateTime(selected.startsAt)}</dd></div><div><dt>Kết thúc</dt><dd>{formatDateTime(selected.endsAt)}</dd></div><div><dt>Sĩ số / Sức chứa</dt><dd>{selected.currentEnrollment ?? selected.enrolledCount ?? selected.registeredCount ?? '—'} / {selected.capacity ?? '—'}</dd></div><div><dt>Trạng thái</dt><dd>{roomSessionStatusLabel(selected)}</dd></div></dl>

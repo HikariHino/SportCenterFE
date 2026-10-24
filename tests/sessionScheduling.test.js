@@ -45,6 +45,14 @@ test('specific dates reject impossible dates, invalid times, reversed intervals 
   assert.throws(() => build({}, sportClass, start), /sau thời điểm hiện tại/)
 })
 
+test('overnight calendar slots preserve Vietnam dates and reject an end outside the class period', () => {
+  const item = build({ startTime: '23:00', endTime: '01:00', endsNextDay: true })
+  assert.equal(item.startsAt, '2099-10-21T16:00:00.000Z')
+  assert.equal(item.endsAt, '2099-10-21T18:00:00.000Z')
+  assert.throws(() => build({ startTime: '23:00', endTime: '01:00' }), /ngày hôm sau/)
+  assert.throws(() => build({ date: sportClass.endDate, startTime: '23:00', endTime: '01:00', endsNextDay: true }), /bắt đầu và kết thúc của lớp/)
+})
+
 test('capacity is a positive integer bounded by both room and class, including current enrolment', () => {
   for (const capacity of [0, -1, 1.5, 21, 26, '', 'abc']) assert.throws(() => check({ data: { ...data, capacity } }), /Sức chứa/)
   assert.throws(() => check({ room: { ...room, capacity: 10 }, data: { ...data, capacity: 11 } }), /1 đến 10/)

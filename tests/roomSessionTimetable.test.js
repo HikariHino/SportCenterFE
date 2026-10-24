@@ -137,3 +137,44 @@ test('opened cancelled calendar renders cancelled sessions by weekday and time w
   assert.match(nextWeek, /Lý do hủy: Chưa cập nhật/)
   assert.doesNotMatch(nextWeek, /Cancelled Yoga/)
 })
+
+test('room calendars offer creation from day headings and empty slots, while occupied slots keep their session action', () => {
+  const html = render([{ ...session, startsAt: '2099-10-26T11:00:00Z', endsAt: '2099-10-26T12:30:00Z' }], {
+    weekStart: '2099-10-26', onCreate: () => {}, now: Date.parse('2099-10-25T00:00:00Z'),
+  })
+  assert.equal((html.match(/class="member-timetable-create-day"/g) || []).length, 7)
+  assert.equal((html.match(/class="member-timetable-create-slot"/g) || []).length, 6)
+  assert.match(html, /data-create-date="2099-10-27" data-create-time="18:00"/)
+  assert.match(html, /aria-label="Tạo buổi học ngày 27\/10\/2099, 18:00 đến 19:30"/)
+  assert.doesNotMatch(html, /data-create-date="2099-10-26" data-create-time=/)
+  assert.match(html, /data-session-id="1"/)
+  assert.doesNotMatch(sections(html).cancellations, /data-create-date/)
+})
+
+test('empty weeks can create from headings, and read-only calendars expose no creation controls', () => {
+  const props = { weekStart: '2099-10-26', now: Date.parse('2099-10-25T00:00:00Z') }
+  const html = render([], { ...props, onCreate: () => {} })
+  assert.equal((html.match(/class="member-timetable-create-day"/g) || []).length, 7)
+  assert.match(html, /Bấm vào ngày ở đầu cột để thêm buổi học/)
+  assert.doesNotMatch(render([], props), /data-create-date/)
+  const cancelled = renderToStaticMarkup(createElement(CancelledRoomSessionsTimetable, {
+    items: [{ ...session, status: 'Cancelled' }], initialWeek: '2026-10-19', onSelect: () => {},
+  }))
+  assert.doesNotMatch(cancelled, /data-create-date/)
+})
+
+test('creation controls disable past days, elapsed slots and every slot during selection or locked interactions', () => {
+  const items = [{ ...session, startsAt: '2026-10-19T11:00:00Z', endsAt: '2026-10-19T12:30:00Z' }]
+  const props = { now: Date.parse('2026-10-21T11:30:00Z'), onCreate: () => {} }
+  const html = render(items, props)
+  assert.match(html, /data-create-date="2026-10-20" disabled=""/)
+  assert.match(html, /class="member-timetable-create-day" data-create-date="2026-10-21" aria-label=/)
+  assert.match(html, /data-create-date="2026-10-21" data-create-time="18:00" disabled=""/)
+  assert.match(html, /data-create-date="2026-10-22" data-create-time="18:00" aria-label=/)
+  for (const lock of [{ interactionDisabled: true }, { selectionMode: true }]) {
+    const locked = render(items, { ...props, ...lock })
+    const buttons = locked.match(/<button[^>]*class="member-timetable-create-(?:day|slot)"[^>]*>/g)
+    assert.equal(buttons.length, 13)
+    assert.ok(buttons.every(button => button.includes('disabled=""')))
+  }
+})

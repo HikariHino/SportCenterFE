@@ -2,6 +2,7 @@ import { getSessionRoom, roomSessionForTimetable } from './roomTimetable.js'
 import { sessionsOverlap } from './sessionReschedule.js'
 import { getClassDateRange } from './recurringSessions.js'
 import { sessionEnrollmentCount } from './sessionEnrollment.js'
+import { shiftTimetableDate } from './memberTimetable.js'
 
 export const isCancelledSession = item => ['cancelled', 'canceled'].includes(String(item.status || item.Status || '').trim().toLowerCase())
 export const isScheduledSession = item => String(item.status || item.Status || '').trim().toLowerCase() === 'scheduled'
@@ -33,16 +34,16 @@ export function assertSessionTimeRange({ startsAt, endsAt }, sportClass, now = D
   if (start < bound(sportClass.startDate) || end > bound(sportClass.endDate, true)) throw new Error('Buổi học phải nằm trong ngày bắt đầu và kết thúc của lớp.')
 }
 
-export function buildDatedSession({ date, startTime, endTime }, { sportClass, now = Date.now() } = {}) {
+export function buildDatedSession({ date, startTime, endTime, endsNextDay = false }, { sportClass, now = Date.now() } = {}) {
   const day = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? Date.parse(`${date}T00:00:00Z`) : NaN
   if (!Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== date) throw new Error('Vui lòng chọn ngày học hợp lệ.')
   const validTime = value => /^([01]\d|2[0-3]):[0-5]\d$/.test(value || '')
   if (!validTime(startTime) || !validTime(endTime)) throw new Error('Vui lòng nhập giờ bắt đầu và kết thúc hợp lệ.')
-  if (endTime <= startTime) throw new Error('Giờ kết thúc phải sau giờ bắt đầu trong cùng ngày.')
+  if (!endsNextDay && endTime <= startTime) throw new Error('Giờ kết thúc phải sau giờ bắt đầu. Chọn kết thúc vào ngày hôm sau nếu học qua đêm.')
   const item = {
     date, weekday: (new Date(day).getUTCDay() + 6) % 7,
     startsAt: new Date(`${date}T${startTime}:00+07:00`).toISOString(),
-    endsAt: new Date(`${date}T${endTime}:00+07:00`).toISOString(),
+    endsAt: new Date(`${endsNextDay ? shiftTimetableDate(date, 1) : date}T${endTime}:00+07:00`).toISOString(),
   }
   assertSessionTimeRange(item, sportClass, now)
   return item

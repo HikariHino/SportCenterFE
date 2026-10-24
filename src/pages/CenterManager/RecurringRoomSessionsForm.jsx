@@ -18,7 +18,7 @@ const classBoundaryLabel = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '')
   ? dateLabel(value)
   : new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })
 
-export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusyChange, onUpdate }) {
+export default function RecurringRoomSessionsForm({ room, rooms, initialSlot, onClose, onBusyChange, onUpdate }) {
   const id = useId()
   const formRef = useRef(null)
   const actionLock = useRef(false)
@@ -26,7 +26,8 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
   const [catalog, setCatalog] = useState({ classes: [], coaches: [], policies: [], loading: true, error: '' })
   const [form, setForm] = useState(() => ({
     classId: '', coachId: '', cancellationPolicyId: '', capacity: room.capacity || '',
-    mode: 'date', date: '', weekdays: '246', startTime: '18:00', endTime: '19:30',
+    mode: 'date', date: initialSlot?.date || '', weekdays: '246',
+    startTime: initialSlot?.startTime || '18:00', endTime: initialSlot?.endTime || '19:30', endsNextDay: initialSlot?.nextDay || false,
   }))
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(null)
@@ -45,6 +46,9 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
       ? `Sức chứa phải từ 1 đến ${maxCapacity} học viên, theo giới hạn của phòng và lớp.` : ''
 
   useEffect(() => { formRef.current?.scrollIntoView({ block: 'nearest' }) }, [])
+  useEffect(() => {
+    if (initialSlot?.date && !catalog.loading && !catalog.error) formRef.current?.querySelector('[name="classId"]')?.focus({ preventScroll: true })
+  }, [catalog.loading, catalog.error])
   useEffect(() => {
     const controller = new AbortController()
     setCatalog({ classes: [], coaches: [], policies: [], loading: true, error: '' })
@@ -86,8 +90,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
     const range = getClassDateRange(sportClass)
     const today = timetableDateKey(new Date().toISOString())
     setForm(previous => ({ ...previous, classId: value, coachId: String(coachId),
-      date: previous.date && previous.date >= range.start && previous.date <= range.end ? previous.date
-        : range.start && range.end ? (today < range.start ? range.start : today > range.end ? range.end : today) : '',
+      date: previous.date || (range.start && range.end ? (today < range.start ? range.start : today > range.end ? range.end : today) : ''),
       capacity: Math.min(Number(room.capacity) || Infinity, Number(sportClass?.maxCapacity) || Number(room.capacity) || 1) }))
     setError('')
     setConflicts([])
@@ -148,6 +151,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
         <label>Giờ kết thúc<input name="endTime" type="time" required value={form.endTime} onChange={event => change('endTime', event.target.value)} /></label>
         <label>Chính sách hủy<select name="cancellationPolicyId" required value={form.cancellationPolicyId} onChange={event => change('cancellationPolicyId', event.target.value)}><option value="">Chọn chính sách hủy</option>{catalog.policies.map(item => <option key={item.id} value={item.id}>{item.name} · Trước {item.minimumHoursBeforeStart} giờ</option>)}</select></label>
       </div>
+      {form.mode === 'date' && <label className="room-recurring-overnight"><input name="endsNextDay" type="checkbox" checked={form.endsNextDay} onChange={event => change('endsNextDay', event.target.checked)} />Kết thúc vào ngày hôm sau</label>}
       {form.mode === 'weekly' && <div className="room-recurring-weekdays">
         <label>Các ngày trong tuần<input name="weekdays" required type="text" value={form.weekdays} maxLength={100} aria-describedby={`${id}-days-help`} placeholder="246 hoặc 357" onChange={event => change('weekdays', event.target.value)} /></label>
         <small id={`${id}-days-help`}>Nhập 246 cho thứ 2, 4, 6; 357 cho thứ 3, 5, 7; hoặc 2, 3, 4, 5, 6, 7, CN.</small>
@@ -163,8 +167,8 @@ export default function RecurringRoomSessionsForm({ room, rooms, onClose, onBusy
     {preview.skippedOutsideRange > 0 && <p className="room-recurring-skip">Bỏ qua {preview.skippedOutsideRange} buổi có giờ học nằm ngoài thời gian bắt đầu hoặc kết thúc của lớp.</p>}
     {preview.error && <p className="room-recurring-error" role="alert"><AlertCircle size={16} />{preview.error}</p>}
     {preview.items.length > 0 && <details className="room-recurring-preview" open>
-      <summary><strong>{preview.items.length} buổi học</strong> · {dateLabel(preview.items[0].date)} – {dateLabel(preview.items.at(-1).date)} · {form.startTime}–{form.endTime}</summary>
-      <div><table><thead><tr><th>Thứ</th><th>Ngày học</th><th>Khung giờ</th></tr></thead><tbody>{preview.items.map(item => <tr key={item.startsAt}><td>{weekdayLabel(item.weekday)}</td><td>{dateLabel(item.date)}</td><td>{form.startTime} – {form.endTime}</td></tr>)}</tbody></table></div>
+      <summary><strong>{preview.items.length} buổi học</strong> · {dateLabel(preview.items[0].date)} – {dateLabel(preview.items.at(-1).date)} · {form.startTime}–{form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}</summary>
+      <div><table><thead><tr><th>Thứ</th><th>Ngày học</th><th>Khung giờ</th></tr></thead><tbody>{preview.items.map(item => <tr key={item.startsAt}><td>{weekdayLabel(item.weekday)}</td><td>{dateLabel(item.date)}</td><td>{form.startTime} – {form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}</td></tr>)}</tbody></table></div>
     </details>}
     {(totals.created > 0 || totals.existing > 0) && <p className="room-recurring-saved" role="status">Đã tạo {totals.created} buổi; {totals.existing} buổi đã có sẵn được giữ nguyên.{pending && ` Còn ${pending.length} buổi cần xử lý.`}</p>}
     {error && <div className="room-recurring-error" role="alert"><p>{error}</p>{conflicts.length > 0 && <ul>{conflicts.map(item => <li key={item.startsAt}>{dateLabel(item.date)} {form.startTime}–{form.endTime}: {item.message}</li>)}</ul>}</div>}
