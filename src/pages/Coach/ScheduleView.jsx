@@ -23,6 +23,19 @@ const getWeekDays = offset => {
   })
 }
 
+const getWeekOffsetForDate = value => {
+  const target = new Date(value)
+  if (Number.isNaN(target.getTime())) return 0
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  target.setHours(0, 0, 0, 0)
+  const currentMonday = new Date(today)
+  const targetMonday = new Date(target)
+  currentMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+  targetMonday.setDate(target.getDate() - ((target.getDay() + 6) % 7))
+  return Math.round((targetMonday - currentMonday) / (7 * 24 * 60 * 60 * 1000))
+}
+
 
 const reviewDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -60,6 +73,8 @@ const mapSession = session => {
 
   return {
     id: session.id,
+    startsAt: session.startsAt,
+    endsAt: session.endsAt,
     rawStatus,
     date: toDateKey(startsAt),
     time: timeFormatter.format(startsAt),
@@ -79,10 +94,10 @@ const mapSession = session => {
 
 const getScheduleError = error => error.response?.data?.message || error.message || 'Không thể tải lịch huấn luyện.'
 
-export function ScheduleView({ showNotice }) {
-  const [weekOffset, setWeekOffset] = useState(0)
+export function ScheduleView({ showNotice, selectedSession, onSelectSession }) {
+  const [weekOffset, setWeekOffset] = useState(() => selectedSession?.startsAt ? getWeekOffsetForDate(selectedSession.startsAt) : 0)
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset])
-  const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()))
+  const [selectedDate, setSelectedDate] = useState(() => selectedSession?.startsAt ? toDateKey(new Date(selectedSession.startsAt)) : toDateKey(new Date()))
   const [filter, setFilter] = useState('Tất cả')
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -98,6 +113,13 @@ export function ScheduleView({ showNotice }) {
   const allDaySessions = sessions.filter(item => item.date === selectedDate)
   const totalMinutes = allDaySessions.reduce((total, item) => total + Number(item.durationMinutes || 0), 0)
   const enrollmentCount = allDaySessions.reduce((total, item) => total + Number(item.currentEnrollment || 0), 0)
+
+  useEffect(() => {
+    if (!selectedSession?.startsAt) return
+    setWeekOffset(getWeekOffsetForDate(selectedSession.startsAt))
+    setSelectedDate(toDateKey(new Date(selectedSession.startsAt)))
+    setFilter('Tất cả')
+  }, [selectedSession?.id, selectedSession?.startsAt])
 
   useEffect(() => {
     let active = true
@@ -133,6 +155,15 @@ export function ScheduleView({ showNotice }) {
     const nextWeek = getWeekDays(nextOffset)
     setWeekOffset(nextOffset)
     setSelectedDate(nextWeek[0].key)
+  }
+
+  const selectSession = session => {
+    onSelectSession?.({
+      id: session.id,
+      startsAt: session.startsAt,
+      endsAt: session.endsAt,
+      className: session.studentName,
+    })
   }
 
   const handleCompleteSession = async session => {
@@ -185,9 +216,9 @@ export function ScheduleView({ showNotice }) {
       <section className="coach-card coach-agenda">
         <div className="coach-view-toolbar"><div><strong>Lịch ngày {selectedDay.date}/{selectedDay.month}</strong><span>{loading ? 'Đang tải lịch...' : `${allDaySessions.length} buổi huấn luyện`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã hoàn thành', 'Đang diễn ra', 'Sắp tới', 'Đã hủy'].map(label => <button type="button" key={label} className={filter === label ? 'active' : ''} onClick={() => setFilter(label)}>{label}</button>)}</div></div>
         {actionError && <div className="coach-attendance-error" role="alert">{actionError}</div>}
-        {loading ? <EmptyState title="Đang tải lịch huấn luyện" text="Dữ liệu đang được đồng bộ từ hệ thống." /> : error ? <EmptyState title="Không thể tải lịch" text={error} /> : daySessions.length ? <div className="coach-agenda-list">{daySessions.map(session => <article key={session.id} className={session.tone || 'next'}>
+        {loading ? <EmptyState title="Đang tải lịch huấn luyện" text="Dữ liệu đang được đồng bộ từ hệ thống." /> : error ? <EmptyState title="Không thể tải lịch" text={error} /> : daySessions.length ? <div className="coach-agenda-list">{daySessions.map(session => <article key={session.id} className={`${session.tone || 'next'} ${String(selectedSession?.id) === String(session.id) ? 'selected' : ''}`} role="button" tabIndex={0} aria-pressed={String(selectedSession?.id) === String(session.id)} onClick={() => selectSession(session)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectSession(session) } }}>
           <div className="coach-agenda-time"><strong>{session.time || '--:--'}</strong><span>{session.endTime || '--:--'}</span></div><div className="coach-agenda-line"><i /></div>
-          <div className="coach-agenda-body"><div><span className={`coach-status ${session.tone || 'next'}`}>{session.status || 'Chưa xác định'}</span><small>{session.type || ''}</small></div><h3>{session.studentName || session.student}</h3><p>{session.program || 'Chưa có chương trình'}</p><footer><span><Users size={14} />Còn {session.availableSeats} chỗ</span><span><Clock3 size={14} />{session.durationMinutes || 0} phút</span><span className="coach-session-actions"><button type="button" className="coach-session-reviews" disabled={reviewsLoading && reviewSession?.id === session.id} onClick={() => loadSessionReviews(session)}><Star size={14} />{reviewsLoading && reviewSession?.id === session.id ? 'Đang tải...' : 'Đánh giá'}</button>{session.canComplete && <button type="button" className="coach-complete-session" disabled={Boolean(completingId)} onClick={() => handleCompleteSession(session)}><CheckCircle2 size={14} />{completingId === session.id ? 'Đang hoàn thành...' : 'Hoàn thành buổi'}</button>}</span></footer></div>
+          <div className="coach-agenda-body"><div><span className={`coach-status ${session.tone || 'next'}`}>{session.status || 'Chưa xác định'}</span><small>{session.type || ''}</small></div><h3>{session.studentName || session.student}</h3><p>{session.program || 'Chưa có chương trình'}</p><footer><span><Users size={14} />Còn {session.availableSeats} chỗ</span><span><Clock3 size={14} />{session.durationMinutes || 0} phút</span><span className="coach-session-actions"><button type="button" className="coach-session-reviews" disabled={reviewsLoading && reviewSession?.id === session.id} onClick={event => { event.stopPropagation(); loadSessionReviews(session) }}><Star size={14} />{reviewsLoading && reviewSession?.id === session.id ? 'Đang tải...' : 'Đánh giá'}</button>{session.canComplete && <button type="button" className="coach-complete-session" disabled={Boolean(completingId)} onClick={event => { event.stopPropagation(); handleCompleteSession(session) }}><CheckCircle2 size={14} />{completingId === session.id ? 'Đang hoàn thành...' : 'Hoàn thành buổi'}</button>}</span></footer></div>
         </article>)}</div> : <EmptyState title="Chưa có lịch huấn luyện" text="Chưa có buổi huấn luyện nào trong ngày này." />}
       </section>
 
