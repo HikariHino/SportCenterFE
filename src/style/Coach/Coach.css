@@ -172,10 +172,10 @@
 .coach-calendar-strip > div > button:hover { color: var(--coach-blue); background: #f1f5fd; transform: translateY(-2px); }
 .coach-calendar-strip > div > button.active { color: #fff; background: linear-gradient(145deg, #2f72e8, #1758d8); box-shadow: 0 7px 15px #1858d82b; }
 .coach-calendar-strip button span { font-size: 12px; text-transform: uppercase; }.coach-calendar-strip button strong { font-size: 20px; }.coach-calendar-strip button i { color: #8fb5ff; font-size: 10px; font-style: normal; }
-.coach-calendar-strip button .coach-calendar-indicator { width: 7px; height: 7px; display: block; border-radius: 50%; box-shadow: 0 0 0 3px currentColor; font-size: 0; }
+.coach-calendar-strip button .coach-calendar-indicator { width: 4px; height: 4px; display: block; border-radius: 50%; box-shadow: 0 0 0 2px currentColor; font-size: 0; }
 .coach-calendar-strip button .coach-calendar-indicator.future { color: #18a874; background: #18a874; }
 .coach-calendar-strip button .coach-calendar-indicator.tomorrow { color: #e6a21a; background: #e6a21a; }
-.coach-calendar-strip button.active .coach-calendar-indicator { box-shadow: 0 0 0 3px #ffffff4d; }
+.coach-calendar-strip button.active .coach-calendar-indicator { box-shadow: 0 0 0 2px #ffffff4d; }
 .coach-schedule-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(240px, .65fr); gap: 16px; margin-top: 16px; align-items: start; }
 .coach-agenda-list { overflow: hidden; padding: 5px 12px 13px; }
 .coach-agenda-list article { position: relative; min-width: 0; min-height: 116px; display: grid; grid-template-columns: 58px 15px minmax(0, 1fr); gap: 10px; padding: 18px 10px; border-bottom: 1px solid #edf1f6; }
