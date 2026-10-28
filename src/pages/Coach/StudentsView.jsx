@@ -222,10 +222,9 @@ function TrainingPlanListDialog({ student, onClose }) {
   </div>
 }
 
-export function StudentsView({ query, showNotice }) {
+export function StudentsView({ query, showNotice, selectedSessionId, onSelectSession }) {
   const [status, setStatus] = useState('Tất cả')
   const [sessions, setSessions] = useState([])
-  const [selectedSessionId, setSelectedSessionId] = useState('')
   const [students, setStudents] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [sessionsLoading, setSessionsLoading] = useState(true)
@@ -246,15 +245,14 @@ export function StudentsView({ query, showNotice }) {
         const result = await getMyCoachSessions({ pageSize: 100 })
         if (!active) return
         setSessions(result.items)
-        setSelectedSessionId(current => {
-          if (current && result.items.some(session => String(session.id) === String(current))) return current
+        if (!selectedSessionId || !result.items.some(session => String(session.id) === String(selectedSessionId))) {
           const upcoming = result.items.find(session => new Date(session.endsAt) >= new Date())
-          return String(upcoming?.id ?? result.items[0]?.id ?? '')
-        })
+          const fallback = upcoming ?? result.items[0]
+          if (fallback) onSelectSession?.(fallback)
+        }
       } catch (requestError) {
         if (active) {
           setSessions([])
-          setSelectedSessionId('')
           setError(getStudentsError(requestError))
         }
       } finally {
@@ -263,7 +261,7 @@ export function StudentsView({ query, showNotice }) {
     }
     loadSessions()
     return () => { active = false }
-  }, [requestKey])
+  }, [onSelectSession, requestKey])
 
   useEffect(() => {
     let active = true
@@ -337,7 +335,7 @@ export function StudentsView({ query, showNotice }) {
   return <div className="coach-section-view">
     <section className="coach-card coach-session-picker">
       <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>BUỔI ĐANG XEM</small><strong>{selectedSession?.className || 'Buổi huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn một buổi để xem học viên'}</p></div></div>
-      <label><span>Chọn buổi huấn luyện</span><select value={selectedSessionId} onChange={event => { setSelectedSessionId(event.target.value); setStatus('Tất cả') }}>{sessions.map(session => <option key={session.id} value={session.id}>{formatSessionOption(session)}</option>)}</select></label>
+      <label><span>Chọn buổi huấn luyện</span><select value={selectedSessionId} onChange={event => { const session = sessions.find(item => String(item.id) === event.target.value); if (session) onSelectSession?.(session); setStatus('Tất cả') }}>{sessions.map(session => <option key={session.id} value={session.id}>{formatSessionOption(session)}</option>)}</select></label>
     </section>
 
     <section className="coach-student-kpis">

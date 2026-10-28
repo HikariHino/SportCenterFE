@@ -249,7 +249,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .manager-button:hover { background: #1d4ed8; }
 
 /* Coach workspace. */
-[data-theme='dark'] :is(.coach-topbar, .coach-card, .coach-notification, .coach-metrics article, .coach-student-kpis article) { background: var(--theme-surface); border-color: var(--theme-border); }
+[data-theme='dark'] :is(.coach-topbar, .coach-card, .coach-notification, .coach-metric-card, .coach-student-kpis article) { background: var(--theme-surface); border-color: var(--theme-border); }
 [data-theme='dark'] :is(.coach-notification-panel, .coach-notification-panel > header, .coach-notification-panel > footer) { background: var(--theme-surface); border-color: var(--theme-border); }
 [data-theme='dark'] .coach-notification { color: var(--theme-muted); }
 [data-theme='dark'] .coach-notification i { border-color: var(--theme-surface); }
@@ -291,6 +291,8 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] :is(.coach-metric-icon.green, .coach-status.live, .coach-student-avatar.green, .coach-quick-actions .chat, .coach-performance .coach-card-head b, .coach-toast) { background: var(--theme-green-bg); color: var(--theme-green); border-color: #2c6554; }
 [data-theme='dark'] :is(.coach-metric-icon.purple, .coach-quick-actions .plan) { background: var(--theme-purple-bg); color: var(--theme-purple); }
 [data-theme='dark'] :is(.coach-metric-icon.amber, .coach-status.next, .coach-student-avatar.orange) { background: var(--theme-gold-bg); color: var(--theme-gold); }
+[data-theme='dark'] .coach-status.attention { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] :is(.coach-session:hover,.coach-week-session:hover) { background:var(--theme-raised); }
 [data-theme='dark'] .coach-metrics p { color: var(--theme-green); }
 [data-theme='dark'] .coach-chart { border-color: var(--theme-border); background: repeating-linear-gradient(to top, transparent 0, transparent 39px, var(--theme-border) 40px); }
 [data-theme='dark'] .coach-goal::before, [data-theme='dark'] .coach-student-progress > span { background: var(--theme-border); }
@@ -313,6 +315,8 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
   color: var(--theme-accent);
   background: var(--theme-blue-bg);
 }
+[data-theme='dark'] .coach-agenda-list article[role='button']:hover { background:var(--theme-raised); box-shadow:0 0 0 8px var(--theme-raised); }
+[data-theme='dark'] .coach-agenda-list article.selected { background:var(--theme-blue-bg); box-shadow:0 0 0 2px #3c5f9f,0 0 0 8px var(--theme-blue-bg); }
 [data-theme='dark'] .coach-session-picker-main > span { background: var(--theme-blue-bg); color: var(--theme-accent); }
 [data-theme='dark'] .coach-roster-table > button { border-color: var(--theme-border); color: var(--theme-text); }
 [data-theme='dark'] :is(.coach-roster-table > button:hover, .coach-roster-table > button.selected) { background: var(--theme-raised); }
@@ -474,26 +478,23 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .reception-profile-summary dl>div { border-color:var(--theme-border); background:var(--theme-raised); }
 
 /* Detailed Coach overview. */
-[data-theme='dark'] .coach-next-session-body { background:linear-gradient(120deg,#1a2941,var(--theme-surface) 62%); }
+[data-theme='dark'] .coach-focus-panel { border-color:#34527d; background:linear-gradient(115deg,#172945,var(--theme-surface) 68%); }
+[data-theme='dark'] .coach-focus-shortcuts { border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] .coach-focus-shortcuts>button { border-color:var(--theme-border); color:var(--theme-text); }
+[data-theme='dark'] .coach-focus-shortcuts>button:hover { background:var(--theme-raised); }
+[data-theme='dark'] .coach-focus-shortcuts>button>span:first-child { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] .coach-focus-shortcuts>button>span:first-child.attention { color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] .coach-focus-shortcuts>button>span:first-child.done { color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .coach-overview-empty { color:var(--theme-muted); }
 [data-theme='dark'] .coach-overview-empty strong { color:var(--theme-text); }
-[data-theme='dark'] .coach-next-date { border-color:#3c5f9f; color:var(--theme-accent); background:var(--theme-blue-bg); box-shadow:none; }
-[data-theme='dark'] .coach-next-session-meta svg { color:var(--theme-accent); }
-[data-theme='dark'] .coach-capacity>span { background:var(--theme-border); }
-[data-theme='dark'] .coach-next-session-body>button,
 [data-theme='dark'] .coach-overview-empty>button { border-color:#3c5f9f; color:var(--theme-accent); background:var(--theme-blue-bg); }
-[data-theme='dark'] .coach-next-session-body>button:hover,
 [data-theme='dark'] .coach-overview-empty>button:hover { border-color:#5175ad; background:#29466f; }
 [data-theme='dark'] .coach-progress-ring { background:conic-gradient(var(--theme-accent) var(--coach-progress),var(--theme-border) 0); }
 [data-theme='dark'] .coach-progress-ring::before { background:var(--theme-surface); }
 [data-theme='dark'] .coach-attendance-breakdown>span { border-color:var(--theme-border); color:var(--theme-muted); background:var(--theme-raised); }
 [data-theme='dark'] .coach-day-progress-card>footer { border-color:var(--theme-border); color:var(--theme-muted); background:var(--theme-raised); }
 [data-theme='dark'] .coach-week-card>.coach-card-head>strong,
-[data-theme='dark'] .coach-week-session time,
-[data-theme='dark'] .coach-overview-actions .blue { color:var(--theme-accent); background:var(--theme-blue-bg); }
-[data-theme='dark'] :is(.coach-week-session,.coach-week-more,.coach-overview-actions>div:last-child>button) { border-color:var(--theme-border); }
+[data-theme='dark'] .coach-week-session time { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] :is(.coach-week-session,.coach-week-more) { border-color:var(--theme-border); }
 [data-theme='dark'] .coach-week-more { color:var(--theme-accent); background:var(--theme-raised); }
-[data-theme='dark'] .coach-overview-actions .green { color:var(--theme-green); background:var(--theme-green-bg); }
-[data-theme='dark'] .coach-overview-actions .amber { color:var(--theme-gold); background:var(--theme-gold-bg); }
-[data-theme='dark'] .coach-overview-actions .purple { color:var(--theme-purple); background:var(--theme-purple-bg); }
 [data-theme='dark'] .coach-status.cancelled { color:var(--theme-red); background:var(--theme-red-bg); }

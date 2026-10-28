@@ -3,8 +3,13 @@ import { CalendarDays, DoorOpen } from 'lucide-react'
 import { RoomsView } from './RoomsView'
 import { SessionsView } from './SessionsView'
 
-export function FacilitiesView({ showNotice }) {
-  const [section, setSection] = useState('rooms')
+export function FacilitiesView({ showNotice, selectedSession, onSelectSession }) {
+  const [section, setSection] = useState(() => selectedSession?.id ? 'sessions' : 'rooms')
+
+  const openSessions = session => {
+    if (session?.id) onSelectSession?.(session)
+    setSection('sessions')
+  }
 
   return <>
     <section className="reception-card reception-facility-switcher">
@@ -20,7 +25,7 @@ export function FacilitiesView({ showNotice }) {
     </section>
 
     {section === 'rooms'
-      ? <RoomsView onOpenSessions={() => setSection('sessions')} />
-      : <div className="reception-facility-sessions"><SessionsView showNotice={showNotice} /></div>}
+      ? <RoomsView onOpenSessions={openSessions} onSelectSession={onSelectSession} />
+      : <div className="reception-facility-sessions"><SessionsView showNotice={showNotice} selectedSession={selectedSession} onSelectSession={onSelectSession} /></div>}
   </>
 }
