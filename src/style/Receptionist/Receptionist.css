@@ -823,3 +823,123 @@
   .reception-session-browser :is(.reception-class-catalog-list,.reception-session-catalog-list) { height:360px; padding:10px; }
   .reception-session-browser .reception-class-catalog-list article>div:last-child { min-width:130px; }
 }
+
+/* Receptionist weekly class schedule */
+.reception-schedule-page { display:grid; gap:14px; }
+.reception-schedule-flow { display:grid; grid-template-columns:minmax(220px,1.1fr) repeat(3,minmax(170px,1fr)); align-items:end; gap:12px; padding:15px 16px; }
+.reception-schedule-flow-title { display:flex; align-items:center; gap:10px; min-width:0; }
+.reception-schedule-flow-title>span { width:38px; height:38px; flex:0 0 auto; display:grid; place-items:center; border-radius:9px; color:var(--rc-accent); background:#eaf1ff; }
+.reception-schedule-flow-title small,.reception-schedule-flow-title strong { display:block; }
+.reception-schedule-flow-title small { color:var(--rc-accent); font-size:10px; font-weight:850; letter-spacing:.9px; }
+.reception-schedule-flow-title strong { margin-top:3px; font-size:13px; }
+.reception-schedule-flow label { display:grid; gap:6px; color:#66748a; font-size:11px; font-weight:750; }
+.reception-schedule-flow select { width:100%; height:40px; padding:0 10px; border:1px solid #d9e1ed; border-radius:8px; outline:0; color:var(--rc-ink); background:#f9fbfe; font:650 12px 'Be Vietnam Pro',sans-serif; }
+.reception-schedule-flow select:focus { border-color:#7aa5f4; box-shadow:0 0 0 3px #1557d512; }
+.reception-schedule-flow select:disabled { opacity:.58; cursor:not-allowed; }
+.reception-schedule-onboarding>.reception-empty { min-height:300px; }
+
+.reception-schedule-classes { overflow:hidden; }
+.reception-schedule-classes>.reception-card-head>strong { padding:5px 9px; border-radius:20px; color:#2363dc; background:#eaf1ff; font-size:11px; }
+.reception-schedule-class-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:14px 16px 16px; }
+.reception-schedule-class-list article { min-width:0; overflow:hidden; border:1px solid #e0e7f0; border-radius:10px; background:#fbfcfe; transition:border-color .2s,box-shadow .2s,transform .2s; }
+.reception-schedule-class-list article:hover,.reception-schedule-class-list article.selected { border-color:#7ba7f6; box-shadow:0 6px 18px #1557d514; transform:translateY(-1px); }
+.reception-schedule-class-filter { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 13px; border:0; color:var(--rc-ink); background:transparent; text-align:left; }
+.reception-schedule-class-filter>span { min-width:0; }
+.reception-schedule-class-filter small,.reception-schedule-class-filter strong,.reception-schedule-class-filter em { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reception-schedule-class-filter small { color:#8792a5; font-size:10px; }
+.reception-schedule-class-filter strong { margin-top:3px; font-size:13px; }
+.reception-schedule-class-filter em { margin-top:3px; color:#687489; font-size:11px; font-style:normal; }
+.reception-schedule-class-filter>b { flex:0 0 auto; color:#5d6c82; font-size:10px; }
+.reception-schedule-add-member { width:100%; min-height:34px; display:flex; align-items:center; justify-content:center; gap:5px; border:0; border-top:1px solid #e7ecf3; color:#fff; background:var(--rc-accent); font-size:11px; font-weight:850; }
+.reception-schedule-add-member:hover { background:#124fc5; }
+
+.reception-week-calendar { min-height:96px; display:grid; grid-template-columns:40px minmax(0,1fr) 40px; align-items:center; padding:10px 13px; }
+.reception-week-calendar>button { width:34px; height:34px; display:grid; place-items:center; border:1px solid #dfe6f0; border-radius:8px; color:#66748a; background:#fff; }
+.reception-week-calendar>div { display:grid; grid-template-columns:repeat(7,1fr); gap:7px; }
+.reception-week-calendar>div>button { min-height:70px; position:relative; display:grid; place-items:center; align-content:center; gap:3px; border:1px solid transparent; border-radius:10px; color:#748096; background:transparent; transition:.2s; }
+.reception-week-calendar>div>button:hover { color:var(--rc-accent); background:#f1f5fd; transform:translateY(-1px); }
+.reception-week-calendar>div>button.active { color:#fff; background:linear-gradient(145deg,#2f72e8,#1758d8); box-shadow:0 7px 15px #1858d82b; }
+.reception-week-calendar button span { font-size:11px; }.reception-week-calendar button strong { font-size:19px; }.reception-week-calendar button i { color:#8fb5ff; font-size:9px; font-style:normal; }
+.reception-week-calendar button b { width:5px; height:5px; position:absolute; bottom:6px; border-radius:50%; background:#18a874; box-shadow:0 0 0 2px #18a8742e; }
+.reception-week-calendar button.active b { background:#fff; box-shadow:0 0 0 2px #ffffff42; }
+
+.reception-schedule-layout { display:grid; grid-template-columns:minmax(0,1fr) 270px; align-items:start; gap:14px; }
+.reception-schedule-agenda { overflow:hidden; }
+.reception-schedule-toolbar { min-height:73px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px; border-bottom:1px solid #e8edf4; }
+.reception-schedule-toolbar>div:first-child strong,.reception-schedule-toolbar>div:first-child span { display:block; }
+.reception-schedule-toolbar>div:first-child strong { font-size:17px; }.reception-schedule-toolbar>div:first-child span { margin-top:4px; color:#7c899d; font-size:11px; }
+.reception-schedule-toolbar>div:last-child { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:5px; }
+.reception-schedule-toolbar button { min-height:31px; padding:0 9px; border:1px solid #dce4ef; border-radius:7px; color:#647289; background:#fff; font-size:10px; font-weight:750; }
+.reception-schedule-toolbar button:hover,.reception-schedule-toolbar button.active { border-color:#8eb2f5; color:#1557d5; background:#edf3ff; }
+.reception-schedule-agenda>.reception-empty { min-height:285px; }
+.reception-schedule-session-list { display:grid; gap:9px; padding:12px; }
+.reception-schedule-session-list article { display:grid; grid-template-columns:minmax(0,1fr) 88px; overflow:hidden; border:1px solid #e0e7f0; border-radius:10px; background:#fbfcfe; }
+.reception-schedule-session-list article.selected { border-color:#6f9ef2; box-shadow:0 0 0 2px #1557d511; }
+.reception-schedule-session-list article>button:first-child { min-width:0; display:grid; grid-template-columns:75px minmax(0,1fr); gap:12px; padding:13px; border:0; color:var(--rc-ink); background:transparent; text-align:left; }
+.reception-schedule-session-list time { padding-right:12px; border-right:1px solid #e6ebf2; }
+.reception-schedule-session-list time strong,.reception-schedule-session-list time span { display:block; }.reception-schedule-session-list time strong { font-size:15px; }.reception-schedule-session-list time span { margin-top:5px; color:#8490a3; font-size:11px; }
+.reception-schedule-session-list article>button:first-child>div { min-width:0; }
+.reception-schedule-session-list article>button:first-child>div>span { display:flex; align-items:center; gap:7px; }
+.reception-schedule-session-list article b { padding:4px 7px; border-radius:15px; color:#8c5c0c; background:#fff0d5; font-size:9px; }.reception-schedule-session-list article b.done { color:#087857; background:#e3f8f0; }.reception-schedule-session-list article b.live { color:#1557d5; background:#eaf1ff; }.reception-schedule-session-list article b.cancelled { color:#a13c48; background:#ffeaed; }
+.reception-schedule-session-list article small { overflow:hidden; color:#7d899c; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.reception-schedule-session-list h3 { margin:7px 0 0; font-size:14px; }.reception-schedule-session-list p { margin:4px 0 0; color:#6f7c91; font-size:11px; }
+.reception-schedule-session-list footer { display:flex; gap:12px; margin-top:9px; color:#718096; font-size:10px; }.reception-schedule-session-list footer span { display:flex; align-items:center; gap:4px; }
+.reception-schedule-review { display:flex; align-items:center; justify-content:center; gap:4px; border:0; border-left:1px solid #e7ecf3; color:#9a690d; background:#fffaf0; font-size:10px; font-weight:800; }
+.reception-schedule-summary { overflow:hidden; }
+.reception-schedule-summary>div { display:flex; align-items:center; gap:10px; padding:15px; border-bottom:1px solid #e8edf4; color:var(--rc-accent); }
+.reception-schedule-summary>div span { min-width:0; }.reception-schedule-summary small,.reception-schedule-summary strong { display:block; }.reception-schedule-summary small { font-size:9px; font-weight:850; letter-spacing:.8px; }.reception-schedule-summary strong { margin-top:3px; color:var(--rc-ink); font-size:14px; }
+.reception-schedule-summary>section { display:grid; grid-template-columns:repeat(3,1fr); padding:14px 8px; }
+.reception-schedule-summary>section>span { min-width:0; padding:0 7px; border-right:1px solid #e5eaf2; text-align:center; }.reception-schedule-summary>section>span:last-child { border-right:0; }
+.reception-schedule-summary>section strong { font-size:18px; }.reception-schedule-summary>section small { margin-top:4px; color:#8290a4; font-size:9px; letter-spacing:0; }
+
+.reception-active-session { overflow:hidden; }
+.reception-active-session-actions { display:flex; gap:7px; }
+.reception-active-session-actions button { min-height:33px; display:flex; align-items:center; gap:5px; padding:0 10px; border:1px solid #b9cef3; border-radius:7px; color:#1557d5; background:#edf3ff; font-size:11px; font-weight:800; }
+.reception-active-session-actions button:last-child { border-color:#b9ddd8; color:#087e74; background:#effaf8; }
+.reception-active-session-actions button:disabled { opacity:.55; cursor:not-allowed; }
+.reception-active-session-meta { display:flex; flex-wrap:wrap; gap:16px; padding:11px 18px; border-bottom:1px solid #e8edf4; color:#69778c; font-size:11px; }
+.reception-active-session-meta span { display:flex; align-items:center; gap:5px; }
+.reception-active-session>.reception-empty { min-height:210px; }
+
+.reception-add-member-dialog { width:min(560px,100%); }
+.reception-add-member-class { display:grid; grid-template-columns:38px minmax(0,1fr) auto; align-items:center; gap:10px; margin-bottom:14px; padding:11px; border:1px solid #dce6f5; border-radius:9px; background:#f5f8ff; }
+.reception-add-member-class>span { width:38px; height:38px; display:grid; place-items:center; border-radius:8px; color:#2363dc; background:#e5eeff; }
+.reception-add-member-class small,.reception-add-member-class strong { display:block; }.reception-add-member-class small { color:#2363dc; font-size:9px; font-weight:850; letter-spacing:.8px; }.reception-add-member-class strong { margin-top:3px; font-size:13px; }.reception-add-member-class>b { color:#2363dc; font-size:12px; }
+.reception-add-member-field { display:grid; gap:7px; margin-top:12px; color:#66748a; font-size:12px; font-weight:750; }
+.reception-add-member-field select,.reception-add-member-field input { width:100%; height:41px; padding:0 11px; border:1px solid #d9e1ed; border-radius:8px; outline:0; color:var(--rc-ink); background:#f9fbfe; font:650 13px 'Be Vietnam Pro',sans-serif; }
+.reception-add-member-success { display:grid; place-items:center; padding:34px 24px; text-align:center; }.reception-add-member-success>span { width:54px; height:54px; display:grid; place-items:center; border-radius:15px; color:#087e74; background:#ddf7f3; }.reception-add-member-success h3 { margin:13px 0 0; font-size:17px; }.reception-add-member-success p { margin:6px 0 17px; color:#68758a; font-size:12px; }.reception-add-member-success button { min-height:38px; padding:0 18px; border:0; border-radius:8px; color:#fff; background:var(--rc-accent); font-size:12px; font-weight:800; }
+
+[data-theme='dark'] :is(.reception-schedule-flow,.reception-schedule-classes,.reception-week-calendar,.reception-schedule-agenda,.reception-schedule-summary,.reception-active-session) { border-color:var(--theme-border); background:var(--theme-surface); }
+[data-theme='dark'] :is(.reception-schedule-flow select,.reception-week-calendar>button,.reception-schedule-toolbar button,.reception-add-member-field select,.reception-add-member-field input) { color:var(--theme-text); border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] .reception-schedule-flow-title>span { color:var(--theme-accent); background:var(--theme-blue-bg); }
+[data-theme='dark'] .reception-schedule-class-list article,[data-theme='dark'] .reception-schedule-session-list article { border-color:var(--theme-border); background:var(--theme-raised); }
+[data-theme='dark'] :is(.reception-schedule-classes>.reception-card-head,.reception-schedule-toolbar,.reception-schedule-summary>div,.reception-active-session>.reception-card-head,.reception-active-session-meta) { border-color:var(--theme-border); }
+[data-theme='dark'] .reception-schedule-review { border-color:var(--theme-border); color:var(--theme-gold); background:var(--theme-gold-bg); }
+[data-theme='dark'] .reception-add-member-class { border-color:var(--theme-border); background:var(--theme-raised); }
+
+@media(max-width:1120px) {
+  .reception-schedule-flow { grid-template-columns:1fr 1fr; }
+  .reception-schedule-class-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:900px) {
+  .reception-schedule-layout { grid-template-columns:1fr; }
+  .reception-schedule-summary { order:-1; }
+}
+@media(max-width:700px) {
+  .reception-schedule-flow { grid-template-columns:1fr; }
+  .reception-schedule-class-list { grid-template-columns:1fr; }
+  .reception-week-calendar { display:block; overflow:hidden; }
+  .reception-week-calendar>button { display:none; }
+  .reception-week-calendar>div { grid-template-columns:repeat(7,58px); overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+  .reception-schedule-toolbar { align-items:stretch; flex-direction:column; }
+  .reception-schedule-toolbar>div:last-child { justify-content:flex-start; overflow-x:auto; flex-wrap:nowrap; }
+  .reception-schedule-toolbar button { min-width:max-content; }
+  .reception-schedule-session-list article { grid-template-columns:1fr; }
+  .reception-schedule-review { min-height:34px; border-top:1px solid #e7ecf3; border-left:0; }
+  .reception-active-session>.reception-card-head { align-items:flex-start; flex-direction:column; }
+}
+@media(max-width:520px) {
+  .reception-schedule-session-list article>button:first-child { grid-template-columns:62px minmax(0,1fr); padding:11px; }
+  .reception-active-session-actions { width:100%; }
+  .reception-active-session-actions button { flex:1; justify-content:center; }
+}
