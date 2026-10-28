@@ -61,11 +61,11 @@ import { getMembershipPackages } from '../../services/membershipPackageService'
 import {
   cancelPendingSubscription,
   confirmSubscriptionPayment,
-  createReceptionistMemberSubscription,
   getReceptionistMemberSubscriptions,
 } from '../../services/memberSubscriptionService'
 import { createPayment } from '../../services/paymentService'
-import { hasActiveMembership } from '../../utils/memberClasses'
+import { subscriptionPackageReason, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
+import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import {
   getAllSupportTickets,
   getTicketErrorMessage,
@@ -159,16 +159,15 @@ export default function FrontDeskOperations() {
   const [subscriptionsMemberId, setSubscriptionsMemberId] = useState('')
   const [subscriptionLoadError, setSubscriptionLoadError] = useState('')
   const subscriptionRequest = useRef(0)
-  const subscriptionSubmitLock = useRef(false)
+  const [purchasePackage, setPurchasePackage] = useState(null)
   const [payModalSubscription, setPayModalSubscription] = useState(null)
   const [payOsData, setPayOsData] = useState(null) // { qrCode, checkoutUrl }
   const subscriptionsReady = Boolean(subMemberId && subscriptionsMemberId === subMemberId && !loadingSubscriptions && !subscriptionLoadError)
-  const activeSubscription = subscriptionsReady ? memberSubscriptions.find(item => hasActiveMembership([item])) : null
-  const subscriptionNotice = activeSubscription
-    ? `Gói tập${activeSubscription.packageName ? ` “${activeSubscription.packageName}”` : ''} của hội viên vẫn còn hiệu lực${activeSubscription.endDate ? ` đến ngày ${formatDate(activeSubscription.endDate)}` : ''}. Chưa thể đăng ký thêm gói tập.`
-    : subscriptionLoadError
+  const selectedSubscriptionPackage = packages.find(item => String(item.id) === String(selectedPackageId))
+  const subscriptionReason = subscriptionsReady && selectedSubscriptionPackage ? subscriptionPackageReason(selectedSubscriptionPackage, memberSubscriptions, packages) : ''
+  const subscriptionNotice = subscriptionReason || (subscriptionLoadError
       ? 'Chưa kiểm tra được hiệu lực gói tập. Vui lòng thử lại trước khi đăng ký.'
-      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : ''
+      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : 'Standard có thể nâng cấp bằng phần chênh lệch; thẻ PT 1-1 được đăng ký độc lập.')
 
   // Tab 4: Class & Attendance states
   const [classView, setClassView] = useState('booking')
@@ -417,35 +416,14 @@ export default function FrontDeskOperations() {
   // Register subscription at counter
   async function handleRegisterSubscription(e) {
     e.preventDefault()
-    if (subscriptionSubmitLock.current || submitting) return
+    if (submitting || purchasePackage) return
     if (!subMemberId || !selectedPackageId) {
       setErrorMessage('Vui lòng chọn hội viên và gói tập.')
       return
     }
-    if (!subscriptionsReady || activeSubscription) return
-
-    subscriptionSubmitLock.current = true
-    setSubmitting(true)
+    if (!subscriptionsReady || subscriptionReason || !selectedSubscriptionPackage) return
     setErrorMessage(null)
-    try {
-      // Recheck immediately before creating: another desk or a payment can
-      // activate a package after this member was selected.
-      const currentSubscriptions = await handleLoadMemberSubscriptions(subMemberId)
-      if (!currentSubscriptions || hasActiveMembership(currentSubscriptions)) return
-      const newSub = await createReceptionistMemberSubscription(
-        Number(subMemberId),
-        Number(selectedPackageId)
-      )
-      setSuccessMessage(`Đã tạo đăng ký gói "${newSub.packageName || ''}" cho hội viên #${subMemberId}!`)
-      await handleLoadMemberSubscriptions(subMemberId)
-      // Open payment confirmation right away
-      setPayModalSubscription(newSub)
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể tạo đăng ký gói.')
-    } finally {
-      subscriptionSubmitLock.current = false
-      setSubmitting(false)
-    }
+    setPurchasePackage(selectedSubscriptionPackage)
   }
 
   // Confirm direct counter payment (Cash / BankTransfer)
@@ -575,6 +553,12 @@ export default function FrontDeskOperations() {
 
   return (
     <div className="fdesk-mgmt">
+      {purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} memberId={Number(subMemberId)} onClose={() => setPurchasePackage(null)} onCreated={async newSub => {
+        setPurchasePackage(null)
+        setSuccessMessage(`Đã tạo đơn gói "${newSub.packageName}". Số tiền cần thu: ${formatVND(newSub.agreedPrice)}.`)
+        await handleLoadMemberSubscriptions(subMemberId)
+        setPayModalSubscription(newSub)
+      }} />}
       {/* Header */}
       <div className="fdesk-header">
         <div>
@@ -1239,7 +1223,7 @@ export default function FrontDeskOperations() {
               <div className="fdesk-form-actions">
                 {subscriptionNotice && (
                   <div id="subscription-registration-notice" className={`fdesk-subscription-notice${subscriptionLoadError ? ' is-error' : ''}`} role={subscriptionLoadError ? 'alert' : 'status'}>
-                    {activeSubscription ? <CheckCircle2 size={18} /> : loadingSubscriptions ? <RefreshCw size={18} className="fdesk-spin" /> : <AlertCircle size={18} />}
+                    {loadingSubscriptions ? <RefreshCw size={18} className="fdesk-spin" /> : <AlertCircle size={18} />}
                     <span>{subscriptionNotice}</span>
                     {subscriptionLoadError && (
                       <button type="button" className="fdesk-btn fdesk-btn-secondary" onClick={() => handleLoadMemberSubscriptions(subMemberId)}>Thử lại</button>
@@ -1249,7 +1233,7 @@ export default function FrontDeskOperations() {
                 <button
                   type="submit"
                   className="fdesk-btn fdesk-btn-primary"
-                  disabled={submitting || !selectedPackageId || !subscriptionsReady || Boolean(activeSubscription)}
+                  disabled={submitting || !selectedPackageId || !subscriptionsReady || Boolean(subscriptionReason)}
                   aria-describedby={subscriptionNotice ? 'subscription-registration-notice' : undefined}
                 >
                   <Plus size={16} />
@@ -1343,7 +1327,7 @@ export default function FrontDeskOperations() {
                               ) : sub.status === 'Expired' ? (
                                 <span className="fdesk-badge inactive">Hết hạn</span>
                               ) : (
-                                <span className="fdesk-badge">{sub.status}</span>
+                                <span className="fdesk-badge">{subscriptionStatusLabel(sub)}</span>
                               )}
                             </td>
                             <td style={{ textAlign: 'right' }}>

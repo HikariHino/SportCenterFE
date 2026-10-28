@@ -123,7 +123,10 @@ export function getAuthDestination(role, from) {
   if (isManagerRole(role)) return '/manager'
   if (role === 'coach') return '/coach'
   if (role === 'receptionist') return '/receptionist'
-  if (role === 'member') return '/member'
+  if (role === 'member') {
+    if (typeof from === 'string' && /^\/payment\/(?:success|cancel)(?:\?[^#]*)?(?:#.*)?$/.test(from)) return from
+    return '/member'
+  }
   return '/'
 }
 

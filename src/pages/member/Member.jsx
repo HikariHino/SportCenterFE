@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
-  Bell, CalendarDays, CheckCircle2, ChevronRight, CreditCard,
+  AlertCircle, Bell, CalendarDays, CheckCircle2, ChevronRight, CreditCard,
   Dumbbell, Headset, LogOut, Menu, QrCode, ReceiptText, ShieldCheck,
   Trophy, UserCheck, X,
 } from 'lucide-react'
@@ -89,9 +89,19 @@ const allNavItems = memberNavSections.flatMap(section => section.items)
 export default function Member() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [activeNav, setActiveNav] = useState('profile')
+  const location = useLocation()
+  const [activeNav, setActiveNav] = useState(() => ['payments', 'subscriptions'].includes(location.state?.activeNav) ? location.state.activeNav : 'profile')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [noticeTone, setNoticeTone] = useState('success')
+
+  useEffect(() => {
+    if (!location.state?.paymentNotice) return
+    setNotice(location.state.paymentNotice)
+    setNoticeTone(location.state.paymentStatus === 'success' ? 'success' : ['pending', 'review'].includes(location.state.paymentStatus) ? 'warning' : 'error')
+    const timer = window.setTimeout(() => setNotice(''), 6000)
+    return () => window.clearTimeout(timer)
+  }, [location.key, location.state?.paymentNotice, location.state?.paymentStatus])
 
   // Quick notification bell dropdown state
   const [notificationOpen, setNotificationOpen] = useState(false)
@@ -105,6 +115,7 @@ export default function Member() {
   const [quickReadError, setQuickReadError] = useState('')
   const [notificationRevision, setNotificationRevision] = useState(0)
   const [scheduleRequest, setScheduleRequest] = useState(null)
+  const [scheduleReviewRequest, setScheduleReviewRequest] = useState(0)
   const notificationRef = useRef(null)
   const quickReadLock = useRef(false)
   const mounted = useRef(true)
@@ -134,6 +145,7 @@ export default function Member() {
   const activeItem = allNavItems.find(item => item.id === activeNav) || allNavItems[0]
 
   const showNotice = (text) => {
+    setNoticeTone('success')
     setNotice(text)
     window.setTimeout(() => setNotice(''), 3000)
   }
@@ -235,8 +247,12 @@ export default function Member() {
 
   const viewUpdatedSchedule = item => {
     refreshNotifications()
-    setScheduleRequest({ sessionId: sessionNotificationId(item), revision: Date.now() })
     setNotificationOpen(false)
+    if (!item.isRead) {
+      setScheduleReviewRequest(value => value + 1)
+      return
+    }
+    setScheduleRequest({ sessionId: sessionNotificationId(item), revision: Date.now() })
     selectNav('classes')
   }
 
@@ -264,7 +280,7 @@ export default function Member() {
   }
 
   return (
-    <MemberScheduleReviewGate key={user?.userId ?? user?.id ?? user?.email} refreshKey={notificationRevision} onConfirmed={refreshNotifications} onLogout={handleLogout}>
+    <MemberScheduleReviewGate key={user?.userId ?? user?.id ?? user?.email} refreshKey={notificationRevision} reopenRequest={scheduleReviewRequest} onConfirmed={refreshNotifications}>
     <div className="member-page member-dashboard">
       {/* Sidebar role Member */}
       <aside className={`member-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
@@ -411,8 +427,8 @@ export default function Member() {
 
         <main className="member-main-content">
           {notice && (
-            <div className="member-toast" role="status">
-              <CheckCircle2 size={18} />
+            <div className="member-toast" data-tone={noticeTone} role="status">
+              {noticeTone === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
               {notice}
             </div>
           )}

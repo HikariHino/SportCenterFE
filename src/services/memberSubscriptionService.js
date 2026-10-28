@@ -22,6 +22,22 @@ export async function createMemberSubscription(packageId) {
   return unwrap(response.data, 'Không thể đăng ký gói hội viên.')
 }
 
+/** GET /api/member-subscriptions/upgrade-preview */
+export async function getSubscriptionUpgradePreview(targetPackageId, memberId) {
+  const response = await api.get('/member-subscriptions/upgrade-preview', {
+    params: { targetPackageId, ...(memberId == null ? {} : { memberId }) },
+  })
+  const preview = unwrap(response.data, 'Không thể xem trước thông tin nâng cấp gói.')
+  if (!preview || String(preview.targetPackageId) !== String(targetPackageId) || typeof preview.canUpgrade !== 'boolean'
+    || !['targetPackagePrice', 'discountAmount', 'amountToPay', 'currentAgreedPrice'].every(field => preview[field] != null && Number.isFinite(Number(preview[field])) && Number(preview[field]) >= 0)
+    || Number(preview.targetPackagePrice) <= 0 || Number(preview.amountToPay) <= 0
+    || (preview.canUpgrade && (preview.currentSubscriptionId == null || !Number.isFinite(Date.parse(preview.newStartDate))
+      || !Number.isFinite(Date.parse(preview.newEndDate)) || Date.parse(preview.newEndDate) <= Date.parse(preview.newStartDate)))) {
+    throw new Error('Thông tin số tiền nâng cấp không hợp lệ. Vui lòng tải lại trước khi đăng ký.')
+  }
+  return preview
+}
+
 /** POST /api/member-subscriptions/members/{memberId} */
 export async function createReceptionistMemberSubscription(memberId, packageId) {
   const response = await api.post(`/member-subscriptions/members/${memberId}`, { packageId })
@@ -82,6 +98,7 @@ export const confirmReceptionistSubscriptionPayment = confirmSubscriptionPayment
 export default {
   getMySubscriptions,
   createMemberSubscription,
+  getSubscriptionUpgradePreview,
   createReceptionistMemberSubscription,
   getReceptionistMemberSubscriptions,
   getReceptionistSubscriptionById,

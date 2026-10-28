@@ -4,7 +4,8 @@ import {
   CreditCard, ExternalLink, Eye, LoaderCircle, QrCode, ReceiptText, RefreshCw, Search, X, XCircle,
 } from 'lucide-react'
 import QRCode from 'qrcode'
-import { getMyPayments, syncPayment, cancelPayment } from '../../services/paymentService'
+import { getMyPayments, syncPayment } from '../../services/paymentService'
+import { cancelPaymentAndSubscription } from '../../services/subscriptionCancellationService'
 import { exportInvoicePdf, triggerBlobDownload } from '../../services/reportService'
 import { filterMemberPayments, paymentReceivedAmount, paymentStatus, paymentStatusLabel, paymentSummary } from '../../utils/memberPayments'
 import '../../style/member/PaymentsView.css'
@@ -119,11 +120,17 @@ export function PaymentsView({ showNotice }) {
     if (!cancelling || actionLock.current || loading) return
     actionLock.current = true; setAction({ id: cancelling.id, type: 'cancel' }); setActionError('')
     try {
-      updatePayment(await cancelPayment(cancelling.id))
+      const result = await cancelPaymentAndSubscription(cancelling)
+      updatePayment(result.payment)
       await loadPayments()
+      updatePayment(result.payment)
       setCancelling(null)
-      announce('Đã xử lý yêu cầu hủy thanh toán. Vui lòng kiểm tra trạng thái mới nhất.')
-    } catch (err) { setActionError(errorMessage(err, 'Không thể hủy thanh toán. Vui lòng thử lại.')) }
+      announce(result.subscription ? 'Đã hủy thanh toán và đơn đăng ký gói.' : 'Đã hủy giao dịch thanh toán.')
+    } catch (err) {
+      await loadPayments()
+      if (err.cancelledPayment) updatePayment(err.cancelledPayment)
+      setActionError(errorMessage(err, 'Không thể hủy thanh toán. Vui lòng thử lại.'))
+    }
     finally { actionLock.current = false; setAction(null) }
   }
   const exportPdf = async payment => {
@@ -180,7 +187,7 @@ export function PaymentsView({ showNotice }) {
     </PaymentDialog>}
 
     {cancelling && <PaymentDialog title="Hủy yêu cầu thanh toán" busy={busy || loading} onClose={() => { setCancelling(null); setActionError('') }} footer={<><button type="button" className="mpay-button" disabled={busy || loading} onClick={() => { setCancelling(null); setActionError('') }}>Giữ giao dịch</button><button type="button" className="mpay-button is-danger" disabled={busy || loading} onClick={confirmCancel}>{action?.type === 'cancel' ? <LoaderCircle className="member-spin" size={16} /> : <XCircle size={16} />}Xác nhận hủy</button></>}>
-      <p>Bạn muốn hủy yêu cầu thanh toán <strong>#PAY-{cancelling.id}</strong> với số tiền <strong>{currency(cancelling.amount)}</strong>?</p><p className="mpay-muted">Chỉ giao dịch đang chờ thanh toán mới có thể yêu cầu hủy. Trạng thái cuối cùng được xác nhận từ hệ thống thanh toán.</p>{actionError && <Message error>{actionError}</Message>}
+      <p>Bạn muốn hủy yêu cầu thanh toán <strong>#PAY-{cancelling.id}</strong> với số tiền <strong>{currency(cancelling.amount)}</strong>?</p><p className="mpay-muted">Khi giao dịch được xác nhận đã hủy, đơn đăng ký gói tương ứng cũng sẽ được hủy. Chỉ áp dụng cho đơn chưa thanh toán; trạng thái cuối cùng được xác nhận từ hệ thống.</p>{actionError && <Message error>{actionError}</Message>}
     </PaymentDialog>}
   </div>
 }

@@ -622,6 +622,8 @@
 }
 
 /* Modal System for Member Portal */
+.member-toast[data-tone='error'] { background: var(--theme-red-bg, #fff0f0); color: var(--theme-red, #b42318); border-color: var(--theme-red, #b42318); }
+.member-toast[data-tone='warning'] { background: var(--theme-gold-bg, #fff7e5); color: var(--theme-gold, #805200); border-color: var(--theme-gold, #805200); }
 .member-modal-overlay {
   position: fixed;
   inset: 0;

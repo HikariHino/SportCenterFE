@@ -33,7 +33,7 @@ export const formatMemberDate = value => {
 
 export const genderLabel = gender => ({ Male: 'Nam', Female: 'Nữ', Other: 'Khác' })[gender] || gender || 'Chưa cập nhật'
 export const attendanceStatusLabel = status => ({ Present: 'Có mặt', Absent: 'Vắng mặt', Excused: 'Có phép' })[status] || status
-export const subscriptionStatusLabel = status => ({ Pending: 'Chờ thanh toán', Active: 'Đang hoạt động', Cancelled: 'Đã hủy', Expired: 'Hết hạn' })[status] || status
+export const subscriptionStatusLabel = status => ({ Pending: 'Chờ thanh toán', Active: 'Đang hoạt động', Cancelled: 'Đã hủy', Expired: 'Hết hạn', Upgraded: 'Đã nâng cấp' })[status] || status
 export const paymentStatusLabel = status => ({ Pending: 'Chờ thanh toán', Completed: 'Thành công', Cancelled: 'Đã hủy', Expired: 'Hết hạn', Failed: 'Thất bại', NeedsReview: 'Cần kiểm tra', Refunded: 'Hoàn tiền' })[status] || status
 
 export const sessionDateTimeFormatter = new Intl.DateTimeFormat('vi-VN', {

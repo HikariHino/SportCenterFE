@@ -5,15 +5,15 @@ import {
   CalendarDays, ArrowRight, Trash2, Ban, ReceiptText,
   Clock, ShieldAlert, ShieldCheck, RefreshCw, LockKeyhole,
 } from 'lucide-react'
-import { getMembershipPackages, getMembershipPackageById } from '../../services/membershipPackageService'
+import { getMembershipPackages, getMembershipPackageById, getPackageErrorMessage } from '../../services/membershipPackageService'
 import {
   getMySubscriptions,
   getSubscriptionById,
-  createMemberSubscription,
-  cancelSubscription,
 } from '../../services/memberSubscriptionService'
 import { createPayment } from '../../services/paymentService'
-import { packageRegistrationReason, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
+import { cancelSubscriptionOrder } from '../../services/subscriptionCancellationService'
+import { currentSubscriptionForPackage, membershipPackageType, membershipPackageTypeLabel, mergeConfirmedSubscriptionCancellations, subscriptionDisplayStatusLabel, subscriptionPackageReason, subscriptionPaymentState, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
+import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import '../../style/member/SubscriptionsView.css'
 import '../../style/member/SubscriptionsLayout.css'
 
@@ -40,6 +40,7 @@ export function SubscriptionsView({ showNotice }) {
   const [error, setError] = useState('')
   const [subscribingId, setSubscribingId] = useState(null)
   const registrationLock = useRef(false)
+  const confirmedCancellations = useRef(new Map())
   const [registrationError, setRegistrationError] = useState('')
   const [tab, setTab] = useState('mine')
   const [now, setNow] = useState(Date.now)
@@ -47,6 +48,8 @@ export function SubscriptionsView({ showNotice }) {
   // Bộ lọc & tìm kiếm danh mục gói tập mở bán
   const [packageSearch, setPackageSearch] = useState('')
   const [packageFilter, setPackageFilter] = useState('all')
+  const [packageTypeFilter, setPackageTypeFilter] = useState('all')
+  const [purchasePackage, setPurchasePackage] = useState(null)
 
   // Bộ lọc & tìm kiếm danh sách gói cá nhân
   const [subSearch, setSubSearch] = useState('')
@@ -66,6 +69,8 @@ export function SubscriptionsView({ showNotice }) {
   const [cancellingSub, setCancellingSub] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
 
+  const applySubscriptionData = items => setSubscriptions(mergeConfirmedSubscriptionCancellations(items, confirmedCancellations.current))
+
   const loadData = async () => {
     setLoading(true)
     setError('')
@@ -76,7 +81,7 @@ export function SubscriptionsView({ showNotice }) {
         getMySubscriptions(),
       ])
       setPackages(Array.isArray(pkgs) ? pkgs : [])
-      setSubscriptions(Array.isArray(subs) ? subs : [])
+      applySubscriptionData(Array.isArray(subs) ? subs : [])
     } catch (err) {
       setError(err.message || 'Không thể tải danh sách gói tập.')
     } finally {
@@ -106,34 +111,31 @@ export function SubscriptionsView({ showNotice }) {
     }
   }
 
-  // Tự đăng ký gói tập mới (POST /api/member-subscriptions)
-  const handleRegister = async (pkg) => {
+  const handleRegister = (pkg) => {
     if (registrationLock.current || loading) return
-    const reason = registrationReason || packageRegistrationReason(pkg)
+    const reason = packageReason(pkg)
     if (reason) { setRegistrationError(reason); return }
+    setRegistrationError('')
+    setViewingPackage(null)
+    setPurchasePackage(pkg)
+  }
+
+  const handlePurchaseCreated = async (sub, purchase) => {
+    setPurchasePackage(null)
     registrationLock.current = true
-    setSubscribingId(pkg.id)
+    setSubscribingId(sub.packageId)
     setRegistrationError('')
     try {
-      const latest = await getMySubscriptions()
-      setSubscriptions(latest)
-      const freshReason = subscriptionRegistrationReason(latest)
-      if (freshReason) { setRegistrationError(freshReason); return }
-      const sub = await createMemberSubscription(pkg.id)
-      if (!sub?.id) { setError('Chưa xác nhận được thông tin đơn đăng ký. Vui lòng làm mới trước khi thử lại.'); return }
-      const created = { ...pkg, ...sub, status: sub.status || 'Pending' }
-      if (viewingPackage) {
-        setViewingPackage(null)
-      }
+      const created = { ...purchase.pkg, ...sub, status: sub.status || 'Pending', upgradePreview: purchase.preview.canUpgrade ? purchase.preview : null }
       setRegistrationSuccessSub(created)
       setSubscriptions(previous => [created, ...previous.filter(item => String(item.id) !== String(created.id))])
       setTab('mine')
       if (showNotice) {
-        showNotice(`Đăng ký gói "${pkg.packageName}" thành công! Trạng thái: Chờ thanh toán.`)
+        showNotice(`Đã tạo đơn ${purchase.preview.canUpgrade ? 'nâng cấp' : 'đăng ký'} gói "${created.packageName}". Số tiền cần thanh toán: ${formatCurrency(created.agreedPrice)}.`)
       }
       try {
         const updated = await getMySubscriptions()
-        setSubscriptions(updated.some(item => String(item.id) === String(created.id)) ? updated : [created, ...updated])
+        applySubscriptionData(updated.some(item => String(item.id) === String(created.id)) ? updated : [created, ...updated])
       }
       catch { setError('Đơn đã được tạo nhưng chưa thể tải lại danh sách. Vui lòng làm mới để đồng bộ.') }
     } catch (err) {
@@ -151,7 +153,7 @@ export function SubscriptionsView({ showNotice }) {
     try {
       const detail = await getSubscriptionById(sub.id)
       if (detail) {
-        setViewingSub(detail)
+        setViewingSub(mergeConfirmedSubscriptionCancellations([detail], confirmedCancellations.current)[0])
       }
     } catch (err) {
       console.warn('Lỗi khi tải chi tiết đơn đăng ký:', err)
@@ -172,7 +174,9 @@ export function SubscriptionsView({ showNotice }) {
     registrationLock.current = true
     setCancelLoading(true)
     try {
-      await cancelSubscription(cancellingSub.id)
+      const cancelled = await cancelSubscriptionOrder(cancellingSub.id)
+      confirmedCancellations.current.set(String(cancelled.id), cancelled)
+      setSubscriptions(previous => previous.map(item => String(item.id) === String(cancelled.id) ? { ...item, ...cancelled } : item))
       if (showNotice) {
         showNotice(`Đã hủy đơn đăng ký gói #${cancellingSub.id} thành công!`)
       }
@@ -182,10 +186,11 @@ export function SubscriptionsView({ showNotice }) {
       }
       setCancellingSub(null)
       // Tải lại danh sách đăng ký
-      const updatedSubs = await getMySubscriptions()
-      setSubscriptions(Array.isArray(updatedSubs) ? updatedSubs : [])
+      try { applySubscriptionData(await getMySubscriptions()) }
+      catch { setError('Đơn đã được hủy thành công nhưng chưa tải lại được danh sách. Vui lòng làm mới để đồng bộ.') }
     } catch (err) {
-      alert('Không thể hủy đơn đăng ký: ' + (err.message || 'Lỗi hệ thống.'))
+      setRegistrationError(getPackageErrorMessage(err, 'Không thể hủy đơn đăng ký.'))
+      try { applySubscriptionData(await getMySubscriptions()) } catch { /* Preserve the last confirmed state. */ }
     } finally {
       registrationLock.current = false
       setCancelLoading(false)
@@ -216,6 +221,8 @@ export function SubscriptionsView({ showNotice }) {
 
     if (!matchesSearch) return false
 
+    if (packageTypeFilter !== 'all' && membershipPackageType(pkg) !== packageTypeFilter) return false
+
     const days = Number(pkg.durationInDays || 0)
     const nameLower = (pkg.packageName || '').toLowerCase()
     const isVip = nameLower.includes('vip') || nameLower.includes('diamond') || nameLower.includes('platinum')
@@ -241,17 +248,22 @@ export function SubscriptionsView({ showNotice }) {
     if (subFilter === 'pending') return status === 'pending'
     if (subFilter === 'expired') return status === 'expired'
     if (subFilter === 'cancelled') return status === 'cancelled'
+    if (subFilter === 'upgraded') return status === 'upgraded'
+    if (subFilter === 'paymentcancelled') return status === 'pending' && subscriptionPaymentState(sub) === 'cancelled'
 
     return true
   })
 
-  const activeSub = subscriptions.find(s => subscriptionStatus(s, now) === 'active')
+  const activeSubscriptions = subscriptions.filter(s => subscriptionStatus(s, now) === 'active')
   const totalSubsCount = subscriptions.length
   const activeSubsCount = subscriptions.filter(s => subscriptionStatus(s, now) === 'active').length
   const pendingSubsCount = subscriptions.filter(s => subscriptionStatus(s, now) === 'pending').length
-  const closedSubsCount = subscriptions.filter(s => ['expired', 'cancelled'].includes(subscriptionStatus(s, now))).length
+  const closedSubsCount = subscriptions.filter(s => ['expired', 'cancelled', 'upgraded'].includes(subscriptionStatus(s, now))).length
   const registrationReason = error ? 'Chưa thể kiểm tra gói đã đăng ký. Vui lòng làm mới trước khi đăng ký gói mới.' : subscriptionRegistrationReason(subscriptions, now)
   const registrationDisabled = loading || Boolean(registrationReason) || subscribingId !== null || cancelLoading
+  const packageReason = pkg => registrationReason || subscriptionPackageReason(pkg, subscriptions, packages, now)
+  const isUpgradePackage = pkg => membershipPackageType(pkg) === 'Standard' && Boolean(currentSubscriptionForPackage(pkg, subscriptions, packages, now))
+  const packageTypeLabel = sub => membershipPackageTypeLabel({ ...sub, ...packages.find(pkg => String(pkg.id) === String(sub.packageId)) })
 
   if (loading) {
     return (
@@ -271,16 +283,16 @@ export function SubscriptionsView({ showNotice }) {
       {error && <div className="member-sub-message is-error" role="alert"><AlertCircle size={18} /><p>{error}</p></div>}
       {registrationError && !viewingPackage && <div className="member-sub-message is-error" role="alert"><AlertCircle size={18} /><p>{registrationError}</p></div>}
 
-      {activeSub ? <article className="member-sub-current" aria-labelledby="member-current-package">
+      {activeSubscriptions.length > 0 ? <section className="member-sub-active-packages" aria-label="Các thẻ đang sử dụng">{activeSubscriptions.map(activeSub => <article key={activeSub.id} className="member-sub-current" aria-labelledby={`member-current-package-${activeSub.id}`}>
         <div className="member-sub-current-main">
-          <div className="member-sub-current-heading"><span className="member-sub-card-icon"><ShieldCheck size={24} /></span><div><div className="member-sub-current-meta"><span className="member-sub-status" data-status="active"><span />Đang hiệu lực</span><span>#SUB-{activeSub.id}</span></div><h3 id="member-current-package">{activeSub.packageName}</h3><p>Gói tập hiện tại của bạn</p></div></div>
-          <dl className="member-sub-current-facts"><div><dt>Ngày bắt đầu</dt><dd>{formatDate(activeSub.startDate)}</dd></div><div><dt>Thời hạn</dt><dd>{activeSub.durationInDays ?? '—'} ngày</dd></div><div><dt>Giá đăng ký</dt><dd>{formatCurrency(activeSub.agreedPrice ?? activeSub.price)}</dd></div></dl>
+          <div className="member-sub-current-heading"><span className="member-sub-card-icon"><ShieldCheck size={24} /></span><div><div className="member-sub-current-meta"><span className="member-sub-status" data-status="active"><span />Đang hiệu lực</span><span>{packageTypeLabel(activeSub)}</span><span>#SUB-{activeSub.id}</span></div><h3 id={`member-current-package-${activeSub.id}`}>{activeSub.packageName}</h3><p>Thẻ đang sử dụng · Standard và PT 1-1 hoạt động độc lập</p></div></div>
+          <dl className="member-sub-current-facts"><div><dt>Ngày bắt đầu</dt><dd>{formatDate(activeSub.startDate)}</dd></div><div><dt>Thời hạn</dt><dd>{activeSub.durationInDays ?? '—'} ngày</dd></div><div><dt>Số tiền đã thanh toán</dt><dd>{formatCurrency(activeSub.agreedPrice ?? activeSub.price)}</dd></div></dl>
         </div>
-        <div className="member-sub-current-aside"><span>Ngày hết hạn</span><strong>{formatDate(activeSub.endDate)}</strong><button type="button" className="member-button" onClick={() => handleOpenSubDetail(activeSub)}><Eye size={15} />Xem chi tiết</button></div>
-      </article> : <div className="member-sub-welcome"><span className="member-sub-card-icon"><CreditCard size={25} /></span><div><h3>{pendingSubsCount ? 'Bạn có đơn đang chờ thanh toán' : 'Sẵn sàng cho hành trình tập luyện'}</h3><p>{pendingSubsCount ? 'Thanh toán đơn đã đăng ký để kích hoạt gói và bắt đầu sử dụng.' : 'Khám phá danh mục và chọn gói tập phù hợp với lịch trình của bạn.'}</p></div><button type="button" className="member-button" onClick={() => setTab(pendingSubsCount ? 'mine' : 'catalog')}>{pendingSubsCount ? 'Xem đơn của tôi' : 'Khám phá gói tập'}<ArrowRight size={16} /></button></div>}
+        <div className="member-sub-current-aside"><span>Ngày hết hạn</span><strong>{formatDate(activeSub.endDate)}</strong><button type="button" className="member-button" onClick={() => handleOpenSubDetail(activeSub)}><Eye size={15} />Xem chi tiết</button>{packageTypeLabel(activeSub) === 'Standard' && <button type="button" className="member-btn-checkout" onClick={() => { setPackageTypeFilter('Standard'); setTab('catalog') }}><Sparkles size={15} />Nâng cấp gói</button>}</div>
+      </article>)}</section> : <div className="member-sub-welcome"><span className="member-sub-card-icon"><CreditCard size={25} /></span><div><h3>{pendingSubsCount ? 'Bạn có đơn đang chờ thanh toán' : 'Sẵn sàng cho hành trình tập luyện'}</h3><p>{pendingSubsCount ? 'Thanh toán đơn đã đăng ký để kích hoạt gói và bắt đầu sử dụng.' : 'Khám phá danh mục và chọn gói tập phù hợp với lịch trình của bạn.'}</p></div><button type="button" className="member-button" onClick={() => setTab(pendingSubsCount ? 'mine' : 'catalog')}>{pendingSubsCount ? 'Xem đơn của tôi' : 'Khám phá gói tập'}<ArrowRight size={16} /></button></div>}
 
       <div className="member-sub-stats" aria-label="Tổng quan gói tập">
-        {[['Tổng đơn đăng ký', totalSubsCount, 'all'], ['Đang hiệu lực', activeSubsCount, 'active'], ['Chờ thanh toán', pendingSubsCount, 'pending'], ['Hết hạn / Đã hủy', closedSubsCount, 'closed']].map(([label, count, tone]) => <div key={tone} data-tone={tone}><span>{label}</span><strong>{count}</strong></div>)}
+        {[['Tổng đơn đăng ký', totalSubsCount, 'all'], ['Đang hiệu lực', activeSubsCount, 'active'], ['Chờ thanh toán', pendingSubsCount, 'pending'], ['Đã kết thúc / Nâng cấp', closedSubsCount, 'closed']].map(([label, count, tone]) => <div key={tone} data-tone={tone}><span>{label}</span><strong>{count}</strong></div>)}
       </div>
       <div className="member-sub-tabs" role="group" aria-label="Nội dung gói tập">
         <button type="button" aria-pressed={tab === 'mine'} onClick={() => setTab('mine')}><CreditCard size={17} />Gói của tôi<span>{subscriptions.length}</span></button>
@@ -291,34 +303,40 @@ export function SubscriptionsView({ showNotice }) {
         <div className="member-sub-section-heading"><div><h3 id="member-my-subscriptions">Đơn đăng ký của tôi</h3><p>Tra cứu trạng thái, thanh toán hoặc hủy đơn chưa thanh toán.</p></div><span>{filteredSubscriptions.length} đơn</span></div>
         <div className="member-sub-toolbar">
           <label className="member-sub-search"><Search size={17} aria-hidden="true" /><input type="search" maxLength={200} value={subSearch} onChange={event => setSubSearch(event.target.value)} placeholder="Tìm tên gói hoặc mã #SUB..." aria-label="Tìm đơn đăng ký" /></label>
-          <label className="member-sub-select"><span>Trạng thái</span><select value={subFilter} onChange={event => setSubFilter(event.target.value)}><option value="all">Tất cả trạng thái</option><option value="active">Đang hiệu lực</option><option value="pending">Chờ thanh toán</option><option value="expired">Đã hết hạn</option><option value="cancelled">Đã hủy</option></select></label>
+          <label className="member-sub-select"><span>Trạng thái</span><select value={subFilter} onChange={event => setSubFilter(event.target.value)}><option value="all">Tất cả trạng thái</option><option value="active">Đang hiệu lực</option><option value="pending">Chờ thanh toán</option><option value="expired">Đã hết hạn</option><option value="cancelled">Đã hủy đơn</option><option value="paymentcancelled">Đã hủy thanh toán</option><option value="upgraded">Đã nâng cấp</option></select></label>
         </div>
         {filteredSubscriptions.length ? <ul className="member-sub-list">{filteredSubscriptions.map(item => <li key={item.id}>
-          <div className="member-sub-list-heading"><div><span className="member-sub-code">#SUB-{item.id}</span><h4>{item.packageName}</h4></div><span className="member-sub-status" data-status={subscriptionStatus(item, now)}><span />{subscriptionStatusLabel(item, now)}</span></div>
-          <dl className="member-sub-list-facts"><div><dt>Giá đăng ký</dt><dd>{formatCurrency(item.agreedPrice ?? item.price)}</dd></div><div><dt>Thời hạn</dt><dd>{item.durationInDays ?? '—'} ngày</dd></div><div><dt>Hiệu lực</dt><dd>{formatDate(item.startDate)} – {formatDate(item.endDate)}</dd></div></dl>
+          <div className="member-sub-list-heading"><div><span className="member-sub-code">#SUB-{item.id}</span><h4>{item.packageName}</h4></div><span className="member-sub-status" data-status={subscriptionStatus(item, now)} data-payment-status={subscriptionPaymentState(item)}><span />{subscriptionDisplayStatusLabel(item, now)}</span></div>
+          <dl className="member-sub-list-facts"><div><dt>Số tiền của đơn</dt><dd>{formatCurrency(item.agreedPrice ?? item.price)}</dd></div><div><dt>Thời hạn</dt><dd>{item.durationInDays ?? '—'} ngày · {packageTypeLabel(item)}</dd></div><div><dt>Hiệu lực</dt><dd>{formatDate(item.startDate)} – {formatDate(item.endDate)}</dd></div></dl>
           <div className="member-sub-actions">
             <button type="button" className="member-button" onClick={() => handleOpenSubDetail(item)}><Eye size={15} />Chi tiết</button>
-            {subscriptionStatus(item, now) === 'pending' && <><button type="button" className="member-btn-checkout" disabled={payingSubId !== null || cancelLoading} onClick={() => handlePayOSCheckout(item.id)}>{payingSubId === item.id ? <LoaderCircle size={15} className="member-spin" /> : <CreditCard size={15} />}Thanh toán</button><button type="button" className="member-button member-button--danger" disabled={cancelLoading || payingSubId !== null} onClick={() => handlePromptCancelSub(item)}><Trash2 size={15} />Hủy đơn</button></>}
+            {subscriptionStatus(item, now) === 'pending' && <><button type="button" className="member-btn-checkout" disabled={payingSubId !== null || cancelLoading || ['completed', 'needsreview'].includes(subscriptionPaymentState(item))} onClick={() => handlePayOSCheckout(item.id)}>{payingSubId === item.id ? <LoaderCircle size={15} className="member-spin" /> : <CreditCard size={15} />}{['cancelled', 'expired', 'failed'].includes(subscriptionPaymentState(item)) ? 'Thanh toán lại' : 'Thanh toán'}</button><button type="button" className="member-button member-button--danger" disabled={cancelLoading || payingSubId !== null || ['completed', 'needsreview'].includes(subscriptionPaymentState(item))} onClick={() => handlePromptCancelSub(item)}><Trash2 size={15} />{subscriptionPaymentState(item) === 'cancelled' ? 'Hoàn tất hủy đơn' : 'Hủy đơn'}</button></>}
           </div>
+          {subscriptionStatus(item, now) === 'pending' && subscriptionPaymentState(item) === 'cancelled' && <p className="member-sub-payment-note">Giao dịch PayOS đã hủy nhưng đơn gói chưa được hủy. Chọn “Hoàn tất hủy đơn” để đóng đơn, hoặc “Thanh toán lại” nếu bạn vẫn muốn đăng ký.</p>}
         </li>)}</ul> : <div className="member-sub-empty"><Search size={27} /><h4>{subscriptions.length ? 'Không tìm thấy đơn phù hợp' : 'Bạn chưa có đơn đăng ký'}</h4><p>{subscriptions.length ? 'Thử thay đổi từ khóa hoặc trạng thái lọc.' : 'Chọn một gói trong danh mục để bắt đầu đăng ký.'}</p>{!subscriptions.length && <button type="button" className="member-button" onClick={() => setTab('catalog')}>Khám phá gói tập<ArrowRight size={16} /></button>}</div>}
       </section>}
 
       {tab === 'catalog' && <section className="member-sub-catalog" aria-labelledby="member-package-catalog">
         <div className="member-sub-section-heading"><div><h3 id="member-package-catalog">Chọn gói tập phù hợp</h3><p>Xem thông tin và thời hạn trước khi tạo đơn đăng ký.</p></div><span>{filteredPackages.length} gói</span></div>
+        <div className="member-sub-message" role="note"><Info size={18} /><p>Bạn có thể dùng đồng thời thẻ Standard và PT 1-1. Với Standard đang còn hạn, chọn gói có giá cao hơn để xem số tiền chênh lệch và ngày hết hạn mới trước khi nâng cấp.</p></div>
         {registrationReason && <div id="member-sub-registration-lock" className="member-sub-message" role="status"><LockKeyhole size={18} /><p>{registrationReason}</p></div>}
         <div className="member-sub-toolbar">
           <label className="member-sub-search"><Search size={17} aria-hidden="true" /><input type="search" maxLength={200} value={packageSearch} onChange={event => setPackageSearch(event.target.value)} placeholder="Tìm tên gói hoặc từ khóa..." aria-label="Tìm gói tập" /></label>
+          <label className="member-sub-select"><span>Loại thẻ</span><select aria-label="Loại thẻ" value={packageTypeFilter} onChange={event => setPackageTypeFilter(event.target.value)}><option value="all">Tất cả loại thẻ</option><option value="Standard">Standard</option><option value="PT">PT 1-1</option></select></label>
           <label className="member-sub-select"><span>Thời hạn</span><select value={packageFilter} onChange={event => setPackageFilter(event.target.value)}><option value="all">Tất cả gói tập</option><option value="1m">Khoảng 1 tháng</option><option value="3m">Khoảng 3 tháng</option><option value="6m">Khoảng 6 tháng</option><option value="1y">Trên 6 tháng</option><option value="vip">VIP / Cao cấp</option></select></label>
         </div>
         {filteredPackages.length ? <div className="member-sub-package-grid">{filteredPackages.map(pkg => {
-          const reason = registrationReason || packageRegistrationReason(pkg)
+          const reason = packageReason(pkg)
           return <article key={pkg.id} className="member-sub-package" data-package-id={pkg.id}>
-            <div className="member-sub-package-top"><span><CalendarDays size={15} />{pkg.durationInDays} ngày</span>{pkg.isActive === false && <small>Tạm ngừng</small>}</div>
+            <div className="member-sub-package-top"><span><CalendarDays size={15} />{pkg.durationInDays} ngày</span><small>{membershipPackageTypeLabel(pkg)}</small>{pkg.isActive === false && <small>Tạm ngừng</small>}</div>
             <h4>{pkg.packageName}</h4><p className="member-sub-package-description">{pkg.description || 'Liên hệ lễ tân để biết thêm thông tin về gói tập.'}</p><strong className="member-sub-package-price">{formatCurrency(pkg.price)}</strong><small className="member-sub-package-note">Giá cho toàn bộ thời hạn gói</small>
-            <div className="member-sub-package-actions"><button type="button" className="member-button" onClick={() => handleOpenPackageDetail(pkg)}><Eye size={15} />Chi tiết</button><button type="button" className="member-btn-checkout" data-register-package={pkg.id} disabled={registrationDisabled || Boolean(packageRegistrationReason(pkg))} aria-describedby={registrationReason ? 'member-sub-registration-lock' : undefined} title={reason || 'Tạo đơn đăng ký gói tập'} onClick={() => handleRegister(pkg)}>{subscribingId === pkg.id ? <><LoaderCircle className="member-spin" size={16} />Đang tạo đơn...</> : reason ? <><LockKeyhole size={15} />Tạm khóa đăng ký</> : <><CreditCard size={16} />Đăng ký gói</>}</button></div>
+            {reason && <p className="member-sub-package-eligibility">{reason}</p>}
+            <div className="member-sub-package-actions"><button type="button" className="member-button" onClick={() => handleOpenPackageDetail(pkg)}><Eye size={15} />Chi tiết</button><button type="button" className="member-btn-checkout" data-register-package={pkg.id} disabled={registrationDisabled || Boolean(reason)} aria-describedby={registrationReason ? 'member-sub-registration-lock' : undefined} title={reason || 'Xem trước số tiền đăng ký gói'} onClick={() => handleRegister(pkg)}>{subscribingId === pkg.id ? <><LoaderCircle className="member-spin" size={16} />Đang tạo đơn...</> : reason ? <><LockKeyhole size={15} />Chưa thể đăng ký</> : isUpgradePackage(pkg) ? <><Sparkles size={16} />Nâng cấp gói</> : <><CreditCard size={16} />Đăng ký gói</>}</button></div>
           </article>
         })}</div> : <div className="member-sub-empty"><Search size={28} /><h4>Không tìm thấy gói tập phù hợp</h4><p>Thử thay đổi từ khóa hoặc thời hạn lọc.</p></div>}
       </section>}
+
+      {purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} onClose={() => setPurchasePackage(null)} onCreated={handlePurchaseCreated} />}
 
       {viewingPackage && (
         <div className="member-modal-overlay" onClick={() => setViewingPackage(null)}>
@@ -387,14 +405,14 @@ export function SubscriptionsView({ showNotice }) {
                   <div style={{ background: 'var(--theme-raised, #edf2fa)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12, display: 'flex', gap: 10 }}>
                     <Info size={18} style={{ color: 'var(--theme-accent, #1557d5)', flexShrink: 0, marginTop: 2 }} />
                     <small style={{ color: 'var(--theme-accent, #1557d5)', fontSize: 11, lineHeight: 1.5 }}>
-                      Khi bạn chọn <strong>Đăng ký gói này</strong>, hệ thống sẽ tạo đơn với trạng thái <strong>Chờ thanh toán (Pending)</strong>. Bạn có thể thanh toán trực tuyến ngay qua cổng PayOS hoặc thanh toán tiền mặt tại quầy lễ tân.
+                      Chọn tiếp tục để xem điều kiện, số tiền cần thanh toán và thời hạn được trung tâm xác nhận. Standard có thể nâng cấp bằng phần chênh lệch; thẻ PT 1-1 được đăng ký độc lập.
                     </small>
                   </div>
                 </>
               )}
             </div>
 
-            {(registrationReason || packageRegistrationReason(viewingPackage)) && <div id="member-sub-modal-lock" className="member-sub-message" role="status"><LockKeyhole size={18} /><p>{registrationReason || packageRegistrationReason(viewingPackage)}</p></div>}
+            {packageReason(viewingPackage) && <div id="member-sub-modal-lock" className="member-sub-message" role="status"><LockKeyhole size={18} /><p>{packageReason(viewingPackage)}</p></div>}
             {registrationError && <div className="member-sub-message is-error" role="alert"><AlertCircle size={18} /><p>{registrationError}</p></div>}
             <div className="member-modal-footer">
               <button
@@ -406,16 +424,16 @@ export function SubscriptionsView({ showNotice }) {
               </button>
               <button
                 type="button"
-                disabled={registrationDisabled || packageDetailLoading || Boolean(packageRegistrationReason(viewingPackage))}
+                disabled={registrationDisabled || packageDetailLoading || Boolean(packageReason(viewingPackage))}
                 data-register-package={viewingPackage.id}
-                aria-describedby={registrationReason || packageRegistrationReason(viewingPackage) ? 'member-sub-modal-lock' : undefined}
+                aria-describedby={packageReason(viewingPackage) ? 'member-sub-modal-lock' : undefined}
                 className="member-btn-checkout member-btn-checkout--lg"
                 onClick={() => handleRegister(viewingPackage)}
               >
                 {subscribingId === viewingPackage.id ? (
                   <><LoaderCircle className="member-spin" size={15} /> Đang tạo đơn...</>
                 ) : (
-                  registrationReason || packageRegistrationReason(viewingPackage) ? <><LockKeyhole size={15} /> Tạm khóa đăng ký</> : <><CreditCard size={15} /> Đăng ký gói này</>
+                  packageReason(viewingPackage) ? <><LockKeyhole size={15} /> Chưa thể đăng ký</> : <><CreditCard size={15} /> Xem số tiền & tiếp tục</>
                 )}
               </button>
             </div>
@@ -432,7 +450,7 @@ export function SubscriptionsView({ showNotice }) {
             <div className="member-modal-header" style={{ background: 'var(--theme-green-bg, #e1f6ee)', borderBottom: '1px solid var(--theme-border, #d8e0ed)' }}>
               <h3 style={{ color: 'var(--theme-green, #096445)' }}>
                 <CheckCircle2 size={20} style={{ color: 'var(--theme-green, #096445)' }} />
-                Đăng ký gói thành công!
+                {registrationSuccessSub.upgradePreview ? 'Đã tạo đơn nâng cấp!' : 'Đăng ký gói thành công!'}
               </h3>
               <button
                 type="button"
@@ -463,7 +481,7 @@ export function SubscriptionsView({ showNotice }) {
                   Đơn đăng ký gói của bạn đã được ghi nhận
                 </h4>
                 <p style={{ fontSize: 12, color: 'var(--theme-muted, #536179)', marginTop: 4 }}>
-                  Gói tập đang ở trạng thái <strong>Chờ thanh toán (Pending)</strong>
+                  Gói tập đang ở trạng thái <strong>Chờ thanh toán (Pending)</strong>.{registrationSuccessSub.upgradePreview && ' Gói cũ vẫn có hiệu lực cho đến khi thanh toán nâng cấp thành công.'}
                 </p>
               </div>
 
@@ -565,13 +583,14 @@ export function SubscriptionsView({ showNotice }) {
               ) : (
                 <>
                   {/* Banner trạng thái */}
+                  {subscriptionStatus(viewingSub, now) === 'upgraded' && <div className="member-sub-message" role="status"><Sparkles size={20} /><p>Gói này đã được thay thế sau khi nâng cấp thành công. Thời hạn và quyền sử dụng hiện tại nằm ở gói Standard mới.</p></div>}
                   {subscriptionStatus(viewingSub, now) === 'pending' && (
                     <div style={{ background: 'var(--theme-gold-bg, #fff7e5)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 10, padding: 14, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                       <Clock size={20} style={{ color: 'var(--theme-gold, #805200)', flexShrink: 0, marginTop: 2 }} />
                       <div>
-                        <strong style={{ color: 'var(--theme-gold, #805200)', fontSize: 13 }}>Đơn đăng ký đang chờ thanh toán</strong>
+                        <strong style={{ color: 'var(--theme-gold, #805200)', fontSize: 13 }}>{subscriptionDisplayStatusLabel(viewingSub, now)}</strong>
                         <p style={{ color: 'var(--theme-gold, #805200)', fontSize: 11, margin: '2px 0 0' }}>
-                          Gói tập chưa được kích hoạt. Bạn có thể thanh toán trực tuyến ngay qua cổng PayOS hoặc hủy đơn nếu không còn nhu cầu.
+                          {subscriptionPaymentState(viewingSub) === 'cancelled' ? 'Giao dịch PayOS đã hủy. Chọn Hủy đơn đăng ký này để hoàn tất hủy đơn gói, hoặc thanh toán lại nếu bạn vẫn muốn đăng ký.' : 'Gói tập chưa được kích hoạt. Trạng thái đơn và thanh toán được cập nhật theo xác nhận của hệ thống.'}
                         </p>
                       </div>
                     </div>
@@ -626,7 +645,7 @@ export function SubscriptionsView({ showNotice }) {
                       </strong>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 11 }}>Giá niêm yết / cam kết</small>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 11 }}>Số tiền thanh toán của đơn</small>
                       <strong style={{ display: 'block', fontSize: 15, color: 'var(--theme-green, #096445)', marginTop: 2 }}>
                         {formatCurrency(viewingSub.agreedPrice ?? viewingSub.price)}
                       </strong>
@@ -738,13 +757,14 @@ export function SubscriptionsView({ showNotice }) {
                   <button
                     type="button"
                     className="member-button member-button--danger"
+                    disabled={cancelLoading || ['completed', 'needsreview'].includes(subscriptionPaymentState(viewingSub))}
                     onClick={() => handlePromptCancelSub(viewingSub)}
                   >
                     <Trash2 size={14} /> Hủy đơn đăng ký này
                   </button>
                   <button
                     type="button"
-                    disabled={payingSubId === viewingSub.id}
+                    disabled={payingSubId === viewingSub.id || ['completed', 'needsreview'].includes(subscriptionPaymentState(viewingSub))}
                     className="member-btn-checkout"
                     onClick={() => handlePayOSCheckout(viewingSub.id)}
                   >

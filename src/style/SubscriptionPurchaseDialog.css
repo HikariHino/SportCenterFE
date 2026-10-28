@@ -1,0 +1,27 @@
+.subscription-purchase-dialog { position: fixed; inset: 0; margin: auto; width: min(570px, calc(100% - 24px)); max-height: calc(100dvh - 32px); overflow: auto; box-sizing: border-box; padding: 0; border: 1px solid var(--theme-border); border-radius: 18px; background: var(--theme-surface); color: var(--theme-text); font: 400 13px/1.6 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
+.subscription-purchase-dialog::backdrop { background: #0d14229e; backdrop-filter: blur(4px); }
+.subscription-purchase-dialog header, .subscription-purchase-dialog footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 20px 24px; }
+.subscription-purchase-dialog header { border-bottom: 1px solid var(--theme-border); }
+.subscription-purchase-dialog header p { margin: 0 0 5px; color: var(--theme-accent); font-size: 11px; font-weight: 700; }
+.subscription-purchase-dialog h2 { margin: 0; font-size: 20px; }
+.subscription-purchase-dialog h3 { margin: 0; font-size: 18px; }
+.subscription-purchase-body { display: grid; gap: 16px; padding: 22px 24px; }
+.subscription-purchase-body > p { margin: 0; }
+.subscription-purchase-body [role='status'] { display: flex; gap: 8px; align-items: center; }
+.subscription-purchase-message { color: var(--theme-muted); }
+.subscription-purchase-breakdown { display: grid; gap: 13px; margin: 0; padding: 18px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-bg); }
+.subscription-purchase-breakdown > div { display: flex; justify-content: space-between; gap: 16px; }
+.subscription-purchase-breakdown dt { color: var(--theme-muted); }
+.subscription-purchase-breakdown dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.subscription-purchase-breakdown .subscription-purchase-total { padding-top: 14px; border-top: 1px solid var(--theme-border); }
+.subscription-purchase-total dt { color: var(--theme-text); font-weight: 600; }
+.subscription-purchase-total dd { color: var(--theme-accent); font-size: 21px; }
+.subscription-purchase-note, .subscription-purchase-error { display: flex; align-items: flex-start; gap: 8px; color: var(--theme-muted); font-size: 12px; }
+.subscription-purchase-dialog svg { flex-shrink: 0; }
+.subscription-purchase-error { padding: 12px; border-radius: 8px; background: var(--theme-red-bg, #fff3f2); color: var(--theme-red, #b42318); }
+.subscription-purchase-dialog footer { border-top: 1px solid var(--theme-border); justify-content: flex-end; }
+.subscription-purchase-dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 9px 13px; border: 1px solid var(--theme-border); border-radius: 9px; background: var(--theme-surface); color: var(--theme-text); font: inherit; font-weight: 600; cursor: pointer; }
+.subscription-purchase-dialog button.primary { background: #1557d5; color: #fff; border-color: #1557d5; }
+.subscription-purchase-dialog button:disabled { opacity: .55; cursor: not-allowed; }
+.subscription-purchase-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+@media (max-width: 600px) { .subscription-purchase-dialog header, .subscription-purchase-dialog footer, .subscription-purchase-body { padding: 18px; } .subscription-purchase-breakdown { padding: 14px; } .subscription-purchase-breakdown > div { flex-wrap: wrap; gap: 4px 12px; } .subscription-purchase-breakdown dd { margin-left: auto; } .subscription-purchase-dialog footer button { flex: 1 1 auto; } }

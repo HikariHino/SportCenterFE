@@ -1,4 +1,9 @@
 .member-subscriptions-view { display: grid; gap: 24px; min-width: 0; color: var(--theme-text); container: member-subscriptions / inline-size; }
+.member-sub-active-packages { display: grid; gap: 16px; }
+.member-sub-package-eligibility { margin-top: 12px; color: var(--theme-muted); font-size: 11px; line-height: 1.7; }
+.member-sub-status[data-status='upgraded'] { background: var(--theme-purple-bg, #f0ebff); color: var(--theme-purple, #6042a6); }
+.member-sub-status[data-status='pending'][data-payment-status='cancelled'], .member-sub-status[data-status='pending'][data-payment-status='failed'] { background: var(--theme-red-bg, #fff0f0); color: var(--theme-red, #b42318); }
+.member-sub-payment-note { grid-column: 1 / -1; margin: 0; padding-top: 12px; border-top: 1px solid var(--theme-border); color: var(--theme-muted); font-size: 11px; line-height: 1.8; }
 .member-sub-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid var(--theme-border); }
 .member-sub-page-heading > div { min-width: 0; }
 .member-subscriptions-view .member-sub-page-heading h2 { margin: 6px 0; font-size: 28px; }
