@@ -37,6 +37,19 @@ const getWeekOffsetForDate = value => {
   return Math.round((targetMonday - currentMonday) / (7 * 24 * 60 * 60 * 1000))
 }
 
+const getDayScheduleIndicator = (dateKey, sessions) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const targetDate = new Date(`${dateKey}T00:00:00`)
+  const daysAway = Math.round((targetDate - today) / (24 * 60 * 60 * 1000))
+  if (daysAway < 1) return ''
+
+  const now = new Date()
+  const hasUpcomingSession = sessions.some(session => session.date === dateKey && session.tone === 'next' && new Date(session.startsAt) > now)
+  if (!hasUpcomingSession) return ''
+  return daysAway === 1 ? 'tomorrow' : 'future'
+}
+
 
 const reviewDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -213,7 +226,11 @@ export function ScheduleView({ showNotice, selectedSession, onSelectSession }) {
   return <div className="coach-section-view">
     <section className="coach-calendar-strip coach-card">
       <button type="button" aria-label="Tuần trước" onClick={() => changeWeek(-1)}><ChevronLeft size={18} /></button>
-      <div>{weekDays.map(day => <button type="button" key={day.key} className={selectedDate === day.key ? 'active' : ''} onClick={() => setSelectedDate(day.key)}><span>{day.weekday}</span><strong>{day.date}</strong>{day.today && <i>Hôm nay</i>}</button>)}</div>
+      <div>{weekDays.map(day => {
+        const indicator = getDayScheduleIndicator(day.key, sessions)
+        const indicatorLabel = indicator === 'tomorrow' ? 'Có lịch vào ngày mai' : indicator === 'future' ? 'Có lịch sau hơn một ngày' : ''
+        return <button type="button" key={day.key} className={selectedDate === day.key ? 'active' : ''} onClick={() => setSelectedDate(day.key)}><span>{day.weekday}</span><strong>{day.date}</strong>{day.today && <i>Hôm nay</i>}{indicator && <span className={`coach-calendar-indicator ${indicator}`} aria-label={indicatorLabel} title={indicatorLabel} />}</button>
+      })}</div>
       <button type="button" aria-label="Tuần sau" onClick={() => changeWeek(1)}><ChevronRight size={18} /></button>
     </section>
 
