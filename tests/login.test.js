@@ -25,6 +25,16 @@ const authResponse = {
   refreshTokenKey: 'test-refresh-token',
 }
 
+test('payment callbacks survive sign-in with their order code and cannot redirect to external URLs', () => {
+  for (const path of ['/payment/success?orderCode=15&status=PAID', '/payment/cancel?orderCode=15&cancel=true']) {
+    assert.equal(getAuthDestination('member', path), path)
+  }
+  for (const path of ['https://example.com/payment/success', '//example.com/payment/success', '/payment/success/other', '/manager']) {
+    assert.equal(getAuthDestination('member', path), '/member')
+  }
+  assert.equal(getAuthDestination('coach', '/payment/success?orderCode=15'), '/coach')
+})
+
 test('direct AuthResponse without success logs in, persists the session and selects the member route', () => {
   const data = getLoginData(authResponse)
   const user = saveSession(data, data.token, true)

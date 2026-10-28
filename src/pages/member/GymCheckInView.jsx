@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, ChevronLeft, ChevronRight, History, LoaderCircle, QrCode, RefreshCw } from 'lucide-react'
+import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronLeft, ChevronRight, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
 import QRCode from 'qrcode'
 import { getMyQrCode, getMyGymCheckInHistory, getCheckInErrorMessage } from '../../services/gymCheckInService'
 import '../../style/member/GymCheckInView.css'
@@ -73,7 +73,7 @@ function ErrorState({ message, retry }) {
     <div className="gym-checkin-state gym-checkin-error" role="alert">
       <AlertCircle size={24} />
       <p>{message}</p>
-      <button type="button" className="member-button" onClick={retry}><RefreshCw size={15} /> Thử lại</button>
+      <button type="button" className="gym-button" onClick={retry}><RefreshCw size={15} /> Thử lại</button>
     </div>
   )
 }
@@ -96,106 +96,130 @@ export function GymCheckInView() {
     history.reload()
   }
 
+  const latest = records[0]
+  const completed = records.filter(item => item.checkOutTime).length
+  const historyReady = !history.loading && !history.error
+  const filters = [
+    { value: 'all', label: 'Tất cả', count: records.length },
+    { value: 'ongoing', label: 'Chưa check-out', count: records.length - completed },
+    { value: 'completed', label: 'Đã hoàn tất', count: completed },
+  ]
+
   return (
-    <div className="member-view-stack gym-checkin-view">
-      <div className="member-section-heading">
+    <div className="gym-checkin-view">
+      <header className="gym-page-heading">
         <div>
-          <p className="member-eyebrow"><QrCode size={16} /> THẺ SỐ HỘI VIÊN</p>
+          <p className="member-eyebrow"><ScanLine size={16} /> THẺ SỐ HỘI VIÊN</p>
           <h2>Ra/vào phòng gym</h2>
-          <p className="member-muted">Xuất trình mã QR tại quầy lễ tân khi vào tập và theo dõi các buổi tập của bạn.</p>
+          <p>Thẻ QR cá nhân và lịch sử tập luyện của bạn, ngay tại đây.</p>
         </div>
-      </div>
+        <button type="button" className="gym-button" disabled={qr.loading || history.loading} onClick={() => { qr.reload(); reloadHistory() }}>
+          <RefreshCw size={16} /> Làm mới
+        </button>
+      </header>
 
       <div className="gym-checkin-overview">
-        <section className="member-card gym-checkin-card" aria-labelledby="gym-qr-title" aria-busy={qr.loading}>
-          <div className="gym-checkin-card-heading">
-            <h3 id="gym-qr-title"><QrCode size={19} /> Mã QR của tôi</h3>
-            <button type="button" className="member-button" disabled={qr.loading} onClick={qr.reload}>
-              <RefreshCw size={15} /> Làm mới mã
-            </button>
+        <section className="gym-panel gym-member-card" aria-labelledby="gym-qr-title" aria-busy={qr.loading}>
+          <div className="gym-card-heading">
+            <h3 id="gym-qr-title"><QrCode size={18} /> Thẻ hội viên</h3>
+            <button type="button" className="gym-icon-button" disabled={qr.loading} onClick={qr.reload} aria-label="Làm mới mã QR"><RefreshCw size={16} /></button>
           </div>
-          {qr.loading ? <LoadingState>Đang tải mã QR...</LoadingState>
+          {qr.loading ? <LoadingState>Đang tải thẻ hội viên...</LoadingState>
             : qr.error ? <ErrorState message={qr.error} retry={qr.reload} />
-              : info && (
+              : info && <>
                 <div className="gym-checkin-identity">
-                  <div className="gym-checkin-qr"><img src={info.image} width="256" height="256" alt="Mã QR thẻ số hội viên để lễ tân quét khi vào tập" /></div>
                   <strong className="gym-checkin-name">{info.fullName || 'Hội viên'}</strong>
-                  <p className="member-muted">Mã hội viên: <strong>{info.memberCode || '—'}</strong></p>
-                  <dl className="gym-checkin-details">
-                    <div><dt>Gói tập</dt><dd>{info.packageName || 'Chưa có thông tin'}</dd></div>
-                    <div><dt>Trạng thái gói</dt><dd>{packageLabel(info.packageStatus)}</dd></div>
-                    <div><dt>Ngày hết hạn</dt><dd>{formatDate(info.expireDate, true)}</dd></div>
-                  </dl>
+                  <span className="gym-member-code">{info.memberCode || 'Chưa có mã hội viên'}</span>
+                  <div className="gym-checkin-qr"><img src={info.image} width="256" height="256" alt="Mã QR thẻ hội viên để lễ tân quét khi vào tập" /></div>
+                  <p>Xuất trình mã QR này tại quầy lễ tân.</p>
                 </div>
-              )}
+                <dl className="gym-checkin-details">
+                  <div><dt>Gói tập</dt><dd>{info.packageName || 'Chưa có thông tin'}</dd></div>
+                  <div><dt>Trạng thái</dt><dd><span className="gym-package-status" data-active={String(info.packageStatus).toLowerCase() === 'active'}>{packageLabel(info.packageStatus)}</span></dd></div>
+                  <div><dt>Hết hạn ngày</dt><dd>{formatDate(info.expireDate, true)}</dd></div>
+                </dl>
+              </>}
         </section>
 
-        <aside className="gym-checkin-side">
-          <section className="member-card gym-checkin-card gym-checkin-summary" aria-label="Tổng quan tập luyện">
-            <div><span>Tổng lượt tập đã ghi nhận</span><strong>{history.loading || history.error ? '—' : records.length}</strong></div>
-            <div><span>Lần vào tập gần nhất</span><strong>{history.loading || history.error ? '—' : formatDate(records[0]?.checkInTime)}</strong></div>
+        <div className="gym-checkin-side">
+          <section className="gym-stats" aria-label="Tổng quan tập luyện">
+            {[{ label: 'Tổng lượt tập', value: records.length, icon: History }, { label: 'Đã hoàn tất', value: completed, icon: CheckCircle2 }, { label: 'Chưa check-out', value: records.length - completed, icon: Clock3 }].map(({ label, value, icon: Icon }) =>
+              <div className="gym-panel" key={label}><Icon size={19} /><strong>{historyReady ? value : '—'}</strong><span>{label}</span></div>
+            )}
           </section>
-          <section className="member-card gym-checkin-card gym-checkin-guide">
-            <h3>Sử dụng thẻ số tại phòng gym</h3>
+
+          <section className="gym-panel gym-latest" aria-labelledby="gym-latest-title" aria-busy={history.loading}>
+            <div className="gym-card-heading"><h3 id="gym-latest-title"><Clock3 size={18} /> Lượt tập gần nhất</h3>{historyReady && latest && <SessionStatus item={latest} />}</div>
+            {history.loading ? <LoadingState>Đang tải thông tin lượt tập...</LoadingState>
+              : history.error ? <ErrorState message={history.error} retry={reloadHistory} />
+                : latest ? <>
+                  <div className="gym-latest-date"><strong>{formatDate(latest.checkInTime, true)}</strong><span>Lượt tập #{latest.id}</span></div>
+                  <div className="gym-visit-times">
+                    <VisitTime label="Giờ vào" value={latest.checkInTime} />
+                    <VisitTime label="Giờ ra" value={latest.checkOutTime} outgoing />
+                    <div><span>Thời lượng</span><strong>{duration(latest)}</strong></div>
+                  </div>
+                  {!latest.checkOutTime && <p className="gym-latest-note">Lượt tập này chưa được ghi nhận giờ ra. Khi kết thúc, hãy nhờ lễ tân xác nhận check-out.</p>}
+                </> : <div className="gym-checkin-state"><History size={28} /><p>Chưa có lượt tập nào được ghi nhận.<br />Xuất trình thẻ QR tại lễ tân để bắt đầu buổi tập đầu tiên.</p></div>}
+          </section>
+
+          <aside className="gym-panel gym-checkin-guide" aria-labelledby="gym-guide-title">
+            <h3 id="gym-guide-title"><ScanLine size={18} /> Sử dụng thẻ trong 3 bước</h3>
             <ol>
-              <li>Mở mã QR cá nhân trên ứng dụng khi đến phòng tập.</li>
-              <li>Đưa mã QR cho nhân viên lễ tân quét để ghi nhận lượt vào tập.</li>
-              <li>Khi ra về, nhờ lễ tân ghi nhận check-out để hoàn tất buổi tập.</li>
+              <li><span>1</span><div><strong>Mở thẻ QR</strong><p>Chuẩn bị mã QR cá nhân khi đến phòng tập.</p></div></li>
+              <li><span>2</span><div><strong>Quét mã tại lễ tân</strong><p>Lễ tân quét mã để ghi nhận giờ vào.</p></div></li>
+              <li><span>3</span><div><strong>Xác nhận khi ra về</strong><p>Nhờ lễ tân check-out, sau đó làm mới lịch sử.</p></div></li>
             </ol>
-            <p className="member-muted">Làm mới lịch sử sau khi lễ tân ghi nhận lượt ra/vào để xem thông tin mới nhất.</p>
-          </section>
-        </aside>
+          </aside>
+        </div>
       </div>
 
-      <section className="member-card gym-checkin-history" aria-labelledby="gym-history-title" aria-busy={history.loading}>
-        <div className="gym-checkin-card-heading">
-          <h3 id="gym-history-title"><History size={19} /> Lịch sử tập luyện</h3>
-          <div className="gym-checkin-actions">
-            <label htmlFor="gym-history-filter">Trạng thái</label>
-            <select id="gym-history-filter" value={filter} onChange={event => { setFilter(event.target.value); setPage(1) }}>
-              <option value="all">Tất cả lượt tập</option>
-              <option value="ongoing">Chưa check-out</option>
-              <option value="completed">Đã check-out</option>
-            </select>
-            <button type="button" className="member-button" disabled={history.loading} onClick={reloadHistory}>
-              <RefreshCw size={15} /> Làm mới lịch sử
-            </button>
-          </div>
+      <section className="gym-checkin-history" aria-labelledby="gym-history-title" aria-busy={history.loading}>
+        <div className="gym-history-heading">
+          <div><h3 id="gym-history-title">Lịch sử tập luyện</h3><p>Theo dõi thời gian vào, ra và thông tin từng lượt tập.</p></div>
+          <button type="button" className="gym-button" disabled={history.loading} onClick={reloadHistory}><RefreshCw size={15} /> Làm mới lịch sử</button>
         </div>
-        {history.loading ? <LoadingState>Đang tải lịch sử tập luyện...</LoadingState>
-          : history.error ? <ErrorState message={history.error} retry={reloadHistory} />
-            : filtered.length === 0 ? (
-              <div className="gym-checkin-state" role="status"><History size={30} /><p>{records.length ? 'Không có lượt tập phù hợp với trạng thái đã chọn.' : 'Bạn chưa có lịch sử ra/vào phòng gym.'}</p></div>
-            ) : (
-              <>
-                <div className="gym-checkin-table-scroll" role="region" aria-label="Bảng lịch sử ra/vào phòng gym" tabIndex={0}>
-                  <table>
-                    <thead><tr><th scope="col">Lượt tập</th><th scope="col">Giờ vào</th><th scope="col">Giờ ra</th><th scope="col">Thời lượng</th><th scope="col">Gói tập</th><th scope="col">Nhân viên ghi nhận</th><th scope="col">Ghi chú</th></tr></thead>
-                    <tbody>
-                      {visibleRecords.map(item => (
-                        <tr key={item.id}>
-                          <td><strong>#{item.id}</strong></td>
-                          <td>{formatDate(item.checkInTime)}</td>
-                          <td>{item.checkOutTime ? formatDate(item.checkOutTime) : <span className="gym-checkin-pending">Chưa check-out</span>}</td>
-                          <td>{duration(item)}</td>
-                          <td>{item.packageName || '—'}</td>
-                          <td>{item.checkedByStaffName || '—'}</td>
-                          <td className="gym-checkin-notes">{item.notes || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="gym-checkin-pagination">
-                  <span>{filtered.length} lượt tập · Trang {currentPage}/{totalPages}</span>
-                  {totalPages > 1 && <div>
-                    <button type="button" className="member-button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={15} /> Trang trước</button>
-                    <button type="button" className="member-button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}>Trang sau <ChevronRight size={15} /></button>
-                  </div>}
-                </div>
-              </>
-            )}
+        <div className="gym-history-filters" role="group" aria-label="Lọc lịch sử theo trạng thái">
+          {filters.map(({ value, label, count }) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setPage(1) }}>{label}<span>{historyReady ? count : '—'}</span></button>)}
+        </div>
+        <div className="gym-panel gym-history-content">
+          {history.loading ? <LoadingState>Đang tải lịch sử tập luyện...</LoadingState>
+            : history.error ? <ErrorState message={history.error} retry={reloadHistory} />
+              : filtered.length === 0 ? <div className="gym-checkin-state" role="status"><History size={30} /><strong>{records.length ? 'Chưa có lượt tập phù hợp' : 'Lịch sử tập luyện đang trống'}</strong><p>{records.length ? 'Thử chọn trạng thái khác để xem các lượt tập của bạn.' : 'Các lượt vào và ra sẽ xuất hiện ở đây sau khi lễ tân ghi nhận.'}</p>{filter !== 'all' && <button type="button" className="gym-button" onClick={() => { setFilter('all'); setPage(1) }}>Xem tất cả lượt tập</button>}</div>
+                : <>
+                  <div className="gym-history-labels" aria-hidden="true"><span>Ngày tập</span><span>Giờ vào / Giờ ra</span><span>Thời lượng</span><span>Trạng thái</span></div>
+                  <ol className="gym-history-list" aria-label="Các lượt ra/vào phòng gym">
+                    {visibleRecords.map(item => <li className="gym-history-record" key={item.id}>
+                      <div className="gym-record-main">
+                        <div className="gym-record-date"><strong>{formatDate(item.checkInTime, true)}</strong><span>Lượt tập #{item.id}</span></div>
+                        <div className="gym-record-times"><VisitTime label="Giờ vào" value={item.checkInTime} /><VisitTime label="Giờ ra" value={item.checkOutTime} outgoing /></div>
+                        <div className="gym-record-duration"><span>Thời lượng</span><strong>{duration(item)}</strong></div>
+                        <SessionStatus item={item} />
+                      </div>
+                      <div className="gym-record-meta"><span>Gói tập: <strong>{item.packageName || '—'}</strong></span><span>Nhân viên: <strong>{item.checkedByStaffName || '—'}</strong></span></div>
+                      {item.notes && <p className="gym-record-notes"><span>Ghi chú:</span> {item.notes}</p>}
+                    </li>)}
+                  </ol>
+                  <nav className="gym-checkin-pagination" aria-label="Phân trang lịch sử tập luyện">
+                    <span>Hiển thị {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} / {filtered.length} lượt tập</span>
+                    {totalPages > 1 && <div><span>Trang {currentPage}/{totalPages}</span><button type="button" className="gym-icon-button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} aria-label="Trang trước"><ChevronLeft size={18} /></button><button type="button" className="gym-icon-button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)} aria-label="Trang sau"><ChevronRight size={18} /></button></div>}
+                  </nav>
+                </>}
+        </div>
       </section>
     </div>
   )
+}
+
+function SessionStatus({ item }) {
+  return <span className="gym-session-status" data-completed={Boolean(item.checkOutTime)}>{item.checkOutTime ? <CheckCircle2 size={14} /> : <Clock3 size={14} />}{item.checkOutTime ? 'Đã hoàn tất' : 'Chưa check-out'}</span>
+}
+
+function VisitTime({ label, value, outgoing = false }) {
+  const date = new Date(value)
+  const valid = value && !Number.isNaN(date.getTime())
+  return <div className="gym-visit-time">
+    <span>{outgoing ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}{label}</span>
+    {valid ? <time dateTime={value}><strong>{date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</strong><small>{formatDate(value, true)}</small></time> : <strong className="gym-time-missing">{outgoing ? 'Chưa ghi nhận' : '—'}</strong>}
+  </div>
 }

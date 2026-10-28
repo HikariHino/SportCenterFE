@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bookingUnavailableReason, cancellationDeadline, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions } from '../src/utils/memberClasses.js'
+import { bookingUnavailableReason, cancellationDeadline, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason, selectableMemberSessions } from '../src/utils/memberClasses.js'
 
 const now = Date.parse('2026-10-19T10:00:00+07:00')
 const upcoming = { id: 1, status: 'Confirmed', startsAt: '2026-10-19T14:00:00+07:00', endsAt: '2026-10-19T15:00:00+07:00' }
@@ -51,6 +51,49 @@ test('booking rejects full, cancelled, started and already registered sessions',
   assert.ok(bookingUnavailableReason({ ...session, canRegister: false }, false, now))
 })
 
+test('member booking blocks identical, partial and enclosing overlaps across classes and time zones', () => {
+  const session = { ...upcoming, id: 2, classId: 20, status: 'Scheduled' }
+  const registration = { ...upcoming, sessionId: 1, classId: 10, status: 'Registered', sessionStatus: 'Scheduled' }
+  for (const times of [
+    {},
+    { startsAt: '2026-10-19T13:30:00+07:00', endsAt: '2026-10-19T14:30:00+07:00' },
+    { startsAt: '2026-10-19T14:30:00+07:00', endsAt: '2026-10-19T15:30:00+07:00' },
+    { startsAt: '2026-10-19T13:00:00+07:00', endsAt: '2026-10-19T16:00:00+07:00' },
+    { startsAt: '2026-10-19T14:15:00+07:00', endsAt: '2026-10-19T14:45:00+07:00' },
+    { startsAt: '2026-10-19T07:00:00Z', endsAt: '2026-10-19T08:00:00Z' },
+  ]) assert.match(bookingUnavailableReason(session, false, now, [{ ...registration, ...times }]), /Trùng lịch/)
+})
+
+test('member booking allows adjacent sessions, other dates and cancelled or completed registrations', () => {
+  const session = { ...upcoming, id: 2, status: 'Scheduled' }
+  const registration = { ...upcoming, sessionId: 1, status: 'Registered', sessionStatus: 'Scheduled' }
+  for (const changes of [
+    { startsAt: '2026-10-19T13:00:00+07:00', endsAt: session.startsAt },
+    { startsAt: session.endsAt, endsAt: '2026-10-19T16:00:00+07:00' },
+    { startsAt: '2026-10-20T14:00:00+07:00', endsAt: '2026-10-20T15:00:00+07:00' },
+    { status: ' Cancelled ' }, { status: 'CANCELED' }, { sessionStatus: 'Cancelled' },
+    { status: 'Completed' }, { sessionStatus: 'Completed' },
+  ]) assert.equal(bookingUnavailableReason(session, false, now, [{ ...registration, ...changes }]), '')
+})
+
+test('member booking detects overlaps through Vietnam midnight', () => {
+  const registration = { sessionId: 1, status: 'Confirmed', startsAt: '2026-10-19T23:30:00+07:00', endsAt: '2026-10-20T01:00:00+07:00' }
+  const session = { id: 2, status: 'Scheduled', startsAt: '2026-10-19T17:30:00Z', endsAt: '2026-10-19T19:00:00Z' }
+  assert.match(bookingUnavailableReason(session, false, now, [registration]), /Trùng lịch/)
+  assert.equal(bookingUnavailableReason({ ...session, startsAt: registration.endsAt }, false, now, [registration]), '')
+})
+
+test('select all and manual selection retain only nonoverlapping sessions in selection order', () => {
+  const first = { ...upcoming, status: 'Scheduled' }
+  const overlap = { ...first, id: 2, startsAt: '2026-10-19T14:30:00+07:00', endsAt: '2026-10-19T15:30:00+07:00' }
+  const adjacent = { ...first, id: 3, startsAt: first.endsAt, endsAt: '2026-10-19T16:00:00+07:00' }
+  assert.deepEqual(selectableMemberSessions([first, overlap, adjacent], [], now).map(item => item.id), [1, 3])
+  assert.deepEqual(selectableMemberSessions([overlap, first, adjacent], [], now).map(item => item.id), [2])
+  assert.deepEqual(selectableMemberSessions([first, overlap, adjacent], [{ ...first, sessionId: first.id, status: 'Registered' }], now).map(item => item.id), [3])
+  // The generic availability check still works without a member timetable.
+  assert.equal(bookingUnavailableReason(overlap, false, now), '')
+})
+
 test('cancellation uses the supplied policy including the exact cutoff and zero-hour policy', () => {
   const policy = { ...upcoming, cancellationPolicy: { minimumHoursBeforeStart: 4 } }
   assert.equal(Date.parse(cancellationDeadline(policy)), now)
@@ -69,10 +112,12 @@ test('cancelled sessions and attended registrations cannot be cancelled or check
   }
 })
 
-test('review is available after the end and is blocked for duplicates and absent members', () => {
-  const ended = { ...upcoming, startsAt: '2026-10-19T08:00:00+07:00', endsAt: '2026-10-19T09:00:00+07:00', attendanceStatus: 'Present' }
+test('review requires a completed registration and session with confirmed participation and no previous review', () => {
+  const ended = { ...upcoming, sessionId: 10, status: 'Completed', sessionStatus: 'Completed', startsAt: '2026-10-19T08:00:00+07:00', endsAt: '2026-10-19T09:00:00+07:00', attendanceStatus: 'Present' }
   assert.equal(registrationActions(upcoming, now).review, false)
   assert.equal(registrationActions(ended, now).review, true)
+  assert.equal(registrationActions({ ...ended, attendanceStatus: 'Late' }, now).review, true)
+  assert.equal(registrationActions({ ...ended, status: ' completed ', sessionStatus: ' COMPLETED ', attendanceStatus: ' late ' }, now).review, true)
   for (const overrides of [{ hasReviewed: true }, { review: { rating: 4 } }, { rating: 3 }, { attendanceStatus: 'Absent' }, { status: 'Cancelled' }, { canReview: false }]) {
     assert.equal(registrationActions({ ...ended, ...overrides }, now).review, false)
   }
@@ -83,7 +128,29 @@ test('review is available after the end and is blocked for duplicates and absent
 test('missing or invalid end time does not permit an early review', () => {
   assert.equal(registrationActions({ ...upcoming, endsAt: undefined }, now).review, false)
   assert.equal(registrationActions({ ...upcoming, endsAt: 'invalid' }, now).review, false)
-  assert.equal(registrationActions({ ...upcoming, sessionStatus: 'Completed' }, now).review, true)
+  assert.equal(registrationActions({ ...upcoming, sessionStatus: 'Completed' }, now).review, false)
+})
+
+test('elapsed time, completed status, a check-in timestamp or canReview cannot replace Present or Late attendance', () => {
+  const ended = { ...upcoming, sessionId: 10, status: 'Completed', sessionStatus: 'Completed', endsAt: '2026-10-19T09:00:00+07:00', canReview: true, checkInTime: '2026-10-19T08:00:00+07:00' }
+  for (const attendanceStatus of [undefined, null, '', 'Unknown', 'Absent', 'Excused', 'NoShow', 'CheckedIn', 'Attended']) {
+    const actions = registrationActions({ ...ended, attendanceStatus }, now)
+    assert.equal(actions.review, false)
+    assert.ok(actions.reviewReason)
+  }
+  assert.match(reviewUnavailableReason({ ...ended, attendanceStatus: 'Absent' }, now), /không tham gia/)
+  assert.match(reviewUnavailableReason(ended, now), /Chưa có điểm danh/)
+})
+
+test('recorded participation alone cannot bypass incomplete statuses or an invalid or future ending time', () => {
+  const ended = { id: 1, sessionId: 10, status: 'Completed', sessionStatus: 'Completed', attendanceStatus: 'Present', endsAt: new Date(now).toISOString() }
+  assert.equal(registrationActions(ended, now).review, true)
+  for (const changes of [{ status: 'Registered' }, { sessionStatus: 'Scheduled' }, { sessionStatus: null }, { sessionId: null }, { endsAt: null }, { endsAt: 'invalid' }, { endsAt: new Date(now + 1).toISOString() }]) {
+    assert.equal(registrationActions({ ...ended, ...changes }, now).review, false)
+  }
+  assert.equal(registrationActions({ ...upcoming, attendanceStatus: 'Present' }, now).reviewReason, '')
+  assert.equal(registrationActions({ ...ended, hasReviewed: true }, now).reviewReason, '')
+  assert.equal(registrationActions({ ...ended, sessionStatus: 'Cancelled' }, now).reviewReason, '')
 })
 
 test('actual session DTO capacity fields and invalid start times cannot offer registration', () => {

@@ -8,6 +8,7 @@ import {
   Search, ShieldCheck, TrendingUp, Trophy, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import usePortalNavigation from '../../hooks/usePortalNavigation'
 import StaffManagement from './StaffManagement'
 import ClassManagement from './ClassManagement'
 import RoomManagement from './RoomManagement'
@@ -51,6 +52,7 @@ const managerNavSections = [
 ]
 
 const navigation = managerNavSections.flatMap(section => section.items)
+const managerViewIds = navigation.map(item => item.id)
 
 const money = value =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value) || 0)
@@ -95,7 +97,7 @@ function renderPaymentStatusBadge(status) {
 export default function CenterManager() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [section, setSection] = useState('overview')
+  const [section, setSection] = usePortalNavigation(managerViewIds, 'overview')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Live Dashboard States

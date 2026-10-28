@@ -1,0 +1,78 @@
+.member-profile-view { container: member-profile / inline-size; color: var(--theme-text); --profile-control-border: var(--theme-border); }
+[data-theme='dark'] .member-profile-view { --profile-control-border: #5b6f8c; }
+[data-theme='dark'] .member-profile-view .member-profile-form select { border-color: var(--profile-control-border); }
+.member-profile-view .member-profile-heading { margin-bottom: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--theme-border); }
+.member-profile-view .member-profile-heading h2 { font-size: 28px; margin: 6px 0; }
+.member-profile-heading .member-muted { max-width: 680px; line-height: 1.7; }
+.member-profile-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); align-items: start; gap: 24px; }
+.member-profile-content { display: grid; gap: 28px; min-width: 0; }
+.member-profile-view .member-profile-identity-card { position: sticky; top: 100px; padding: 24px; background: var(--theme-surface); border-color: var(--theme-border); }
+.member-profile-id-meta { justify-content: space-between; gap: 8px; }
+.member-profile-identity-card .member-identity { flex-direction: column; text-align: center; gap: 16px; margin: 28px 0; }
+.member-profile-identity-card .member-avatar--large { width: 76px; height: 76px; border-radius: 22px; font-size: 27px; }
+.member-profile-identity-card .member-identity h1 { font-size: 21px; line-height: 1.5; margin: 0 0 4px; }
+.member-profile-identity-card .member-identity p { font-size: 12px; line-height: 1.7; }
+.member-profile-identity-card .member-identity .member-profile-id-code { color: var(--theme-accent); font-weight: 600; margin-bottom: 8px; }
+.member-profile-identity-card .member-identity-status { justify-content: center; margin-top: 14px; }
+.member-profile-identity-card .member-quick-pass { background: var(--theme-raised); border-color: var(--theme-border); flex-wrap: nowrap; padding: 13px 10px; }
+.member-profile-identity-card .member-quick-pass strong { font-size: 11px; }
+.member-profile-identity-card .member-quick-pass small { font-size: 10px; overflow-wrap: anywhere; }
+.member-profile-identity-card .member-wallet { flex-wrap: wrap; gap: 12px; border-color: var(--theme-border); margin-top: 22px; padding-top: 18px; }
+.member-profile-identity-card .member-wallet strong { font-size: 20px; }
+.member-profile-view :is(.member-profile-personal, .member-profile-password) { padding: 24px; background: var(--theme-surface); border-color: var(--theme-border); border-radius: 16px; }
+.member-profile-panel-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
+.member-profile-panel-icon { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; background: var(--theme-raised); color: var(--theme-accent); }
+.member-profile-view .member-profile-panel-header h3 { margin: 0 0 4px; font-size: 18px; }
+.member-profile-view .member-profile-panel-header p { margin: 0; color: var(--theme-muted); font-size: 12px; line-height: 1.7; }
+.member-profile-view :is(.member-profile-form, .member-password-form) { display: grid; gap: 20px; min-width: 0; }
+.member-profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.member-profile-fields > div, .member-password-form > div { min-width: 0; }
+.member-profile-view :is(.member-profile-form, .member-password-form) label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; line-height: 1.5; }
+.member-profile-view :is(.member-profile-form, .member-password-form) :is(input, select) { box-sizing: border-box; display: block; width: 100%; min-width: 0; min-height: 44px; padding: 11px 13px; border: 1px solid var(--profile-control-border); border-radius: 9px; background: var(--theme-surface); color: var(--theme-text); font: inherit; font-size: 13px; line-height: 1.5; }
+.member-profile-view .member-profile-form input[readonly] { background: var(--theme-bg); color: var(--theme-muted); }
+.member-profile-view input::placeholder { color: var(--theme-muted); opacity: .85; }
+.member-profile-view :is(input, select):disabled { opacity: .65; cursor: wait; }
+.member-profile-form-footer { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid var(--theme-border); }
+.member-profile-view .member-profile-form-footer .member-button { min-height: 44px; padding: 11px 18px; font-size: 12px; border-radius: 9px; }
+.member-profile-security { min-width: 0; }
+.member-profile-security-heading { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+.member-profile-security-heading > svg { color: var(--theme-accent); margin-top: 4px; flex-shrink: 0; }
+.member-profile-view .member-profile-security-heading h3 { font-size: 17px; margin: 0; }
+.member-profile-security-heading p { color: var(--theme-muted); font-size: 12px; margin-top: 3px; }
+.member-profile-security-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
+.member-profile-security .account-email-change { padding: 24px; border-radius: 16px; }
+.member-profile-security .account-email-change header { gap: 12px; margin-bottom: 18px; }
+.member-profile-security .account-email-change header > svg { box-sizing: content-box; padding: 10px; margin-top: 0; width: 20px; height: 20px; border-radius: 12px; background: var(--theme-raised); }
+.member-profile-security .account-email-change h3 { font-size: 18px; margin-bottom: 4px; }
+.member-profile-security .account-email-change header p { margin: 0; line-height: 1.7; }
+.member-profile-security .account-email-change form { gap: 10px; margin-top: 18px; }
+.member-profile-security .account-email-change input { min-height: 44px; border-radius: 9px; border-color: var(--profile-control-border); }
+.member-profile-security .account-email-change footer { margin-top: 10px; padding-top: 20px; border-top: 1px solid var(--theme-border); }
+.member-profile-security .account-email-change button { min-height: 44px; }
+.member-profile-view .member-api-message { margin-bottom: 18px; overflow-wrap: anywhere; }
+.member-profile-view .member-profile-message--success { background: var(--theme-green-bg, #e1f6ee); color: var(--theme-green, #096445); border: 1px solid var(--theme-border); }
+@container member-profile (max-width: 1000px) {
+  .member-profile-layout { grid-template-columns: minmax(0, 1fr); }
+  .member-profile-view .member-profile-identity-card { position: static; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 0 28px; }
+  .member-profile-id-meta { grid-column: 1 / -1; }
+  .member-profile-identity-card .member-identity { grid-row: 2 / 4; flex-direction: row; text-align: left; margin: 22px 0 0; }
+  .member-profile-identity-card .member-identity-status { justify-content: flex-start; }
+  .member-profile-identity-card .member-quick-pass { margin-top: 22px; align-self: start; }
+  .member-profile-identity-card .member-wallet { margin-top: 16px; }
+}
+@container member-profile (max-width: 700px) {
+  .member-profile-security-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container member-profile (max-width: 520px) {
+  .member-profile-view .member-profile-heading h2 { font-size: 24px; }
+  .member-profile-view .member-profile-identity-card { display: flex; padding: 20px; }
+  .member-profile-identity-card .member-identity { flex-direction: row; text-align: left; margin: 24px 0; gap: 14px; }
+  .member-profile-identity-card .member-avatar--large { width: 60px; height: 60px; font-size: 22px; border-radius: 18px; }
+  .member-profile-identity-card .member-identity h1 { font-size: 18px; }
+  .member-profile-identity-card .member-identity-status { justify-content: flex-start; margin-top: 10px; }
+  .member-profile-identity-card .member-quick-pass { margin-top: 0; align-self: stretch; }
+  .member-profile-view :is(.member-profile-personal, .member-profile-password), .member-profile-security .account-email-change { padding: 20px; }
+  .member-profile-fields { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .member-profile-form-footer .member-button { width: 100%; }
+  .member-profile-content { gap: 24px; }
+}

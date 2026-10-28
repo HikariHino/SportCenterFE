@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { getToken, isManagerRole } from './utils/auth'
 
@@ -37,8 +37,9 @@ function ReceptionistRoute() {
 
 function MemberRoute({ children }) {
   const { user } = useAuth()
+  const location = useLocation()
   const isMember = user?.role === 'member' && Boolean(getToken())
-  return isMember ? children : <Navigate to="/login" replace state={{ from: '/member' }} />
+  return isMember ? children : <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}${location.hash}`, message: location.pathname.startsWith('/payment/') ? 'Đăng nhập để kiểm tra kết quả thanh toán và cập nhật gói hội viên.' : undefined }} />
 }
 
 function App() {
@@ -55,7 +56,7 @@ function App() {
           <Route path="/receptionist" element={<ReceptionistRoute />} />
           <Route path="/member" element={<MemberRoute><Member /></MemberRoute>} />
           <Route path="/payment/success" element={<MemberRoute><PaymentResult /></MemberRoute>} />
-          <Route path="/payment/cancel" element={<MemberRoute><PaymentResult cancelled /></MemberRoute>} />
+          <Route path="/payment/cancel" element={<MemberRoute><PaymentResult /></MemberRoute>} />
         </Routes>
       </Suspense>
     </BrowserRouter>

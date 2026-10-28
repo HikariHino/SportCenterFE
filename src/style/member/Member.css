@@ -509,8 +509,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid var(--member-line);
-  background: #fff;
+  border-bottom: 1px solid var(--theme-border, var(--member-line));
+  background: var(--theme-surface, #fff);
+  color: var(--theme-text, var(--member-ink));
   position: sticky;
   top: 0;
   z-index: 25;
@@ -519,6 +520,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 .member-menu-btn {
   display: none;
@@ -534,6 +536,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 .member-topbar-breadcrumb strong {
   color: var(--member-ink);
@@ -544,6 +547,10 @@
   align-items: center;
   gap: 14px;
 }
+.member-topbar-account { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.member-topbar .member-profile-info { display: flex; flex-direction: column; }
+.member-topbar .member-profile-name { font-size: 12px; font-weight: 700; color: var(--theme-text, var(--member-ink)); }
+.member-topbar .member-profile-role { font-size: 9.5px; color: var(--theme-accent, #004ac6); font-weight: 600; }
 
 .member-main-content {
   padding: 28px 32px 64px;
@@ -604,7 +611,19 @@
   }
 }
 
+@media (max-width: 600px) {
+  .member-topbar { gap: 10px; padding-inline: 16px; }
+  .member-topbar-left { flex: 1; gap: 10px; }
+  .member-topbar-breadcrumb > span, .member-topbar-breadcrumb > svg { display: none; }
+  .member-topbar-breadcrumb strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .member-topbar-right { flex-shrink: 0; gap: 10px; }
+  .member-topbar .member-profile-info { display: none; }
+  .member-topbar .member-menu-btn { flex-shrink: 0; }
+}
+
 /* Modal System for Member Portal */
+.member-toast[data-tone='error'] { background: var(--theme-red-bg, #fff0f0); color: var(--theme-red, #b42318); border-color: var(--theme-red, #b42318); }
+.member-toast[data-tone='warning'] { background: var(--theme-gold-bg, #fff7e5); color: var(--theme-gold, #805200); border-color: var(--theme-gold, #805200); }
 .member-modal-overlay {
   position: fixed;
   inset: 0;
