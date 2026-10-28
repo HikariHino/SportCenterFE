@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
   Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
-  ClipboardCheck, LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Trophy, UserRound, Users, X,
+  LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
@@ -14,7 +14,6 @@ const AttendanceView = lazy(() => import('./AttendanceView').then(module => ({ d
 const CoachProfileView = lazy(() => import('./ProfileView').then(module => ({ default: module.CoachProfileView })))
 const CoachRoomsView = lazy(() => import('./RoomsView').then(module => ({ default: module.CoachRoomsView })))
 const OverviewView = lazy(() => import('./OverviewView').then(module => ({ default: module.OverviewView })))
-const ScheduleView = lazy(() => import('./ScheduleView').then(module => ({ default: module.ScheduleView })))
 const StudentsView = lazy(() => import('./StudentsView').then(module => ({ default: module.StudentsView })))
 
 const navigation = [
@@ -22,15 +21,13 @@ const navigation = [
   [CalendarDays, 'Lịch huấn luyện'],
   [DoorOpen, 'Phòng tập'],
   [Users, 'Học viên'],
-  [ClipboardCheck, 'Điểm danh'],
   [UserRound, 'Hồ sơ'],
 ]
 
 const pageMeta = {
-  'Lịch huấn luyện': { eyebrow: 'QUẢN LÝ THỜI GIAN', title: 'Lịch huấn luyện', description: 'Theo dõi và sắp xếp toàn bộ buổi huấn luyện trong tuần.' },
+  'Lịch huấn luyện': { eyebrow: 'LỊCH & CHUYÊN CẦN', title: 'Lịch huấn luyện', description: 'Chọn buổi trên thời khóa biểu để xem học viên và cập nhật điểm danh.' },
   'Phòng tập': { eyebrow: 'CƠ SỞ VẬT CHẤT', title: 'Phòng tập', description: 'Xem danh sách phòng và tình trạng phục vụ huấn luyện.' },
   'Học viên': { eyebrow: 'HỌC VIÊN THEO BUỔI', title: 'Danh sách học viên', description: 'Chọn một buổi huấn luyện để xem đăng ký và trạng thái điểm danh.' },
-  'Điểm danh': { eyebrow: 'CHUYÊN CẦN THEO BUỔI', title: 'Điểm danh học viên', description: 'Chọn buổi huấn luyện và cập nhật trạng thái chuyên cần của từng học viên.' },
   'Hồ sơ': { eyebrow: 'TÀI KHOẢN HUẤN LUYỆN VIÊN', title: 'Hồ sơ cá nhân', description: 'Kiểm tra thông tin tài khoản Coach đang đăng nhập.' },
 }
 
@@ -144,9 +141,15 @@ export default function Coach() {
   }
 
   const selectCoachSession = useCallback(session => {
-    if (!session?.id) return
+    if (!session?.id) {
+      setSelectedCoachSession(null)
+      return
+    }
     setSelectedCoachSession({
       id: String(session.id),
+      classId: session.classId ? String(session.classId) : null,
+      sportId: session.sportId ? String(session.sportId) : null,
+      sportName: session.sportName || null,
       startsAt: session.startsAt || null,
       endsAt: session.endsAt || null,
       className: session.className || session.studentName || 'Buổi huấn luyện',
@@ -168,10 +171,9 @@ export default function Coach() {
   }
 
   const renderActiveView = () => {
-    if (activeNav === 'Lịch huấn luyện') return <ScheduleView showNotice={showNotice} selectedSession={selectedCoachSession} onSelectSession={selectCoachSession} />
+    if (activeNav === 'Lịch huấn luyện') return <AttendanceView query={query} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
     if (activeNav === 'Phòng tập') return <CoachRoomsView />
     if (activeNav === 'Học viên') return <StudentsView query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
-    if (activeNav === 'Điểm danh') return <AttendanceView query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
     if (activeNav === 'Hồ sơ') return <CoachProfileView showNotice={showNotice} />
     return <OverviewView onNavigate={selectNavigation} showNotice={showNotice} />
   }
@@ -206,7 +208,7 @@ export default function Coach() {
       </header>
 
       <div className="coach-main">
-        <section className="coach-page-heading"><div><p><ActiveNavIcon size={16} />{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div>{['Học viên', 'Điểm danh'].includes(activeNav) && <label className="coach-content-search"><Search size={16} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm học viên..." aria-label="Tìm học viên" /></label>}</section>
+        <section className="coach-page-heading"><div><p><ActiveNavIcon size={16} />{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div>{['Học viên', 'Lịch huấn luyện'].includes(activeNav) && <label className="coach-content-search"><Search size={16} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm học viên..." aria-label="Tìm học viên" /></label>}</section>
 
         {notice && <div className="coach-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
         <div className="coach-view-content" key={activeNav}><Suspense fallback={<ViewLoader />}>{renderActiveView()}</Suspense></div>

@@ -76,7 +76,7 @@ export default function WeeklyTimetable({ items, weekStart, onWeekChange, onSele
               const isCancelled = ['cancelled', 'canceled'].includes(String(item.status || item.Status).trim().toLowerCase()) || ['cancelled', 'canceled'].includes(String(item.sessionStatus).trim().toLowerCase())
               const movable = Boolean(onReschedule && !interactionDisabled && !selectionMode && canReschedule(item))
               const selected = selectedIds.has(String(item.id))
-              return <button type="button" className={`member-timetable-session${isCancelled ? ' is-cancelled' : ''}${movable ? ' is-movable' : ''}${selectionMode && selected ? ' is-selected' : ''}${draggedId === item.id ? ' is-dragging' : ''}`} key={item.id} data-session-id={item.id} aria-pressed={selectionMode ? selected : undefined} disabled={selectionMode && (interactionDisabled || !canSelectSession(item, now))} draggable={movable} onDragStart={event => {
+              return <button type="button" className={`member-timetable-session${isCancelled ? ' is-cancelled' : ''}${movable ? ' is-movable' : ''}${selected ? ' is-selected' : ''}${draggedId === item.id ? ' is-dragging' : ''}`} key={item.id} data-session-id={item.id} aria-pressed={selectionMode || selectedSessionIds.length ? selected : undefined} disabled={selectionMode && (interactionDisabled || !canSelectSession(item, now))} draggable={movable} onDragStart={event => {
                 if (!movable) { event.preventDefault(); return }
                 dragged.current = item
                 setDraggedId(item.id)

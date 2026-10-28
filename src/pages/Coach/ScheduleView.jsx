@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Star, Users } from 'lucide-react'
 import { completeCoachSession, getCoachSessionReviews, getMyCoachSessions } from '../../services/coachService'
 import { EmptyState, timeFormatter, ViewLoader } from './CoachViewShared'
+import ScheduleSessionDetail from './ScheduleSessionDetail'
 
 const toDateKey = date => {
   const year = date.getFullYear()
@@ -34,6 +35,19 @@ const getWeekOffsetForDate = value => {
   currentMonday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
   targetMonday.setDate(target.getDate() - ((target.getDay() + 6) % 7))
   return Math.round((targetMonday - currentMonday) / (7 * 24 * 60 * 60 * 1000))
+}
+
+const getDayScheduleIndicator = (dateKey, sessions) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const targetDate = new Date(`${dateKey}T00:00:00`)
+  const daysAway = Math.round((targetDate - today) / (24 * 60 * 60 * 1000))
+  if (daysAway < 1) return ''
+
+  const now = new Date()
+  const hasUpcomingSession = sessions.some(session => session.date === dateKey && session.tone === 'next' && new Date(session.startsAt) > now)
+  if (!hasUpcomingSession) return ''
+  return daysAway === 1 ? 'tomorrow' : 'future'
 }
 
 
@@ -108,6 +122,7 @@ export function ScheduleView({ showNotice, selectedSession, onSelectSession }) {
   const [reviewPage, setReviewPage] = useState({ items: [], total: 0, page: 1, pageSize: 5 })
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState('')
+  const [detailSession, setDetailSession] = useState(null)
   const selectedDay = weekDays.find(day => day.key === selectedDate) || weekDays[0]
   const daySessions = sessions.filter(item => item.date === selectedDate && (filter === 'Tất cả' || item.status === filter))
   const allDaySessions = sessions.filter(item => item.date === selectedDate)
@@ -164,6 +179,7 @@ export function ScheduleView({ showNotice, selectedSession, onSelectSession }) {
       endsAt: session.endsAt,
       className: session.studentName,
     })
+    setDetailSession(session)
   }
 
   const handleCompleteSession = async session => {
@@ -205,10 +221,16 @@ export function ScheduleView({ showNotice, selectedSession, onSelectSession }) {
 
   if (loading) return <ViewLoader />
 
+  if (detailSession) return <ScheduleSessionDetail session={detailSession} showNotice={showNotice} onBack={() => setDetailSession(null)} />
+
   return <div className="coach-section-view">
     <section className="coach-calendar-strip coach-card">
       <button type="button" aria-label="Tuần trước" onClick={() => changeWeek(-1)}><ChevronLeft size={18} /></button>
-      <div>{weekDays.map(day => <button type="button" key={day.key} className={selectedDate === day.key ? 'active' : ''} onClick={() => setSelectedDate(day.key)}><span>{day.weekday}</span><strong>{day.date}</strong>{day.today && <i>Hôm nay</i>}</button>)}</div>
+      <div>{weekDays.map(day => {
+        const indicator = getDayScheduleIndicator(day.key, sessions)
+        const indicatorLabel = indicator === 'tomorrow' ? 'Có lịch vào ngày mai' : indicator === 'future' ? 'Có lịch sau hơn một ngày' : ''
+        return <button type="button" key={day.key} className={selectedDate === day.key ? 'active' : ''} onClick={() => setSelectedDate(day.key)}><span>{day.weekday}</span><strong>{day.date}</strong>{day.today && <i>Hôm nay</i>}{indicator && <span className={`coach-calendar-indicator ${indicator}`} aria-label={indicatorLabel} title={indicatorLabel} />}</button>
+      })}</div>
       <button type="button" aria-label="Tuần sau" onClick={() => changeWeek(1)}><ChevronRight size={18} /></button>
     </section>
 
