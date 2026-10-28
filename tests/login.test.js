@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
-import { getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getSavedUser, getToken, saveSession } from '../src/utils/auth.js'
+import { canUsePayments, getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getLoginRedirectPath, getSavedUser, getToken, saveSession } from '../src/utils/auth.js'
 
 function memoryStorage() {
   const values = new Map()
@@ -24,6 +24,22 @@ const authResponse = {
   token: 'test-access-token',
   refreshTokenKey: 'test-refresh-token',
 }
+
+test('payment returns are available to BE payment roles while external redirects and unrelated roles remain blocked', () => {
+  const callback = '/payment/success?orderCode=15&status=PAID#receipt'
+  for (const role of ['member', 'receptionist', 'manager', 'centermanager']) {
+    assert.equal(canUsePayments(role), true)
+    assert.equal(getAuthDestination(role, callback), callback)
+    assert.notEqual(getAuthDestination(role, 'https://example.com/payment/success'), 'https://example.com/payment/success')
+  }
+  for (const role of ['coach', 'admin', '', undefined]) assert.equal(canUsePayments(role), false)
+  assert.equal(getAuthDestination('coach', callback), '/coach')
+  const login = getLoginRedirectPath({ pathname: '/payment/cancel', search: '?orderCode=15&cancel=true', hash: '#receipt' })
+  const from = new URLSearchParams(login.split('?')[1]).get('returnTo')
+  assert.equal(from, '/payment/cancel?orderCode=15&cancel=true#receipt')
+  assert.equal(getAuthDestination('member', from), from)
+  assert.equal(getLoginRedirectPath({ pathname: '/manager', search: '?view=users' }), '/login')
+})
 
 test('payment callbacks survive sign-in with their order code and cannot redirect to external URLs', () => {
   for (const path of ['/payment/success?orderCode=15&status=PAID', '/payment/cancel?orderCode=15&cancel=true']) {

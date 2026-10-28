@@ -107,6 +107,18 @@ test('if payment wins the race or the gateway cannot close the link, the subscri
   assert.ok(!wrong.posts.includes('/member-subscriptions/20/cancel'))
 })
 
+test('payment cancellation exposes a reconciled paid or review state instead of announcing a cancellation', async () => {
+  for (const status of ['Completed', 'NeedsReview', 'Pending']) {
+    const state = mockCancellation({ cancelPaymentStatus: status })
+    await assert.rejects(service.cancelOpenPayment(pendingPayment, 'Nhân viên hủy yêu cầu'), error => {
+      assert.equal(error.paymentResult.status, status)
+      assert.equal(error.paymentResult.id, pendingPayment.id)
+      return true
+    })
+    assert.deepEqual(state.posts, ['/payments/30/cancel'])
+  }
+})
+
 test('lost gateway and subscription responses are read back before deciding the cancellation failed', async () => {
   for (const options of [{ losePaymentResponse: true }, { loseOrderResponse: true }]) {
     const state = mockCancellation(options)

@@ -11,6 +11,7 @@ import {
   getSubscriptionById,
 } from '../../services/memberSubscriptionService'
 import { createPayment } from '../../services/paymentService'
+import { canCheckoutPayOSPayment, paymentCheckoutMessage } from '../../utils/memberPayments'
 import { cancelSubscriptionOrder } from '../../services/subscriptionCancellationService'
 import { currentSubscriptionForPackage, membershipPackageType, membershipPackageTypeLabel, mergeConfirmedSubscriptionCancellations, subscriptionDisplayStatusLabel, subscriptionPackageReason, subscriptionPaymentState, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
@@ -31,6 +32,11 @@ function formatDateTime(value) {
   if (!value) return '—'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function CheckoutFeedback({ feedback }) {
+  if (!feedback) return null
+  return <div className={`member-sub-message ${feedback.error ? 'is-error' : 'is-success'}`} role={feedback.error ? 'alert' : 'status'}><AlertCircle size={18} /><p>{feedback.message}</p></div>
 }
 
 export function SubscriptionsView({ showNotice }) {
@@ -60,6 +66,7 @@ export function SubscriptionsView({ showNotice }) {
   const [packageDetailLoading, setPackageDetailLoading] = useState(false)
   const [registrationSuccessSub, setRegistrationSuccessSub] = useState(null)
   const [payingSubId, setPayingSubId] = useState(null)
+  const [checkoutFeedback, setCheckoutFeedback] = useState(null)
 
   // Modal xem chi tiết đăng ký cá nhân (GET /api/member-subscriptions/{id})
   const [viewingSub, setViewingSub] = useState(null)
@@ -149,6 +156,7 @@ export function SubscriptionsView({ showNotice }) {
 
   // Mở modal xem chi tiết đơn đăng ký cá nhân (GET /api/member-subscriptions/{id})
   const handleOpenSubDetail = async (sub) => {
+    setCheckoutFeedback(null)
     setSubDetailLoading(true)
     setViewingSub(sub)
     try {
@@ -208,18 +216,27 @@ export function SubscriptionsView({ showNotice }) {
 
   // Chuyển hướng thanh toán PayOS trực tuyến
   const handlePayOSCheckout = async (subId) => {
+    if (registrationLock.current) return
+    registrationLock.current = true
     setPayingSubId(subId)
+    setCheckoutFeedback(null)
     try {
       const pay = await createPayment(subId)
-      if (pay?.checkoutUrl) {
+      if (canCheckoutPayOSPayment(pay)) {
         window.location.assign(pay.checkoutUrl)
       } else {
-        alert('Đã tạo giao dịch thanh toán nhưng chưa có liên kết PayOS. Vui lòng kiểm tra mục Thanh toán trực tuyến.')
+        await loadData()
+        setCheckoutFeedback({ message: paymentCheckoutMessage(pay), error: pay.status !== 'Completed' })
+        if (pay.status === 'Completed') setRegistrationSuccessSub(null)
+        if (String(viewingSub?.id) === String(subId)) {
+          try { setViewingSub(await getSubscriptionById(subId)) } catch { /* Keep the payment result visible if refreshing details fails. */ }
+        }
       }
     } catch (err) {
-      alert('Không thể khởi tạo thanh toán PayOS: ' + (err.message || 'Lỗi hệ thống'))
+      setCheckoutFeedback({ message: getPackageErrorMessage(err, 'Không thể khởi tạo thanh toán PayOS.'), error: true })
     } finally {
       setPayingSubId(null)
+      registrationLock.current = false
     }
   }
 
@@ -291,6 +308,7 @@ export function SubscriptionsView({ showNotice }) {
       </header>
       {error && <div className="member-sub-message is-error" role="alert"><AlertCircle size={18} /><p>{error}</p></div>}
       {registrationError && !viewingPackage && <div className="member-sub-message is-error" role="alert"><AlertCircle size={18} /><p>{registrationError}</p></div>}
+      {!viewingSub && !registrationSuccessSub && <CheckoutFeedback feedback={checkoutFeedback} />}
 
       {activeSubscriptions.length > 0 ? <section className="member-sub-active-packages" aria-label="Các thẻ đang sử dụng">{activeSubscriptions.map(activeSub => <article key={activeSub.id} className="member-sub-current" aria-labelledby={`member-current-package-${activeSub.id}`}>
         <div className="member-sub-current-main">
@@ -471,6 +489,7 @@ export function SubscriptionsView({ showNotice }) {
             </div>
 
             <div className="member-modal-body">
+              <CheckoutFeedback feedback={checkoutFeedback} />
               <div style={{ textAlign: 'center', padding: '10px 0' }}>
                 <div
                   style={{
@@ -584,6 +603,7 @@ export function SubscriptionsView({ showNotice }) {
             </div>
 
             <div className="member-modal-body">
+              <CheckoutFeedback feedback={checkoutFeedback} />
               {subDetailLoading ? (
                 <div style={{ padding: 32, textAlign: 'center' }}>
                   <LoaderCircle className="member-spin" size={26} style={{ margin: '0 auto 10px' }} />

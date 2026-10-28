@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { filterMemberPayments, paymentReceivedAmount, paymentStatus, paymentStatusLabel, paymentSummary } from '../src/utils/memberPayments.js'
+import { canCancelPayOSPayment, canCheckoutPayOSPayment, canSyncPayOSPayment, filterMemberPayments, paymentCheckoutMessage, paymentReceivedAmount, paymentStatus, paymentStatusLabel, paymentSummary } from '../src/utils/memberPayments.js'
 
 const rows = [
   { id: 1, status: 'Completed', amount: 2000, amountReceived: 2000, subscriptionId: 13, transactionReference: 'BANK-ABC' },
@@ -9,6 +9,22 @@ const rows = [
   { id: 5, status: 'Failed', amount: 3000 }, { id: 6, status: 'Refunded', amount: 3000 },
   { id: 7, status: 'NeedsReview', amount: 4000, amountReceived: 500 },
 ]
+
+test('only an unpaid pending PayOS link can be opened or cancelled, including reused closed links returned by create', () => {
+  const payment = { id: 1, subscriptionId: 20, paymentMethod: 'PayOS', status: 'Pending', checkoutUrl: 'https://pay.payos.vn/web/fixture', amountReceived: 0 }
+  assert.equal(canCheckoutPayOSPayment(payment), true)
+  for (const changed of [{ status: 'Completed' }, { status: 'Cancelled' }, { status: 'Expired' }, { status: 'Failed' }, { status: 'NeedsReview' }, { paymentMethod: 'Cash' }, { amountReceived: 1 }]) {
+    assert.equal(canCheckoutPayOSPayment({ ...payment, ...changed }), false)
+    assert.equal(canCancelPayOSPayment({ ...payment, ...changed }), false)
+  }
+  assert.equal(canCheckoutPayOSPayment({ ...payment, checkoutUrl: '' }), false)
+  assert.match(paymentCheckoutMessage({ ...payment, status: 'Cancelled' }), /đã hủy/)
+  assert.match(paymentCheckoutMessage({ ...payment, status: 'NeedsReview' }), /đối soát/)
+  assert.equal(canSyncPayOSPayment({ ...payment, status: 'NeedsReview' }), true)
+  assert.equal(canSyncPayOSPayment({ ...payment, status: 'Cancelled' }), true)
+  assert.equal(canSyncPayOSPayment({ ...payment, status: 'Completed' }), false)
+  assert.equal(canSyncPayOSPayment({ ...payment, paymentMethod: 'Cash' }), false)
+})
 test('payment labels cover review and refund without treating them as completed', () => {
   assert.equal(paymentStatus({ status: ' needs_review ' }), 'needsreview')
   assert.equal(paymentStatus({ status: 'Canceled' }), 'cancelled')
