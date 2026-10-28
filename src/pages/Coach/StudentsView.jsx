@@ -15,22 +15,15 @@ const weekdayDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   weekday: 'long',
   day: '2-digit',
   month: '2-digit',
+  year: 'numeric',
 })
 
-const weekRangeFormatter = new Intl.DateTimeFormat('vi-VN', {
-  day: '2-digit',
-  month: '2-digit',
-})
-
-const formatWeekSessionOption = session => {
+const formatTimeSessionOption = session => {
   const start = new Date(session.startsAt)
   const end = new Date(session.endsAt)
-  const weekStart = new Date(start.getFullYear(), start.getMonth(), start.getDate())
-  const dayFromMonday = (weekStart.getDay() + 6) % 7
-  weekStart.setDate(weekStart.getDate() - dayFromMonday)
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekEnd.getDate() + 6)
-  return `Tuần ${weekRangeFormatter.format(weekStart)}–${weekRangeFormatter.format(weekEnd)} · ${weekdayDateFormatter.format(start)} · ${timeFormatter.format(start)}–${timeFormatter.format(end)}`
+  const enrollment = Number(session.currentEnrollment || 0)
+  const capacity = Number(session.capacity || 0)
+  return `${timeFormatter.format(start)}–${timeFormatter.format(end)} · ${enrollment}/${capacity} học viên`
 }
 
 const trainingGoals = [
@@ -248,8 +241,8 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
   const [status, setStatus] = useState('Tất cả')
   const [sessions, setSessions] = useState([])
   const [classCatalog, setClassCatalog] = useState([])
-  const [selectedSportId, setSelectedSportId] = useState('')
   const [selectedClassId, setSelectedClassId] = useState('')
+  const [selectedDate, setSelectedDate] = useState('')
   const [students, setStudents] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [sessionsLoading, setSessionsLoading] = useState(true)
@@ -278,11 +271,8 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
         setClassCatalog(classResult.status === 'fulfilled' ? classResult.value.items : [])
         const restoredSession = result.items.find(session => String(session.id) === String(selectedSessionId))
         if (restoredSession) {
-          const restoredClass = classResult.status === 'fulfilled'
-            ? classResult.value.items.find(item => String(item.id) === String(restoredSession.classId))
-            : null
           setSelectedClassId(String(restoredSession.classId))
-          setSelectedSportId(restoredClass?.sportId ? String(restoredClass.sportId) : 'unknown')
+          setSelectedDate(toDateInput(new Date(restoredSession.startsAt)))
         }
       } catch (requestError) {
         if (active) {
@@ -306,21 +296,24 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
       if (!values.has(classId)) values.set(classId, {
         id: classId,
         className: session.className || catalogClass?.className || `Lớp #${classId}`,
-        sportId: catalogClass?.sportId ? String(catalogClass.sportId) : 'unknown',
-        sportName: catalogClass?.sportName || 'Chưa xác định môn',
       })
     })
     return [...values.values()].sort((left, right) => left.className.localeCompare(right.className, 'vi'))
   }, [classCatalog, sessions])
 
-  const sports = useMemo(() => {
-    const values = new Map()
-    classes.forEach(item => values.set(item.sportId, item.sportName))
-    return [...values].map(([id, name]) => ({ id, name })).sort((left, right) => left.name.localeCompare(right.name, 'vi'))
-  }, [classes])
-
-  const visibleClasses = selectedSportId ? classes.filter(item => item.sportId === selectedSportId) : []
   const visibleSessions = selectedClassId ? sessions.filter(session => String(session.classId) === selectedClassId) : []
+  const sessionDates = useMemo(() => {
+    const values = new Map()
+    visibleSessions.forEach(session => {
+      const startsAt = new Date(session.startsAt)
+      const key = toDateInput(startsAt)
+      if (!values.has(key)) values.set(key, weekdayDateFormatter.format(startsAt))
+    })
+    return [...values].map(([value, label]) => ({ value, label })).sort((left, right) => left.value.localeCompare(right.value))
+  }, [visibleSessions])
+  const daySessions = selectedDate
+    ? visibleSessions.filter(session => toDateInput(new Date(session.startsAt)) === selectedDate).sort((left, right) => new Date(left.startsAt) - new Date(right.startsAt))
+    : []
 
   useEffect(() => {
     let active = true
@@ -364,6 +357,12 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
   })
   const selected = students.find(student => student.id === selectedId)
   const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
+  const selectionEmptyTitle = !selectedClassId ? 'Chọn lớp huấn luyện' : !selectedDate ? 'Chọn ngày tập' : 'Chọn khung giờ'
+  const selectionEmptyText = !selectedClassId
+    ? 'Chọn lớp Coach đang phụ trách để xem các ngày tập.'
+    : !selectedDate
+      ? 'Chọn một ngày có lịch của lớp để xem các khung giờ.'
+      : 'Chọn khung giờ phù hợp để tải danh sách học viên của buổi học.'
   const checkedInCount = students.filter(student => ['Đã điểm danh', 'Đi trễ'].includes(student.attendanceStatus)).length
   const absentCount = students.filter(student => student.attendanceStatus === 'Vắng mặt').length
 
@@ -395,15 +394,15 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
 
   return <div className="coach-section-view">
     <section className="coach-card coach-session-picker coach-student-session-picker">
-      <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>CHỌN THEO THỨ TỰ</small><strong>{selectedSession?.className || 'Tìm học viên theo tuần huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn môn, lớp và tuần huấn luyện trước khi xem danh sách học viên.'}</p></div></div>
+      <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>CHỌN THEO THỨ TỰ</small><strong>{selectedSession?.className || 'Tìm học viên theo lịch lớp'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn lớp, ngày tập và khung giờ trước khi xem danh sách học viên.'}</p></div></div>
       <div className="coach-student-selection-steps">
-        <label><span><b>1</b>Chọn môn</span><select value={selectedSportId} onChange={event => { setSelectedSportId(event.target.value); setSelectedClassId(''); onSelectSession?.(null); setStatus('Tất cả') }}><option value="">Chọn môn thể thao</option>{sports.map(sport => <option value={sport.id} key={sport.id}>{sport.name}</option>)}</select></label>
-        <label><span><b>2</b>Chọn lớp</span><select value={selectedClassId} disabled={!selectedSportId} onChange={event => { setSelectedClassId(event.target.value); onSelectSession?.(null); setStatus('Tất cả') }}><option value="">Chọn lớp huấn luyện</option>{visibleClasses.map(item => <option value={item.id} key={item.id}>{item.className}</option>)}</select></label>
-        <label><span><b>3</b>Chọn tuần</span><select value={selectedSession?.id || ''} disabled={!selectedClassId} onChange={event => { const session = visibleSessions.find(item => String(item.id) === event.target.value); if (session) onSelectSession?.({ ...session, sportId: selectedSportId, sportName: sports.find(sport => sport.id === selectedSportId)?.name }); setStatus('Tất cả') }}><option value="">Chọn tuần huấn luyện</option>{visibleSessions.map(session => <option key={session.id} value={session.id}>{formatWeekSessionOption(session)}</option>)}</select></label>
+        <label><span><b>1</b>Chọn lớp</span><select value={selectedClassId} onChange={event => { setSelectedClassId(event.target.value); setSelectedDate(''); onSelectSession?.(null); setStatus('Tất cả') }}><option value="">Chọn lớp huấn luyện</option>{classes.map(item => <option value={item.id} key={item.id}>{item.className}</option>)}</select></label>
+        <label><span><b>2</b>Chọn ngày tập</span><select value={selectedDate} disabled={!selectedClassId} onChange={event => { setSelectedDate(event.target.value); onSelectSession?.(null); setStatus('Tất cả') }}><option value="">Chọn ngày có lịch</option>{sessionDates.map(date => <option key={date.value} value={date.value}>{date.label}</option>)}</select></label>
+        <label><span><b>3</b>Chọn khung giờ</span><select value={selectedSession?.id || ''} disabled={!selectedDate} onChange={event => { const session = daySessions.find(item => String(item.id) === event.target.value); if (session) onSelectSession?.(session); setStatus('Tất cả') }}><option value="">Chọn khung giờ</option>{daySessions.map(session => <option key={session.id} value={session.id}>{formatTimeSessionOption(session)}</option>)}</select></label>
       </div>
     </section>
 
-    {!selectedSession ? <section className="coach-card coach-roster-state coach-student-selection-empty"><EmptyState title="Chọn tuần huấn luyện" text="Hoàn tất lần lượt ba bước phía trên để tải đúng danh sách học viên của buổi trong tuần." /></section> : <><section className="coach-student-kpis">
+    {!selectedSession ? <section className="coach-card coach-roster-state coach-student-selection-empty"><EmptyState title={selectionEmptyTitle} text={selectionEmptyText} /></section> : <><section className="coach-student-kpis">
       <article><span className="blue"><Users size={21} /></span><div><small>Học viên trong buổi</small><strong>{students.length}</strong><p>Dữ liệu trực tiếp từ roster</p></div></article>
       <article><span className="green"><UserCheck size={21} /></span><div><small>Đã điểm danh</small><strong>{checkedInCount}</strong><p>Bao gồm đúng giờ và đi trễ</p></div></article>
       <article><span className="purple"><UserRound size={21} /></span><div><small>Vắng mặt</small><strong>{absentCount}</strong><p>Theo trạng thái chuyên cần</p></div></article>

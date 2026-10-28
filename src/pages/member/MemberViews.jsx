@@ -15,6 +15,7 @@ import { getMySubscriptions, createMemberSubscription } from '../../services/mem
 import { getMyPayments, createPayment, cancelPayment, syncPayment } from '../../services/paymentService'
 import { exportInvoicePdf, triggerBlobDownload } from '../../services/reportService'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
+import { getFullNameValidationError, getVietnamPhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_LENGTH } from '../../utils/profileValidation'
 import { getProfilePhoneConflict, passwordChangeErrors, profileDateLimit, profileFieldErrors, profileValidationErrors } from '../../utils/profileValidation'
 import '../../style/member/ProfileValidation.css'
 import '../../style/member/MemberProfile.css'
@@ -102,19 +103,27 @@ export function ProfileView({ user, showNotice }) {
   }, [])
 
   const validationOptions = { requirePhone: Boolean(profile?.phoneNumber || memberInfo?.phone), requireDateOfBirth: Boolean(profile?.dateOfBirth), phoneConflict }
+  const validateProfile = values => {
+    const errors = profileValidationErrors(values, validationOptions)
+    const nameError = getFullNameValidationError(values.fullName)
+    const phoneError = getVietnamPhoneValidationError(values.phoneNumber, { required: validationOptions.requirePhone })
+    if (nameError) errors.fullName = nameError
+    if (phoneError) errors.phoneNumber = phoneError
+    return errors
+  }
   const hasPhoneConflict = Boolean(getProfilePhoneConflict(formData.phoneNumber, phoneConflict))
   const focusProfileError = errors => window.requestAnimationFrame(() => profileForm.current?.elements.namedItem(Object.keys(errors)[0])?.focus())
   const changeProfileField = (name, value) => {
     const next = { ...formData, [name]: value }
     setFormData(next)
     setError('')
-    if (fieldErrors[name] || name === 'phoneNumber') setFieldErrors(previous => ({ ...previous, [name]: profileValidationErrors(next, validationOptions)[name] }))
+    if (fieldErrors[name] || name === 'phoneNumber') setFieldErrors(previous => ({ ...previous, [name]: validateProfile(next)[name] }))
   }
   const profileInputProps = name => ({
     id: `member-profile-${name}`, name, disabled: saving,
     'aria-invalid': Boolean(fieldErrors[name]),
     'aria-describedby': fieldErrors[name] ? `member-profile-${name}-error` : undefined,
-    onBlur: () => setFieldErrors(previous => ({ ...previous, [name]: profileValidationErrors(formData, validationOptions)[name] })),
+    onBlur: () => setFieldErrors(previous => ({ ...previous, [name]: validateProfile(formData)[name] })),
     onChange: event => changeProfileField(name, event.target.value),
   })
   const fieldError = name => fieldErrors[name] ? <p id={`member-profile-${name}-error`} className="member-profile-field-error" role="alert">{fieldErrors[name]}</p> : null
@@ -122,7 +131,7 @@ export function ProfileView({ user, showNotice }) {
   const handleUpdateProfile = async (e) => {
     e.preventDefault()
     if (saveLock.current) return
-    const validation = profileValidationErrors(formData, validationOptions)
+    const validation = validateProfile(formData)
     setFieldErrors(validation)
     if (Object.keys(validation).length) { focusProfileError(validation); return }
     saveLock.current = true
@@ -266,7 +275,7 @@ export function ProfileView({ user, showNotice }) {
                   <input
                     type="text"
                     required
-                    maxLength={200}
+                    maxLength={PROFILE_FULL_NAME_MAX_LENGTH}
                     autoComplete="name"
                     {...profileInputProps('fullName')}
                     value={formData.fullName}
@@ -277,14 +286,17 @@ export function ProfileView({ user, showNotice }) {
                   <label htmlFor="member-profile-phoneNumber">Số điện thoại</label>
                   <input
                     type="tel"
-                    maxLength={30}
+                    maxLength={PROFILE_PHONE_LENGTH}
+                    inputMode="numeric"
+                    pattern="0[0-9]{9}"
+                    title="Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0"
                     autoComplete="tel"
                     required={validationOptions.requirePhone}
                     {...profileInputProps('phoneNumber')}
                     value={formData.phoneNumber}
-                    placeholder="0912..."
+                    placeholder="0912345678"
                   />
-                  <small className="member-profile-field-hint">Ví dụ: 0912 345 678 hoặc +84 912 345 678.</small>
+                  <small className="member-profile-field-hint">Số điện thoại gồm đúng 10 chữ số và bắt đầu bằng 0.</small>
                   {fieldError('phoneNumber')}
                 </div>
               </div>

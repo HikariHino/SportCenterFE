@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Bell, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
+  Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
   LayoutDashboard, LifeBuoy, LogOut, Menu, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import ThemeToggle from '../../components/ThemeToggle'
@@ -15,12 +15,14 @@ const MembersView = lazy(() => import('./MembersView').then(module => ({ default
 const Overview = lazy(() => import('./OverviewView').then(module => ({ default: module.Overview })))
 const PaymentsView = lazy(() => import('./PaymentsView').then(module => ({ default: module.PaymentsView })))
 const ReceptionistProfileView = lazy(() => import('./ProfileView').then(module => ({ default: module.ReceptionistProfileView })))
-const FacilitiesView = lazy(() => import('./FacilitiesView').then(module => ({ default: module.FacilitiesView })))
+const RoomsView = lazy(() => import('./RoomsView').then(module => ({ default: module.RoomsView })))
+const SessionsView = lazy(() => import('./ScheduleView').then(module => ({ default: module.ReceptionistScheduleView })))
 const SupportTicketsView = lazy(() => import('./SupportTicketsView').then(module => ({ default: module.SupportTicketsView })))
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
-  [DoorOpen, 'Buổi học & Phòng tập'],
+  [CalendarDays, 'Buổi học'],
+  [DoorOpen, 'Phòng tập'],
   [ScanLine, 'Check-in'],
   [Users, 'Hội viên'],
   [ReceiptText, 'Thanh toán'],
@@ -40,7 +42,8 @@ const storedSelectedSession = () => {
 }
 
 const pageMeta = {
-  'Buổi học & Phòng tập': ['VẬN HÀNH CƠ SỞ', 'Phòng tập & Buổi học', 'Theo dõi phòng, lịch sử dụng và xử lý nghiệp vụ buổi học tại quầy.'],
+  'Buổi học': ['QUẢN LÝ LỊCH HỌC', 'Buổi học', 'Chọn môn thể thao và huấn luyện viên để theo dõi lịch, lớp và hội viên.'],
+  'Phòng tập': ['VẬN HÀNH CƠ SỞ', 'Phòng tập', 'Theo dõi phòng, sức chứa và lịch sử dụng tại trung tâm.'],
   'Check-in': ['TIẾP NHẬN KHÁCH', 'Check-in tại quầy', 'Xác minh mã đặt sân hoặc tài khoản hội viên trước khi sử dụng dịch vụ.'],
   'Hội viên': ['HỖ TRỢ HỘI VIÊN', 'Tra cứu hội viên', 'Kiểm tra trạng thái tài khoản, gói dịch vụ và thông tin liên hệ.'],
   'Thanh toán': ['GIAO DỊCH TẠI QUẦY', 'Thanh toán', 'Theo dõi giao dịch và hóa đơn phát sinh tại quầy lễ tân.'],
@@ -157,7 +160,8 @@ export default function Receptionist() {
   }
 
   const renderView = () => {
-    if (activeNav === 'Buổi học & Phòng tập') return <FacilitiesView showNotice={showNotice} selectedSession={selectedReceptionSession} onSelectSession={selectReceptionSession} />
+    if (activeNav === 'Buổi học') return <SessionsView showNotice={showNotice} selectedSession={selectedReceptionSession} onSelectSession={selectReceptionSession} />
+    if (activeNav === 'Phòng tập') return <RoomsView onOpenSessions={session => selectNavigation('Buổi học', session)} onSelectSession={selectReceptionSession} />
     if (activeNav === 'Check-in') return <CheckInView showNotice={showNotice} />
     if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
     if (activeNav === 'Thanh toán') return <PaymentsView query={query} showNotice={showNotice} />
