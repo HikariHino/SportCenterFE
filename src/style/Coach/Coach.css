@@ -285,6 +285,7 @@
 .coach-attendance-timetable { margin-bottom:16px; }
 .coach-attendance-timetable .member-timetable { border-radius:12px; box-shadow:0 5px 16px #17315a08; }
 .coach-attendance-timetable .member-timetable-session>small { font-size:12px; }
+.coach-attendance-page>.coach-schedule-detail-back { margin-bottom:12px; }
 .coach-attendance-schedule-error { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; padding:11px 13px; border:1px solid #f0b7bd; border-radius:9px; color:#a62d3a; background:#fff0f2; font-size:12px; font-weight:700; }
 .coach-attendance-selected-session { margin-bottom:14px; }
 .coach-attendance-selected-session>b { flex-shrink:0; padding:6px 10px; border-radius:20px; color:var(--coach-blue); background:#edf3ff; font-size:12px; }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Clock3, UserCheck, Users } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, Clock3, UserCheck, Users } from 'lucide-react'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
 import { getCoachSessionAttendances, getCoachSessionRoster, getMyCoachSessions, markCoachAttendance } from '../../services/coachService'
 import { shiftTimetableDate, timetableWeekStart } from '../../utils/memberTimetable'
@@ -38,6 +38,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
   const [attendanceSelections, setAttendanceSelections] = useState({})
   const [scheduleRequestKey, setScheduleRequestKey] = useState(0)
   const [rosterRequestKey, setRosterRequestKey] = useState(0)
+  const [attendancePageOpen, setAttendancePageOpen] = useState(false)
 
   useEffect(() => {
     if (sharedSelectedSession?.startsAt) setWeekStart(timetableWeekStart(sharedSelectedSession.startsAt))
@@ -70,7 +71,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
 
   useEffect(() => {
     let active = true
-    if (!selectedSessionId) {
+    if (!attendancePageOpen || !selectedSessionId) {
       setStudents([])
       setRosterError('')
       setRosterLoading(false)
@@ -109,7 +110,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
     }
     loadAttendances()
     return () => { active = false }
-  }, [rosterRequestKey, selectedSessionId])
+  }, [attendancePageOpen, rosterRequestKey, selectedSessionId])
 
   const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
     || (String(sharedSelectedSession?.id) === String(selectedSessionId) ? sharedSelectedSession : null)
@@ -130,6 +131,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
     onSelectSession?.(session)
     setStatus('Tất cả')
     setActionError('')
+    setAttendancePageOpen(true)
   }
 
   const handleMarkAttendance = async student => {
@@ -160,7 +162,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
     }
   }
 
-  return <div className="coach-section-view">
+  if (!attendancePageOpen || !selectedSessionId) return <div className="coach-section-view">
     <div className="coach-attendance-timetable">
       {scheduleError && <div className="coach-attendance-schedule-error" role="alert"><span>{scheduleError}</span><button className="coach-retry-button" type="button" onClick={() => setScheduleRequestKey(key => key + 1)}>Thử lại</button></div>}
       <WeeklyTimetable
@@ -172,11 +174,13 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
         getStatusLabel={getSessionStatusLabel}
         interactionDisabled={scheduleLoading}
         title="Thời khóa biểu huấn luyện"
-        description={scheduleLoading ? 'Đang tải các buổi huấn luyện Coach phụ trách...' : 'Bấm vào một buổi học để xem học viên và cập nhật điểm danh ngay bên dưới.'}
+        description={scheduleLoading ? 'Đang tải các buổi huấn luyện Coach phụ trách...' : 'Bấm vào một buổi học để mở trang điểm danh.'}
       />
     </div>
+  </div>
 
-    {!selectedSessionId ? <section className="coach-card coach-roster-state"><EmptyState title="Chọn buổi học trên thời khóa biểu" text="Danh sách học viên và thao tác điểm danh sẽ xuất hiện sau khi bạn chọn một buổi." /></section> : <>
+  return <div className="coach-section-view coach-attendance-page">
+      <button type="button" className="coach-schedule-detail-back" onClick={() => setAttendancePageOpen(false)}><ChevronLeft size={16} />Quay lại thời khóa biểu</button>
       <section className="coach-card coach-session-picker coach-attendance-selected-session">
         <div className="coach-session-picker-main"><span><UserCheck size={21} /></span><div><small>BUỔI ĐANG ĐIỂM DANH</small><strong>{selectedSession?.className || 'Buổi huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : `Buổi học #${selectedSessionId}`}</p></div></div>
         <b>Buổi #{selectedSessionId}</b>
@@ -203,6 +207,5 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
           </article>
         })}</div> : <EmptyState title="Chưa có học viên" text={query || status !== 'Tất cả' ? 'Không có học viên phù hợp với bộ lọc.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </section>
-    </>}
   </div>
 }
