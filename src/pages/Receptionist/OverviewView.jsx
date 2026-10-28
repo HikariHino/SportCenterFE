@@ -36,14 +36,14 @@ export function Overview({ onNavigate }) {
   const metrics = [
     [Users, 'Hội viên', data.members.length, 'blue', 'Hội viên'],
     [UserCheck, 'Check-in hôm nay', data.checkIns.length, 'green', 'Check-in'],
-    [MapPin, 'Phòng hoạt động', data.rooms.length, 'purple', 'Buổi học & Phòng tập'],
+    [MapPin, 'Phòng hoạt động', data.rooms.length, 'purple', 'Phòng tập'],
     [CircleDollarSign, 'Đã thu', `${new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 }).format(revenue)} đ`, 'amber', 'Thanh toán'],
   ]
   const focus = activeCheckIns.length
     ? { icon: UserCheck, eyebrow: 'ĐANG PHỤC VỤ', title: `${activeCheckIns.length} khách đang sử dụng phòng gym`, description: 'Theo dõi lượt đang hoạt động và thực hiện check-out khi khách rời trung tâm.', action: 'Mở Check-in', target: 'Check-in' }
     : pendingPayments.length
       ? { icon: CreditCard, eyebrow: 'CẦN XỬ LÝ', title: `${pendingPayments.length} giao dịch đang chờ`, description: 'Kiểm tra trạng thái hoặc đồng bộ thanh toán tại quầy.', action: 'Xem thanh toán', target: 'Thanh toán' }
-      : { icon: DoorOpen, eyebrow: 'TRẠNG THÁI QUẦY', title: 'Không có tác vụ khẩn cấp', description: 'Kiểm tra phòng và lịch buổi học trước khi tiếp nhận yêu cầu tiếp theo.', action: 'Xem phòng và lịch', target: 'Buổi học & Phòng tập' }
+      : { icon: DoorOpen, eyebrow: 'TRẠNG THÁI QUẦY', title: 'Không có tác vụ khẩn cấp', description: 'Kiểm tra phòng trước khi tiếp nhận yêu cầu tiếp theo.', action: 'Xem phòng tập', target: 'Phòng tập' }
   const FocusIcon = focus.icon
 
   if (loading) return <ViewLoader />
@@ -67,9 +67,9 @@ export function Overview({ onNavigate }) {
         {activeCheckIns.length > 3 && <button className="reception-overview-more" type="button" onClick={() => onNavigate('Check-in')}>Xem thêm {activeCheckIns.length - 3} lượt check-in <ArrowRight size={15} /></button>}
       </section>
       <section className="reception-card reception-court-panel">
-        <div className="reception-card-head"><div><span>PHÒNG HOẠT ĐỘNG</span><h2>Cơ sở đang sẵn sàng</h2></div><button type="button" onClick={() => onNavigate('Buổi học & Phòng tập')}>Xem phòng <ArrowRight size={15} /></button></div>
+        <div className="reception-card-head"><div><span>PHÒNG HOẠT ĐỘNG</span><h2>Cơ sở đang sẵn sàng</h2></div><button type="button" onClick={() => onNavigate('Phòng tập')}>Xem phòng <ArrowRight size={15} /></button></div>
         {loading ? <EmptyState icon={DoorOpen} title="Đang tải phòng" text="Dữ liệu phòng đang được đồng bộ từ hệ thống." /> : data.rooms.length ? <div className="reception-overview-rooms">{data.rooms.slice(0, 3).map(room => <article key={room.id}><span><DoorOpen size={16} /></span><div><strong>{room.name}</strong><small>{room.roomType} · {room.capacity} người</small></div></article>)}</div> : <EmptyState icon={MapPin} title="Chưa có phòng hoạt động" text="Hiện chưa có phòng nào ở trạng thái hoạt động." />}
-        {data.rooms.length > 3 && <button className="reception-overview-more" type="button" onClick={() => onNavigate('Buổi học & Phòng tập')}>Xem thêm {data.rooms.length - 3} phòng <ArrowRight size={15} /></button>}
+        {data.rooms.length > 3 && <button className="reception-overview-more" type="button" onClick={() => onNavigate('Phòng tập')}>Xem thêm {data.rooms.length - 3} phòng <ArrowRight size={15} /></button>}
       </section>
     </div>
   </>
