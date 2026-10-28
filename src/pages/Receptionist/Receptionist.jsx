@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
+import usePortalNavigation from '../../hooks/usePortalNavigation'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { formatDateTime, requestErrorMessage, ViewLoader } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
@@ -29,6 +30,7 @@ const navigation = [
   [LifeBuoy, 'Hỗ trợ'],
   [UserRound, 'Hồ sơ'],
 ]
+const receptionistViews = navigation.map(([, label]) => label)
 
 const selectedSessionStorageKey = 'receptionist:selected-session'
 
@@ -54,7 +56,7 @@ const pageMeta = {
 export default function Receptionist() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [activeNav, setActiveNav] = useState('Tổng quan')
+  const [activeNav, setActiveNav] = usePortalNavigation(receptionistViews, 'Tổng quan')
   const [query, setQuery] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')

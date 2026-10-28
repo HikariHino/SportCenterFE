@@ -57,7 +57,8 @@ export default function Login() {
     try {
       const session = await loginApi({ email, password })
       const user = login(session, session.token, formData.has('remember'))
-      navigate(getAuthDestination(user.role, location.state?.from), { replace: true, state: { membership: selectedMembership } })
+      const returnTo = location.state?.from || new URLSearchParams(location.search).get('returnTo')
+      navigate(getAuthDestination(user.role, returnTo), { replace: true, state: { membership: selectedMembership } })
     } catch (error) {
       setError(getLoginErrorMessage(error))
     } finally {

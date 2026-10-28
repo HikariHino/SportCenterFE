@@ -1,6 +1,6 @@
 ﻿import axios from 'axios'
 
-import { clearSession, getRefreshTokenKey, getToken, updateSessionTokens } from '../utils/auth'
+import { clearSession, getLoginRedirectPath, getRefreshTokenKey, getToken, updateSessionTokens } from '../utils/auth'
 
 const baseURL = import.meta.env.VITE_API_BASE || '/api'
 
@@ -64,7 +64,7 @@ api.interceptors.response.use(
 
     if (!config || config._retry) {
       clearSession()
-      if (window.location.pathname !== '/login') window.location.href = '/login'
+      if (window.location.pathname !== '/login') window.location.href = getLoginRedirectPath(window.location)
       return Promise.reject(error)
     }
 
@@ -76,7 +76,7 @@ api.interceptors.response.use(
       return api(config)
     } catch (refreshError) {
       clearSession()
-      if (window.location.pathname !== '/login') window.location.href = '/login'
+      if (window.location.pathname !== '/login') window.location.href = getLoginRedirectPath(window.location)
       return Promise.reject(refreshError)
     }
   }

@@ -7,7 +7,7 @@ import QRCode from 'qrcode'
 import { getMyPayments, syncPayment } from '../../services/paymentService'
 import { cancelPaymentAndSubscription } from '../../services/subscriptionCancellationService'
 import { exportInvoicePdf, triggerBlobDownload } from '../../services/reportService'
-import { filterMemberPayments, paymentReceivedAmount, paymentStatus, paymentStatusLabel, paymentSummary } from '../../utils/memberPayments'
+import { canCancelPayOSPayment, canCheckoutPayOSPayment, canSyncPayOSPayment, filterMemberPayments, paymentReceivedAmount, paymentStatus, paymentStatusLabel, paymentSummary } from '../../utils/memberPayments'
 import '../../style/member/PaymentsView.css'
 
 const currency = value => `${Number(value ?? 0).toLocaleString('vi-VN')} đ`
@@ -99,7 +99,7 @@ export function PaymentsView({ showNotice }) {
 
   const openDetail = payment => { setActionError(''); setNotice(''); setViewingId(payment.id) }
   const checkout = payment => {
-    if (busy || loading || paymentStatus(payment) !== 'pending') return
+    if (busy || loading || !canCheckoutPayOSPayment(payment)) return
     if (!payment.checkoutUrl) { setActionError('Giao dịch chưa có liên kết PayOS. Hãy mở chi tiết và đồng bộ trạng thái hoặc liên hệ lễ tân.'); return }
     window.location.assign(payment.checkoutUrl)
   }
@@ -107,17 +107,18 @@ export function PaymentsView({ showNotice }) {
     if (result?.id && result.status) setPayments(previous => previous.map(payment => String(payment.id) === String(result.id) ? { ...payment, ...result } : payment))
   }
   const handleSync = async payment => {
-    if (actionLock.current || loading || paymentStatus(payment) !== 'pending') return
+    if (actionLock.current || loading || !canSyncPayOSPayment(payment)) return
     actionLock.current = true; setAction({ id: payment.id, type: 'sync' }); setActionError(''); setNotice('')
     try {
-      updatePayment(await syncPayment(payment.id))
+      const updated = await syncPayment(payment.id)
       await loadPayments()
+      updatePayment(updated)
       announce('Đã cập nhật trạng thái giao dịch từ PayOS.')
     } catch (err) { setActionError(errorMessage(err, 'Không thể đồng bộ thanh toán. Vui lòng thử lại.')) }
     finally { actionLock.current = false; setAction(null) }
   }
   const confirmCancel = async () => {
-    if (!cancelling || actionLock.current || loading) return
+    if (!cancelling || !canCancelPayOSPayment(cancelling) || actionLock.current || loading) return
     actionLock.current = true; setAction({ id: cancelling.id, type: 'cancel' }); setActionError('')
     try {
       const result = await cancelPaymentAndSubscription(cancelling)
@@ -128,7 +129,8 @@ export function PaymentsView({ showNotice }) {
       announce(result.subscription ? 'Đã hủy thanh toán và đơn đăng ký gói.' : 'Đã hủy giao dịch thanh toán.')
     } catch (err) {
       await loadPayments()
-      if (err.cancelledPayment) updatePayment(err.cancelledPayment)
+      if (err.cancelledPayment || err.paymentResult) updatePayment(err.cancelledPayment || err.paymentResult)
+      if (err.paymentResult) setCancelling(previous => ({ ...previous, ...err.paymentResult }))
       setActionError(errorMessage(err, 'Không thể hủy thanh toán. Vui lòng thử lại.'))
     }
     finally { actionLock.current = false; setAction(null) }
@@ -168,25 +170,25 @@ export function PaymentsView({ showNotice }) {
           <div className="mpay-record-amount"><span className="mpay-mobile-label">Số tiền</span><strong>{currency(paymentStatus(payment) === 'completed' ? paymentReceivedAmount(payment) : payment.amount)}</strong><small>{payment.paymentMethod || 'PayOS'}</small></div>
           <div className="mpay-record-date"><span className="mpay-mobile-label">Thời gian</span><time>{dateTime(payment.paidAt || payment.createdAt)}</time><small>{payment.paidAt ? 'Ngày thanh toán' : 'Ngày tạo giao dịch'}</small></div>
           <div className="mpay-record-status"><PaymentStatus payment={payment} /></div>
-          <div className="mpay-record-actions"><button type="button" className="mpay-button" onClick={() => openDetail(payment)} aria-label={`Xem chi tiết giao dịch PAY-${payment.id}`}><Eye size={15} />Chi tiết</button>{paymentStatus(payment) === 'pending' && payment.checkoutUrl && <button type="button" className="mpay-button is-primary" disabled={busy || loading} onClick={() => checkout(payment)}><ExternalLink size={15} />Thanh toán</button>}{paymentStatus(payment) === 'completed' && <button type="button" className="mpay-button is-soft" disabled={busy || loading} onClick={() => exportPdf(payment)}>{action?.id === payment.id && action.type === 'pdf' ? <LoaderCircle className="member-spin" size={15} /> : <ArrowDownToLine size={15} />}Hóa đơn PDF</button>}</div>
+          <div className="mpay-record-actions"><button type="button" className="mpay-button" onClick={() => openDetail(payment)} aria-label={`Xem chi tiết giao dịch PAY-${payment.id}`}><Eye size={15} />Chi tiết</button>{canCheckoutPayOSPayment(payment) && <button type="button" className="mpay-button is-primary" disabled={busy || loading} onClick={() => checkout(payment)}><ExternalLink size={15} />Thanh toán</button>}{paymentStatus(payment) === 'completed' && <button type="button" className="mpay-button is-soft" disabled={busy || loading} onClick={() => exportPdf(payment)}>{action?.id === payment.id && action.type === 'pdf' ? <LoaderCircle className="member-spin" size={15} /> : <ArrowDownToLine size={15} />}Hóa đơn PDF</button>}</div>
         </li>)}</ul>
       </div> : <div className="mpay-empty"><Search size={28} /><h4>{payments.length ? 'Không tìm thấy giao dịch phù hợp' : 'Bạn chưa có giao dịch thanh toán'}</h4><p>{payments.length ? 'Thử thay đổi từ khóa hoặc trạng thái lọc.' : 'Giao dịch sẽ xuất hiện tại đây sau khi bạn tạo yêu cầu thanh toán gói tập.'}</p>{payments.length > 0 && <button type="button" className="mpay-button" onClick={() => { setSearch(''); setStatusFilter('all') }}>Xóa bộ lọc</button>}</div>}
     </section>
 
     {viewing && <PaymentDialog title={`Chi tiết giao dịch #PAY-${viewing.id}`} busy={busy || loading} onClose={() => setViewingId(null)} footer={<>
       <button type="button" className="mpay-button" disabled={busy || loading} onClick={() => setViewingId(null)}>Đóng</button>
-      {paymentStatus(viewing) === 'pending' && <><button type="button" className="mpay-button is-danger" disabled={busy || loading} onClick={() => { setActionError(''); setViewingId(null); setCancelling(viewing) }}><XCircle size={15} />Hủy giao dịch</button><button type="button" className="mpay-button is-soft" disabled={busy || loading} onClick={() => handleSync(viewing)}><RefreshCw size={15} className={action?.type === 'sync' ? 'member-spin' : undefined} />{action?.type === 'sync' ? 'Đang đồng bộ...' : 'Đồng bộ trạng thái'}</button></>}
+      {canCancelPayOSPayment(viewing) && <button type="button" className="mpay-button is-danger" disabled={busy || loading} onClick={() => { setActionError(''); setViewingId(null); setCancelling(viewing) }}><XCircle size={15} />Hủy giao dịch</button>}{canSyncPayOSPayment(viewing) && <button type="button" className="mpay-button is-soft" disabled={busy || loading} onClick={() => handleSync(viewing)}><RefreshCw size={15} className={action?.type === 'sync' ? 'member-spin' : undefined} />{action?.type === 'sync' ? 'Đang đồng bộ...' : 'Đồng bộ trạng thái'}</button>}
       {paymentStatus(viewing) === 'completed' && <button type="button" className="mpay-button is-primary" disabled={busy || loading} onClick={() => exportPdf(viewing)}><ArrowDownToLine size={15} />{action?.type === 'pdf' ? 'Đang tải...' : 'Tải hóa đơn PDF'}</button>}
     </>}>
       <div className="mpay-detail-summary"><div><span>Số tiền giao dịch</span><strong>{currency(viewing.amount)}</strong></div><PaymentStatus payment={viewing} /></div>
       {actionError && <Message error>{actionError}</Message>}{loadError && <Message error>{loadError}</Message>}
       {paymentStatus(viewing) === 'needsreview' && <Message>{viewing.reviewReason || 'Giao dịch cần được kiểm tra đối soát. Vui lòng liên hệ lễ tân để được hỗ trợ.'}</Message>}
       <dl className="mpay-detail-grid"><DetailField label="Mã giao dịch">#PAY-{viewing.id}</DetailField><DetailField label="Đăng ký gói tập">{viewing.subscriptionId ? `#SUB-${viewing.subscriptionId}` : 'Chưa cập nhật'}</DetailField><DetailField label="Phương thức">{viewing.paymentMethod || 'PayOS'}</DetailField><DetailField label="Mã đơn PayOS">{viewing.payOSOrderCode ?? 'Chưa cập nhật'}</DetailField><DetailField label="Ngày tạo">{dateTime(viewing.createdAt)}</DetailField><DetailField label="Ngày thanh toán">{dateTime(viewing.paidAt)}</DetailField><DetailField label="Số tiền thực nhận">{currency(viewing.amountReceived ?? 0)}</DetailField><DetailField label="Mã tham chiếu">{viewing.transactionReference || 'Chưa cập nhật'}</DetailField></dl>
-      {paymentStatus(viewing) === 'pending' && (viewing.qrCode || viewing.checkoutUrl) && <PaymentQr payment={viewing} onCheckout={checkout} disabled={busy || loading} />}
+      {canCheckoutPayOSPayment(viewing) && (viewing.qrCode || viewing.checkoutUrl) && <PaymentQr payment={viewing} onCheckout={checkout} disabled={busy || loading} />}
       {paymentStatus(viewing) === 'pending' && !viewing.checkoutUrl && !viewing.qrCode && <Message>Giao dịch chưa có liên kết thanh toán. Hãy đồng bộ trạng thái hoặc liên hệ lễ tân để được hỗ trợ.</Message>}
     </PaymentDialog>}
 
-    {cancelling && <PaymentDialog title="Hủy yêu cầu thanh toán" busy={busy || loading} onClose={() => { setCancelling(null); setActionError('') }} footer={<><button type="button" className="mpay-button" disabled={busy || loading} onClick={() => { setCancelling(null); setActionError('') }}>Giữ giao dịch</button><button type="button" className="mpay-button is-danger" disabled={busy || loading} onClick={confirmCancel}>{action?.type === 'cancel' ? <LoaderCircle className="member-spin" size={16} /> : <XCircle size={16} />}Xác nhận hủy</button></>}>
+    {cancelling && <PaymentDialog title="Hủy yêu cầu thanh toán" busy={busy || loading} onClose={() => { setCancelling(null); setActionError('') }} footer={<><button type="button" className="mpay-button" disabled={busy || loading} onClick={() => { setCancelling(null); setActionError('') }}>Giữ giao dịch</button><button type="button" className="mpay-button is-danger" disabled={busy || loading || !canCancelPayOSPayment(cancelling)} onClick={confirmCancel}>{action?.type === 'cancel' ? <LoaderCircle className="member-spin" size={16} /> : <XCircle size={16} />}Xác nhận hủy</button></>}>
       <p>Bạn muốn hủy yêu cầu thanh toán <strong>#PAY-{cancelling.id}</strong> với số tiền <strong>{currency(cancelling.amount)}</strong>?</p><p className="mpay-muted">Khi giao dịch được xác nhận đã hủy, đơn đăng ký gói tương ứng cũng sẽ được hủy. Chỉ áp dụng cho đơn chưa thanh toán; trạng thái cuối cùng được xác nhận từ hệ thống.</p>{actionError && <Message error>{actionError}</Message>}
     </PaymentDialog>}
   </div>

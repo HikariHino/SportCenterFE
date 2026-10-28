@@ -11,17 +11,18 @@ function assertUnpaidClosed(payment) {
   if (!['cancelled', 'expired', 'failed'].includes(status)) throw new Error('Chưa xác nhận hủy giao dịch PayOS. Vui lòng đồng bộ hoặc thử lại.')
 }
 
-async function cancelOpenPayment(payment) {
+export async function cancelOpenPayment(payment, reason) {
   if (!Number.isSafeInteger(Number(payment?.id)) || Number(payment.id) <= 0) throw new Error('Mã giao dịch thanh toán không hợp lệ.')
   let updated
-  try { updated = await cancelPayment(payment.id) }
+  try { updated = await cancelPayment(payment.id, reason) }
   catch (error) {
     // A cancellation response may be lost after the gateway has accepted it.
     try { updated = await getPaymentById(payment.id) } catch { throw error }
     if (paymentStatus(updated) === 'pending') throw error
   }
   if (String(updated?.id) !== String(payment.id) || (payment.subscriptionId != null && String(updated.subscriptionId) !== String(payment.subscriptionId))) throw new Error('Kết quả hủy không khớp giao dịch. Vui lòng tải lại.')
-  assertUnpaidClosed(updated)
+  try { assertUnpaidClosed(updated) }
+  catch (error) { error.paymentResult = updated; throw error }
   return updated
 }
 

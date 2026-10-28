@@ -2,7 +2,7 @@ import api from './api'
 import { getToken } from '../utils/auth'
 
 function unwrap(body, fallback) {
-  if (body?.success === false) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
     throw new Error(body.message || fallback)
   }
 
@@ -13,7 +13,8 @@ function unwrap(body, fallback) {
 export async function getPayments() {
   const response = await api.get('/payments')
   const payload = unwrap(response.data, 'Không thể tải lịch sử thanh toán.')
-  return Array.isArray(payload) ? payload : []
+  if (!Array.isArray(payload)) throw new Error('Dữ liệu lịch sử thanh toán không hợp lệ. Vui lòng tải lại.')
+  return payload
 }
 
 export const getMyPayments = getPayments
@@ -27,7 +28,14 @@ export async function getPaymentById(id) {
 /** POST /api/payments - Tạo hoặc lấy lại link PayOS cho đăng ký đang chờ. */
 export async function createPayment(subscriptionId) {
   const response = await api.post('/payments', { subscriptionId })
-  return unwrap(response.data, 'Không thể tạo yêu cầu thanh toán.')
+  const payment = unwrap(response.data, 'Không thể tạo yêu cầu thanh toán.')
+  if (!Number.isSafeInteger(Number(payment?.id)) || Number(payment.id) <= 0
+    || String(payment.subscriptionId) !== String(subscriptionId)
+    || String(payment.paymentMethod).toLowerCase() !== 'payos'
+    || !['pending', 'completed', 'cancelled', 'expired', 'failed', 'needsreview'].includes(String(payment.status).toLowerCase())) {
+    throw new Error('Kết quả tạo thanh toán không khớp đơn đăng ký. Vui lòng tải lại trước khi thử lại.')
+  }
+  return payment
 }
 
 /** POST /api/payments/{id}/sync - Đồng bộ trạng thái mới nhất từ PayOS. */
@@ -56,16 +64,16 @@ const isSettled = payment => settledStatuses.has(String(payment.status || '').tr
 const pendingVerifications = new Map()
 
 /** Verify the return page against BE state; URL status/cancel flags are not proof of payment. */
-export function verifyPaymentResult(orderCode) {
+export function verifyPaymentResult(orderCode, { refresh = false } = {}) {
   if (!/^[1-9]\d*$/.test(String(orderCode || ''))) return Promise.reject(new Error('Đường dẫn thiếu mã đơn thanh toán hợp lệ.'))
-  const key = JSON.stringify([getToken(), String(orderCode)])
+  const key = JSON.stringify([getToken(), String(orderCode), refresh])
   if (pendingVerifications.has(key)) return pendingVerifications.get(key)
-  const request = verifyPayment(orderCode).finally(() => pendingVerifications.delete(key))
+  const request = verifyPayment(orderCode, refresh).finally(() => pendingVerifications.delete(key))
   pendingVerifications.set(key, request)
   return request
 }
 
-async function verifyPayment(orderCode) {
+async function verifyPayment(orderCode, refresh) {
   const payments = await getMyPayments()
   let payment = payments.find(item => String(item.payOSOrderCode) === String(orderCode))
   if (!payment || !Number.isSafeInteger(Number(payment.id)) || Number(payment.id) <= 0) throw new Error('Không tìm thấy giao dịch PayOS vừa thực hiện.')
@@ -76,7 +84,8 @@ async function verifyPayment(orderCode) {
     }
     return result
   }
-  if (isSettled(payment)) return payment
+  const status = String(payment.status || '').trim().toLowerCase()
+  if (status === 'completed' || (!refresh && status !== 'needsreview' && isSettled(payment))) return payment
   // Keep one verification in flight across StrictMode effects. Retry sequentially
   // so a webhook can commit before we read again, without creating a new payment.
   for (let attempt = 0; attempt < 3; attempt += 1) {

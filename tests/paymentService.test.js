@@ -83,8 +83,8 @@ test('StrictMode-style concurrent verification shares list, sync and readback wh
   assert.deepEqual(calls, ['get /payments', 'post /payments/14/sync', 'get /payments/14'])
 })
 
-test('already settled server records return without calling sync, including review and cancellation', async () => {
-  for (const status of ['Completed', 'NeedsReview', 'Cancelled', 'Expired', 'Failed']) {
+test('settled server records return without calling sync, while review can be reconciled again', async () => {
+  for (const status of ['Completed', 'Cancelled', 'Expired', 'Failed']) {
     const calls = []
     api.defaults.adapter = async config => {
       calls.push(config.url)
@@ -93,6 +93,48 @@ test('already settled server records return without calling sync, including revi
     assert.equal((await service.verifyPaymentResult('14')).status, status)
     assert.deepEqual(calls, ['/payments'])
   }
+})
+
+test('review records query PayOS again and can complete without creating another payment', async () => {
+  const calls = []
+  api.defaults.adapter = async config => {
+    calls.push(`${config.method} ${config.url}`)
+    return response(config, config.url === '/payments' ? [{ ...pending, status: 'NeedsReview', amountReceived: 500 }] : completed)
+  }
+  assert.equal((await service.verifyPaymentResult('14')).status, 'Completed')
+  assert.deepEqual(calls, ['get /payments', 'post /payments/14/sync'])
+})
+
+test('manual verification refreshes a closed payment and reports review if money arrived later', async () => {
+  const calls = []
+  api.defaults.adapter = async config => {
+    calls.push(config.url)
+    return response(config, config.url === '/payments' ? [{ ...pending, status: 'Cancelled' }] : { ...pending, status: 'NeedsReview', amountReceived: 500 })
+  }
+  assert.equal((await service.verifyPaymentResult('14', { refresh: true })).status, 'NeedsReview')
+  assert.deepEqual(calls, ['/payments', '/payments/14/sync'])
+})
+
+test('creation submits only the subscription ID and preserves the actual state returned by BE', async () => {
+  for (const status of ['Pending', 'Completed', 'Cancelled', 'Expired', 'Failed', 'NeedsReview']) {
+    const dto = { ...pending, subscriptionId: 20, status, checkoutUrl: 'https://pay.payos.vn/web/fixture' }
+    api.defaults.adapter = async config => {
+      assert.equal(config.method, 'post')
+      assert.equal(config.url, '/payments')
+      assert.deepEqual(JSON.parse(config.data), { subscriptionId: 20 })
+      return response(config, dto)
+    }
+    assert.equal((await service.createPayment(20)).status, status)
+  }
+})
+
+test('creation rejects mismatched records and malformed history rather than directing a member to another order', async () => {
+  for (const dto of [null, { ...pending, subscriptionId: 99 }, { ...pending, subscriptionId: 20, paymentMethod: 'Cash' }, { ...pending, subscriptionId: 20, status: 'Unknown' }]) {
+    api.defaults.adapter = async config => response(config, dto)
+    await assert.rejects(service.createPayment(20), /không khớp/)
+  }
+  api.defaults.adapter = async config => response(config, { items: [] })
+  await assert.rejects(service.getPayments(), /không hợp lệ/)
 })
 
 test('pending gateway state is checked again until the server confirms completion', async t => {
