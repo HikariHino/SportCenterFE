@@ -6,6 +6,11 @@ import { getRegistrationResult } from '../utils/registration'
 // Other methods return the complete API body.
 // HTTP errors reject with the backend body available at error.response.data.
 
+function getPasswordResetResult(data) {
+  if (data && typeof data === 'object') return { ...data, success: data.success !== false }
+  return { success: true }
+}
+
 /**
  * POST /api/Auth/login
  * @param {{ email: string, password: string }} credentials
@@ -65,7 +70,7 @@ export async function verifyRegisterOtp({ email, otp }) {
 /** POST /api/Auth/request-reset-password */
 export async function requestResetPassword({ email }) {
   const response = await api.post('/Auth/request-reset-password', { email }, { skipAuth: true })
-  return response.data
+  return getPasswordResetResult(response.data)
 }
 
 /** POST /api/Auth/verify-reset-password */
@@ -76,7 +81,7 @@ export async function verifyResetPassword({ email, otp, newPassword, confirmPass
     newPassword,
     confirmPassword,
   }, { skipAuth: true })
-  return response.data
+  return getPasswordResetResult(response.data)
 }
 
 /** POST /api/Auth/refresh-token */
