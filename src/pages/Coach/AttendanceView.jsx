@@ -171,8 +171,8 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
         selectedSessionIds={selectedIds}
         getStatusLabel={getSessionStatusLabel}
         interactionDisabled={scheduleLoading}
-        title="Thời khóa biểu điểm danh"
-        description={scheduleLoading ? 'Đang tải các buổi huấn luyện Coach phụ trách...' : 'Bấm vào một buổi học để xem học viên và điểm danh ngay bên dưới.'}
+        title="Thời khóa biểu huấn luyện"
+        description={scheduleLoading ? 'Đang tải các buổi huấn luyện Coach phụ trách...' : 'Bấm vào một buổi học để xem học viên và cập nhật điểm danh ngay bên dưới.'}
       />
     </div>
 

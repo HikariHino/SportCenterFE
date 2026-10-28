@@ -184,7 +184,7 @@ export function OverviewView({ onNavigate }) {
   const primaryAction = overdueSession
     ? { label: 'Xử lý buổi học', target: 'Lịch huấn luyện', icon: CheckCircle2 }
     : attendance.pending > 0 && focusSessionIsToday
-      ? { label: 'Điểm danh ngay', target: 'Điểm danh', icon: UserCheck }
+      ? { label: 'Điểm danh ngay', target: 'Lịch huấn luyện', icon: UserCheck }
       : { label: 'Mở lịch huấn luyện', target: 'Lịch huấn luyện', icon: CalendarRange }
   const PrimaryActionIcon = primaryAction.icon
 
