@@ -7,6 +7,7 @@ import {
   Trophy, UserCheck, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import usePortalNavigation from '../../hooks/usePortalNavigation'
 import { getUserDisplayName, getUserInitials } from '../../utils/auth'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification, sessionNotificationId } from '../../utils/sessionNotifications'
@@ -85,18 +86,20 @@ export const memberNavSections = [
 ]
 
 const allNavItems = memberNavSections.flatMap(section => section.items)
+const memberViewIds = allNavItems.map(item => item.id)
 
 export default function Member() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [activeNav, setActiveNav] = useState(() => ['payments', 'subscriptions'].includes(location.state?.activeNav) ? location.state.activeNav : 'profile')
+  const paymentReturnView = ['payments', 'subscriptions'].includes(location.state?.activeNav) ? location.state.activeNav : undefined
+  const [activeNav, setActiveNav] = usePortalNavigation(memberViewIds, 'profile', paymentReturnView)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [noticeTone, setNoticeTone] = useState('success')
 
   useEffect(() => {
-    if (!location.state?.paymentNotice) return
+    if (!location.state?.paymentNotice) { setNotice(''); return }
     setNotice(location.state.paymentNotice)
     setNoticeTone(location.state.paymentStatus === 'success' ? 'success' : ['pending', 'review'].includes(location.state.paymentStatus) ? 'warning' : 'error')
     const timer = window.setTimeout(() => setNotice(''), 6000)

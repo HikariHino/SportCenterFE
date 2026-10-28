@@ -68,6 +68,7 @@ export function SubscriptionsView({ showNotice }) {
   // Modal xác nhận hủy gói tập Pending (POST /api/member-subscriptions/{id}/cancel)
   const [cancellingSub, setCancellingSub] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelError, setCancelError] = useState('')
 
   const applySubscriptionData = items => setSubscriptions(mergeConfirmedSubscriptionCancellations(items, confirmedCancellations.current))
 
@@ -165,7 +166,14 @@ export function SubscriptionsView({ showNotice }) {
   // Khởi tạo modal xác nhận hủy gói
   const handlePromptCancelSub = (sub) => {
     setViewingSub(null)
+    setCancelError('')
     setCancellingSub(sub)
+  }
+
+  const handleCloseCancellation = () => {
+    if (registrationLock.current) return
+    setCancellingSub(null)
+    setCancelError('')
   }
 
   // Thực thi hủy gói Pending (POST /api/member-subscriptions/{id}/cancel)
@@ -173,6 +181,7 @@ export function SubscriptionsView({ showNotice }) {
     if (!cancellingSub || registrationLock.current) return
     registrationLock.current = true
     setCancelLoading(true)
+    setCancelError('')
     try {
       const cancelled = await cancelSubscriptionOrder(cancellingSub.id)
       confirmedCancellations.current.set(String(cancelled.id), cancelled)
@@ -189,7 +198,7 @@ export function SubscriptionsView({ showNotice }) {
       try { applySubscriptionData(await getMySubscriptions()) }
       catch { setError('Đơn đã được hủy thành công nhưng chưa tải lại được danh sách. Vui lòng làm mới để đồng bộ.') }
     } catch (err) {
-      setRegistrationError(getPackageErrorMessage(err, 'Không thể hủy đơn đăng ký.'))
+      setCancelError(getPackageErrorMessage(err, 'Không thể hủy đơn đăng ký.'))
       try { applySubscriptionData(await getMySubscriptions()) } catch { /* Preserve the last confirmed state. */ }
     } finally {
       registrationLock.current = false
@@ -792,17 +801,18 @@ export function SubscriptionsView({ showNotice }) {
           MODAL 4: XÁC NHẬN HỦY GÓI TẬP CHƯA THANH TOÁN (POST /api/member-subscriptions/{id}/cancel)
           ========================================================================= */}
       {cancellingSub && (
-        <div className="member-modal-overlay" onClick={() => setCancellingSub(null)}>
-          <div className="member-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+        <div className="member-modal-overlay" onClick={handleCloseCancellation}>
+          <div className="member-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-subscription-title" aria-busy={cancelLoading} onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
             <div className="member-modal-header" style={{ background: 'var(--theme-red-bg, #fef2f2)', borderBottom: '1px solid var(--theme-border, #d8e0ed)' }}>
-              <h3 style={{ color: 'var(--theme-red, #b42318)' }}>
+              <h3 id="cancel-subscription-title" style={{ color: 'var(--theme-red, #b42318)' }}>
                 <ShieldAlert size={19} style={{ color: 'var(--theme-red, #b42318)' }} />
                 Xác nhận hủy đơn đăng ký gói
               </h3>
               <button
                 type="button"
                 className="member-modal-close" aria-label="Đóng cửa sổ"
-                onClick={() => setCancellingSub(null)}
+                disabled={cancelLoading}
+                onClick={handleCloseCancellation}
               >
                 <X size={18} />
               </button>
@@ -812,6 +822,8 @@ export function SubscriptionsView({ showNotice }) {
               <p style={{ fontSize: 13, color: 'var(--theme-text, #17243c)', margin: 0, lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn hủy đơn đăng ký gói <strong>{cancellingSub.packageName}</strong> (Mã đơn: <strong>#SUB-{cancellingSub.id}</strong>) không?
               </p>
+
+              {cancelError && <div className="member-sub-message is-error" role="alert"><AlertCircle size={18} /><p>{cancelError}</p></div>}
 
               <div style={{ background: 'var(--theme-red-bg, #fef2f2)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 11, color: 'var(--theme-red, #b42318)', lineHeight: 1.5 }}>
@@ -825,7 +837,7 @@ export function SubscriptionsView({ showNotice }) {
                 type="button"
                 disabled={cancelLoading}
                 className="member-button"
-                onClick={() => setCancellingSub(null)}
+                onClick={handleCloseCancellation}
               >
                 Quay lại
               </button>
