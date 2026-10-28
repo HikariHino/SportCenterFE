@@ -14,6 +14,7 @@ import { getMembershipPackages } from '../../services/membershipPackageService'
 import { getMySubscriptions, createMemberSubscription } from '../../services/memberSubscriptionService'
 import { getMyPayments, createPayment, cancelPayment, syncPayment } from '../../services/paymentService'
 import { exportInvoicePdf, triggerBlobDownload } from '../../services/reportService'
+import { getFullNameValidationError, getVietnamPhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_LENGTH } from '../../utils/profileValidation'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
 
 function formatCurrency(value) {
@@ -93,8 +94,13 @@ export function ProfileView({ user, showNotice }) {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault()
-    setSaving(true)
     setError('')
+    const validationError = getFullNameValidationError(formData.fullName) || getVietnamPhoneValidationError(formData.phoneNumber)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setSaving(true)
     try {
       const result = await updateProfile({
         fullName: formData.fullName.trim(),
@@ -212,7 +218,7 @@ export function ProfileView({ user, showNotice }) {
                 <input
                   type="text"
                   required
-                  maxLength={200}
+                  maxLength={PROFILE_FULL_NAME_MAX_LENGTH}
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
                   value={formData.fullName}
                   onChange={e => setFormData({ ...formData, fullName: e.target.value })}
@@ -222,11 +228,14 @@ export function ProfileView({ user, showNotice }) {
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 5 }}>Số điện thoại</label>
                 <input
                   type="tel"
-                  maxLength={30}
+                  inputMode="numeric"
+                  pattern="0[0-9]{9}"
+                  title="Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0"
+                  maxLength={PROFILE_PHONE_LENGTH}
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #cdd3e1', borderRadius: 7 }}
                   value={formData.phoneNumber}
                   onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  placeholder="0912..."
+                  placeholder="0912345678"
                 />
               </div>
             </div>
