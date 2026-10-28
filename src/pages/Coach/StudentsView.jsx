@@ -2,13 +2,35 @@ import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, Clock3, PencilLine, Plus, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
 import { checkInCoachRegistration, getCoachClasses, getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
 import { createTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
-import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, ViewLoader } from './CoachViewShared'
+import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, timeFormatter, ViewLoader } from './CoachViewShared'
 
 const toDateInput = date => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+const weekdayDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  weekday: 'long',
+  day: '2-digit',
+  month: '2-digit',
+})
+
+const weekRangeFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+})
+
+const formatWeekSessionOption = session => {
+  const start = new Date(session.startsAt)
+  const end = new Date(session.endsAt)
+  const weekStart = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+  const dayFromMonday = (weekStart.getDay() + 6) % 7
+  weekStart.setDate(weekStart.getDate() - dayFromMonday)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+  return `Tuần ${weekRangeFormatter.format(weekStart)}–${weekRangeFormatter.format(weekEnd)} · ${weekdayDateFormatter.format(start)} · ${timeFormatter.format(start)}–${timeFormatter.format(end)}`
 }
 
 const trainingGoals = [
@@ -373,15 +395,15 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
 
   return <div className="coach-section-view">
     <section className="coach-card coach-session-picker coach-student-session-picker">
-      <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>CHỌN THEO THỨ TỰ</small><strong>{selectedSession?.className || 'Tìm học viên theo buổi huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn môn, lớp và buổi trước khi xem danh sách học viên.'}</p></div></div>
+      <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>CHỌN THEO THỨ TỰ</small><strong>{selectedSession?.className || 'Tìm học viên theo tuần huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn môn, lớp và tuần huấn luyện trước khi xem danh sách học viên.'}</p></div></div>
       <div className="coach-student-selection-steps">
         <label><span><b>1</b>Chọn môn</span><select value={selectedSportId} onChange={event => { setSelectedSportId(event.target.value); setSelectedClassId(''); onSelectSession?.(null); setStatus('Tất cả') }}><option value="">Chọn môn thể thao</option>{sports.map(sport => <option value={sport.id} key={sport.id}>{sport.name}</option>)}</select></label>
         <label><span><b>2</b>Chọn lớp</span><select value={selectedClassId} disabled={!selectedSportId} onChange={event => { setSelectedClassId(event.target.value); onSelectSession?.(null); setStatus('Tất cả') }}><option value="">Chọn lớp huấn luyện</option>{visibleClasses.map(item => <option value={item.id} key={item.id}>{item.className}</option>)}</select></label>
-        <label><span><b>3</b>Chọn buổi</span><select value={selectedSession?.id || ''} disabled={!selectedClassId} onChange={event => { const session = visibleSessions.find(item => String(item.id) === event.target.value); if (session) onSelectSession?.({ ...session, sportId: selectedSportId, sportName: sports.find(sport => sport.id === selectedSportId)?.name }); setStatus('Tất cả') }}><option value="">Chọn buổi huấn luyện</option>{visibleSessions.map(session => <option key={session.id} value={session.id}>{formatSessionOption(session)}</option>)}</select></label>
+        <label><span><b>3</b>Chọn tuần</span><select value={selectedSession?.id || ''} disabled={!selectedClassId} onChange={event => { const session = visibleSessions.find(item => String(item.id) === event.target.value); if (session) onSelectSession?.({ ...session, sportId: selectedSportId, sportName: sports.find(sport => sport.id === selectedSportId)?.name }); setStatus('Tất cả') }}><option value="">Chọn tuần huấn luyện</option>{visibleSessions.map(session => <option key={session.id} value={session.id}>{formatWeekSessionOption(session)}</option>)}</select></label>
       </div>
     </section>
 
-    {!selectedSession ? <section className="coach-card coach-roster-state coach-student-selection-empty"><EmptyState title="Chọn buổi huấn luyện" text="Hoàn tất lần lượt ba bước phía trên để tải đúng danh sách học viên của buổi." /></section> : <><section className="coach-student-kpis">
+    {!selectedSession ? <section className="coach-card coach-roster-state coach-student-selection-empty"><EmptyState title="Chọn tuần huấn luyện" text="Hoàn tất lần lượt ba bước phía trên để tải đúng danh sách học viên của buổi trong tuần." /></section> : <><section className="coach-student-kpis">
       <article><span className="blue"><Users size={21} /></span><div><small>Học viên trong buổi</small><strong>{students.length}</strong><p>Dữ liệu trực tiếp từ roster</p></div></article>
       <article><span className="green"><UserCheck size={21} /></span><div><small>Đã điểm danh</small><strong>{checkedInCount}</strong><p>Bao gồm đúng giờ và đi trễ</p></div></article>
       <article><span className="purple"><UserRound size={21} /></span><div><small>Vắng mặt</small><strong>{absentCount}</strong><p>Theo trạng thái chuyên cần</p></div></article>
