@@ -1,0 +1,18 @@
+.member-schedule-review { width: min(620px, calc(100% - 24px)); }
+.member-schedule-review[open] { display: grid; gap: 18px; }
+.member-schedule-review header { justify-content: flex-start; align-items: flex-start; }
+.member-schedule-review header p, .member-schedule-review-count { color: var(--theme-accent); font-size: 11px; font-weight: 700; }
+.member-schedule-review-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 12px; background: var(--theme-raised); color: var(--theme-accent); }
+.member-schedule-review-content { display: grid; gap: 14px; min-width: 0; }
+.member-schedule-review-message { padding: 12px; border-left: 3px solid var(--theme-accent); background: var(--theme-bg); overflow-wrap: anywhere; white-space: pre-line; }
+.member-schedule-review-accept { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border: 1px solid var(--theme-border); border-radius: 10px; font-weight: 600; cursor: pointer; }
+.member-schedule-review-accept input { flex: 0 0 18px; width: 18px; height: 18px; margin: 2px 0 0; accent-color: #1557d5; }
+.member-schedule-review-status, .member-schedule-review-error { display: flex; align-items: flex-start; gap: 8px; }
+.member-schedule-review-status svg, .member-schedule-review-error svg { flex-shrink: 0; }
+.member-schedule-review-error { color: var(--theme-red, #b42318); }
+.member-schedule-review footer { justify-content: flex-end; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--theme-border); }
+@media (max-width: 600px) {
+  .member-schedule-review { padding: 18px; max-height: calc(100dvh - 24px); }
+  .member-schedule-review header h2 { font-size: 17px; }
+  .member-schedule-review footer button { flex: 1 1 140px; }
+}

@@ -21,6 +21,7 @@ import {
   NotificationsView,
 } from './MemberViews'
 import '../../style/member/Member.css'
+import MemberScheduleReviewGate from './MemberScheduleReviewGate'
 
 export const memberNavSections = [
   {
@@ -216,7 +217,7 @@ export default function Member() {
     try {
       const outcome = await markAllNotificationsRead()
       if (!mounted.current) return
-      setQuickReadNotice(outcome.total ? `Đã đọc ${outcome.read}/${outcome.total} thông báo.` : 'Bạn đã đọc hết thông báo.')
+      setQuickReadNotice((outcome.total ? `Đã đọc ${outcome.read}/${outcome.total} thông báo.` : outcome.requiresReview ? '' : 'Bạn đã đọc hết thông báo.') + (outcome.requiresReview ? ` Có ${outcome.requiresReview} thông báo thay đổi lịch cần kiểm tra và xác nhận.` : ''))
       if (outcome.failed.length) setQuickReadError(`Còn ${outcome.failed.length} thông báo chưa cập nhật được. Vui lòng thử lại.`)
     } catch (error) {
       if (mounted.current) setQuickReadError(getNotificationErrorMessage(error))
@@ -233,6 +234,7 @@ export default function Member() {
   }
 
   const viewUpdatedSchedule = item => {
+    refreshNotifications()
     setScheduleRequest({ sessionId: sessionNotificationId(item), revision: Date.now() })
     setNotificationOpen(false)
     selectNav('classes')
@@ -262,6 +264,7 @@ export default function Member() {
   }
 
   return (
+    <MemberScheduleReviewGate key={user?.userId ?? user?.id ?? user?.email} refreshKey={notificationRevision} onConfirmed={refreshNotifications} onLogout={handleLogout}>
     <div className="member-page member-dashboard">
       {/* Sidebar role Member */}
       <aside className={`member-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
@@ -379,7 +382,7 @@ export default function Member() {
                             <h4>{item.title}</h4>
                             <p>{item.content}</p>
                             {isSessionUpdateNotification(item) && <div className="member-session-update-notice"><p>Kiểm tra lịch mới và HLV. Đăng ký được giữ nguyên; bạn có thể tự hủy theo hạn hủy nếu không tham gia được.</p><button type="button" onClick={() => viewUpdatedSchedule(item)}>Xem lịch đã đặt</button></div>}
-                            {!item.isRead && (
+                            {!item.isRead && !isSessionUpdateNotification(item) && (
                               <button
                                 type="button"
                                 disabled={quickMarkingId !== null || quickMarkingAll}
@@ -418,5 +421,6 @@ export default function Member() {
         </main>
       </section>
     </div>
+    </MemberScheduleReviewGate>
   )
 }

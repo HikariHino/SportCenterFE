@@ -59,7 +59,7 @@ function RegistrationDetailsDialog({ item, busy, now, onClose, onAction }) {
   </dialog>
 }
 
-function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscription, onNavigateTab, bulkResult, bulkProgress, now }) {
+function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscription, onNavigateTab, bulkResult, bulkProgress, now, registrations }) {
   const dialogRef = useRef(null)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
@@ -71,7 +71,12 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
   }, [])
   const titles = { book: 'Xác nhận đặt lịch', bookClass: 'Đăng ký các buổi đã chọn', cancel: 'Hủy đăng ký buổi học', checkIn: 'Điểm danh buổi học', review: 'Đánh giá buổi học' }
   const isBooking = action.type === 'book' || action.type === 'bookClass'
-  const isBookBlocked = isBooking && hasActiveSubscription !== true
+  const pendingSessions = action.type === 'bookClass'
+    ? action.item.sessions.filter(item => !bulkResult?.remaining.length || bulkResult.remaining.includes(String(item.id)))
+    : action.type === 'book' ? [action.item] : []
+  const registered = registeredSessionIds(registrations)
+  const bookingReason = pendingSessions.map(item => bookingUnavailableReason(item, registered.has(String(item.id)), now, registrations)).find(Boolean) || ''
+  const isBookBlocked = isBooking && (hasActiveSubscription !== true || Boolean(bookingReason))
   const checkInReason = action.type === 'checkIn' ? checkInUnavailableReason(action.item, now) : ''
   const reviewReason = action.type === 'review' ? reviewUnavailableReason(action.item, now) : ''
   return <dialog className="member-classes-dialog" ref={dialogRef} aria-labelledby="member-class-dialog-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }}>
@@ -86,6 +91,7 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
         {bulkProgress && <p role="status">Đang xử lý {bulkProgress.completed}/{bulkProgress.total} buổi...</p>}
       </> : <SessionDetails item={action.item} />}
       {isBooking && <>
+        {bookingReason && <p className="member-classes-checkin-notice" role="alert"><AlertCircle size={17} />{bookingReason}</p>}
         {hasActiveSubscription === false ? (
           <div className="member-classes-dialog-alert" role="alert">
             <ShieldAlert size={20} />
@@ -351,7 +357,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
         if (hasActiveSubscription !== true) {
           throw new Error('Không thể đặt lịch khi chưa đăng ký gói thành viên.')
         }
-        const reason = bookingUnavailableReason(item, booked[item.id] || registeredSessions.has(String(item.id)))
+        const reason = bookingUnavailableReason(item, booked[item.id] || registeredSessions.has(String(item.id)), Date.now(), registrations)
         if (reason) throw new Error(reason)
         const result = await bookClassSessions({ classId: item.classId, sessionIds: [item.id] })
         if (result.remaining.length || result.skipped.length) throw new Error(result.error || result.skipped[0].reason)
@@ -426,7 +432,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
       </div>
     )}
 
-    {tab === 'browse' && <MemberClassBrowser sports={sports} coaches={coaches} rooms={roomsList} registered={registeredSessions} busy={busy} now={now} refreshKey={browseRevision}
+    {tab === 'browse' && <MemberClassBrowser sports={sports} coaches={coaches} rooms={roomsList} registered={registeredSessions} registrations={registrations} busy={busy} now={now} refreshKey={browseRevision}
       bookingState={{ loading: mine.loading || subscriptions.loading, error: mine.error || subscriptions.error, reload: () => { mine.reload(); subscriptions.reload() } }}
       onBookClass={course => openAction('bookClass', course)} />}
 
@@ -467,6 +473,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
         bulkResult={bulkResult}
         bulkProgress={bulkProgress}
         hasActiveSubscription={hasActiveSubscription}
+        registrations={registrations}
         onNavigateTab={onNavigateTab}
         onClose={() => { if (!busy) setAction(null) }}
         onSubmit={submitAction}

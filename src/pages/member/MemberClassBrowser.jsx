@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, ArrowLeft, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock3, LoaderCircle, MapPin, RefreshCw, Search, User, Users } from 'lucide-react'
 import useResource from '../../hooks/useClassResource'
 import { getMemberClasses, getMemberClassSessions } from '../../services/memberClassService'
-import { bookingUnavailableReason, cancellationDeadline, classStatusLabel, getRoomForClass } from '../../utils/memberClasses'
+import { bookingUnavailableReason, cancellationDeadline, classStatusLabel, getRoomForClass, selectableMemberSessions } from '../../utils/memberClasses'
 import { formatClassDateTime } from './MemberSessionDetails'
 import { timetableDateKey, timetableTime } from '../../utils/memberTimetable'
 
@@ -31,7 +31,7 @@ function SelectAllCheckbox({ checked, mixed, disabled, onChange }) {
   return <label className="member-session-select-all"><input ref={ref} type="checkbox" checked={checked} disabled={disabled} onChange={onChange} />Chọn tất cả buổi có thể đăng ký</label>
 }
 
-export default function MemberClassBrowser({ sports, coaches, rooms, registered, busy, bookingState, onBookClass, refreshKey, now }) {
+export default function MemberClassBrowser({ sports, coaches, rooms, registered, registrations = [], busy, bookingState, onBookClass, refreshKey, now }) {
   const [draft, setDraft] = useState(emptyFilters)
   const [filters, setFilters] = useState(emptyFilters)
   const [page, setPage] = useState(1)
@@ -44,10 +44,13 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
   useEffect(() => { if (sessions.data) setSessionPage(previous => Math.min(previous, Math.max(1, Math.ceil(sessions.data.total / PAGE_SIZE)))) }, [sessions.data])
   const enrich = item => ({ ...item, classId: course.id, className: item.className || course.className, sportName: item.sportName || course.sportName, coachName: item.coachName || ((item.coachId == null || String(item.coachId) === String(course.coachId)) ? course.coachName : undefined), roomName: item.roomName || getRoomForClass(item, rooms)?.name || getRoomForClass(course, rooms)?.name })
   const allSessions = (course ? sessions.data?.items || [] : []).map(enrich).sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))
-  const available = allSessions.filter(item => !bookingUnavailableReason(item, registered.has(String(item.id)), now))
-  const availableKey = available.map(item => String(item.id)).join('|')
-  const selectedSet = new Set(selectedIds)
-  const selectedSessions = available.filter(item => selectedSet.has(String(item.id)))
+  const available = allSessions.filter(item => !bookingUnavailableReason(item, registered.has(String(item.id)), now, registrations))
+  const selectedSessions = selectableMemberSessions(selectedIds.map(id => available.find(item => String(item.id) === id)).filter(Boolean), registrations, now)
+  const selectedSet = new Set(selectedSessions.map(item => String(item.id)))
+  const planned = [...registrations, ...selectedSessions.map(item => ({ ...item, sessionId: item.id, status: 'Registered', sessionStatus: 'Scheduled' }))]
+  const availableKey = available.filter(item => !bookingUnavailableReason(item, false, now, planned)).map(item => String(item.id)).join('|')
+  const selectAll = selectableMemberSessions([...selectedSessions, ...available.filter(item => !selectedSet.has(String(item.id)))], registrations, now)
+  const allSelected = selectAll.length > 0 && selectedSessions.length === selectAll.length
   const blocked = busy || bookingState.loading || Boolean(bookingState.error)
   useEffect(() => {
     if (sessions.loading || sessions.error || bookingState.loading || bookingState.error) return
@@ -69,14 +72,14 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
     {bookingState.error && <div className="member-classes-error" role="alert"><p>{bookingState.error}</p><button type="button" onClick={bookingState.reload}>Thử lại</button></div>}
     {!sessions.loading && !sessions.error && allSessions.length > 0 && <div className="member-session-selection-tools">
       <div><strong>{allSessions.length} buổi học <span>· {available.length} buổi có thể đăng ký</span></strong><p>Tích chọn những buổi bạn muốn tham gia. Lựa chọn được giữ khi chuyển trang.</p></div>
-      <SelectAllCheckbox checked={available.length > 0 && selectedSessions.length === available.length} mixed={selectedSessions.length > 0 && selectedSessions.length < available.length} disabled={blocked || !available.length} onChange={event => setSelectedIds(event.target.checked ? available.map(item => String(item.id)) : [])} />
-      <p>Chọn tất cả áp dụng cho các buổi có thể đăng ký ở mọi trang.</p>
+      <SelectAllCheckbox checked={allSelected} mixed={selectedSessions.length > 0 && !allSelected} disabled={blocked || !available.length} onChange={event => setSelectedIds(event.target.checked ? selectAll.map(item => String(item.id)) : [])} />
+      <p>Chọn tất cả áp dụng cho các buổi không trùng lịch ở mọi trang.</p>
     </div>}
     {sessions.loading || sessions.error || !allSessions.length ? <State resource={sessions} emptyText="Lớp chưa có buổi học. Vui lòng quay lại sau." /> : <>
       <div className="member-session-list">
         <div className="member-session-list-heading" aria-hidden="true"><span>Buổi học</span><span>Phòng & Huấn luyện viên</span><span>Sĩ số</span><span>Trạng thái</span></div>
         <ul>{allSessions.slice((sessionPage - 1) * PAGE_SIZE, sessionPage * PAGE_SIZE).map(session => {
-        const unavailable = bookingUnavailableReason(session, registered.has(String(session.id)), now)
+        const unavailable = bookingUnavailableReason(session, registered.has(String(session.id)), now, planned)
         const selected = !unavailable && selectedSet.has(String(session.id))
         const deadline = cancellationDeadline(session)
         return <li className="member-session-list-row" key={session.id} data-member-session-id={session.id} data-selected={selected} data-unavailable={Boolean(unavailable)}>

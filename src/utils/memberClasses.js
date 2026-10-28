@@ -1,3 +1,5 @@
+import { sessionsOverlap } from './sessionReschedule.js'
+
 const normalized = value => String(value || '').toLowerCase().replace(/[\s_-]/g, '')
 const cancelled = value => ['cancelled', 'canceled'].includes(normalized(value))
 
@@ -95,14 +97,30 @@ export function registrationActions(item, now = Date.now()) {
   }
 }
 
-export function bookingUnavailableReason(session, registered = false, now = Date.now()) {
+export function bookingUnavailableReason(session, registered = false, now = Date.now(), registrations = []) {
   if (cancelled(session.status)) return 'Buổi học đã hủy'
   if (normalized(session.status) === 'completed' || !Number.isFinite(Date.parse(session.startsAt)) || Date.parse(session.startsAt) <= now) return 'Đã đóng đăng ký'
   if (registered || session.isRegistered) return 'Đã đăng ký'
   const count = session.currentEnrollment ?? session.enrolledCount ?? session.registeredCount
   if (Number(session.availableSlots ?? session.availableSeats ?? NaN) === 0 || (session.capacity != null && count != null && Number(count) >= Number(session.capacity))) return 'Đã hết chỗ'
   if (session.canRegister === false) return 'Chưa thể đăng ký'
+  const conflict = registrations.some(item => !cancelled(item.status) && !cancelled(item.sessionStatus)
+    && normalized(item.status) !== 'completed' && normalized(item.sessionStatus) !== 'completed'
+    && String(item.sessionId) !== String(session.id) && sessionsOverlap(session, item))
+  if (conflict) return 'Trùng lịch với buổi học đã đăng ký hoặc đang chọn'
   return ''
+}
+
+// Keep the input order so an explicit selection takes priority over later choices.
+export function selectableMemberSessions(sessions, registrations, now = Date.now()) {
+  const selected = [], planned = [...registrations]
+  const registered = registeredSessionIds(registrations)
+  for (const session of sessions) {
+    if (bookingUnavailableReason(session, registered.has(String(session.id)), now, planned)) continue
+    selected.push(session)
+    planned.push({ ...session, sessionId: session.id, status: 'Registered', sessionStatus: 'Scheduled' })
+  }
+  return selected
 }
 
 export function registeredSessionIds(registrations) {
