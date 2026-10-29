@@ -5,7 +5,7 @@ import { getGoogleClientId } from './src/utils/googleAuth.js'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), ['API_PROXY_TARGET', 'VITE_GOOGLE_CLIENT_ID'])
-  const apiTarget = env.API_PROXY_TARGET || 'https://localhost:7182'
+  const apiTarget = env.API_PROXY_TARGET || 'https://sportscenterbe-2.onrender.com'
 
   return {
     plugins: [react(), {
