@@ -1,0 +1,53 @@
+.member-workout-layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 20px; align-items: start; }
+.member-workout-config, .member-workout-result { min-width: 0; border: 1px solid var(--theme-border, var(--member-line)); border-radius: 14px; background: var(--theme-surface, #fff); overflow: hidden; }
+.member-workout-panel-heading { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--theme-border, var(--member-line)); }
+.member-workout-panel-heading h3 { font-size: 13px; }
+#member-workout-result-title { scroll-margin-top: 95px; }
+.member-workout-panel-heading p { color: var(--theme-muted, var(--member-muted)); font-size: 10px; }
+.member-workout-config form { padding: 18px; }
+.member-workout-config fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.member-workout-config label { display: block; margin-bottom: 7px; font-size: 11px; font-weight: 600; }
+.member-workout-config label:not(:first-child) { margin-top: 18px; }
+.member-workout-config label > span { color: var(--theme-red, #b42318); }
+.member-workout-config :is(textarea, select) { box-sizing: border-box; width: 100%; padding: 10px 11px; border: 1px solid var(--theme-border, var(--member-line)); border-radius: 9px; background: var(--theme-bg, #f5f7fb); color: var(--theme-text, var(--member-ink)); font: inherit; font-size: 12px; line-height: 1.7; }
+.member-workout-config textarea { min-height: 86px; resize: vertical; max-height: 180px; }
+.member-workout-config textarea::placeholder { color: var(--theme-muted, var(--member-muted)); }
+.member-workout-config :is(textarea, select):focus-visible { outline: 2px solid var(--theme-accent, var(--member-blue)); outline-offset: 2px; }
+.member-workout-config [aria-invalid='true'] { border-color: var(--theme-red, #b42318); }
+.member-workout-field-hint { display: flex; justify-content: space-between; gap: 8px; margin-top: 5px; color: var(--theme-muted, var(--member-muted)); font-size: 9px; }
+.member-workout-goals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.member-workout-goals button { padding: 5px 8px; border: 1px solid var(--theme-border, var(--member-line)); border-radius: 7px; background: transparent; color: var(--theme-muted, var(--member-muted)); font-size: 10px; }
+.member-workout-goals button[aria-pressed='true'], .member-workout-goals button:hover:enabled { color: var(--theme-accent, var(--member-blue)); background: var(--theme-raised, var(--member-soft)); border-color: var(--theme-accent, var(--member-blue)); }
+.member-workout-field-error { color: var(--theme-red, #b42318); font-size: 10px; margin-top: 5px !important; }
+.member-workout .member-workout-submit { width: 100%; margin-top: 22px; min-height: 40px; }
+.member-workout-config fieldset:disabled { opacity: .7; }
+.member-workout-config fieldset:disabled button { cursor: not-allowed; }
+.member-workout-stop { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 8px; margin-top: 8px; border: 1px solid var(--theme-border, var(--member-line)); border-radius: 8px; background: transparent; color: var(--theme-muted, var(--member-muted)); font-size: 11px; }
+.member-workout-note { margin: 0 18px 18px !important; color: var(--theme-muted, var(--member-muted)); font-size: 10px; line-height: 1.8; }
+.member-workout-result-content { min-width: 0; padding: 18px; }
+.member-workout-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 350px; text-align: center; padding: 20px; }
+.member-workout-empty > svg { color: var(--theme-accent, var(--member-blue)); }
+.member-workout-empty h3 { font-size: 17px; }
+.member-workout-empty p { max-width: 330px; color: var(--theme-muted, var(--member-muted)); font-size: 12px; line-height: 1.8; }
+.member-workout-empty-icon { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 18px; background: var(--theme-raised, var(--member-soft)); color: var(--theme-accent, var(--member-blue)); }
+.member-workout-empty-tags, .member-workout-summary { display: flex; flex-wrap: wrap; gap: 7px; }
+.member-workout-empty-tags { justify-content: center; }
+.member-workout-empty-tags span, .member-workout-summary span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid var(--theme-border, var(--member-line)); border-radius: 7px; color: var(--theme-muted, var(--member-muted)); font-size: 10px; overflow-wrap: anywhere; }
+.member-workout-summary { margin-bottom: 14px; }
+.member-workout .member-ai-answer { border-radius: 10px; font-size: 12px; }
+.member-workout .member-ai-answer p { white-space: pre-line; }
+.member-workout-changed { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 12px !important; padding: 9px 10px; border-radius: 8px; background: var(--theme-raised, var(--member-soft)); color: var(--theme-muted, var(--member-muted)); font-size: 10px; }
+.member-workout-result-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 14px !important; color: var(--theme-muted, var(--member-muted)); font-size: 10px; }
+.member-workout-message { display: flex; align-items: flex-start; gap: 8px; margin: 16px 18px 0 !important; padding: 12px; border: 1px solid var(--theme-border, var(--member-line)); border-radius: 9px; color: var(--theme-muted, var(--member-muted)); font-size: 11px; }
+.member-workout-message--error { color: var(--theme-red, #b42318); border-color: currentColor; }
+.member-workout-message .member-button { margin-top: 9px; }
+.member-workout-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--theme-border, var(--member-line)); }
+.member-workout-footer button { display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; border: 0; background: transparent; color: var(--theme-accent, var(--member-blue)); font-size: 10px; }
+@media (max-width: 1050px) { .member-workout-layout { grid-template-columns: 270px minmax(0, 1fr); gap: 14px; } }
+@media (max-width: 820px) {
+  .member-workout-layout { grid-template-columns: minmax(0, 1fr); }
+  .member-workout-config form, .member-workout-result-content { padding: 16px; }
+  .member-workout-empty { min-height: 240px; padding: 12px; }
+  .member-workout-empty h3 { font-size: 16px; }
+  .member-workout-panel-heading { padding: 13px 16px; }
+}

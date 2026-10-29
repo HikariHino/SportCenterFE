@@ -1,136 +1,164 @@
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, ArrowUpRight, BellRing, CalendarDays, Check, ChevronDown, Clock3, Dumbbell, Layers, LoaderCircle, LogOut, Menu, RefreshCw, ScanLine, Search, ShieldCheck, Target, Trophy, Users, X } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Activity, ArrowRight, CalendarDays, Check, ChevronDown, CirclePlay, Clock3, Dumbbell, Globe2, LoaderCircle, LogOut, MapPin, Menu, MessageCircle, Phone, Search, Trophy, Users, Waves, X, Zap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { getAuthDestination, getToken, getUserDisplayName, getUserInitials } from '../utils/auth'
+import { getToken, getUserDisplayName, getUserInitials } from '../utils/auth'
+import { getLandingAction, getLandingPortal } from '../utils/landingNavigation'
+import { membershipPackageType } from '../utils/memberSubscriptions'
+import { getLandingCoaches, getLandingPackages, getLandingSessions, getLandingSports } from '../services/landingService'
 import '../style/SportDashboard.css'
 
-const sports = [
-  ['🏓', 'Pickleball Arena', '6 sân điều hòa chuẩn USA', 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=900&q=80'],
-  ['🎾', 'Tennis Pro Courts', '4 sân tiêu chuẩn Grand Slam', 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=900&q=80'],
-  ['🏸', 'Cầu lông Yonex', '8 sân thảm cao cấp giảm chấn', 'https://images.unsplash.com/photo-1613918431703-aa50889e3be3?auto=format&fit=crop&w=900&q=80'],
-  ['⚽', 'Sân bóng đá mini', 'Cỏ nhân tạo chuẩn FIFA Quality', 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=900&q=80'],
-]
-const coaches = [['Nguyễn Hoàng Nam', 'HLV Pickleball cấp quốc tế', 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=700&q=80'], ['Trần Minh Quân', 'Cựu tuyển thủ quốc gia', 'https://images.unsplash.com/photo-1566751942272-7bdc0d5ada1d?auto=format&fit=crop&w=700&q=80'], ['Lê Thu Hà', 'Huấn luyện viên cầu lông Yonex', 'https://images.unsplash.com/photo-1622250800494-0c6b98d7d722?auto=format&fit=crop&w=700&q=80']]
-const navItems = [
-  ['top', 'Về Olympus'],
-  ['sports', 'Bộ môn thi đấu'],
-  ['booking', 'Lịch sân & Giá'],
-  ['memberships', 'Gói hội viên'],
-  ['amenities', 'Tiện ích'],
-  ['coaches', 'HLV Pro'],
-]
+const navigation = [['experience', 'Trải nghiệm'], ['schedule', 'Lịch lớp học'], ['memberships', 'Gói tập'], ['coaches', 'Huấn luyện viên']]
+const emptyResource = { items: [], loading: true, error: false }
+const money = value => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0)
+const dateLabel = (value, options) => {
+  const date = new Date(value)
+  return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', ...options }).format(date) : 'Chưa cập nhật'
+}
+const sessionTime = item => `${dateLabel(item.startsAt, { hour: '2-digit', minute: '2-digit' })} – ${dateLabel(item.endsAt, { hour: '2-digit', minute: '2-digit' })}`
+const heroPhoto = 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=1100&q=85'
+
+function ActionLink({ action, children, className = '', ...props }) {
+  return <Link to={action.to} state={action.state} className={className} {...props}>{children}</Link>
+}
+
+function SectionHeading({ eyebrow, title, children, action }) {
+  return <div className="lp-section-heading"><div><p className="lp-eyebrow">{eyebrow}</p><h2>{title}</h2>{children && <p className="lp-section-copy">{children}</p>}</div>{action}</div>
+}
+
+function ResourceState({ resource, empty, onRetry }) {
+  if (resource.loading) return <div className="lp-resource" role="status"><LoaderCircle className="lp-spin" size={24} /><p>Đang tải thông tin mới nhất…</p></div>
+  if (resource.error) return <div className="lp-resource" role="status"><p>Chưa kết nối được dữ liệu. Bạn có thể thử lại sau.</p><button className="lp-text-button" type="button" onClick={onRetry}><RefreshCw size={15} />Thử lại</button></div>
+  return <div className="lp-resource"><CalendarDays size={25} /><p>{empty}</p></div>
+}
 
 export default function SportDashboard() {
-  const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const currentUser = user && getToken() ? user : null
+  const member = currentUser?.role === 'member'
+  const portal = getLandingPortal(currentUser)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const headerRef = useRef(null)
+  const menuButton = useRef(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const logoutLock = useRef(false)
-  const displayName = getUserDisplayName(user)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [status, setStatus] = useState('')
-  const [activeSection, setActiveSection] = useState('top')
-  const [indicator, setIndicator] = useState({ left: 0, width: 0, visible: false })
-  const navLinksRef = useRef(null)
-  const scrollLockRef = useRef(false)
-  const scrollLockTimerRef = useRef()
-  const moveIndicator = useCallback((sectionId) => {
-    const navLinks = navLinksRef.current
-    const link = navLinks?.querySelector(`[data-section="${sectionId}"]`)
-    if (!navLinks || !link) return
-    const navRect = navLinks.getBoundingClientRect()
-    const linkRect = link.getBoundingClientRect()
-    setIndicator({ left: linkRect.left - navRect.left, width: linkRect.width, visible: true })
+  const [activeSection, setActiveSection] = useState('')
+  const [catalogRevision, setCatalogRevision] = useState(0)
+  const [catalog, setCatalog] = useState({ packages: emptyResource, sports: emptyResource, coaches: emptyResource })
+  const [sessions, setSessions] = useState({ ...emptyResource, total: 0 })
+  const [sessionRevision, setSessionRevision] = useState(0)
+  const [sportId, setSportId] = useState('')
+  const [search, setSearch] = useState('')
+  const [submittedSearch, setSubmittedSearch] = useState('')
+  const [packageType, setPackageType] = useState('all')
+
+  useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+    setCatalog({ packages: emptyResource, sports: emptyResource, coaches: emptyResource })
+    const loaders = { packages: getLandingPackages, sports: getLandingSports, coaches: getLandingCoaches }
+    Promise.allSettled(Object.entries(loaders).map(async ([key, loader]) => {
+      try {
+        const items = await loader(controller.signal)
+        if (active) setCatalog(previous => ({ ...previous, [key]: { items, loading: false, error: false } }))
+      } catch {
+        if (active) setCatalog(previous => ({ ...previous, [key]: { items: [], loading: false, error: true } }))
+      }
+    }))
+    return () => { active = false; controller.abort() }
+  }, [catalogRevision])
+
+  useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+    setSessions({ ...emptyResource, total: 0 })
+    getLandingSessions({ sportId, search: submittedSearch, signal: controller.signal })
+      .then(result => { if (active) setSessions({ items: result.items, total: result.total, loading: false, error: false }) })
+      .catch(() => { if (active) setSessions({ items: [], total: 0, loading: false, error: true }) })
+    return () => { active = false; controller.abort() }
+  }, [sportId, submittedSearch, sessionRevision])
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) if (entry.isIntersecting) setActiveSection(entry.target.id)
+    }, { rootMargin: '-15% 0px -65% 0px' })
+    navigation.forEach(([id]) => { const element = document.getElementById(id); if (element) observer.observe(element) })
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
-    let frameId
-    const updateActiveSection = () => {
-      frameId = window.requestAnimationFrame(() => {
-        if (scrollLockRef.current) return
-        const marker = window.scrollY + 180
-        const sections = navItems
-          .map(([id]) => ({ id, top: document.getElementById(id)?.getBoundingClientRect().top + window.scrollY }))
-          .filter(({ top }) => Number.isFinite(top))
-          .sort((a, b) => a.top - b.top)
-        const current = sections.reduce((selected, section) => section.top <= marker ? section.id : selected, 'top')
-        setActiveSection(current)
-      })
-    }
-    updateActiveSection()
-    window.addEventListener('scroll', updateActiveSection, { passive: true })
-    return () => {
-      window.cancelAnimationFrame(frameId)
-      window.removeEventListener('scroll', updateActiveSection)
-    }
-  }, [])
+    if (!menuOpen) return
+    const close = event => { if (event.key === 'Escape') { setMenuOpen(false); menuButton.current?.focus() } }
+    const outside = event => { if (!headerRef.current?.contains(event.target)) setMenuOpen(false) }
+    document.addEventListener('keydown', close)
+    document.addEventListener('pointerdown', outside)
+    return () => { document.removeEventListener('keydown', close); document.removeEventListener('pointerdown', outside) }
+  }, [menuOpen])
 
-  useEffect(() => {
-    let mounted = true
-    let secondFrameId
-    const updateIndicator = () => moveIndicator(activeSection)
-    const firstFrameId = window.requestAnimationFrame(() => {
-      secondFrameId = window.requestAnimationFrame(updateIndicator)
-    })
-    const resizeObserver = new ResizeObserver(updateIndicator)
-    if (navLinksRef.current) resizeObserver.observe(navLinksRef.current)
-    document.fonts?.ready.then(() => mounted && updateIndicator())
-    window.addEventListener('resize', updateIndicator)
-    return () => {
-      mounted = false
-      window.cancelAnimationFrame(firstFrameId)
-      window.cancelAnimationFrame(secondFrameId)
-      resizeObserver.disconnect()
-      window.removeEventListener('resize', updateIndicator)
-    }
-  }, [activeSection, moveIndicator])
-
-  useEffect(() => () => window.clearTimeout(scrollLockTimerRef.current), [])
-
-  const selectNavItem = (sectionId) => {
-    scrollLockRef.current = true
-    window.clearTimeout(scrollLockTimerRef.current)
-    scrollLockTimerRef.current = window.setTimeout(() => { scrollLockRef.current = false }, 800)
-    setActiveSection(sectionId)
-    setMenuOpen(false)
-  }
-  const selectMembership = (membershipName) => {
-    const isAuthenticated = Boolean(user && getToken())
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: '/#memberships', membership: membershipName } })
-    }
-  }
-  const checkAvailability = () => { setStatus('Đang kiểm tra lịch trống...'); window.setTimeout(() => setStatus('Còn 12 khung giờ đẹp!'), 700) }
-  const handleLogout = async () => {
+  async function handleLogout() {
     if (logoutLock.current) return
     logoutLock.current = true
     setLoggingOut(true)
-    try {
-      await logout()
-      setMenuOpen(false)
-    } finally {
-      logoutLock.current = false
-      setLoggingOut(false)
-    }
+    try { await logout(); setMenuOpen(false) }
+    finally { logoutLock.current = false; setLoggingOut(false) }
   }
-  return <main className="sport-page">
-    <div className="utility-bar"><div className="container utility-content"><div><i className="open-dot" /> Cơ sở 1 - Cầu Giấy, Hà Nội <span className="utility-hours">| &nbsp; Đang mở cửa: 06:00 - 22:00</span></div><div className="utility-links"><a href="#booking"><Search size={14} /> Tra cứu lịch trống</a><a href="tel:19008899"><Phone size={14} /> Hotline: 1900 8899</a></div></div></div>
-    <nav className="main-nav"><div className="container nav-content"><a className="brand" href="#top" onClick={() => selectNavItem('top')}><i className="brand-icon"><Trophy size={24} /></i><span><b>SportPulse <em>Olympus</em></b><small>TỔ HỢP THỂ THAO ĐỈNH CAO</small></span></a><div ref={navLinksRef} className={menuOpen ? 'nav-links is-open' : 'nav-links'}><i className="nav-indicator" style={{ left: indicator.left, width: indicator.width, opacity: indicator.visible ? 1 : 0 }} aria-hidden="true" />{navItems.map(([id, label]) => <a key={id} data-section={id} className={activeSection === id ? 'active' : ''} href={`#${id}`} onClick={() => selectNavItem(id)} aria-current={activeSection === id ? 'page' : undefined}>{label}{id === 'sports' && <ChevronDown size={15} />}</a>)}</div><div className="nav-actions"><ThemeToggle />{user ? <>
-      <Link className="dashboard-profile" to={getAuthDestination(user.role)} aria-label={`Tài khoản của ${displayName}`} title={displayName}><span className="dashboard-avatar" aria-hidden="true">{getUserInitials(user)}</span><span className="dashboard-profile-info"><small>Xin chào,</small><strong>{displayName}</strong></span></Link>
-      <button type="button" className="dashboard-logout" disabled={loggingOut} onClick={handleLogout}>
-        {loggingOut ? <LoaderCircle size={17} aria-hidden="true" /> : <LogOut size={17} aria-hidden="true" />}
-        <span>{loggingOut ? 'Đang thoát...' : 'Đăng xuất'}</span>
-      </button>
-    </> : <><Link className="login" to="/login">Đăng nhập</Link><Link className="dashboard-register" to="/register">Đăng ký</Link></>}<a className="book-now" href="#booking"><CalendarDays size={17} /> Đặt sân ngay</a><button className="mobile-menu" onClick={() => setMenuOpen(!menuOpen)} aria-label="Mở menu">{menuOpen ? <X /> : <Menu />}</button></div></div></nav>
-    <section className="hero" id="top"><i className="hero-orb orb-one" /><i className="hero-orb orb-two" /><div className="container hero-content"><div className="live-badge"><i className="pulse" /> Tổ hợp thể thao tiêu chuẩn quốc tế số 1 Hà Nội <b>• Mở cửa 06:00 - 22:00</b></div><h1>Nâng Tầm Trải Nghiệm<br /><span>Vận Động Đỉnh Cao</span> Cùng Olympus</h1><p>Hệ sinh thái thể thao đa năng với 25+ cụm sân thi đấu, huấn luyện viên chuyên nghiệp và hệ thống đặt sân trực tuyến siêu tốc chỉ trong 30 giây.</p><div className="stats"><div><strong>25+</strong><small>Sân thi đấu Olympic</small></div><div><strong>15.000+</strong><small>Hội viên gắn kết</small></div><div><strong className="green">99.4%</strong><small>Đánh giá 5 sao</small></div><div><strong>1.000 Lux</strong><small>Đèn chống lóa TV</small></div></div><div className="booking-card" id="booking"><div className="booking-head"><div className="booking-title"><i><Zap size={21} /></i><div><h2>Đặt Sân Giữ Chỗ Nhanh</h2><p>Xác nhận lịch ngay lập tức - Không cần cọc đối với Hội viên</p></div></div><b className="speed"><Zap size={14} /> 30 Giây Hoàn Tất</b></div><div className="booking-fields"><label><span><MapPin size={15} /> Chọn cơ sở</span><select><option>Cơ sở 1: Cầu Giấy, Hà Nội</option><option>Cơ sở 2: Mỹ Đình, Hà Nội</option></select></label><label><span><Activity size={15} /> Bộ môn</span><select><option>Pickleball Arena</option><option>Tennis Pro Courts</option><option>Cầu lông Yonex</option></select></label><label><span><CalendarDays size={15} /> Ngày thi đấu</span><input type="date" defaultValue="2026-09-10" /></label><label><span><Clock3 size={15} /> Khung giờ</span><select><option>18:00 - 19:30</option><option>19:30 - 21:00</option></select></label><button onClick={checkAvailability} className={status.includes('Còn') ? 'search-court success' : 'search-court'}>{status.includes('Còn') ? <Check size={19} /> : <Search size={19} />}{status || 'Tìm sân & Báo giá'}</button></div></div></div></section>
-    <section className="section sports-section" id="sports"><div className="container"><Header eyebrow="HỆ THỐNG SÂN THI ĐẤU" title="Chọn Bộ Môn Của Bạn" text="Hạ tầng đẳng cấp, sẵn sàng cho mọi trận đấu và khoảnh khắc bứt phá." /><div className="sport-grid">{sports.map(([icon,title,detail,image]) => <article className="sport-card" key={title}><img src={image} alt={title} /><i className="image-shade" /><span className="sport-tag">PHỔ BIẾN</span><div><span className="sport-emoji">{icon}</span><h3>{title}</h3><p>{detail}</p><a href="#booking">Đặt sân ngay <ArrowRight size={17} /></a></div></article>)}</div></div></section>
-    <section className="section amenities" id="amenities"><div className="container amenity-layout"><div><span className="eyebrow">TRẢI NGHIỆM TOÀN DIỆN</span><h2>Không Chỉ Là<br />Một Trận Đấu</h2><p>Từ phòng thay đồ chuẩn khách sạn, khu phục hồi Ice Bath đến Sport Bar sôi động — mọi trải nghiệm đều được chăm chút.</p><a className="text-link" href="#booking">Khám phá tiện ích <ArrowRight size={17} /></a></div><div className="amenity-grid"><div className="amenity-card large"><Waves /><h3>Bể bơi bốn mùa</h3><p>Nước điện phân chuẩn quốc tế</p></div><div className="amenity-card"><Dumbbell /><h3>Gym hiện đại</h3><p>Thiết bị Technogym</p></div><div className="amenity-card"><Users /><h3>Sport Bar</h3><p>Nạp năng lượng sau trận</p></div></div></div></section>
-    <section className="section memberships" id="memberships"><div className="container"><Header eyebrow="THÀNH VIÊN OLYMPUS" title="Gói Hội Viên Phù Hợp Với Bạn" /><div className="membership-grid"><Membership name="Flex Pass" price="499.000" items={['Giá sân ưu đãi 10%','Đặt sân trước 3 ngày','2 lượt khách/tháng']} onSelect={selectMembership} /><Membership featured name="Performance" price="999.000" items={['Giá sân ưu đãi 20%','Đặt sân trước 7 ngày','4 buổi Gym & Ice Bath']} onSelect={selectMembership} /><Membership name="Elite Gold" price="1.990.000" items={['Giá sân ưu đãi 30%','Ưu tiên mọi khung giờ','HLV tư vấn hàng tháng']} onSelect={selectMembership} /></div></div></section>
-    <section className="section coaches" id="coaches"><div className="container"><Header eyebrow="ĐỘI NGŨ CHUYÊN GIA" title="Huấn Luyện Viên Pro" text="Đồng hành cùng bạn trên hành trình tiến bộ mỗi ngày." /><div className="coach-grid">{coaches.map(([name,role,image]) => <article className="coach-card" key={name}><img src={image} alt={name} /><div><span>PICKLEBALL & THỂ LỰC</span><h3>{name}</h3><p>{role}</p><button>Đặt lịch học <ArrowRight size={15} /></button></div></article>)}</div></div></section>
-    <section className="container cta"><div><span><Trophy size={16} /> ƯU ĐÃI DÀNH RIÊNG CHO KHÁCH MỚI</span><h2>Sẵn Sàng Cho Trận Đấu Hôm Nay?</h2><p>Đặt sân trực tuyến ngay hôm nay để nhận ưu đãi giảm 20% cho lần đầu trải nghiệm.</p></div><a href="#booking">Đặt Sân Giữ Slot Ngay <ArrowRight /></a></section>
-    <footer><div className="container footer-grid"><div><a className="brand footer-brand" href="#top"><i className="brand-icon"><Trophy size={24} /></i><span><b>SportPulse <em>Olympus</em></b><small>TỔ HỢP THỂ THAO ĐỈNH CAO</small></span></a><p>Trung tâm Thể thao Đa năng Olympus — chuẩn mực thi đấu quốc tế, dành cho cộng đồng yêu vận động.</p><div className="socials"><a href="#facebook"><Globe2 /></a><a href="#chat"><MessageCircle /></a><a href="#video"><CirclePlay /></a></div></div><div><h4>Cụm sân thi đấu</h4><a href="#sports">Pickleball Arena</a><a href="#sports">Tennis Pro Courts</a><a href="#sports">Cầu lông Yonex</a><a href="#sports">Bóng đá Mini FIFA</a></div><div><h4>Địa chỉ & Hotline</h4><p>188 Đường Cầu Giấy, Phường Dịch Vọng, Hà Nội</p><p>Tổng đài: 1900 8899</p><p>booking@sportpulse.vn</p></div></div><div className="container copyright">© 2026 SportPulse Olympus Sports Center. Bản quyền thuộc về SportPulse Olympus.</div></footer>
+
+  const retryCatalog = () => setCatalogRevision(value => value + 1)
+  const classAction = getLandingAction(currentUser, 'classes')
+  const packageAction = getLandingAction(currentUser, 'subscriptions')
+  const packages = catalog.packages.items.filter(pkg => packageType === 'all' || membershipPackageType(pkg) === packageType)
+  const nextSession = sessions.items[0]
+
+  return <main className="sport-page" id="top">
+    <a className="lp-skip" href="#landing-content">Bỏ qua điều hướng</a>
+    <div className="lp-announcement"><span><span className="lp-live-dot" />OLYMPUS · KHÔNG GIAN TẬP LUYỆN CỦA BẠN</span><a href="#how-it-works">Bắt đầu hành trình <ArrowUpRight size={13} /></a></div>
+    <header className="lp-header" ref={headerRef}>
+      <div className="lp-container lp-header-row">
+        <a className="lp-brand" href="#top" aria-label="SportPulse Olympus - Trang chủ"><span className="lp-brand-icon"><Trophy size={25} /></span><span><strong>SportPulse<span> Olympus</span></strong><small>SPORTCENTER · TRAIN YOUR WAY</small></span></a>
+        <nav id="landing-navigation" aria-label="Điều hướng trang chủ" className={`lp-navigation${menuOpen ? ' is-open' : ''}`}>{navigation.map(([id, label]) => <a href={`#${id}`} key={id} className={activeSection === id ? 'is-active' : ''} aria-current={activeSection === id ? 'location' : undefined} onClick={() => setMenuOpen(false)}>{label}</a>)}</nav>
+        <div className="lp-account-actions">
+          <ThemeToggle compact />
+          {currentUser ? <><ActionLink action={portal} className="lp-account" title={getUserDisplayName(currentUser)} aria-label={`${portal.label}: ${getUserDisplayName(currentUser)}`}><span className="lp-avatar">{getUserInitials(currentUser)}</span><span><small>{portal.label}</small><strong>{getUserDisplayName(currentUser)}</strong></span></ActionLink><button className="lp-logout" type="button" aria-label="Đăng xuất" disabled={loggingOut} onClick={handleLogout}>{loggingOut ? <LoaderCircle size={17} className="lp-spin" /> : <LogOut size={17} />}<span>{loggingOut ? 'Đang thoát…' : 'Đăng xuất'}</span></button></> : <><Link className="lp-login" to="/login">Đăng nhập</Link><Link className="lp-button lp-button-primary lp-register" to="/register">Đăng ký <ArrowUpRight size={15} /></Link></>}
+          <button ref={menuButton} className="lp-menu-toggle" type="button" aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'} aria-expanded={menuOpen} aria-controls="landing-navigation" onClick={() => setMenuOpen(value => !value)}>{menuOpen ? <X size={23} /> : <Menu size={23} />}</button>
+        </div>
+      </div>
+    </header>
+
+    <section className="lp-hero" id="landing-content"><div className="lp-container lp-hero-grid">
+      <div className="lp-hero-copy"><p className="lp-eyebrow"><span />MỖI BUỔI TẬP, MỘT BƯỚC TIẾN</p><h1>Chủ động lịch tập.<br /><span>Bứt phá</span> mỗi ngày.</h1><p className="lp-hero-description">Từ tập luyện tự do đến đồng hành cùng PT 1-1. Chọn gói phù hợp, đăng ký buổi học và theo dõi hành trình của bạn cùng Olympus.</p><div className="lp-hero-actions"><a className="lp-button lp-button-primary" href="#memberships">Khám phá gói tập <ArrowUpRight size={18} /></a><a className="lp-button lp-button-secondary" href="#schedule"><CalendarDays size={18} />Xem lịch lớp học</a></div><div className="lp-hero-assurances"><span><Check size={15} />Standard & PT 1-1</span><span><Check size={15} />Đăng ký buổi học trực tuyến</span><span><Check size={15} />Thanh toán PayOS</span></div><div className="lp-hero-note"><span className="lp-note-icon"><ShieldCheck size={20} /></span><p><strong>Kế hoạch của bạn, trong một tài khoản.</strong><span>Lịch tập, gói hội viên và thanh toán luôn ở cùng một nơi.</span></p></div></div>
+      <div className="lp-hero-visual"><div className="lp-hero-photo"><img src={heroPhoto} alt="Hoạt động tập luyện thể thao" fetchPriority="high" /><div className="lp-photo-shade" /><span className="lp-photo-caption"><span />MOVE WITH PURPOSE.</span><div className="lp-visual-type"><Dumbbell size={17} /><span>STANDARD <i>+</i> PT 1-1</span></div></div><div className="lp-next-session"><span className="lp-next-icon"><CalendarDays size={21} /></span><div><small>BUỔI HỌC SẮP TỚI</small><strong>{nextSession?.className || (sessions.loading ? 'Đang cập nhật lịch học…' : 'Chọn nhịp tập của riêng bạn')}</strong><span>{nextSession ? `${dateLabel(nextSession.startsAt, { day: '2-digit', month: '2-digit' })} · ${sessionTime(nextSession)}` : 'Khám phá lịch lớp học bên dưới'}</span></div><a href="#schedule" aria-label="Xem lịch lớp học"><ArrowUpRight size={21} /></a></div><span className="lp-visual-label">A LITTLE STRONGER. EVERY DAY.</span></div>
+    </div></section>
+
+    <section className="lp-journey-strip" aria-label="Hành trình hội viên"><div className="lp-container"><div><span>01</span><p><strong>Chọn cách bạn tập</strong><small>Gói Standard hoặc PT 1-1</small></p></div><div><span>02</span><p><strong>Sắp xếp lịch phù hợp</strong><small>Đăng ký từng buổi học</small></p></div><div><span>03</span><p><strong>Theo dõi mọi thay đổi</strong><small>Lịch bù, thông báo & thanh toán</small></p></div></div></section>
+
+    <section className="lp-section lp-experience" id="experience"><div className="lp-container"><SectionHeading eyebrow="TẬP TRUNG VÀO ĐIỀU QUAN TRỌNG" title={<>Tập luyện liền mạch.<br />Quản lý thật nhẹ nhàng.</>}>Một không gian kết nối những việc bạn cần trước, trong và sau mỗi buổi tập.</SectionHeading><div className="lp-feature-grid">{[
+      [CalendarDays, 'Lớp học theo lịch của bạn', 'Khám phá các buổi học, xem thời gian và đăng ký khi còn chỗ.', 'classes'],
+      [ScanLine, 'Ra vào phòng gym', 'Sử dụng mã QR hội viên và theo dõi lịch sử ra vào của mình.', 'checkin'],
+      [Target, 'Lộ trình tập luyện cá nhân', 'Theo dõi kế hoạch tập luyện được huấn luyện viên xây dựng cho bạn.', 'training-plans'],
+      [BellRing, 'Luôn theo kịp lịch tập', 'Xem thông báo thay đổi buổi học và cập nhật lịch bù mới.', 'notifications'],
+    ].map(([Icon, title, text, view], index) => <ActionLink key={view} action={getLandingAction(currentUser, view)} className="lp-feature-card"><div><span className="lp-feature-icon"><Icon size={24} /></span><small>0{index + 1}</small></div><h3>{title}</h3><p>{text}</p><span className="lp-feature-link">{currentUser && !member ? 'Mở không gian làm việc' : 'Khám phá ngay'}<ArrowUpRight size={17} /></span></ActionLink>)}</div></div></section>
+
+    <section className="lp-section lp-schedule" id="schedule"><div className="lp-container"><SectionHeading eyebrow="DÀNH THỜI GIAN CHO CHÍNH MÌNH" title="Tìm buổi tập tiếp theo.">Lịch các buổi học còn chỗ được cập nhật từ trung tâm. Đăng nhập để kiểm tra điều kiện và đăng ký.</SectionHeading><div className="lp-schedule-toolbar"><div className="lp-sport-filters" aria-label="Lọc theo bộ môn"><button type="button" className={!sportId ? 'is-active' : ''} aria-pressed={!sportId} onClick={() => setSportId('')}>Tất cả bộ môn</button>{catalog.sports.items.map(sport => <button key={sport.id} type="button" className={sportId === String(sport.id) ? 'is-active' : ''} aria-pressed={sportId === String(sport.id)} onClick={() => setSportId(String(sport.id))}>{sport.name}</button>)}</div><form className="lp-class-search" onSubmit={event => { event.preventDefault(); setSubmittedSearch(search.trim()); setSessionRevision(value => value + 1) }}><Search size={17} /><input type="search" aria-label="Tìm lớp học" placeholder="Tìm lớp học…" maxLength={200} value={search} onChange={event => setSearch(event.target.value)} /><button type="submit" aria-label="Tìm kiếm lớp học"><ArrowRight size={18} /></button></form></div>{catalog.sports.error && <p className="lp-inline-note">Chưa tải được bộ môn. Bạn vẫn có thể xem tất cả lịch học. <button type="button" onClick={retryCatalog}>Tải lại bộ môn</button></p>}
+      {sessions.loading || sessions.error || !sessions.items.length ? <ResourceState resource={sessions} empty="Chưa có buổi học còn chỗ phù hợp. Bạn có thể đổi bộ môn hoặc tìm lại sau." onRetry={() => setSessionRevision(value => value + 1)} /> : <><div className="lp-session-grid">{sessions.items.map(item => <article className="lp-session-card" key={item.id}><div className="lp-session-top"><span className="lp-session-date"><strong>{dateLabel(item.startsAt, { day: '2-digit' })}</strong><small>{dateLabel(item.startsAt, { month: 'short' })}</small></span><span className="lp-seat-badge"><span />Còn {item.availableSeats} chỗ</span></div><h3>{item.className}</h3><p><Users size={15} />{item.coachName || 'Trung tâm đang cập nhật HLV'}</p><div className="lp-session-bottom"><span><Clock3 size={15} />{sessionTime(item)}</span><span>{dateLabel(item.startsAt, { weekday: 'long' })}</span></div>{item.roomName && <small className="lp-room-name">{item.roomName}</small>}</article>)}</div><div className="lp-section-bottom"><p>Đang hiển thị {sessions.items.length} / {sessions.total} buổi học phù hợp.</p><ActionLink action={classAction} className="lp-text-link">{currentUser && !member ? 'Mở cổng làm việc' : 'Vào lịch đăng ký'}<ArrowRight size={17} /></ActionLink></div></>}
+    </div></section>
+
+    <section className="lp-section lp-memberships" id="memberships"><div className="lp-container"><SectionHeading eyebrow="MỘT LỰA CHỌN, NHIỀU ĐỘNG LỰC" title="Gói tập dành cho bạn.">Tập luyện tự do với Standard, hoặc chọn PT 1-1 để được hướng dẫn cá nhân. Bạn có thể sử dụng hai loại gói song song.</SectionHeading><div className="lp-package-toolbar"><div className="lp-package-filters" aria-label="Lọc loại gói tập">{[['all', 'Tất cả gói'], ['Standard', 'Standard'], ['PT', 'PT 1-1']].map(([type, label]) => <button type="button" key={type} className={packageType === type ? 'is-active' : ''} aria-pressed={packageType === type} onClick={() => setPackageType(type)}>{label}</button>)}</div><span><ShieldCheck size={15} />Giá & thời hạn từ trung tâm</span></div>
+      {catalog.packages.loading || catalog.packages.error || !packages.length ? <ResourceState resource={catalog.packages} empty="Trung tâm chưa mở bán gói thuộc loại này. Vui lòng xem loại gói khác hoặc quay lại sau." onRetry={retryCatalog} /> : <div className="lp-package-grid">{packages.map(pkg => { const pt = membershipPackageType(pkg) === 'PT'; return <article className={`lp-package-card${pt ? ' is-pt' : ''}`} key={pkg.id}><div className="lp-package-label"><span>{pt ? <Users size={17} /> : <Dumbbell size={17} />}{pt ? 'PT 1-1' : 'STANDARD'}</span><span>{pkg.durationInDays} ngày</span></div><h3>{pkg.packageName}</h3><p className="lp-package-description">{pkg.description || (pt ? 'Đồng hành cùng huấn luyện viên cá nhân trong hành trình tập luyện.' : 'Duy trì thói quen tập luyện theo kế hoạch của bạn.')}</p><div className="lp-package-price">{money(pkg.price)}<small>/ {pkg.durationInDays} ngày</small></div><ul><li><Check size={15} />{pt ? 'Gói huấn luyện viên cá nhân' : 'Gói hội viên tập chung'}</li><li><Check size={15} />Theo dõi hiệu lực trong tài khoản</li><li><Check size={15} />Kích hoạt sau khi thanh toán được xác nhận</li></ul><ActionLink action={getLandingAction(currentUser, 'subscriptions', pkg.id)} className={`lp-button ${pt ? 'lp-button-primary' : 'lp-button-secondary'}`}>{currentUser && !member ? 'Mở cổng làm việc' : 'Xem & đăng ký'}<ArrowUpRight size={17} /></ActionLink></article> })}</div>}
+      <div className="lp-upgrade-note"><span><Layers size={23} /></span><div><strong>Muốn đổi sang gói Standard cao hơn?</strong><p>Đăng nhập để xem điều kiện nâng cấp và số tiền chênh lệch trước khi xác nhận.</p></div><ActionLink action={packageAction} className="lp-text-link">Xem gói của bạn<ArrowRight size={17} /></ActionLink></div>
+    </div></section>
+
+    <section className="lp-section lp-coaches" id="coaches"><div className="lp-container"><SectionHeading eyebrow="THÊM HƯỚNG DẪN, THÊM TỰ TIN" title="Cùng bạn qua từng buổi tập." action={<ActionLink action={classAction} className="lp-text-link">Xem lịch các lớp<ArrowUpRight size={17} /></ActionLink>}>Tìm hiểu đội ngũ huấn luyện viên của trung tâm và các buổi học đang mở.</SectionHeading>{catalog.coaches.loading || catalog.coaches.error || !catalog.coaches.items.length ? <ResourceState resource={catalog.coaches} empty="Thông tin huấn luyện viên đang được trung tâm cập nhật." onRetry={retryCatalog} /> : <div className="lp-coach-grid">{catalog.coaches.items.slice(0, 6).map((coach, index) => <article className="lp-coach-card" key={coach.id}><div className={`lp-coach-monogram lp-coach-tone-${index % 3}`}><span>{getUserInitials({ fullName: coach.fullName })}</span><Dumbbell size={100} strokeWidth={.8} aria-hidden="true" /><small>OLYMPUS COACH</small></div><div className="lp-coach-info"><p>{coach.specialization || 'Huấn luyện viên'}</p><h3>{coach.fullName}</h3>{Number(coach.yearsOfExperience) > 0 && <span>{coach.yearsOfExperience} năm kinh nghiệm</span>}{coach.bio && <small>{coach.bio}</small>}</div></article>)}</div>}</div></section>
+
+    <section className="lp-section lp-how" id="how-it-works"><div className="lp-container lp-how-grid"><div><p className="lp-eyebrow">BẮT ĐẦU THẬT ĐƠN GIẢN</p><h2>Sẵn sàng cho<br />buổi tập đầu tiên?</h2><p>Thiết lập tài khoản một lần. Chủ động theo dõi lịch tập và dịch vụ trong cổng hội viên.</p><ActionLink action={portal} className="lp-button lp-button-primary">{portal.label}<ArrowUpRight size={18} /></ActionLink></div><ol className="lp-steps"><li><span>01</span><div><h3>Tạo tài khoản hội viên</h3><p>Đăng ký, xác thực email và cập nhật hồ sơ cá nhân.</p></div></li><li><span>02</span><div><h3>Chọn gói tập phù hợp</h3><p>Xem giá, thời hạn và thanh toán qua PayOS hoặc tại quầy. Gói có hiệu lực khi hệ thống xác nhận thanh toán.</p></div></li><li><span>03</span><div><h3>Đăng ký buổi học & bắt đầu tập</h3><p>Chọn buổi còn chỗ, kiểm tra lịch của mình và theo dõi thông báo từ trung tâm.</p></div></li></ol></div></section>
+
+    <section className="lp-section lp-faq" id="faq"><div className="lp-container lp-faq-grid"><div><p className="lp-eyebrow">GIẢI ĐÁP TRƯỚC KHI BẮT ĐẦU</p><h2>Bạn cần biết thêm?</h2><p>Thông tin để bạn dễ dàng lựa chọn và sắp xếp việc tập luyện.</p><ActionLink action={getLandingAction(currentUser, 'support')} className="lp-text-link">Gửi yêu cầu hỗ trợ<ArrowUpRight size={17} /></ActionLink></div><div>{[
+      ['Tôi có thể dùng thẻ Standard và PT 1-1 cùng lúc không?', 'Có. Hai loại gói được đăng ký độc lập và có thể sử dụng song song. Bạn có thể xem hiệu lực của từng gói trong cổng hội viên.'],
+      ['Tôi cần làm gì để đăng ký một buổi học?', 'Đăng nhập tài khoản hội viên và có gói tập còn hiệu lực. Trong mục Lớp học, chọn buổi phù hợp; hệ thống kiểm tra điều kiện, số chỗ và lịch đã đăng ký trước khi xác nhận.'],
+      ['Thanh toán xong thì gói tập có hiệu lực khi nào?', 'Gói được kích hoạt sau khi hệ thống xác nhận giao dịch thanh toán thành công. Bạn có thể xem trạng thái và đồng bộ lại giao dịch trong mục Thanh toán trực tuyến & Hóa đơn.'],
+      ['Tôi xem lịch bù hoặc thay đổi buổi học ở đâu?', 'Thông báo về lịch học và lịch bù xuất hiện trong cổng hội viên. Bạn có thể mở mục Thông báo hệ thống để xem lại các cập nhật liên quan đến mình.'],
+    ].map(([question, answer]) => <details key={question}><summary>{question}<ChevronDown size={18} /></summary><p>{answer}</p></details>)}</div></div></section>
+
+    <footer className="lp-footer"><div className="lp-container"><div className="lp-footer-callout"><div><p className="lp-eyebrow">BƯỚC TIẾP THEO LÀ CỦA BẠN</p><h2>Hẹn gặp ở buổi tập tiếp theo.</h2></div><ActionLink action={portal} className="lp-button lp-button-light">{currentUser ? portal.label : 'Tạo tài khoản hội viên'}<ArrowUpRight size={18} /></ActionLink></div><div className="lp-footer-grid"><div><a className="lp-brand" href="#top"><span className="lp-brand-icon"><Trophy size={24} /></span><span><strong>SportPulse<span> Olympus</span></strong><small>SPORTCENTER · TRAIN YOUR WAY</small></span></a><p>Kết nối tập luyện, lớp học và dịch vụ hội viên trong một không gian.</p></div><div><h3>Khám phá Olympus</h3><a href="#experience">Trải nghiệm tập luyện</a><a href="#schedule">Lịch lớp học</a><a href="#memberships">Gói Standard & PT 1-1</a><a href="#coaches">Huấn luyện viên</a></div><div><h3>Dành cho hội viên</h3><ActionLink action={classAction}>Lịch tập & đăng ký buổi</ActionLink><ActionLink action={getLandingAction(currentUser, 'payments')}>Thanh toán & hóa đơn</ActionLink><ActionLink action={getLandingAction(currentUser, 'support')}>Hỗ trợ khách hàng</ActionLink><a href="#faq">Câu hỏi thường gặp</a></div></div><div className="lp-footer-bottom"><span>© {new Date().getFullYear()} SportPulse Olympus · SportCenter</span><span><ShieldCheck size={14} />Tập luyện theo cách của bạn.</span></div></div></footer>
   </main>
 }
-function Header({ eyebrow, title, text }) { return <div className="section-heading"><span>{eyebrow}</span><h2>{title}</h2>{text && <p>{text}</p>}</div> }
-function Membership({ name, price, items, featured, onSelect }) { return <article className={featured ? 'featured' : ''}>{featured && <span className="popular">LỰA CHỌN PHỔ BIẾN</span>}<h3>{name}</h3><p>{featured ? 'Tối ưu cho người tập đều đặn' : 'Dành cho trải nghiệm linh hoạt'}</p><strong>{price}<small>đ / tháng</small></strong><ul>{items.map(item => <li key={item}><Check />{item}</li>)}</ul><button type="button" onClick={() => onSelect(name)}>{featured ? 'Đăng ký Performance' : 'Chọn gói này'}</button></article> }

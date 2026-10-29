@@ -42,6 +42,11 @@
 .login-socials button, .login-otp { display: flex; justify-content: center; align-items: center; gap: 8px; border: 1px solid #d9dce6; border-radius: 8px; background: white; min-height: 44px; font-size: 12px; font-weight: 600; color: #263146; }
 .login-socials button:hover, .login-otp:hover { background: #f2f3ff; }
 .login-google { font-size: 22px; color: #4285f4; }
+.login-google-signin { display: grid; justify-items: center; gap: 8px; margin-top: 24px; }
+.login-google-host { width: 100%; max-width: 400px; min-width: 0; }
+.login-google-host[aria-disabled='true'] { opacity: .55; pointer-events: none; }
+.login-google-note { margin: 0; color: var(--theme-muted, #626879); text-align: center; font-size: 12px; line-height: 1.6; }
+.login-google-unavailable { width: 100%; max-width: 400px; min-height: 42px; border: 1px solid var(--theme-border, #d1d5e0); border-radius: 4px; background: var(--theme-surface, #fff); color: var(--theme-muted, #626879); cursor: not-allowed !important; }
 .login-zalo { background: #0068ff; color: white; border-radius: 50%; width: 20px; height: 20px; display: grid; place-items: center; }
 .login-divider { display: flex; align-items: center; gap: 14px; margin: 24px 0; color: #737686; font-size: 11px; text-align: center; }
 .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: #e1e4ed; }

@@ -20,6 +20,21 @@ export async function login({ email, password }) {
   return getLoginData(response.data)
 }
 
+/** POST /api/Auth/google — Google ID token is verified by the backend. */
+export async function loginWithGoogle({ idToken }, { signal } = {}) {
+  if (typeof idToken !== 'string' || !idToken.trim() || idToken.length > 4096) {
+    throw new Error('Invalid Google credential')
+  }
+  const response = await api.post('/Auth/google', { idToken }, { skipAuth: true, timeout: 15000, signal })
+  const body = response.data
+  if (body?.success === false || body?.statusCode >= 400) {
+    const error = new Error('Google login rejected')
+    error.response = { status: body.statusCode || 400, data: body }
+    throw error
+  }
+  return getLoginData(body)
+}
+
 /**
  * POST /api/auth/register
  * @param {Object} details
@@ -98,6 +113,7 @@ export async function logout({ refreshTokenKey }) {
 
 export default {
   login,
+  loginWithGoogle,
   register,
   sendRegisterOtp,
   verifyRegisterOtp,

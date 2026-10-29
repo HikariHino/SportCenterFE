@@ -16,6 +16,7 @@ function formatDate(value) {
 
 function CreateTicketDialog({ onClose, onCreated }) {
   const dialogRef = useRef(null)
+  const openerRef = useRef(null)
   const locked = useRef(false)
   const mounted = useRef(true)
   const [form, setForm] = useState({ title: '', description: '', priority: 'Normal' })
@@ -25,8 +26,17 @@ function CreateTicketDialog({ onClose, onCreated }) {
   useEffect(() => {
     mounted.current = true
     const dialog = dialogRef.current
+    if (!openerRef.current) openerRef.current = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     dialog.showModal()
-    return () => { mounted.current = false; dialog.close() }
+    dialog.querySelector('#member-support-title')?.focus({ preventScroll: true })
+    return () => {
+      mounted.current = false
+      dialog.close()
+      document.body.style.overflow = previousOverflow
+      if (openerRef.current?.isConnected) openerRef.current.focus({ preventScroll: true })
+    }
   }, [])
 
   const submit = async event => {
@@ -50,20 +60,33 @@ function CreateTicketDialog({ onClose, onCreated }) {
     }
   }
 
-  return <dialog className="member-support-dialog" ref={dialogRef} aria-labelledby="member-support-create-title" onCancel={event => { event.preventDefault(); if (!locked.current) onClose() }}>
+  return <dialog className="member-support-dialog" ref={dialogRef} aria-labelledby="member-support-create-title" aria-describedby="member-support-create-description" onCancel={event => { event.preventDefault(); if (!locked.current) onClose() }}>
     <form onSubmit={submit} aria-busy={saving}>
-      <header><h2 id="member-support-create-title">Gửi yêu cầu hỗ trợ</h2><button type="button" aria-label="Đóng biểu mẫu" disabled={saving} onClick={onClose}><X size={20} /></button></header>
-      <p className="member-support-muted">Mô tả thắc mắc hoặc sự cố để trung tâm có thể tiếp nhận và hỗ trợ bạn.</p>
-      <label htmlFor="member-support-title">Tiêu đề yêu cầu <span aria-hidden="true">*</span></label>
-      <input id="member-support-title" type="text" required maxLength={200} disabled={saving} value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Ví dụ: Cần hỗ trợ kiểm tra gói tập" />
-      <small>{form.title.length}/200 ký tự</small>
-      <label htmlFor="member-support-priority">Mức độ ưu tiên</label>
-      <select id="member-support-priority" disabled={saving} value={form.priority} onChange={event => setForm({ ...form, priority: event.target.value })}>
-        {Object.entries(priorities).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-      </select>
-      <label htmlFor="member-support-description">Nội dung chi tiết <span aria-hidden="true">*</span></label>
-      <textarea id="member-support-description" required rows={6} disabled={saving} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Mô tả vấn đề, thời gian xảy ra và thông tin liên quan..." />
-      {error && <p className="member-support-error" role="alert">{error}</p>}
+      <header className="member-support-dialog-header">
+        <span className="member-support-dialog-icon"><Headset size={22} /></span>
+        <div><h2 id="member-support-create-title">Gửi yêu cầu hỗ trợ</h2><p id="member-support-create-description" className="member-support-muted">Chia sẻ thắc mắc hoặc sự cố để trung tâm hỗ trợ bạn.</p></div>
+        <button type="button" className="member-support-dialog-close" aria-label="Đóng biểu mẫu" disabled={saving} onClick={onClose}><X size={20} /></button>
+      </header>
+      <div className="member-support-dialog-body">
+        <div className="member-support-dialog-fields">
+          <div className="member-support-field">
+            <label htmlFor="member-support-title">Tiêu đề yêu cầu <span aria-hidden="true">*</span></label>
+            <input id="member-support-title" type="text" required maxLength={200} disabled={saving} value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Ví dụ: Cần kiểm tra gói tập" aria-describedby="member-support-title-count" />
+            <small id="member-support-title-count">{form.title.length}/200 ký tự</small>
+          </div>
+          <div className="member-support-field">
+            <label htmlFor="member-support-priority">Mức độ ưu tiên</label>
+            <select id="member-support-priority" disabled={saving} value={form.priority} onChange={event => setForm({ ...form, priority: event.target.value })}>
+              {Object.entries(priorities).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="member-support-field">
+          <label htmlFor="member-support-description">Nội dung chi tiết <span aria-hidden="true">*</span></label>
+          <textarea id="member-support-description" required rows={5} disabled={saving} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Mô tả vấn đề, thời gian xảy ra và thông tin liên quan..." />
+        </div>
+        {error && <p className="member-support-error" role="alert">{error}</p>}
+      </div>
       <footer><button type="button" disabled={saving} onClick={onClose}>Đóng</button><button className="primary" type="submit" disabled={saving}>{saving ? <><LoaderCircle className="member-spin" size={16} /> Đang gửi...</> : <><Send size={16} /> Gửi yêu cầu</>}</button></footer>
     </form>
   </dialog>
@@ -75,6 +98,8 @@ function TicketCard({ ticket }) {
   const tone = Object.hasOwn(statuses, status) ? status : 'unknown'
   return <article className="member-support-card" aria-labelledby={`member-support-ticket-${ticket.id}`}>
     <header><span className="member-support-muted">Phiếu #{ticket.id}</span><span className={`member-support-status ${tone}`}>{statuses[status] || ticket.status || 'Chưa cập nhật trạng thái'}</span></header>
+    <div className="member-support-ticket-layout">
+    <div className="member-support-ticket-content">
     <h3 id={`member-support-ticket-${ticket.id}`}>{ticket.title || 'Yêu cầu hỗ trợ'}</h3>
     <p className="member-support-description">{ticket.description || 'Chưa có nội dung'}</p>
     <dl className="member-support-meta">
@@ -83,10 +108,12 @@ function TicketCard({ ticket }) {
       <div><dt>Người xử lý</dt><dd>{ticket.handledByUserName || 'Chưa cập nhật'}</dd></div>
       {ticket.resolvedAt && <div><dt>Ngày giải quyết</dt><dd>{formatDate(ticket.resolvedAt)}</dd></div>}
     </dl>
+    </div>
     <section className="member-support-response" aria-label="Phản hồi từ trung tâm">
       <h4><MessageSquare size={17} /> Phản hồi từ trung tâm</h4>
       {ticket.resolutionNote ? <p>{ticket.resolutionNote}</p> : <p className="member-support-muted">Chưa có phản hồi từ trung tâm.</p>}
     </section>
+    </div>
   </article>
 }
 
@@ -148,7 +175,7 @@ export function SupportTicketsView() {
         : error ? <div className="member-support-state member-support-error" role="alert"><AlertCircle size={28} /><h3>Không thể tải phiếu hỗ trợ</h3><p>{error}</p><button type="button" onClick={reload}>Thử lại</button></div>
           : !filtered.length ? <div className="member-support-state" role="status"><MessageSquare size={34} /><h3>{tickets.length ? 'Không tìm thấy phiếu phù hợp' : 'Bạn chưa có phiếu hỗ trợ'}</h3><p>{tickets.length ? 'Thử thay đổi từ khóa hoặc trạng thái để xem các phiếu khác.' : 'Gửi yêu cầu mới khi bạn cần trợ giúp hoặc muốn phản ánh sự cố.'}</p></div>
             : <>
-              <p className="member-support-count">{filtered.length} phiếu hỗ trợ · Mới nhất trước</p>
+              <div className="member-support-list-heading"><p className="member-support-count">{filtered.length} phiếu hỗ trợ</p><span>Mới nhất trước</span></div>
               <div className="member-support-list">{visible.map(ticket => <TicketCard key={ticket.id} ticket={ticket} />)}</div>
               {totalPages > 1 && <nav className="member-support-pagination" aria-label="Phân trang phiếu hỗ trợ"><span>Trang {currentPage}/{totalPages}</span><div><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={15} /> Trang trước</button><button type="button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}>Trang sau <ChevronRight size={15} /></button></div></nav>}
             </>}

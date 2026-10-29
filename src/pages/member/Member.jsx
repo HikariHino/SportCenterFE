@@ -4,7 +4,7 @@ import ThemeToggle from '../../components/ThemeToggle'
 import {
   AlertCircle, Bell, CalendarDays, CheckCircle2, ChevronRight, CreditCard,
   Dumbbell, Headset, LogOut, Menu, QrCode, ReceiptText, ShieldCheck,
-  Trophy, UserCheck, X,
+  Sparkles, Trophy, UserCheck, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
@@ -23,6 +23,8 @@ import {
 } from './MemberViews'
 import '../../style/member/Member.css'
 import MemberScheduleReviewGate from './MemberScheduleReviewGate'
+import MemberAiChat from './MemberAiChat'
+import MemberAiWorkout from './MemberAiWorkout'
 
 export const memberNavSections = [
   {
@@ -68,6 +70,16 @@ export const memberNavSections = [
         label: 'Lộ trình tập luyện cá nhân',
         subtitle: 'TrainingPlansController',
         icon: Dumbbell,
+      },
+      {
+        id: 'ai-workout',
+        label: 'Gợi ý bài tập AI',
+        icon: Dumbbell,
+      },
+      {
+        id: 'ai-chat',
+        label: 'Trợ lý AI',
+        icon: Sparkles,
       },
       {
         id: 'support',
@@ -270,9 +282,12 @@ export default function Member() {
       case 'checkin':
         return <GymCheckInView showNotice={showNotice} />
       case 'classes':
-        return <ClassesView key={scheduleRequest?.revision || 'classes'} showNotice={showNotice} onNavigateTab={selectNav} notificationSessionId={scheduleRequest?.sessionId} />
+        return <ClassesView key={scheduleRequest?.revision || 'classes'} initialTab={new URLSearchParams(location.search).get('browse') === '1' ? 'browse' : 'mine'} showNotice={showNotice} onNavigateTab={selectNav} notificationSessionId={scheduleRequest?.sessionId} />
       case 'training-plans':
         return <TrainingPlansView user={user} showNotice={showNotice} />
+      case 'ai-chat':
+      case 'ai-workout':
+        return null
       case 'support':
         return <SupportTicketsView showNotice={showNotice} />
       case 'notifications':
@@ -437,6 +452,12 @@ export default function Member() {
           )}
 
           {renderActiveView()}
+          <div hidden={activeNav !== 'ai-chat'}>
+            <MemberAiChat key={user?.userId ?? user?.id ?? user?.email} active={activeNav === 'ai-chat'} onNavigate={selectNav} />
+          </div>
+          <div hidden={activeNav !== 'ai-workout'}>
+            <MemberAiWorkout key={user?.userId ?? user?.id ?? user?.email} active={activeNav === 'ai-workout'} onNavigate={selectNav} />
+          </div>
         </main>
       </section>
     </div>

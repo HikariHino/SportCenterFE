@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   CreditCard, Award, CheckCircle2, AlertCircle, LoaderCircle,
   Coins, Info, Search, Eye, Sparkles, X,
@@ -40,6 +41,9 @@ function CheckoutFeedback({ feedback }) {
 }
 
 export function SubscriptionsView({ showNotice }) {
+  const [searchParams] = useSearchParams()
+  const requestedPackage = searchParams.get('packageId')
+  const openedLandingPackage = useRef(null)
   const [packages, setPackages] = useState([])
   const [subscriptions, setSubscriptions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -48,7 +52,7 @@ export function SubscriptionsView({ showNotice }) {
   const registrationLock = useRef(false)
   const confirmedCancellations = useRef(new Map())
   const [registrationError, setRegistrationError] = useState('')
-  const [tab, setTab] = useState('mine')
+  const [tab, setTab] = useState(() => searchParams.get('catalog') === '1' ? 'catalog' : 'mine')
   const [now, setNow] = useState(Date.now)
 
   // Bộ lọc & tìm kiếm danh mục gói tập mở bán
@@ -118,6 +122,15 @@ export function SubscriptionsView({ showNotice }) {
       setPackageDetailLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (loading || error || !/^[1-9]\d*$/.test(requestedPackage || '') || openedLandingPackage.current === requestedPackage) return
+    openedLandingPackage.current = requestedPackage
+    const selected = packages.find(pkg => String(pkg.id) === requestedPackage && pkg.isActive !== false)
+    setTab('catalog')
+    if (selected) handleOpenPackageDetail(selected)
+    else setRegistrationError('Gói bạn chọn hiện không còn mở bán. Vui lòng chọn gói khác trong danh mục.')
+  }, [loading, error, requestedPackage, packages])
 
   const handleRegister = (pkg) => {
     if (registrationLock.current || loading) return
