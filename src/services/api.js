@@ -1,6 +1,7 @@
 ﻿import axios from 'axios'
 
 import { clearSession, getLoginRedirectPath, getRefreshTokenKey, getToken, updateSessionTokens } from '../utils/auth'
+import { isCoachDemoLocation } from '../utils/coachDemoAccess'
 
 const baseURL = import.meta.env.VITE_API_BASE || '/api'
 
@@ -59,6 +60,11 @@ api.interceptors.response.use(
   async (error) => {
     const config = error.config
     if (error.response?.status !== 401 || config?.skipAuth) {
+      return Promise.reject(error)
+    }
+
+    // Development-only Coach preview must stay visible even when protected APIs reject it.
+    if (isCoachDemoLocation(window.location, import.meta.env.DEV)) {
       return Promise.reject(error)
     }
 
