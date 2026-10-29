@@ -71,6 +71,37 @@ export function extractWorkoutRecommendation(body) {
   }
 }
 
+export function applyExercisesPerSession(recommendation, exercisesPerSession) {
+  const normalizedCount = Number(exercisesPerSession)
+  if (!Number.isSafeInteger(normalizedCount) || normalizedCount < 1 || normalizedCount > 10) {
+    throw new Error('Số bài mỗi buổi phải từ 1 đến 10.')
+  }
+
+  const sessions = Array.isArray(recommendation?.sessions)
+    ? recommendation.sessions.map(session => ({
+      ...session,
+      exercises: Array.isArray(session?.exercises)
+        ? session.exercises.slice(0, normalizedCount)
+        : [],
+    }))
+    : []
+  const shortSessions = sessions
+    .filter(session => session.exercises.length < normalizedCount)
+    .map(session => session.day)
+  const warnings = Array.isArray(recommendation?.warnings) ? [...recommendation.warnings] : []
+
+  if (shortSessions.length) {
+    warnings.push(`AI trả về ít hơn ${normalizedCount} bài ở buổi ${shortSessions.join(', ')}; hệ thống giữ nguyên dữ liệu nhận được.`)
+  }
+
+  return {
+    ...recommendation,
+    exercisesPerSession: normalizedCount,
+    sessions,
+    warnings,
+  }
+}
+
 const normalizedExerciseName = value => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
