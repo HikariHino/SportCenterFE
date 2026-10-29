@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { getUserDisplayName, getUserInitials } from '../../utils/auth'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification, sessionNotificationId } from '../../utils/sessionNotifications'
+import { clearPortalPage, readPortalPage, storePortalPage } from '../../utils/portalNavigation'
 import {
   ProfileView,
   SubscriptionsView,
@@ -84,11 +85,14 @@ export const memberNavSections = [
 ]
 
 const allNavItems = memberNavSections.flatMap(section => section.items)
+const activeNavStorageKey = 'member:active-nav'
+const memberNavigationIds = allNavItems.map(item => item.id)
+const storedActiveNavigation = () => readPortalPage(window.sessionStorage, activeNavStorageKey, memberNavigationIds, 'profile')
 
 export default function Member() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [activeNav, setActiveNav] = useState('profile')
+  const [activeNav, setActiveNav] = useState(storedActiveNavigation)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
 
@@ -128,6 +132,10 @@ export default function Member() {
     return () => { mounted.current = false }
   }, [])
 
+  useEffect(() => {
+    storePortalPage(window.sessionStorage, activeNavStorageKey, activeNav)
+  }, [activeNav])
+
   const displayName = getUserDisplayName(user)
   const initials = getUserInitials(user)
   const activeItem = allNavItems.find(item => item.id === activeNav) || allNavItems[0]
@@ -138,6 +146,7 @@ export default function Member() {
   }
 
   const handleLogout = async () => {
+    clearPortalPage(window.sessionStorage, activeNavStorageKey)
     await logout()
     navigate('/login', { replace: true })
   }

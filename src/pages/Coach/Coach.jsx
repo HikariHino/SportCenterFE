@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
+import { clearPortalPage, readPortalPage, storePortalPage } from '../../utils/portalNavigation'
 import { ViewLoader } from './CoachViewShared'
 import '../../style/Coach/Coach.css'
 
@@ -40,6 +41,8 @@ const notificationDateFormatter = new Intl.DateTimeFormat('vi-VN', {
 })
 
 const selectedSessionStorageKey = 'coach:selected-session'
+const activeNavStorageKey = 'coach:active-nav'
+const coachNavigationLabels = navigation.map(([, label]) => label)
 
 const readSelectedSession = () => {
   try {
@@ -50,10 +53,12 @@ const readSelectedSession = () => {
   }
 }
 
+const readActiveNavigation = () => readPortalPage(window.sessionStorage, activeNavStorageKey, coachNavigationLabels, 'Tổng quan')
+
 export default function Coach() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [activeNav, setActiveNav] = useState('Tổng quan')
+  const [activeNav, setActiveNav] = useState(readActiveNavigation)
   const [selectedCoachSession, setSelectedCoachSession] = useState(readSelectedSession)
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
@@ -83,6 +88,10 @@ export default function Coach() {
     if (selectedCoachSession?.id) window.sessionStorage.setItem(selectedSessionStorageKey, JSON.stringify(selectedCoachSession))
     else window.sessionStorage.removeItem(selectedSessionStorageKey)
   }, [selectedCoachSession])
+
+  useEffect(() => {
+    storePortalPage(window.sessionStorage, activeNavStorageKey, activeNav)
+  }, [activeNav])
 
   useEffect(() => {
     if (!notificationOpen) return undefined
@@ -166,6 +175,7 @@ export default function Coach() {
 
   const handleLogout = async () => {
     window.sessionStorage.removeItem(selectedSessionStorageKey)
+    clearPortalPage(window.sessionStorage, activeNavStorageKey)
     await logout()
     navigate('/login', { replace: true })
   }
