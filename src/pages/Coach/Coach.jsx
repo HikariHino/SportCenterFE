@@ -6,6 +6,7 @@ import {
   LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import usePortalNavigation from '../../hooks/usePortalNavigation'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { ViewLoader } from './CoachViewShared'
 import '../../style/Coach/Coach.css'
@@ -23,6 +24,7 @@ const navigation = [
   [Users, 'Học viên'],
   [UserRound, 'Hồ sơ'],
 ]
+const coachViews = navigation.map(([, label]) => label)
 
 const pageMeta = {
   'Lịch huấn luyện': { eyebrow: 'LỊCH & CHUYÊN CẦN', title: 'Lịch huấn luyện', description: 'Chọn buổi trên thời khóa biểu để xem học viên và cập nhật điểm danh.' },
@@ -53,7 +55,7 @@ const readSelectedSession = () => {
 export default function Coach() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [activeNav, setActiveNav] = useState('Tổng quan')
+  const [activeNav, setActiveNav] = usePortalNavigation(coachViews, 'Tổng quan')
   const [selectedCoachSession, setSelectedCoachSession] = useState(readSelectedSession)
   const [notice, setNotice] = useState('')
   const [query, setQuery] = useState('')
