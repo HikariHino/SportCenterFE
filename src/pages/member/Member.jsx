@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
-  Bell, CalendarDays, CheckCircle2, ChevronRight, CreditCard,
+  AlertCircle, Bell, CalendarDays, CheckCircle2, ChevronRight, CreditCard,
   Dumbbell, Headset, LogOut, Menu, QrCode, ReceiptText, ShieldCheck,
   Trophy, UserCheck, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import usePortalNavigation from '../../hooks/usePortalNavigation'
 import { getUserDisplayName, getUserInitials } from '../../utils/auth'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification, sessionNotificationId } from '../../utils/sessionNotifications'
-import { clearPortalPage, readPortalPage, storePortalPage } from '../../utils/portalNavigation'
 import {
   ProfileView,
   SubscriptionsView,
@@ -22,6 +22,7 @@ import {
   NotificationsView,
 } from './MemberViews'
 import '../../style/member/Member.css'
+import MemberScheduleReviewGate from './MemberScheduleReviewGate'
 
 export const memberNavSections = [
   {
@@ -85,16 +86,25 @@ export const memberNavSections = [
 ]
 
 const allNavItems = memberNavSections.flatMap(section => section.items)
-const activeNavStorageKey = 'member:active-nav'
-const memberNavigationIds = allNavItems.map(item => item.id)
-const storedActiveNavigation = () => readPortalPage(window.sessionStorage, activeNavStorageKey, memberNavigationIds, 'profile')
+const memberViewIds = allNavItems.map(item => item.id)
 
 export default function Member() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [activeNav, setActiveNav] = useState(storedActiveNavigation)
+  const location = useLocation()
+  const paymentReturnView = ['payments', 'subscriptions'].includes(location.state?.activeNav) ? location.state.activeNav : undefined
+  const [activeNav, setActiveNav] = usePortalNavigation(memberViewIds, 'profile', paymentReturnView)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [noticeTone, setNoticeTone] = useState('success')
+
+  useEffect(() => {
+    if (!location.state?.paymentNotice) { setNotice(''); return }
+    setNotice(location.state.paymentNotice)
+    setNoticeTone(location.state.paymentStatus === 'success' ? 'success' : ['pending', 'review'].includes(location.state.paymentStatus) ? 'warning' : 'error')
+    const timer = window.setTimeout(() => setNotice(''), 6000)
+    return () => window.clearTimeout(timer)
+  }, [location.key, location.state?.paymentNotice, location.state?.paymentStatus])
 
   // Quick notification bell dropdown state
   const [notificationOpen, setNotificationOpen] = useState(false)
@@ -108,6 +118,7 @@ export default function Member() {
   const [quickReadError, setQuickReadError] = useState('')
   const [notificationRevision, setNotificationRevision] = useState(0)
   const [scheduleRequest, setScheduleRequest] = useState(null)
+  const [scheduleReviewRequest, setScheduleReviewRequest] = useState(0)
   const notificationRef = useRef(null)
   const quickReadLock = useRef(false)
   const mounted = useRef(true)
@@ -132,21 +143,17 @@ export default function Member() {
     return () => { mounted.current = false }
   }, [])
 
-  useEffect(() => {
-    storePortalPage(window.sessionStorage, activeNavStorageKey, activeNav)
-  }, [activeNav])
-
   const displayName = getUserDisplayName(user)
   const initials = getUserInitials(user)
   const activeItem = allNavItems.find(item => item.id === activeNav) || allNavItems[0]
 
   const showNotice = (text) => {
+    setNoticeTone('success')
     setNotice(text)
     window.setTimeout(() => setNotice(''), 3000)
   }
 
   const handleLogout = async () => {
-    clearPortalPage(window.sessionStorage, activeNavStorageKey)
     await logout()
     navigate('/login', { replace: true })
   }
@@ -225,7 +232,7 @@ export default function Member() {
     try {
       const outcome = await markAllNotificationsRead()
       if (!mounted.current) return
-      setQuickReadNotice(outcome.total ? `Đã đọc ${outcome.read}/${outcome.total} thông báo.` : 'Bạn đã đọc hết thông báo.')
+      setQuickReadNotice((outcome.total ? `Đã đọc ${outcome.read}/${outcome.total} thông báo.` : outcome.requiresReview ? '' : 'Bạn đã đọc hết thông báo.') + (outcome.requiresReview ? ` Có ${outcome.requiresReview} thông báo thay đổi lịch cần kiểm tra và xác nhận.` : ''))
       if (outcome.failed.length) setQuickReadError(`Còn ${outcome.failed.length} thông báo chưa cập nhật được. Vui lòng thử lại.`)
     } catch (error) {
       if (mounted.current) setQuickReadError(getNotificationErrorMessage(error))
@@ -242,8 +249,13 @@ export default function Member() {
   }
 
   const viewUpdatedSchedule = item => {
-    setScheduleRequest({ sessionId: sessionNotificationId(item), revision: Date.now() })
+    refreshNotifications()
     setNotificationOpen(false)
+    if (!item.isRead) {
+      setScheduleReviewRequest(value => value + 1)
+      return
+    }
+    setScheduleRequest({ sessionId: sessionNotificationId(item), revision: Date.now() })
     selectNav('classes')
   }
 
@@ -258,7 +270,7 @@ export default function Member() {
       case 'checkin':
         return <GymCheckInView showNotice={showNotice} />
       case 'classes':
-        return <ClassesView key={scheduleRequest?.revision || 'classes'} showNotice={showNotice} onNavigateTab={selectNav} initialTab={scheduleRequest ? 'mine' : 'browse'} notificationSessionId={scheduleRequest?.sessionId} />
+        return <ClassesView key={scheduleRequest?.revision || 'classes'} showNotice={showNotice} onNavigateTab={selectNav} notificationSessionId={scheduleRequest?.sessionId} />
       case 'training-plans':
         return <TrainingPlansView user={user} showNotice={showNotice} />
       case 'support':
@@ -271,6 +283,7 @@ export default function Member() {
   }
 
   return (
+    <MemberScheduleReviewGate key={user?.userId ?? user?.id ?? user?.email} refreshKey={notificationRevision} reopenRequest={scheduleReviewRequest} onConfirmed={refreshNotifications}>
     <div className="member-page member-dashboard">
       {/* Sidebar role Member */}
       <aside className={`member-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
@@ -388,7 +401,7 @@ export default function Member() {
                             <h4>{item.title}</h4>
                             <p>{item.content}</p>
                             {isSessionUpdateNotification(item) && <div className="member-session-update-notice"><p>Kiểm tra lịch mới và HLV. Đăng ký được giữ nguyên; bạn có thể tự hủy theo hạn hủy nếu không tham gia được.</p><button type="button" onClick={() => viewUpdatedSchedule(item)}>Xem lịch đã đặt</button></div>}
-                            {!item.isRead && (
+                            {!item.isRead && !isSessionUpdateNotification(item) && (
                               <button
                                 type="button"
                                 disabled={quickMarkingId !== null || quickMarkingAll}
@@ -405,11 +418,11 @@ export default function Member() {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="member-topbar-account">
               <span className="member-avatar">{initials}</span>
-              <div className="member-profile-info" style={{ display: 'flex', flexDirection: 'column' }}>
-                <span className="member-profile-name" style={{ fontSize: 12, fontWeight: 700 }}>{displayName}</span>
-                <small style={{ fontSize: 9.5, color: '#004ac6', fontWeight: 600 }}>Thành viên Olympus</small>
+              <div className="member-profile-info">
+                <span className="member-profile-name">{displayName}</span>
+                <small className="member-profile-role">Thành viên Olympus</small>
               </div>
             </div>
           </div>
@@ -417,8 +430,8 @@ export default function Member() {
 
         <main className="member-main-content">
           {notice && (
-            <div className="member-toast" role="status">
-              <CheckCircle2 size={18} />
+            <div className="member-toast" data-tone={noticeTone} role="status">
+              {noticeTone === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
               {notice}
             </div>
           )}
@@ -427,5 +440,6 @@ export default function Member() {
         </main>
       </section>
     </div>
+    </MemberScheduleReviewGate>
   )
 }

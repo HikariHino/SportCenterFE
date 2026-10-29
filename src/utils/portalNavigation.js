@@ -1,24 +1,13 @@
-export function readPortalPage(storage, key, allowedPages, fallback) {
-  try {
-    const storedPage = storage?.getItem(key)
-    return allowedPages.includes(storedPage) ? storedPage : fallback
-  } catch {
-    return fallback
-  }
+export function getPortalView(search, allowedViews, fallback, initialView) {
+  const selected = new URLSearchParams(search).get('view')
+  if (allowedViews.includes(selected)) return selected
+  if (selected === null && allowedViews.includes(initialView)) return initialView
+  return fallback
 }
 
-export function storePortalPage(storage, key, page) {
-  try {
-    storage?.setItem(key, page)
-  } catch {
-    // Navigation must continue even when browser storage is unavailable.
-  }
-}
-
-export function clearPortalPage(storage, key) {
-  try {
-    storage?.removeItem(key)
-  } catch {
-    // Logout must continue even when browser storage is unavailable.
-  }
+export function getPortalViewSearch(search, view, allowedViews) {
+  if (!allowedViews.includes(view)) return null
+  const next = new URLSearchParams(search)
+  next.set('view', view)
+  return next
 }

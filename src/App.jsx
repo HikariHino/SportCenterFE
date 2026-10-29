@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
-import { getToken, isManagerRole } from './utils/auth'
+import { canUsePayments, getToken, isManagerRole } from './utils/auth'
 
 const SportDashboard = lazy(() => import('./pages/SportDashboard'))
 const Login = lazy(() => import('./pages/Login'))
@@ -37,8 +37,15 @@ function ReceptionistRoute() {
 
 function MemberRoute({ children }) {
   const { user } = useAuth()
+  const location = useLocation()
   const isMember = user?.role === 'member' && Boolean(getToken())
-  return isMember ? children : <Navigate to="/login" replace state={{ from: '/member' }} />
+  return isMember ? children : <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}${location.hash}`, message: location.pathname.startsWith('/payment/') ? 'Đăng nhập để kiểm tra kết quả thanh toán và cập nhật gói hội viên.' : undefined }} />
+}
+
+function PaymentRoute() {
+  const { user } = useAuth()
+  const location = useLocation()
+  return canUsePayments(user?.role) && Boolean(getToken()) ? <PaymentResult /> : <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}${location.hash}`, message: 'Đăng nhập để kiểm tra kết quả thanh toán.' }} />
 }
 
 function App() {
@@ -54,8 +61,8 @@ function App() {
           <Route path="/manager" element={<ManagerRoute />} />
           <Route path="/receptionist" element={<ReceptionistRoute />} />
           <Route path="/member" element={<MemberRoute><Member /></MemberRoute>} />
-          <Route path="/payment/success" element={<MemberRoute><PaymentResult /></MemberRoute>} />
-          <Route path="/payment/cancel" element={<MemberRoute><PaymentResult cancelled /></MemberRoute>} />
+          <Route path="/payment/success" element={<PaymentRoute />} />
+          <Route path="/payment/cancel" element={<PaymentRoute />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

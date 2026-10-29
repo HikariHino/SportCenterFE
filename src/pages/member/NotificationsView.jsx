@@ -90,7 +90,7 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
     try {
       const outcome = await markAllNotificationsRead()
       if (!mounted.current) return
-      setNotice(outcome.total ? `Đã đọc ${outcome.read}/${outcome.total} thông báo.` : 'Bạn đã đọc hết thông báo.')
+      setNotice((outcome.total ? `Đã đọc ${outcome.read}/${outcome.total} thông báo.` : outcome.requiresReview ? '' : 'Bạn đã đọc hết thông báo.') + (outcome.requiresReview ? ` Có ${outcome.requiresReview} thông báo thay đổi lịch cần kiểm tra và xác nhận.` : ''))
       if (outcome.failed.length) setActionError(`Còn ${outcome.failed.length} thông báo chưa cập nhật được. Vui lòng bấm Đọc tất cả để thử lại.`)
     } catch (requestError) {
       if (mounted.current) setActionError(getNotificationErrorMessage(requestError, 'Không thể đọc tất cả thông báo.'))
@@ -129,7 +129,7 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
                   <h3 id={`member-notification-${item.id}`}>{item.title || 'Thông báo từ trung tâm'}</h3>
                   <p>{item.content}</p>
                   {isSessionUpdateNotification(item) && <div className="member-session-update-notice"><p>Vui lòng kiểm tra ngày, giờ và HLV trong lịch đã đặt (giờ Việt Nam). Đăng ký của bạn được giữ nguyên. Nếu không thể tham gia, bạn có thể tự hủy đăng ký theo hạn hủy của buổi học.</p>{onViewSchedule && <button type="button" onClick={() => onViewSchedule(item)}>Xem lịch đã đặt</button>}</div>}
-                  {!item.isRead && <button type="button" disabled={actionBusy} onClick={() => markRead(item)}>{markingId === item.id ? <><LoaderCircle className="member-spin" size={15} /> Đang cập nhật...</> : <><CheckCheck size={15} /> Đánh dấu đã đọc</>}</button>}
+                  {!item.isRead && !isSessionUpdateNotification(item) && <button type="button" disabled={actionBusy} onClick={() => markRead(item)}>{markingId === item.id ? <><LoaderCircle className="member-spin" size={15} /> Đang cập nhật...</> : <><CheckCheck size={15} /> Đánh dấu đã đọc</>}</button>}
                 </div>
               </article>)}</div>
               {totalPages > 1 && <nav className="member-notifications-pagination" aria-label="Phân trang thông báo"><span>Trang {page}/{totalPages}</span><div><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)}><ChevronLeft size={15} /> Trang trước</button><button type="button" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Trang sau <ChevronRight size={15} /></button></div></nav>}

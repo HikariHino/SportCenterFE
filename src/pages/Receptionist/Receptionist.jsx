@@ -6,8 +6,8 @@ import {
 } from 'lucide-react'
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
+import usePortalNavigation from '../../hooks/usePortalNavigation'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
-import { clearPortalPage, readPortalPage, storePortalPage } from '../../utils/portalNavigation'
 import { formatDateTime, requestErrorMessage, ViewLoader } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
 
@@ -30,10 +30,9 @@ const navigation = [
   [LifeBuoy, 'Hỗ trợ'],
   [UserRound, 'Hồ sơ'],
 ]
+const receptionistViews = navigation.map(([, label]) => label)
 
 const selectedSessionStorageKey = 'receptionist:selected-session'
-const activeNavStorageKey = 'receptionist:active-nav'
-const receptionistNavigationLabels = navigation.map(([, label]) => label)
 
 const storedSelectedSession = () => {
   try {
@@ -43,8 +42,6 @@ const storedSelectedSession = () => {
     return null
   }
 }
-
-const storedActiveNavigation = () => readPortalPage(window.sessionStorage, activeNavStorageKey, receptionistNavigationLabels, 'Tổng quan')
 
 const pageMeta = {
   'Buổi học': ['QUẢN LÝ LỊCH HỌC', 'Buổi học', 'Chọn môn thể thao và huấn luyện viên để theo dõi lịch, lớp và hội viên.'],
@@ -59,7 +56,7 @@ const pageMeta = {
 export default function Receptionist() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [activeNav, setActiveNav] = useState(storedActiveNavigation)
+  const [activeNav, setActiveNav] = usePortalNavigation(receptionistViews, 'Tổng quan')
   const [query, setQuery] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
@@ -81,10 +78,6 @@ export default function Receptionist() {
     if (selectedReceptionSession?.id) window.sessionStorage.setItem(selectedSessionStorageKey, JSON.stringify(selectedReceptionSession))
     else window.sessionStorage.removeItem(selectedSessionStorageKey)
   }, [selectedReceptionSession])
-
-  useEffect(() => {
-    storePortalPage(window.sessionStorage, activeNavStorageKey, activeNav)
-  }, [activeNav])
 
   useEffect(() => {
     let active = true
@@ -164,7 +157,6 @@ export default function Receptionist() {
 
   const handleLogout = async () => {
     window.sessionStorage.removeItem(selectedSessionStorageKey)
-    clearPortalPage(window.sessionStorage, activeNavStorageKey)
     await logout()
     navigate('/login', { replace: true })
   }

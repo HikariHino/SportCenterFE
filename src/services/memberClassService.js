@@ -1,5 +1,5 @@
 import api from './api'
-import { bookingUnavailableReason, hasActiveMembership, registeredSessionIds } from '../utils/memberClasses.js'
+import { bookingUnavailableReason, hasActiveMembership, registeredSessionIds, reviewUnavailableReason } from '../utils/memberClasses.js'
 import { getMySubscriptions } from './memberSubscriptionService'
 
 function readPage(body, page, pageSize, fallback) {
@@ -137,24 +137,35 @@ export async function bookClassSessions({ classId, sessionIds }, onProgress = ()
   const [catalog, mine, subscriptions] = await Promise.all([getMemberClassSessions(classId), getAllMyRegistrations(), getMySubscriptions()])
   if (!hasActiveMembership(subscriptions)) throw new Error('Bạn cần có gói hội viên đang còn hiệu lực để đăng ký buổi học.')
   const registered = registeredSessionIds(mine.items)
+  let planned = [...mine.items]
   const result = { registered: [], existing: [], skipped: [], remaining: [], error: '' }
   for (let index = 0; index < ids.length; index += 1) {
     const id = ids[index]
     const session = catalog.items.find(item => String(item.id) === id && (item.classId == null || String(item.classId) === String(classId)))
     if (registered.has(id)) { result.existing.push(id); continue }
-    const reason = session ? bookingUnavailableReason(session) : 'Buổi học không còn tồn tại trong lớp.'
+    const reason = session ? bookingUnavailableReason(session, false, Date.now(), planned) : 'Buổi học không còn tồn tại trong lớp.'
     if (reason) { result.skipped.push({ id, reason }); continue }
     onProgress({ completed: index, total: ids.length })
     try {
       await bookSession(id)
       result.registered.push(id)
       registered.add(id)
+      planned.push({ ...session, sessionId: session.id, status: 'Registered', sessionStatus: 'Scheduled' })
     } catch (error) {
       // A response may be lost after a successful POST. Reconcile before offering
       // retry, so the member is never asked to book a confirmed session twice.
       let recovered = false
-      try { recovered = registeredSessionIds((await getAllMyRegistrations()).items).has(id) } catch { /* Retry will reload registrations before any further POST. */ }
-      if (recovered) { result.registered.push(id); registered.add(id); continue }
+      try {
+        const latest = (await getAllMyRegistrations()).items
+        recovered = registeredSessionIds(latest).has(id)
+        if (recovered) planned = latest
+      } catch { /* Retry will reload registrations before any further POST. */ }
+      if (recovered) {
+        result.registered.push(id)
+        registered.add(id)
+        planned.push({ ...session, sessionId: session.id, status: 'Registered', sessionStatus: 'Scheduled' })
+        continue
+      }
       result.remaining = ids.slice(index)
       result.error = error?.response?.data?.message || getMemberClassErrorMessage(error)
       return result
@@ -201,6 +212,10 @@ export async function reviewRegistration(registrationId, { rating, comment = '' 
     throw new Error('Vui lòng chọn điểm đánh giá từ 1 đến 5 sao.')
   }
   if (comment.trim().length > 2000) throw new Error('Nhận xét không được vượt quá 2.000 ký tự.')
+  const current = (await getAllMyRegistrations()).items.find(item => String(item.id) === String(registrationId))
+  if (!current) throw new Error('Không tìm thấy đăng ký buổi học của bạn. Vui lòng làm mới lịch đã đặt.')
+  const reason = reviewUnavailableReason(current)
+  if (reason) throw new Error(reason)
   const response = await api.post(`/class-registrations/${registrationId}/review`, {
     rating, comment: comment.trim() || null,
   })

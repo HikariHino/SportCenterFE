@@ -1,444 +1,137 @@
-/* ═══════════════════════════════════════════════════════════════════════
-   PaymentsView.css – Thanh toán trực tuyến & Hóa đơn (role Member)
-   ═══════════════════════════════════════════════════════════════════════ */
-
-/* ── Nút "Thanh toán ngay" (Primary CTA cao cấp) ─────────────────────── */
-.member-btn-checkout {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 10px 14px;
-  border: none;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #004ac6 0%, #2563eb 50%, #3b82f6 100%);
-  color: #ffffff !important;
-  font-family: inherit;
-  font-size: 11.5px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.25px;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 74, 198, 0.32);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  text-decoration: none;
-  white-space: nowrap;
-  user-select: none;
+.member-payments-view { display: grid; gap: 24px; min-width: 0; color: var(--theme-text); container: member-payments / inline-size; }
+.mpay-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid var(--theme-border); }
+.mpay-page-heading > div { min-width: 0; }
+.member-payments-view .mpay-page-heading h2 { margin: 6px 0; font-size: 28px; }
+.mpay-page-heading > div > p:last-child { color: var(--theme-muted); font-size: 12px; line-height: 1.8; }
+:is(.member-payments-view, .mpay-dialog) .mpay-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 9px 13px; border: 1px solid var(--theme-border); border-radius: 9px; background: var(--theme-surface); color: var(--theme-text); font: inherit; font-size: 12px; font-weight: 600; line-height: 1.5; cursor: pointer; text-align: center; }
+:is(.member-payments-view, .mpay-dialog) .mpay-button:hover:not(:disabled) { background: var(--theme-raised); border-color: var(--theme-accent); }
+:is(.member-payments-view, .mpay-dialog) .mpay-button.is-primary { color: #fff; background: #1557d5; border-color: #1557d5; }
+:is(.member-payments-view, .mpay-dialog) .mpay-button.is-primary:hover:not(:disabled) { background: #1044a8; }
+:is(.member-payments-view, .mpay-dialog) .mpay-button.is-soft { color: var(--theme-accent); background: var(--theme-raised); }
+:is(.member-payments-view, .mpay-dialog) .mpay-button.is-danger { color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fef2f2); }
+:is(.member-payments-view, .mpay-dialog) button:disabled { opacity: .55; cursor: not-allowed; }
+:is(.member-payments-view, .mpay-dialog) :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+.mpay-overview { display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; }
+.mpay-total, .mpay-pending-overview { display: flex; align-items: flex-start; gap: 16px; padding: 24px; border: 1px solid var(--theme-border); border-radius: 16px; background: var(--theme-surface); min-width: 0; }
+.mpay-total { background: var(--theme-green-bg, #e1f6ee); }
+.mpay-overview-icon { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 14px; background: var(--theme-surface); color: var(--theme-green, #096445); }
+.mpay-total p { color: var(--theme-green, #096445); font-size: 12px; font-weight: 600; }
+.mpay-total strong { display: block; font-size: 32px; line-height: 1.5; color: var(--theme-green, #096445); margin: 8px 0; overflow-wrap: anywhere; }
+.mpay-total small { color: var(--theme-green, #096445); font-size: 11px; line-height: 1.7; }
+.mpay-pending-overview .mpay-overview-icon { color: var(--theme-gold, #805200); background: var(--theme-gold-bg, #fff7e5); }
+.member-payments-view .mpay-pending-overview h3 { font-size: 16px; margin: 0 0 6px; }
+.mpay-pending-overview p { color: var(--theme-muted); font-size: 12px; line-height: 1.8; }
+.mpay-pending-overview button { display: inline-flex; align-items: center; gap: 7px; padding: 10px 0 0; margin-top: 5px; border: 0; background: transparent; color: var(--theme-accent); font-size: 12px; font-weight: 600; cursor: pointer; }
+.mpay-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.mpay-stats > button { display: flex; align-items: flex-start; gap: 14px; min-width: 0; padding: 18px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-surface); color: var(--theme-muted); text-align: left; cursor: pointer; }
+.mpay-stats > button > svg { flex-shrink: 0; margin-top: 3px; color: var(--theme-accent); }
+.mpay-stats > button > span { font-size: 11px; line-height: 1.7; }
+.mpay-stats strong { display: block; font-size: 25px; line-height: 1.4; margin-top: 4px; color: var(--theme-text); }
+.mpay-stats > button[data-tone='completed'] > svg, .mpay-stats [data-tone='completed'] strong { color: var(--theme-green, #096445); }
+.mpay-stats > button[data-tone='pending'] > svg, .mpay-stats [data-tone='pending'] strong { color: var(--theme-gold, #805200); }
+.mpay-stats > button[aria-pressed='true'] { border-color: var(--theme-accent); box-shadow: inset 0 0 0 1px var(--theme-accent); }
+.mpay-history { display: grid; gap: 18px; min-width: 0; }
+.mpay-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.member-payments-view .mpay-section-heading h3 { font-size: 18px; margin-bottom: 4px; }
+.mpay-section-heading p { color: var(--theme-muted); font-size: 12px; line-height: 1.8; }
+.mpay-section-heading > span { color: var(--theme-muted); font-size: 11px; flex-shrink: 0; }
+.mpay-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 16px; background: var(--theme-surface); border: 1px solid var(--theme-border); border-radius: 12px; }
+.mpay-search { display: flex; flex: 1 1 240px; align-items: center; gap: 10px; min-width: 0; color: var(--theme-muted); }
+.mpay-search input { min-height: 40px; min-width: 0; width: 100%; padding: 8px 4px; border: 0; color: var(--theme-text); background: var(--theme-surface); font: inherit; font-size: 12px; }
+.mpay-filter { display: flex; align-items: center; gap: 10px; color: var(--theme-muted); font-size: 11px; }
+.member-payments-view .mpay-filter select { min-height: 40px; min-width: 0; max-width: 100%; padding: 8px 12px; color: var(--theme-text); background: var(--theme-bg); border: 1px solid var(--theme-border); border-radius: 8px; font: inherit; font-size: 12px; }
+.mpay-records { --mpay-columns: minmax(160px, 1.1fr) minmax(100px, .8fr) minmax(125px, .9fr) minmax(110px, .9fr) minmax(205px, auto); background: var(--theme-surface); border: 1px solid var(--theme-border); border-radius: 14px; overflow: hidden; }
+.mpay-record-labels, .mpay-record { display: grid; grid-template-columns: var(--mpay-columns); align-items: center; gap: 16px; padding: 18px 20px; }
+.mpay-record-labels { background: var(--theme-raised); color: var(--theme-muted); font-size: 11px; }
+.mpay-record-labels > span:last-child { text-align: right; }
+.mpay-records > ul { list-style: none; margin: 0; padding: 0; }
+.mpay-record { border-top: 1px solid var(--theme-border); }
+.mpay-record > div { min-width: 0; }
+.mpay-record-main { display: flex; align-items: center; gap: 10px; }
+.mpay-record-icon { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; background: var(--theme-raised); color: var(--theme-accent); }
+.mpay-record-main h4 { margin: 0 0 4px; font-size: 13px; line-height: 1.7; }
+.mpay-record-main p { color: var(--theme-muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.mpay-record-amount strong { font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.mpay-record :is(.mpay-record-amount, .mpay-record-date) small { display: block; color: var(--theme-muted); font-size: 10px; line-height: 1.8; margin-top: 4px; }
+.mpay-record-date time { font-size: 12px; line-height: 1.7; }
+.mpay-record-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.mpay-status { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 9px; border-radius: 20px; background: var(--theme-raised); color: var(--theme-muted); font-size: 10px; font-weight: 600; line-height: 1.7; }
+.mpay-status > span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.mpay-status[data-status='completed'] { color: var(--theme-green, #096445); background: var(--theme-green-bg, #e1f6ee); }
+.mpay-status[data-status='pending'], .mpay-status[data-status='needsreview'] { color: var(--theme-gold, #805200); background: var(--theme-gold-bg, #fff7e5); }
+.mpay-status[data-status='cancelled'], .mpay-status[data-status='failed'] { color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fef2f2); }
+.mpay-mobile-label { display: none; color: var(--theme-muted); font-size: 10px; margin-bottom: 4px; }
+.mpay-message { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border: 1px solid var(--theme-border); border-radius: 10px; color: var(--theme-text); background: var(--theme-raised); }
+.mpay-message > svg { margin-top: 3px; flex-shrink: 0; color: var(--theme-accent); }
+:is(.member-payments-view, .mpay-dialog) .mpay-message p { margin: 0; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.mpay-message.is-error { color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fef2f2); }
+.mpay-message.is-error > svg { color: inherit; }
+.mpay-empty { display: grid; justify-items: center; gap: 12px; padding: 40px 20px; text-align: center; color: var(--theme-muted); border: 1px dashed var(--theme-border); border-radius: 12px; background: var(--theme-surface); }
+.mpay-empty h4 { margin: 0; font-size: 15px; color: var(--theme-text); }
+.mpay-empty p { font-size: 12px; line-height: 1.8; }
+.mpay-dialog { position: fixed; inset: 0; margin: auto; padding: 0; width: min(720px, calc(100% - 32px)); max-height: calc(100dvh - 32px); border: 1px solid var(--theme-border); border-radius: 16px; color: var(--theme-text); background: var(--theme-surface); font: 400 13px/1.7 'Be Vietnam Pro', sans-serif; }
+.mpay-dialog::backdrop { background: #0d1422ad; backdrop-filter: blur(4px); }
+.mpay-dialog-content > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--theme-border); }
+.mpay-dialog-content > header > div { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mpay-dialog-content > header svg { flex-shrink: 0; color: var(--theme-accent); }
+.mpay-dialog h2 { font-size: 18px; line-height: 1.6; margin: 0; }
+.mpay-close { display: grid; place-items: center; padding: 6px; border: 0; border-radius: 8px; background: transparent; color: var(--theme-muted); cursor: pointer; }
+.mpay-close:hover { background: var(--theme-raised); }
+.mpay-dialog-body { display: grid; gap: 20px; padding: 24px; min-width: 0; }
+.mpay-dialog-body > p { margin: 0; }
+.mpay-detail-summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding-bottom: 20px; border-bottom: 1px solid var(--theme-border); }
+.mpay-detail-summary > div > span { font-size: 11px; color: var(--theme-muted); }
+.mpay-detail-summary strong { display: block; margin-top: 5px; font-size: 28px; color: var(--theme-accent); line-height: 1.5; }
+.mpay-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 22px; margin: 0; }
+.mpay-detail-grid > div { min-width: 0; }
+.mpay-detail-grid dt { font-size: 11px; color: var(--theme-muted); margin-bottom: 5px; }
+.mpay-detail-grid dd { margin: 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.mpay-qr { padding: 18px; background: var(--theme-bg); border: 1px solid var(--theme-border); border-radius: 12px; }
+.mpay-qr-heading { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 18px; }
+.mpay-qr-heading > svg { flex-shrink: 0; color: var(--theme-accent); margin-top: 3px; }
+.mpay-qr h3 { font-size: 14px; margin: 0 0 5px; }
+.mpay-qr p { margin: 0; font-size: 11px; color: var(--theme-muted); line-height: 1.8; }
+.mpay-qr-content { display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap; }
+.mpay-qr-content img { display: block; width: 176px; height: 176px; flex-shrink: 0; background: #fff; border-radius: 10px; }
+.mpay-qr-content > div { display: grid; gap: 8px; min-width: 0; }
+.mpay-qr-content > div > span, .mpay-qr-content small { color: var(--theme-muted); font-size: 11px; }
+.mpay-qr-content strong { color: var(--theme-accent); font-size: 24px; line-height: 1.6; }
+.mpay-muted { color: var(--theme-muted); font-size: 12px; line-height: 1.8; }
+.mpay-dialog-content > footer { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; padding: 18px 24px; border-top: 1px solid var(--theme-border); background: var(--theme-surface); }
+@container member-payments (max-width: 1000px) {
+  .mpay-records { border: 0; border-radius: 0; background: transparent; overflow: visible; }
+  .mpay-record-labels { display: none; }
+  .mpay-records > ul { display: grid; gap: 14px; }
+  .mpay-record { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; padding: 20px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); }
+  .mpay-record-main { grid-column: 1; grid-row: 1; }
+  .mpay-record-status { grid-column: 2; grid-row: 1; justify-self: end; }
+  .mpay-record-amount { grid-column: 1; grid-row: 2; }
+  .mpay-record-date { grid-column: 2; grid-row: 2; }
+  .mpay-record-actions { grid-column: 1 / -1; padding-top: 16px; border-top: 1px solid var(--theme-border); }
+  .mpay-mobile-label { display: block; }
 }
-
-.member-btn-checkout:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 7px 22px rgba(0, 74, 198, 0.45);
-  filter: brightness(1.06);
+@container member-payments (max-width: 700px) {
+  .mpay-overview { grid-template-columns: minmax(0, 1fr); }
+  .mpay-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .mpay-stats > button { padding: 15px; gap: 10px; }
 }
-
-.member-btn-checkout:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 74, 198, 0.28);
+@container member-payments (max-width: 500px) {
+  .mpay-page-heading { flex-wrap: wrap; }
+  .member-payments-view .mpay-page-heading h2 { font-size: 24px; }
+  .mpay-total, .mpay-pending-overview { padding: 20px; gap: 12px; }
+  .mpay-total strong { font-size: 28px; }
+  .mpay-filter { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+  .mpay-record { padding: 18px; gap: 16px 12px; }
+  .mpay-record-main { gap: 8px; }
+  .mpay-record-icon { display: none; }
+  .mpay-section-heading { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
 }
-
-.member-btn-checkout:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
-  filter: none !important;
-}
-
-.member-btn-checkout--sm {
-  padding: 6px 12px;
-  font-size: 11px !important;
-  border-radius: 7px;
-  box-shadow: 0 2px 8px rgba(0, 74, 198, 0.25);
-}
-
-/* ── Stat cards ──────────────────────────────────────────────────────── */
-.pay-stats {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 22px;
-}
-
-.pay-stat-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
-  background: #fff;
-  border: 1px solid var(--member-line, #dfe3ee);
-  border-radius: 13px;
-  box-shadow: 0 2px 5px rgba(19, 27, 46, 0.012);
-}
-
-.pay-stat-card p {
-  margin: 0;
-  font-size: 11px;
-  color: var(--member-muted, #626878);
-}
-
-.pay-stat-card strong {
-  display: block;
-  font-size: 22px;
-  line-height: 1.4;
-  color: var(--member-ink, #131b2e);
-}
-
-.pay-stat-card--revenue strong {
-  font-size: 17px;
-  color: #006c49;
-}
-
-.pay-stat-icon {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  flex-shrink: 0;
-}
-
-.pay-stat-icon--blue {
-  background: #e1e8ff;
-  color: var(--member-blue, #004ac6);
-}
-
-.pay-stat-icon--green {
-  background: #d5f8e6;
-  color: #006c49;
-}
-
-.pay-stat-icon--amber {
-  background: #fff1cf;
-  color: #9a6300;
-}
-
-.pay-stat-icon--red {
-  background: #fee4e2;
-  color: #b42318;
-}
-
-.pay-stat-icon--gold {
-  background: #ffddb8;
-  color: #784b00;
-}
-
-/* ── Search & Filter toolbar ─────────────────────────────────────────── */
-.pay-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px 20px;
-  margin-bottom: 18px;
-}
-
-.pay-search-box {
-  position: relative;
-  flex: 1 1 260px;
-  max-width: 400px;
-}
-
-.pay-search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
-  pointer-events: none;
-}
-
-.pay-search-box input {
-  width: 100%;
-  padding: 9px 32px 9px 36px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 12px;
-  outline: none;
-  font-family: inherit;
-  color: var(--member-ink, #131b2e);
-  background: #fff;
-  transition: border-color 0.15s;
-}
-
-.pay-search-box input:focus {
-  border-color: var(--member-blue, #004ac6);
-}
-
-.pay-search-clear {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 2px;
-}
-
-/* ── Table footer ────────────────────────────────────────────────────── */
-.pay-table-footer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  background: #f7f8ff;
-  border-top: 1px solid var(--member-line, #dfe3ee);
-  color: var(--member-muted, #626878);
-  font-size: 11px;
-}
-
-.pay-table-footer > svg {
-  color: var(--member-blue, #004ac6);
-  flex-shrink: 0;
-}
-
-/* ── Detail modal enhancements ───────────────────────────────────────── */
-.pay-detail-status-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.pay-detail-id {
-  font-family: monospace;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--member-blue, #004ac6);
-}
-
-.pay-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-.pay-detail-item {
-  padding: 12px 16px;
-  background: #f8fafc;
-  border: 1px solid #e8ebf2;
-  border-radius: 10px;
-}
-
-.pay-detail-item small {
-  display: block;
-  font-size: 10px;
-  color: var(--member-muted, #626878);
-  margin-bottom: 4px;
-  font-weight: 600;
-}
-
-.pay-detail-item strong {
-  display: block;
-  font-size: 13px;
-  color: var(--member-ink, #131b2e);
-}
-
-.pay-detail-item--full {
-  grid-column: 1 / -1;
-}
-
-.pay-detail-amount {
-  color: var(--member-blue, #004ac6) !important;
-  font-size: 16px !important;
-  font-weight: 800 !important;
-}
-
-/* ── QR Section ──────────────────────────────────────────────────────── */
-.pay-detail-qr-section {
-  border: 2px dashed #c7d2fe;
-  border-radius: 14px;
-  padding: 20px;
-  background: #f5f7ff;
-}
-
-.pay-detail-qr-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.pay-detail-qr-header > svg {
-  color: var(--member-blue, #004ac6);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.pay-detail-qr-header strong {
-  display: block;
-  font-size: 13px;
-  color: var(--member-ink, #131b2e);
-  margin-bottom: 3px;
-}
-
-.pay-detail-qr-header p {
-  margin: 0;
-  font-size: 11px;
-  color: var(--member-muted, #626878);
-  line-height: 1.5;
-}
-
-.pay-detail-qr-body {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.pay-detail-qr-img {
-  width: 180px;
-  height: 180px;
-  border: 3px solid #fff;
-  border-radius: 14px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  background: #fff;
-}
-
-.pay-detail-qr-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-
-.pay-detail-qr-amount {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--member-blue, #004ac6);
-  letter-spacing: -0.5px;
-}
-
-/* ── Responsive ──────────────────────────────────────────────────────── */
-@media (max-width: 1280px) {
-  .pay-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 900px) {
-  .pay-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .pay-detail-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .pay-stats {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .pay-stat-card {
-    padding: 14px 16px;
-    gap: 12px;
-  }
-
-  .pay-stat-card strong {
-    font-size: 20px;
-  }
-
-  .pay-stat-icon {
-    width: 40px;
-    height: 40px;
-  }
-
-  .pay-toolbar {
-    padding: 12px 14px;
-    gap: 10px;
-  }
-
-  .pay-search-box {
-    max-width: 100%;
-    flex-basis: 100%;
-  }
-
-  .pay-detail-qr-img {
-    width: 150px;
-    height: 150px;
-  }
-
-  .pay-detail-qr-amount {
-    font-size: 22px;
-  }
-}
-
-/* ── Dark theme support ──────────────────────────────────────────────── */
-[data-theme='dark'] .pay-stat-card {
-  background: var(--theme-surface, #1e293b);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme='dark'] .pay-stat-card strong {
-  color: #e2e8f0;
-}
-
-[data-theme='dark'] .pay-stat-card--revenue strong {
-  color: #86efac;
-}
-
-[data-theme='dark'] .pay-stat-icon--blue {
-  background: rgba(37, 99, 235, 0.18);
-  color: #93c5fd;
-}
-
-[data-theme='dark'] .pay-stat-icon--green {
-  background: rgba(22, 163, 74, 0.18);
-  color: #86efac;
-}
-
-[data-theme='dark'] .pay-stat-icon--amber {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fcd34d;
-}
-
-[data-theme='dark'] .pay-stat-icon--red {
-  background: rgba(220, 38, 38, 0.18);
-  color: #fca5a5;
-}
-
-[data-theme='dark'] .pay-stat-icon--gold {
-  background: rgba(180, 120, 0, 0.18);
-  color: #fde68a;
-}
-
-[data-theme='dark'] .pay-toolbar {
-  background: var(--theme-surface, #1e293b);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme='dark'] .pay-search-box input {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #e2e8f0;
-}
-
-[data-theme='dark'] .pay-table-footer {
-  background: var(--theme-surface, #1e293b);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: #94a3b8;
-}
-
-[data-theme='dark'] .pay-detail-item {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme='dark'] .pay-detail-item strong {
-  color: #e2e8f0;
-}
-
-[data-theme='dark'] .pay-detail-qr-section {
-  background: rgba(99, 102, 241, 0.06);
-  border-color: rgba(99, 102, 241, 0.2);
-}
-
-[data-theme='dark'] .pay-detail-qr-img {
-  border-color: rgba(255, 255, 255, 0.1);
+@media (max-width: 520px) {
+  .mpay-dialog-content > header { padding: 18px; }
+  .mpay-dialog-body { padding: 18px; gap: 18px; }
+  .mpay-dialog-content > footer { padding: 16px 18px; }
+  .mpay-dialog-content > footer .mpay-button { flex: 1 1 120px; }
+  .mpay-detail-grid { gap: 16px; }
+  .mpay-qr { padding: 14px; }
+  .mpay-qr-content > div { justify-items: center; text-align: center; }
 }

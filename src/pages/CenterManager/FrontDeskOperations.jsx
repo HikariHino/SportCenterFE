@@ -57,15 +57,17 @@ import {
   manualCheckIn,
   scanQrCheckIn,
 } from '../../services/gymCheckInService'
-import { getMembershipPackages } from '../../services/membershipPackageService'
+import { getMembershipPackages, getPackageErrorMessage } from '../../services/membershipPackageService'
 import {
-  cancelPendingSubscription,
   confirmSubscriptionPayment,
-  createReceptionistMemberSubscription,
   getReceptionistMemberSubscriptions,
 } from '../../services/memberSubscriptionService'
-import { createPayment } from '../../services/paymentService'
-import { hasActiveMembership } from '../../utils/memberClasses'
+import { createPayment, syncPayment } from '../../services/paymentService'
+import { cancelOpenPayment } from '../../services/subscriptionCancellationService'
+import { canCancelPayOSPayment, canCheckoutPayOSPayment, canSyncPayOSPayment, paymentCheckoutMessage, paymentStatusLabel } from '../../utils/memberPayments'
+import PayOSQrImage from '../../components/PayOSQrImage'
+import { subscriptionPackageReason, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
+import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import {
   getAllSupportTickets,
   getTicketErrorMessage,
@@ -159,16 +161,16 @@ export default function FrontDeskOperations() {
   const [subscriptionsMemberId, setSubscriptionsMemberId] = useState('')
   const [subscriptionLoadError, setSubscriptionLoadError] = useState('')
   const subscriptionRequest = useRef(0)
-  const subscriptionSubmitLock = useRef(false)
+  const [purchasePackage, setPurchasePackage] = useState(null)
   const [payModalSubscription, setPayModalSubscription] = useState(null)
   const [payOsData, setPayOsData] = useState(null) // { qrCode, checkoutUrl }
+  const [paymentError, setPaymentError] = useState('')
   const subscriptionsReady = Boolean(subMemberId && subscriptionsMemberId === subMemberId && !loadingSubscriptions && !subscriptionLoadError)
-  const activeSubscription = subscriptionsReady ? memberSubscriptions.find(item => hasActiveMembership([item])) : null
-  const subscriptionNotice = activeSubscription
-    ? `Gói tập${activeSubscription.packageName ? ` “${activeSubscription.packageName}”` : ''} của hội viên vẫn còn hiệu lực${activeSubscription.endDate ? ` đến ngày ${formatDate(activeSubscription.endDate)}` : ''}. Chưa thể đăng ký thêm gói tập.`
-    : subscriptionLoadError
+  const selectedSubscriptionPackage = packages.find(item => String(item.id) === String(selectedPackageId))
+  const subscriptionReason = subscriptionsReady && selectedSubscriptionPackage ? subscriptionPackageReason(selectedSubscriptionPackage, memberSubscriptions, packages) : ''
+  const subscriptionNotice = subscriptionReason || (subscriptionLoadError
       ? 'Chưa kiểm tra được hiệu lực gói tập. Vui lòng thử lại trước khi đăng ký.'
-      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : ''
+      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : 'Standard có thể nâng cấp bằng phần chênh lệch; thẻ PT 1-1 được đăng ký độc lập.')
 
   // Tab 4: Class & Attendance states
   const [classView, setClassView] = useState('booking')
@@ -417,42 +419,21 @@ export default function FrontDeskOperations() {
   // Register subscription at counter
   async function handleRegisterSubscription(e) {
     e.preventDefault()
-    if (subscriptionSubmitLock.current || submitting) return
+    if (submitting || purchasePackage) return
     if (!subMemberId || !selectedPackageId) {
       setErrorMessage('Vui lòng chọn hội viên và gói tập.')
       return
     }
-    if (!subscriptionsReady || activeSubscription) return
-
-    subscriptionSubmitLock.current = true
-    setSubmitting(true)
+    if (!subscriptionsReady || subscriptionReason || !selectedSubscriptionPackage) return
     setErrorMessage(null)
-    try {
-      // Recheck immediately before creating: another desk or a payment can
-      // activate a package after this member was selected.
-      const currentSubscriptions = await handleLoadMemberSubscriptions(subMemberId)
-      if (!currentSubscriptions || hasActiveMembership(currentSubscriptions)) return
-      const newSub = await createReceptionistMemberSubscription(
-        Number(subMemberId),
-        Number(selectedPackageId)
-      )
-      setSuccessMessage(`Đã tạo đăng ký gói "${newSub.packageName || ''}" cho hội viên #${subMemberId}!`)
-      await handleLoadMemberSubscriptions(subMemberId)
-      // Open payment confirmation right away
-      setPayModalSubscription(newSub)
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể tạo đăng ký gói.')
-    } finally {
-      subscriptionSubmitLock.current = false
-      setSubmitting(false)
-    }
+    setPurchasePackage(selectedSubscriptionPackage)
   }
 
   // Confirm direct counter payment (Cash / BankTransfer)
   async function handleConfirmCounterPayment(paymentMethod) {
-    if (!payModalSubscription) return
+    if (!payModalSubscription || submitting) return
     setSubmitting(true)
-    setErrorMessage(null)
+    setPaymentError(null)
 
     try {
       const amount = payModalSubscription.agreedPrice || payModalSubscription.price || 0
@@ -466,7 +447,7 @@ export default function FrontDeskOperations() {
       setPayOsData(null)
       if (subMemberId) await handleLoadMemberSubscriptions(subMemberId)
     } catch (err) {
-      setErrorMessage(err.message || 'Không thể xác nhận thanh toán.')
+      setPaymentError(getPackageErrorMessage(err, 'Không thể xác nhận thanh toán.'))
     } finally {
       setSubmitting(false)
     }
@@ -474,19 +455,37 @@ export default function FrontDeskOperations() {
 
   // Create PayOS online link
   async function handleCreatePayOsLink() {
-    if (!payModalSubscription) return
+    if (!payModalSubscription || submitting) return
     setSubmitting(true)
-    setErrorMessage(null)
+    setPaymentError(null)
 
     try {
       const payment = await createPayment(payModalSubscription.id)
       setPayOsData(payment)
-      setSuccessMessage('Đã tạo link thanh toán PayOS thành công! Khách hàng có thể quét mã QR để trả tiền.')
+      setSuccessMessage(paymentCheckoutMessage(payment))
+      if (subMemberId) await handleLoadMemberSubscriptions(subMemberId)
     } catch (err) {
-      setErrorMessage(err.message || 'Không thể tạo mã thanh toán PayOS.')
+      setPaymentError(getPackageErrorMessage(err, 'Không thể tạo mã thanh toán PayOS.'))
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function handlePayOsAction(action) {
+    if (!payOsData || submitting) return
+    setSubmitting(true)
+    setPaymentError(null)
+    try {
+      const payment = action === 'cancel'
+        ? await cancelOpenPayment(payOsData, 'Nhân viên hủy yêu cầu thanh toán')
+        : await syncPayment(payOsData.id)
+      setPayOsData(payment)
+      setSuccessMessage(paymentCheckoutMessage(payment))
+      if (subMemberId) await handleLoadMemberSubscriptions(subMemberId)
+    } catch (error) {
+      if (error.paymentResult) setPayOsData(error.paymentResult)
+      setPaymentError(getPackageErrorMessage(error, 'Chưa xác nhận được trạng thái giao dịch.'))
+    } finally { setSubmitting(false) }
   }
 
   // Resolve Ticket
@@ -575,6 +574,12 @@ export default function FrontDeskOperations() {
 
   return (
     <div className="fdesk-mgmt">
+      {purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} memberId={Number(subMemberId)} onClose={() => setPurchasePackage(null)} onCreated={async newSub => {
+        setPurchasePackage(null)
+        setSuccessMessage(`Đã tạo đơn gói "${newSub.packageName}". Số tiền cần thu: ${formatVND(newSub.agreedPrice)}.`)
+        await handleLoadMemberSubscriptions(subMemberId)
+        setPaymentError(''); setPayOsData(null); setPayModalSubscription(newSub)
+      }} />}
       {/* Header */}
       <div className="fdesk-header">
         <div>
@@ -1239,7 +1244,7 @@ export default function FrontDeskOperations() {
               <div className="fdesk-form-actions">
                 {subscriptionNotice && (
                   <div id="subscription-registration-notice" className={`fdesk-subscription-notice${subscriptionLoadError ? ' is-error' : ''}`} role={subscriptionLoadError ? 'alert' : 'status'}>
-                    {activeSubscription ? <CheckCircle2 size={18} /> : loadingSubscriptions ? <RefreshCw size={18} className="fdesk-spin" /> : <AlertCircle size={18} />}
+                    {loadingSubscriptions ? <RefreshCw size={18} className="fdesk-spin" /> : <AlertCircle size={18} />}
                     <span>{subscriptionNotice}</span>
                     {subscriptionLoadError && (
                       <button type="button" className="fdesk-btn fdesk-btn-secondary" onClick={() => handleLoadMemberSubscriptions(subMemberId)}>Thử lại</button>
@@ -1249,7 +1254,7 @@ export default function FrontDeskOperations() {
                 <button
                   type="submit"
                   className="fdesk-btn fdesk-btn-primary"
-                  disabled={submitting || !selectedPackageId || !subscriptionsReady || Boolean(activeSubscription)}
+                  disabled={submitting || !selectedPackageId || !subscriptionsReady || Boolean(subscriptionReason)}
                   aria-describedby={subscriptionNotice ? 'subscription-registration-notice' : undefined}
                 >
                   <Plus size={16} />
@@ -1343,7 +1348,7 @@ export default function FrontDeskOperations() {
                               ) : sub.status === 'Expired' ? (
                                 <span className="fdesk-badge inactive">Hết hạn</span>
                               ) : (
-                                <span className="fdesk-badge">{sub.status}</span>
+                                <span className="fdesk-badge">{subscriptionStatusLabel(sub)}</span>
                               )}
                             </td>
                             <td style={{ textAlign: 'right' }}>
@@ -1353,7 +1358,7 @@ export default function FrontDeskOperations() {
                                   className="fdesk-btn fdesk-btn-success"
                                   style={{ padding: '6px 12px', fontSize: 12 }}
                                   onClick={() => {
-                                    setPayModalSubscription(sub)
+                                    setPaymentError(''); setPayModalSubscription(sub)
                                     setPayOsData(null)
                                   }}
                                 >
@@ -1646,21 +1651,23 @@ export default function FrontDeskOperations() {
 
       {/* Modal: Thanh toán gói tập (Tiền mặt / PayOS QR) */}
       {payModalSubscription && (
-        <div className="fdesk-dialog-overlay" onClick={() => setPayModalSubscription(null)}>
-          <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="fdesk-dialog-overlay" onClick={() => { if (!submitting) setPayModalSubscription(null) }}>
+          <div className="fdesk-dialog" role="dialog" aria-modal="true" aria-labelledby="frontdesk-payment-title" onClick={(e) => e.stopPropagation()}>
             <div className="fdesk-dialog-header">
-              <h3>
+              <h3 id="frontdesk-payment-title">
                 Xác nhận thanh toán gói #{payModalSubscription.id}
               </h3>
               <button
                 type="button"
                 className="fdesk-dialog-close"
+                disabled={submitting}
                 onClick={() => setPayModalSubscription(null)}
               >
                 <X size={18} />
               </button>
             </div>
             <div className="fdesk-dialog-body">
+              {paymentError && <p role="alert" style={{ color: 'var(--theme-red, #b42318)' }}>{paymentError}</p>}
               <div style={{ background: 'var(--manager-raised, #f8fafc)', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div>Gói thẻ: <strong>{payModalSubscription.packageName}</strong></div>
                 <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--manager-success, #059669)', fontSize: 16 }}>{formatVND(payModalSubscription.agreedPrice || payModalSubscription.price)}</strong></div>
@@ -1670,22 +1677,12 @@ export default function FrontDeskOperations() {
               {/* PayOS QR code preview if generated */}
               {payOsData ? (
                 <div className="fdesk-qr-container">
-                  <h4>Mã QR thanh toán PayOS</h4>
+                  <h4>{paymentStatusLabel(payOsData)}</h4>
                   <p style={{ margin: 0, fontSize: 12, color: 'var(--manager-secondary, #64748b)' }}>
-                    Cho hội viên quét mã bằng ứng dụng Ngân hàng để thanh toán ngay lập tức.
+                    {paymentCheckoutMessage(payOsData)}
                   </p>
-                  {payOsData.qrCode ? (
-                    <img
-                      src={payOsData.qrCode}
-                      alt="PayOS QR Code"
-                      className="fdesk-qr-image"
-                    />
-                  ) : (
-                    <div style={{ padding: 20 }}>
-                      <QrCode size={80} color="var(--manager-info, #2563eb)" />
-                    </div>
-                  )}
-                  {payOsData.checkoutUrl && (
+                  {canCheckoutPayOSPayment(payOsData) && payOsData.qrCode && <PayOSQrImage value={payOsData.qrCode} className="fdesk-qr-image" />}
+                  {canCheckoutPayOSPayment(payOsData) && (
                     <a
                       href={payOsData.checkoutUrl}
                       target="_blank"
@@ -1697,6 +1694,9 @@ export default function FrontDeskOperations() {
                       Mở cổng thanh toán PayOS
                     </a>
                   )}
+                  {canSyncPayOSPayment(payOsData) && <button type="button" className="fdesk-btn fdesk-btn-primary" disabled={submitting} onClick={() => handlePayOsAction('sync')}><RefreshCw size={16} />Đồng bộ trạng thái PayOS</button>}
+                  {canCancelPayOSPayment(payOsData) && <button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={submitting} onClick={() => handlePayOsAction('cancel')}><Ban size={16} />Hủy liên kết PayOS</button>}
+                  {['Cancelled', 'Expired', 'Failed'].includes(payOsData.status) && Number(payOsData.amountReceived || 0) === 0 && <button type="button" className="fdesk-btn fdesk-btn-primary" disabled={submitting} onClick={handleCreatePayOsLink}>Tạo yêu cầu thanh toán mới</button>}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1740,6 +1740,7 @@ export default function FrontDeskOperations() {
               <button
                 type="button"
                 className="fdesk-btn fdesk-btn-secondary"
+                disabled={submitting}
                 onClick={() => setPayModalSubscription(null)}
               >
                 Đóng

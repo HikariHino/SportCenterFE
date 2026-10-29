@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     cacheDir: process.env.VITE_CACHE_DIR || 'node_modules/.vite',
     server: {
+      // Match the ReturnUrl/CancelUrl configured by the existing BE.
+      port: 3000,
+      strictPort: true,
       proxy: {
         '/api': {
           target: apiTarget,

@@ -1,4 +1,5 @@
 import api from './api'
+import { isSessionUpdateNotification } from '../utils/sessionNotifications.js'
 
 export function getNotificationErrorMessage(error, fallback = 'Không thể xử lý thông báo. Vui lòng thử lại.') {
   const body = error?.response?.data
@@ -38,27 +39,29 @@ export async function markNotificationRead(notificationId) {
   }
 }
 
-export async function markAllNotificationsRead() {
-  // Load the unread IDs before writing: marking a page changes the unread list
-  // and would otherwise cause later pages to skip notifications.
+export async function getAllUnreadNotifications() {
   const ids = new Set()
-  let loaded = 0
+  const items = []
   for (let page = 1; ; page += 1) {
     const result = await getNotifications({ unreadOnly: true, page, pageSize: 100 })
     if (result.page !== page || !Number.isInteger(result.total) || result.total < 0
-      || (result.items.length === 0 && loaded < result.total)) {
+      || (result.items.length === 0 && items.length < result.total)) {
       throw new Error('Chưa tải đủ thông báo chưa đọc. Vui lòng thử lại.')
     }
     for (const item of result.items) {
       if (item.id == null || ids.has(String(item.id))) throw new Error('Danh sách thông báo đã thay đổi. Vui lòng thử lại.')
       ids.add(String(item.id))
+      items.push(item)
     }
-    loaded += result.items.length
-    if (loaded >= result.total) break
+    if (items.length >= result.total) return items
   }
+}
 
-  const pending = [...ids]
-  const result = { total: pending.length, read: 0, failed: [] }
+export async function markAllNotificationsRead() {
+  // Collect every unread page before writing: marking a page changes the list.
+  const unread = await getAllUnreadNotifications()
+  const pending = unread.filter(item => !isSessionUpdateNotification(item)).map(item => String(item.id))
+  const result = { total: pending.length, read: 0, failed: [], requiresReview: unread.length - pending.length }
   for (let offset = 0; offset < pending.length; offset += 4) {
     const batch = pending.slice(offset, offset + 4)
     const responses = await Promise.allSettled(batch.map(markNotificationRead))

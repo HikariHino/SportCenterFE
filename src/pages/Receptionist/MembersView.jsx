@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Clock3, CreditCard, ReceiptText, Ban, LogIn, Plus, UserCheck, Users, WalletCards, X } from 'lucide-react'
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import { getMembershipPackageById, getMembershipPackages } from '../../services/membershipPackageService'
-import { cancelReceptionistSubscription, confirmReceptionistSubscriptionPayment, createReceptionistMemberSubscription, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
+import { confirmReceptionistSubscriptionPayment, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
+import { cancelSubscriptionOrder } from '../../services/subscriptionCancellationService'
+import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import { cancelReceptionistRegistration, checkInReceptionistRegistration, getReceptionistMemberRegistrations } from '../../services/receptionistClassService'
 import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, subscriptionStatusLabel, ViewLoader } from './ReceptionistViewShared'
 
@@ -107,6 +109,7 @@ function MemberDetailDialog({ memberId, onClose, onViewRegistrations, onRegister
 }
 
 function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
+  const [purchasePackage, setPurchasePackage] = useState(null)
   const [packages, setPackages] = useState([])
   const [packageId, setPackageId] = useState('')
   const [packageDetail, setPackageDetail] = useState(null)
@@ -170,22 +173,16 @@ function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
       setError('Vui lòng chọn một gói hội viên hợp lệ.')
       return
     }
-    setSaving(true)
+    if (saving || !selectedPackage) return
     setError('')
-    try {
-      const subscription = await createReceptionistMemberSubscription(memberId, normalizedPackageId)
-      onCreated(subscription)
-      onClose()
-    } catch (requestError) {
-      setError(requestErrorMessage(requestError, 'Không thể đăng ký gói cho hội viên.'))
-    } finally {
-      setSaving(false)
-    }
+    setSaving(true)
+    setPurchasePackage(selectedPackage)
   }
 
   const selectedPackage = packageDetail || packages.find(item => String(item.id) === packageId)
 
   return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
+    {purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} memberId={memberId} onClose={() => { setPurchasePackage(null); setSaving(false) }} onCreated={subscription => { onCreated(subscription); onClose() }} />}
     <section className="reception-dialog reception-subscription-create-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-create-subscription-title">
       <header><div><span>ĐĂNG KÝ TẠI QUẦY</span><h2 id="reception-create-subscription-title">Đăng ký gói cho hội viên #{memberId}</h2><p>Đăng ký mới sẽ chờ xác nhận thanh toán trước khi kích hoạt.</p></div><button type="button" aria-label="Đóng biểu mẫu đăng ký gói" onClick={onClose} disabled={saving}><X size={19} /></button></header>
       <form onSubmit={submit}>
@@ -292,7 +289,7 @@ function CancelSubscriptionDialog({ subscription, onClose, onCancelled }) {
     setSaving(true)
     setError('')
     try {
-      const result = await cancelReceptionistSubscription(subscription.id)
+      const result = await cancelSubscriptionOrder(subscription.id)
       onCancelled(result)
       onClose()
     } catch (requestError) {
@@ -305,7 +302,7 @@ function CancelSubscriptionDialog({ subscription, onClose, onCancelled }) {
   return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
     <section className="reception-dialog reception-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-cancel-subscription-title">
       <header><div><span>HỦY GÓI CHỜ THANH TOÁN</span><h2 id="reception-cancel-subscription-title">Đăng ký #{subscription.id}</h2><p>{subscription.packageName}</p></div><button type="button" aria-label="Đóng xác nhận hủy gói" onClick={onClose} disabled={saving}><X size={19} /></button></header>
-      <form onSubmit={submit}><div className="reception-cancel-subscription-copy"><span><Ban size={24} /></span><strong>Xác nhận hủy đăng ký gói?</strong><p>Chỉ gói đang chờ và chưa thanh toán mới có thể hủy.</p></div>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button className="danger" type="submit" disabled={saving}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
+      <form onSubmit={submit}><div className="reception-cancel-subscription-copy"><span><Ban size={24} /></span><strong>Xác nhận hủy đăng ký gói?</strong><p>Chỉ gói đang chờ và chưa thanh toán mới có thể hủy. Hệ thống sẽ đóng các liên kết PayOS đang chờ trước khi hủy đơn gói.</p></div>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button className="danger" type="submit" disabled={saving}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
     </section>
   </div>
 }

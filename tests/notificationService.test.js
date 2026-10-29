@@ -22,8 +22,8 @@ after(async () => {
   }
 })
 
-function mockNotifications({ count = 207, array = false, failId, failPage, invalidPage } = {}) {
-  const items = Array.from({ length: count }, (_, index) => ({ id: index + 1, isRead: false }))
+function mockNotifications({ count = 207, array = false, failId, failPage, invalidPage, scheduleIds = [] } = {}) {
+  const items = Array.from({ length: count }, (_, index) => ({ id: index + 1, isRead: false, title: scheduleIds.includes(index + 1) ? 'Cập nhật lịch buổi học' : 'Thông báo' }))
   items.push({ id: count + 1, isRead: true })
   const state = { items, pages: [], patches: [], active: 0, maxActive: 0 }
   api.defaults.adapter = async config => {
@@ -83,6 +83,15 @@ test('an empty unread list produces no PATCH', async () => {
   assert.equal(result.read, 0)
   assert.equal(result.total, 0)
   assert.equal(state.patches.length, 0)
+})
+
+test('read all cannot acknowledge a schedule change in place of the mandatory review', async () => {
+  const state = mockNotifications({ count: 105, scheduleIds: [1, 102] })
+  const result = await markAllNotificationsRead()
+  assert.equal(result.read, 103)
+  assert.equal(result.requiresReview, 2)
+  assert.deepEqual(state.items.filter(item => !item.isRead).map(item => item.id), [1, 102])
+  assert.ok(!state.patches.includes(1) && !state.patches.includes(102))
 })
 
 test('partial failures retain successful reads and retry only what remains unread', async () => {
