@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { applyExercisesPerSession, buildWorkoutRecommendationPayload, extractWorkoutRecommendation, mapWorkoutRecommendationToPlanExercises } from '../src/utils/aiWorkoutRecommendation.js'
+import { applyExercisesPerSession, buildWorkoutGoalContext, buildWorkoutRecommendationPayload, extractWorkoutRecommendation, mapWorkoutRecommendationToPlanExercises } from '../src/utils/aiWorkoutRecommendation.js'
 
 test('AI workout recommendation payload matches the backend contract', () => {
   assert.deepEqual(buildWorkoutRecommendationPayload({
@@ -55,6 +55,22 @@ test('requested exercise count limits every AI session without inventing missing
   assert.match(result.warnings[0], /buổi 2/)
   assert.throws(() => applyExercisesPerSession(recommendation, 0), /1 đến 10/)
   assert.throws(() => applyExercisesPerSession(recommendation, 11), /1 đến 10/)
+})
+
+test('exercise count and available catalog names are included in the supported AI goal field', () => {
+  const context = buildWorkoutGoalContext({
+    goal: 'Tăng cơ',
+    exercisesPerSession: 5,
+    exerciseCatalog: [
+      { exerciseName: 'Squat (Gánh tạ đùi)' },
+      { exerciseName: 'Bench Press (Đẩy ngực)' },
+      { exerciseName: 'Plank (Giữ cơ bụng)' },
+    ],
+  })
+
+  assert.equal(context, 'Tăng cơ. Mỗi buổi phải có đúng 5 bài tập. Chỉ dùng tên bài trong kho: Squat, Bench Press, Plank')
+  assert.ok(context.length <= 200)
+  assert.throws(() => buildWorkoutGoalContext({ goal: 'Tăng cơ', exercisesPerSession: 0 }), /1 đến 10/)
 })
 
 test('AI exercises are added to the training plan using matching catalog IDs', () => {
