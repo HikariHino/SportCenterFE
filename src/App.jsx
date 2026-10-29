@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { canUsePayments, getToken, isManagerRole } from './utils/auth'
+import { canUseCoachDemo } from './utils/coachDemoAccess'
 
 const SportDashboard = lazy(() => import('./pages/SportDashboard'))
 const Login = lazy(() => import('./pages/Login'))
@@ -19,8 +20,10 @@ function RouteFallback() {
 
 function CoachRoute() {
   const { user } = useAuth()
+  const location = useLocation()
   const isCoach = user?.role === 'coach' && Boolean(getToken())
-  return isCoach ? <Coach /> : <Navigate to="/login" replace state={{ from: '/coach' }} />
+  const isDemo = canUseCoachDemo(location.search, import.meta.env.DEV)
+  return isCoach || isDemo ? <Coach /> : <Navigate to="/login" replace state={{ from: '/coach' }} />
 }
 
 function ManagerRoute() {

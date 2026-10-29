@@ -10,15 +10,15 @@ FE dùng nút chính thức của Google Identity Services, mở hộp chọn t�
 
    ```dotenv
    VITE_API_BASE=
-   API_PROXY_TARGET=https://localhost:7182
+   API_PROXY_TARGET=https://sportscenterbe-2.onrender.com
    VITE_GOOGLE_CLIENT_ID=CLIENT_ID_GOOGLE_THAT
    ```
 
-   Thay `CLIENT_ID_GOOGLE_THAT` bằng toàn bộ Client ID Google cấp, thường có dạng `1234567890-abc123.apps.googleusercontent.com`. FE chạy tại `http://localhost:3000`, gửi API đến `/api` và Vite chuyển tiếp sang BE `https://localhost:7182`. Nếu chạy profile HTTP của BE, đổi `API_PROXY_TARGET` thành `http://localhost:5212`.
+   Thay `CLIENT_ID_GOOGLE_THAT` bằng toàn bộ Client ID Google cấp, thường có dạng `1234567890-abc123.apps.googleusercontent.com`. FE chạy tại `http://localhost:3000`, gửi API đến `/api` và Vite chuyển tiếp sang BE đã deploy tại `https://sportscenterbe-2.onrender.com`.
 
    `.env.local` được ưu tiên hơn `.env` và được Git bỏ qua. Điền Client ID trong `.env.local` để tránh bị giá trị trống ghi đè. Khi thiếu Client ID thật, terminal Vite sẽ nhắc cấu hình và nút Google vẫn hiển thị chưa sẵn sàng.
 4. Đặt cùng Client ID trong cấu hình BE `GoogleAuth:ClientId` (User Secrets hoặc biến môi trường `GoogleAuth__ClientId`). Luồng ID token này không cần Client Secret trên FE.
-5. Khởi động BE với profile HTTPS, sau đó chạy `npm run dev` trong thư mục FE và mở `http://localhost:3000/login`. Khởi động lại Vite sau khi sửa `.env.local`. Với FE build tĩnh, build lại sau khi đổi biến `VITE_...`.
+5. Chạy `npm run dev` trong thư mục FE và mở `http://localhost:3000/login`; không cần khởi động BE local. Khởi động lại Vite sau khi sửa `.env.local`. Với FE build tĩnh, build lại sau khi đổi biến `VITE_...`.
 
 Nếu thiếu Client ID hoặc còn dùng giá trị mẫu, nút Google hiển thị chưa sẵn sàng. SDK bị chặn hoặc mất mạng có nút thử lại; đăng nhập bằng mật khẩu vẫn sử dụng được.
 
