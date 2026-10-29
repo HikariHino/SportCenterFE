@@ -96,6 +96,18 @@ test('AI exercises are added to the training plan using matching catalog IDs', (
   })
 })
 
+test('generic AI session titles are not repeated in exercise notes', () => {
+  const recommendation = { sessions: [{
+    day: 1,
+    title: 'Buổi 1',
+    exercises: [{ exerciseName: 'Squat', sets: 3, reps: 12, restSeconds: 60, note: 'Thực hiện đúng kỹ thuật.' }],
+  }] }
+
+  const result = mapWorkoutRecommendationToPlanExercises(recommendation, [{ id: 11, exerciseName: 'Squat' }])
+  assert.equal(result.exercises[0].notes, 'Buổi 1 · Nghỉ 60 giây · Thực hiện đúng kỹ thuật.')
+  assert.doesNotMatch(result.exercises[0].notes, /Buổi 1: Buổi 1/)
+})
+
 test('AI exercises outside the catalog are reported and never assigned a fake ID', () => {
   const recommendation = { sessions: [{ day: 1, exercises: [
     { exerciseName: 'Burpee', sets: 3, reps: 10 },

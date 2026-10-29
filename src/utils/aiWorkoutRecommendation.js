@@ -167,7 +167,18 @@ export function mapWorkoutRecommendationToPlanExercises(recommendation, exercise
   const unmatchedNames = []
 
   sessions.forEach((session, sessionIndex) => {
-    const sessionLabel = `Buổi ${session?.day || sessionIndex + 1}${session?.title ? `: ${session.title}` : ''}`
+    const sessionDay = session?.day || sessionIndex + 1
+    const defaultSessionLabel = `Buổi ${sessionDay}`
+    const sessionTitle = String(session?.title || '').trim()
+    const normalizedTitle = normalizedExerciseName(sessionTitle)
+    const genericSessionTitles = new Set([
+      normalizedExerciseName(defaultSessionLabel),
+      normalizedExerciseName(`Buổi tập ${sessionDay}`),
+      normalizedExerciseName(`Session ${sessionDay}`),
+    ])
+    const sessionLabel = !sessionTitle || genericSessionTitles.has(normalizedTitle)
+      ? defaultSessionLabel
+      : `${defaultSessionLabel}: ${sessionTitle}`
     const sessionExercises = Array.isArray(session?.exercises) ? session.exercises : []
 
     sessionExercises.forEach(exercise => {
