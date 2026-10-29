@@ -134,6 +134,7 @@ export function getAuthDestination(role, from) {
   if (role === 'coach') return '/coach'
   if (role === 'receptionist') return '/receptionist'
   if (role === 'member') {
+    if (typeof from === 'string' && /^\/member(?:\?[^#]*)?(?:#.*)?$/.test(from)) return from
     return '/member'
   }
   return '/'

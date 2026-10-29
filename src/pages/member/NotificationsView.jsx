@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, Bell, CheckCheck, ChevronLeft, ChevronRight, LoaderCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle, Bell, CalendarDays, CheckCheck, ChevronLeft, ChevronRight, LoaderCircle, RefreshCw } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification } from '../../utils/sessionNotifications'
 import '../../style/member/NotificationsView.css'
@@ -104,15 +104,18 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
 
   return <div className="member-view-stack member-notifications-view">
     <div className="member-section-heading">
-      <div><p className="member-eyebrow"><Bell size={16} /> CẬP NHẬT DÀNH CHO BẠN</p><h2>Thông báo hệ thống</h2><p className="member-notifications-muted">Theo dõi thay đổi lịch học, huấn luyện viên, thanh toán và gói tập.</p></div>
+      <div><h2>Thông báo hệ thống</h2><p className="member-notifications-muted">Cập nhật lịch học, thanh toán và gói tập của bạn.</p></div>
       <div className="member-notifications-heading-actions">
         <button type="button" className="member-notifications-read-all" disabled={loading || actionBusy || Boolean(error) || result.total === 0 || unreadCount === 0} onClick={markAllRead}>{markingAll ? <LoaderCircle className="member-spin" size={16} /> : <CheckCheck size={16} />}{markingAll ? 'Đang đọc...' : 'Đọc tất cả'}</button>
         <button type="button" disabled={loading || actionBusy} onClick={() => { reload(); onNotificationsChange?.() }}><RefreshCw size={16} /> Làm mới</button>
       </div>
     </div>
-    <div className="member-notifications-filters" role="group" aria-label="Lọc thông báo">
-      <button type="button" aria-pressed={!unreadOnly} onClick={() => changeFilter(false)}>Tất cả thông báo</button>
-      <button type="button" aria-pressed={unreadOnly} onClick={() => changeFilter(true)}>Chưa đọc</button>
+    <div className="member-notifications-toolbar">
+      <div className="member-notifications-filters" role="group" aria-label="Lọc thông báo">
+        <button type="button" aria-pressed={!unreadOnly} onClick={() => changeFilter(false)}>Tất cả thông báo</button>
+        <button type="button" aria-pressed={unreadOnly} onClick={() => changeFilter(true)}>Chưa đọc</button>
+      </div>
+      <p className="member-notifications-count" aria-live="polite">{loading ? 'Đang tải...' : error ? 'Chưa tải được thông báo' : `${result.total} thông báo${unreadOnly ? ' chưa đọc' : ''}`}</p>
     </div>
     {notice && <p className="member-notifications-notice" role="status"><CheckCheck size={18} />{notice}</p>}
     {actionError && <p className="member-notifications-error" role="alert">{actionError}</p>}
@@ -121,15 +124,17 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
         : error ? <div className="member-notifications-state member-notifications-error" role="alert"><AlertCircle size={28} /><h3>Không thể tải thông báo</h3><p>{error}</p><button type="button" onClick={reload}>Thử lại</button></div>
           : !result.items.length ? <div className="member-notifications-state" role="status"><Bell size={36} /><h3>{unreadOnly ? 'Bạn đã đọc hết thông báo' : 'Chưa có thông báo'}</h3><p>{unreadOnly ? 'Chọn “Tất cả thông báo” để xem lại các thông báo đã đọc.' : 'Các thông báo gửi đến tài khoản của bạn sẽ xuất hiện tại đây.'}</p></div>
             : <>
-              <p className="member-notifications-count">{result.total} thông báo{unreadOnly ? ' chưa đọc' : ''}</p>
               <div className="member-notifications-list">{result.items.map(item => <article className={`member-notifications-card ${item.isRead ? '' : 'unread'}`} key={item.id} aria-labelledby={`member-notification-${item.id}`}>
-                <span className="member-notifications-icon"><Bell size={21} /></span>
+                <span className="member-notifications-icon">{isSessionUpdateNotification(item) ? <CalendarDays size={16} /> : <Bell size={16} />}</span>
                 <div className="member-notifications-content">
-                  <header><span className="member-notifications-badge">{item.isRead ? 'Đã đọc' : 'Chưa đọc'}</span><span className="member-notifications-muted">{formatDate(item.sentAt)}</span></header>
                   <h3 id={`member-notification-${item.id}`}>{item.title || 'Thông báo từ trung tâm'}</h3>
                   <p>{item.content}</p>
-                  {isSessionUpdateNotification(item) && <div className="member-session-update-notice"><p>Vui lòng kiểm tra ngày, giờ và HLV trong lịch đã đặt (giờ Việt Nam). Đăng ký của bạn được giữ nguyên. Nếu không thể tham gia, bạn có thể tự hủy đăng ký theo hạn hủy của buổi học.</p>{onViewSchedule && <button type="button" onClick={() => onViewSchedule(item)}>Xem lịch đã đặt</button>}</div>}
-                  {!item.isRead && !isSessionUpdateNotification(item) && <button type="button" disabled={actionBusy} onClick={() => markRead(item)}>{markingId === item.id ? <><LoaderCircle className="member-spin" size={15} /> Đang cập nhật...</> : <><CheckCheck size={15} /> Đánh dấu đã đọc</>}</button>}
+                  <div className="member-notifications-meta"><span>{formatDate(item.sentAt)}</span><span className="member-notifications-badge">{item.isRead ? 'Đã đọc' : 'Chưa đọc'}</span></div>
+                  {isSessionUpdateNotification(item) && <details className="member-notifications-schedule-info"><summary>Thông tin về đăng ký</summary><p>Vui lòng kiểm tra ngày, giờ và HLV trong lịch đã đặt (giờ Việt Nam). Đăng ký của bạn được giữ nguyên. Nếu không thể tham gia, bạn có thể tự hủy đăng ký theo hạn hủy của buổi học.</p></details>}
+                </div>
+                <div className="member-notifications-card-actions">
+                  {isSessionUpdateNotification(item) && onViewSchedule && <button type="button" aria-label="Xem lịch đã đặt" title="Xem lịch đã đặt" onClick={() => onViewSchedule(item)}><CalendarDays size={14} /><span>Xem lịch đã đặt</span></button>}
+                  {!item.isRead && !isSessionUpdateNotification(item) && <button type="button" aria-label={markingId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'} title="Đánh dấu đã đọc" disabled={actionBusy} onClick={() => markRead(item)}>{markingId === item.id ? <><LoaderCircle className="member-spin" size={15} /><span>Đang cập nhật...</span></> : <><CheckCheck size={15} /><span>Đánh dấu đã đọc</span></>}</button>}
                 </div>
               </article>)}</div>
               {totalPages > 1 && <nav className="member-notifications-pagination" aria-label="Phân trang thông báo"><span>Trang {page}/{totalPages}</span><div><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)}><ChevronLeft size={15} /> Trang trước</button><button type="button" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Trang sau <ChevronRight size={15} /></button></div></nav>}

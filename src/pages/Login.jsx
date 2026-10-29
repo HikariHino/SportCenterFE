@@ -1,10 +1,12 @@
 import ThemeToggle from '../components/ThemeToggle'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CreditCard, Eye, EyeOff, LockKeyhole, Mail, Phone, ShieldCheck, Trophy, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { login as loginApi } from '../services/authService'
+import { login as loginApi, loginWithGoogle } from '../services/authService'
 import { getAuthDestination, getLoginErrorMessage } from '../utils/auth'
+import { getGoogleLoginErrorMessage } from '../utils/googleAuth'
 import '../style/Login.css'
 
 const features = [
@@ -26,9 +28,44 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const submitting = useRef(false)
+  const mounted = useRef(true)
+  const formRef = useRef(null)
+  const googleRequest = useRef(null)
   const errorRef = useRef(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState(() => selectedMembership ? `Vui lòng đăng nhập để tiếp tục đăng ký gói ${selectedMembership}.` : location.state?.message || '')
+
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; googleRequest.current?.abort() }
+  }, [])
+
+  function completeLogin(session, remember) {
+    const user = login(session, session.token, remember)
+    const returnTo = location.state?.from || new URLSearchParams(location.search).get('returnTo')
+    navigate(getAuthDestination(user.role, returnTo), { replace: true, state: { membership: selectedMembership } })
+  }
+
+  async function handleGoogleCredential(idToken) {
+    if (!mounted.current || submitting.current) return
+    const remember = formRef.current?.elements.namedItem('remember')?.checked ?? true
+    const controller = new AbortController()
+    googleRequest.current = controller
+    submitting.current = true
+    setIsSubmitting(true)
+    setError('')
+    setMessage('Đang xác thực tài khoản Google...')
+    try {
+      const session = await loginWithGoogle({ idToken }, { signal: controller.signal })
+      if (mounted.current) completeLogin(session, remember)
+    } catch (error) {
+      if (mounted.current && !controller.signal.aborted) setError(getGoogleLoginErrorMessage(error))
+    } finally {
+      googleRequest.current = null
+      submitting.current = false
+      if (mounted.current) { setIsSubmitting(false); setMessage('') }
+    }
+  }
 
   useEffect(() => {
     if (!error) return
@@ -56,14 +93,12 @@ export default function Login() {
     setError('')
     try {
       const session = await loginApi({ email, password })
-      const user = login(session, session.token, formData.has('remember'))
-      const returnTo = location.state?.from || new URLSearchParams(location.search).get('returnTo')
-      navigate(getAuthDestination(user.role, returnTo), { replace: true, state: { membership: selectedMembership } })
+      if (mounted.current) completeLogin(session, formData.has('remember'))
     } catch (error) {
-      setError(getLoginErrorMessage(error))
+      if (mounted.current) setError(getLoginErrorMessage(error))
     } finally {
       submitting.current = false
-      setIsSubmitting(false)
+      if (mounted.current) setIsSubmitting(false)
     }
   }
 
@@ -78,7 +113,9 @@ export default function Login() {
       <div className="login-topbar"><ThemeToggle /><div className="login-mobile-brand"><Brand /></div><Link to="/" className="login-back"><ArrowLeft size={16} /> Về trang chủ</Link></div>
       <div className="login-content">
         <header><h2 id="login-title">Chào mừng trở lại</h2><p>Đăng nhập vào tài khoản SportPulse của bạn để bắt đầu</p></header>
-        <form onSubmit={handleSubmit} onChange={() => { if (error) setError('') }} className="login-form" aria-busy={isSubmitting} aria-describedby={error ? 'login-error' : undefined}>
+        <GoogleSignInButton disabled={isSubmitting} onCredential={handleGoogleCredential} />
+        <div className="login-divider">Hoặc đăng nhập bằng email</div>
+        <form ref={formRef} onSubmit={handleSubmit} onChange={() => { if (error) setError('') }} className="login-form" aria-busy={isSubmitting} aria-describedby={error ? 'login-error' : undefined}>
           {error && <div id="login-error" ref={errorRef} className="login-error" role="alert" tabIndex={-1}><AlertCircle size={20} aria-hidden="true" /><div><strong>Đăng nhập không thành công</strong><p>{error}</p></div></div>}
           <div><label htmlFor="login-email">Email</label><div className="login-input"><Mail size={19} /><input id="login-email" defaultValue={location.state?.email || ''} name="email" type="email" autoComplete="username" placeholder="vd: athlete@sportpulse.vn" required /></div></div>
           <div><div className="login-label-row"><label htmlFor="login-password">Mật khẩu</label><Link className="login-text-button" to="/forgot-password">Quên mật khẩu?</Link></div><div className="login-input"><LockKeyhole size={19} /><input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Nhập mật khẩu của bạn" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
