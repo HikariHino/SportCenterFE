@@ -4,7 +4,7 @@ import { checkInCoachRegistration, getCoachClasses, getCoachSessionRoster, getMy
 import { createTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { getWorkoutRecommendation, getWorkoutRecommendationError } from '../../services/aiService'
 import { aiTrainingPlanDemoSteps } from '../../utils/aiTrainingPlanDemo'
-import { applyExercisesPerSession, mapWorkoutRecommendationToPlanExercises } from '../../utils/aiWorkoutRecommendation'
+import { applyExercisesPerSession, buildWorkoutGoalContext, mapWorkoutRecommendationToPlanExercises } from '../../utils/aiWorkoutRecommendation'
 import { getCoachPlanDemoStudent } from '../../utils/coachDemoAccess'
 import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, timeFormatter, ViewLoader } from './CoachViewShared'
 
@@ -158,12 +158,17 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
 
     let recommendationRequest
     try {
+      const goal = trainingGoalLabel(form.goal)
       recommendationRequest = getWorkoutRecommendation({
         memberId: student.memberId,
-        goal: trainingGoalLabel(form.goal),
+        goal: buildWorkoutGoalContext({
+          goal,
+          exercisesPerSession,
+          exerciseCatalog,
+        }),
         level: aiOptions.level,
         daysPerWeek: aiOptions.daysPerWeek,
-      }).then(answer => ({ answer })).catch(requestError => ({ requestError }))
+      }).then(answer => ({ answer: { ...answer, goal } })).catch(requestError => ({ requestError }))
     } catch (requestError) {
       setError(getWorkoutRecommendationError(requestError))
       return

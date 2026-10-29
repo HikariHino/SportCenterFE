@@ -1,5 +1,32 @@
 const allowedLevels = new Set(['Beginner', 'Intermediate', 'Advanced'])
 
+const promptCatalogName = value => String(value || '')
+  .replace(/\([^)]*\)/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+
+export function buildWorkoutGoalContext({ goal, exercisesPerSession, exerciseCatalog }) {
+  const normalizedGoal = String(goal || '').trim()
+  const normalizedCount = Number(exercisesPerSession)
+  if (!normalizedGoal) throw new Error('Mục tiêu tập luyện không hợp lệ.')
+  if (!Number.isSafeInteger(normalizedCount) || normalizedCount < 1 || normalizedCount > 10) {
+    throw new Error('Số bài mỗi buổi phải từ 1 đến 10.')
+  }
+
+  let context = `${normalizedGoal}. Mỗi buổi phải có đúng ${normalizedCount} bài tập.`
+  const names = [...new Set((Array.isArray(exerciseCatalog) ? exerciseCatalog : [])
+    .map(item => promptCatalogName(item?.exerciseName))
+    .filter(Boolean))]
+
+  names.forEach(name => {
+    const separator = context.includes('Chỉ dùng tên bài trong kho:') ? ', ' : ' Chỉ dùng tên bài trong kho: '
+    const candidate = `${context}${separator}${name}`
+    if (candidate.length <= 200) context = candidate
+  })
+
+  return context
+}
+
 export function buildWorkoutRecommendationPayload({ memberId, goal, level, daysPerWeek }) {
   const normalizedMemberId = Number(memberId)
   const normalizedGoal = String(goal || '').trim()
