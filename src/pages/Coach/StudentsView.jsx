@@ -4,7 +4,7 @@ import { checkInCoachRegistration, getCoachClasses, getCoachSessionRoster, getMy
 import { createTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { getWorkoutRecommendation, getWorkoutRecommendationError } from '../../services/aiService'
 import { aiTrainingPlanDemoSteps } from '../../utils/aiTrainingPlanDemo'
-import { mapWorkoutRecommendationToPlanExercises } from '../../utils/aiWorkoutRecommendation'
+import { applyExercisesPerSession, mapWorkoutRecommendationToPlanExercises } from '../../utils/aiWorkoutRecommendation'
 import { getCoachPlanDemoStudent } from '../../utils/coachDemoAccess'
 import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, timeFormatter, ViewLoader } from './CoachViewShared'
 
@@ -61,6 +61,7 @@ function WorkoutRecommendationResult({ recommendation, startDate, endDate, onClo
       <span><small>Mục tiêu</small><strong>{recommendation.goal}</strong></span>
       <span><small>Trình độ</small><strong>{workoutLevelLabels[recommendation.level] || recommendation.level}</strong></span>
       <span><small>Lịch tập</small><strong>{recommendation.daysPerWeek} buổi/tuần</strong></span>
+      <span><small>Số bài</small><strong>{recommendation.exercisesPerSession} bài/buổi</strong></span>
       <span><small>Thời gian áp dụng</small><strong>{startDate} – {endDate}</strong></span>
     </div>
     <div className="coach-plan-ai-sessions">
@@ -97,7 +98,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
   const [aiDemoMessage, setAiDemoMessage] = useState('')
   const [aiDemoProgress, setAiDemoProgress] = useState(null)
   const [aiRecommendation, setAiRecommendation] = useState(null)
-  const [aiOptions, setAiOptions] = useState({ level: 'Beginner', daysPerWeek: 3 })
+  const [aiOptions, setAiOptions] = useState({ level: 'Beginner', daysPerWeek: 3, exercisesPerSession: 5 })
 
   useEffect(() => () => {
     aiDemoRunRef.current += 1
@@ -149,6 +150,11 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
       setError(catalogError || 'Kho bài tập chưa sẵn sàng. Vui lòng thử lại sau khi tải xong.')
       return
     }
+    const exercisesPerSession = Number(aiOptions.exercisesPerSession)
+    if (!Number.isSafeInteger(exercisesPerSession) || exercisesPerSession < 1 || exercisesPerSession > 10) {
+      setError('Số bài mỗi buổi phải từ 1 đến 10.')
+      return
+    }
 
     let recommendationRequest
     try {
@@ -185,14 +191,15 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
     await new Promise(resolve => window.setTimeout(resolve, 500))
     if (aiDemoRunRef.current !== runId) return
     setAiDemoProgress(null)
-    setAiRecommendation(result.answer)
-    const mappedResult = mapWorkoutRecommendationToPlanExercises(result.answer, exerciseCatalog)
+    const recommendation = applyExercisesPerSession(result.answer, exercisesPerSession)
+    setAiRecommendation(recommendation)
+    const mappedResult = mapWorkoutRecommendationToPlanExercises(recommendation, exerciseCatalog)
     if (mappedResult.exercises.length) setExercises(mappedResult.exercises)
     const missingMessage = mappedResult.unmatchedNames.length
       ? ` ${mappedResult.unmatchedNames.length} bài chưa có trong kho nên chưa được thêm: ${mappedResult.unmatchedNames.join(', ')}.`
       : ''
     setAiDemoMessage(mappedResult.exercises.length
-      ? `Đã dùng mục tiêu, trình độ, ${aiOptions.daysPerWeek} buổi/tuần và thời gian ${form.startDate} – ${form.endDate}; ${mappedResult.exercises.length} bài tập đã được thêm vào giáo án.${missingMessage}`
+      ? `Đã dùng mục tiêu, trình độ, ${aiOptions.daysPerWeek} buổi/tuần, ${exercisesPerSession} bài/buổi và thời gian ${form.startDate} – ${form.endDate}; ${mappedResult.exercises.length} bài tập đã được thêm vào giáo án.${missingMessage}`
       : `AI đã tạo gợi ý nhưng chưa có tên bài nào khớp kho bài tập.${missingMessage}`)
   }
 
@@ -254,6 +261,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
           <div className="coach-plan-ai-options">
             <label><span>Trình độ</span><select value={aiOptions.level} onChange={event => setAiOptions(current => ({ ...current, level: event.target.value }))}><option value="Beginner">Mới bắt đầu</option><option value="Intermediate">Trung cấp</option><option value="Advanced">Nâng cao</option></select></label>
             <label><span>Buổi/tuần</span><input type="number" min="1" max="7" value={aiOptions.daysPerWeek} onChange={event => setAiOptions(current => ({ ...current, daysPerWeek: event.target.value }))} /></label>
+            <label><span>Số bài/buổi</span><input type="number" min="1" max="10" value={aiOptions.exercisesPerSession} onChange={event => setAiOptions(current => ({ ...current, exercisesPerSession: event.target.value }))} /></label>
             <button type="button" disabled={saving || aiDemoLoading || catalogLoading || !exerciseCatalog.length || student.isDemo} onClick={applyAiDemo}><Sparkles size={15} />{aiDemoLoading ? 'Đang tạo...' : 'Tạo bằng AI'}</button>
           </div>
         </div>

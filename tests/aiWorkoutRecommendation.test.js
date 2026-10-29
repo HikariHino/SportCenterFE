@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildWorkoutRecommendationPayload, extractWorkoutRecommendation, mapWorkoutRecommendationToPlanExercises } from '../src/utils/aiWorkoutRecommendation.js'
+import { applyExercisesPerSession, buildWorkoutRecommendationPayload, extractWorkoutRecommendation, mapWorkoutRecommendationToPlanExercises } from '../src/utils/aiWorkoutRecommendation.js'
 
 test('AI workout recommendation payload matches the backend contract', () => {
   assert.deepEqual(buildWorkoutRecommendationPayload({
@@ -38,6 +38,23 @@ test('AI workout recommendation is normalized from the new structured API envelo
 test('AI workout recommendation rejects the retired text response and empty sessions', () => {
   assert.throws(() => extractWorkoutRecommendation({ success: true, data: { answer: 'Lịch tập 3 buổi.' } }), /đúng định dạng/)
   assert.throws(() => extractWorkoutRecommendation({ success: true, data: { sessions: [] } }), /buổi tập nào/)
+})
+
+test('requested exercise count limits every AI session without inventing missing exercises', () => {
+  const recommendation = {
+    sessions: [
+      { day: 1, exercises: [{ exerciseName: 'A' }, { exerciseName: 'B' }, { exerciseName: 'C' }] },
+      { day: 2, exercises: [{ exerciseName: 'D' }] },
+    ],
+    warnings: [],
+  }
+  const result = applyExercisesPerSession(recommendation, 2)
+
+  assert.equal(result.exercisesPerSession, 2)
+  assert.deepEqual(result.sessions.map(session => session.exercises.map(item => item.exerciseName)), [['A', 'B'], ['D']])
+  assert.match(result.warnings[0], /buổi 2/)
+  assert.throws(() => applyExercisesPerSession(recommendation, 0), /1 đến 10/)
+  assert.throws(() => applyExercisesPerSession(recommendation, 11), /1 đến 10/)
 })
 
 test('AI exercises are added to the training plan using matching catalog IDs', () => {
