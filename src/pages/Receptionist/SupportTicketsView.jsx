@@ -61,10 +61,12 @@ export function SupportTicketsView({ query, showNotice }) {
     setSaving(true)
     setActionError('')
     try {
-      const result = await resolveSupportTicket(selectedTicket.id, resolutionForm)
-      setTickets(current => current.map(ticket => ticket.id === result.id ? result : ticket))
+      const ticketId = selectedTicket.id
+      await resolveSupportTicket(ticketId, resolutionForm)
       setSelectedTicket(null)
-      showNotice?.(`Đã cập nhật phiếu hỗ trợ #${result.id}.`)
+      // The update response may only acknowledge success; reload the saved status and active filter.
+      setRequestKey(key => key + 1)
+      showNotice?.(`Đã cập nhật phiếu hỗ trợ #${ticketId}.`)
     } catch (requestError) {
       setActionError(getTicketErrorMessage(requestError, 'Không thể cập nhật phiếu hỗ trợ.'))
     } finally {
