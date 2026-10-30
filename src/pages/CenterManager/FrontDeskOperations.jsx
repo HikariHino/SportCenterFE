@@ -165,6 +165,8 @@ export default function FrontDeskOperations() {
   const [payModalSubscription, setPayModalSubscription] = useState(null)
   const [payOsData, setPayOsData] = useState(null) // { qrCode, checkoutUrl }
   const [paymentError, setPaymentError] = useState('')
+  const [counterPaymentReceived, setCounterPaymentReceived] = useState(false)
+  useEffect(() => { setCounterPaymentReceived(false) }, [payModalSubscription?.id])
   const subscriptionsReady = Boolean(subMemberId && subscriptionsMemberId === subMemberId && !loadingSubscriptions && !subscriptionLoadError)
   const selectedSubscriptionPackage = packages.find(item => String(item.id) === String(selectedPackageId))
   const subscriptionReason = subscriptionsReady && selectedSubscriptionPackage ? subscriptionPackageReason(selectedSubscriptionPackage, memberSubscriptions, packages) : ''
@@ -432,15 +434,19 @@ export default function FrontDeskOperations() {
   // Confirm direct counter payment (Cash / BankTransfer)
   async function handleConfirmCounterPayment(paymentMethod) {
     if (!payModalSubscription || submitting) return
+    if (!counterPaymentReceived) {
+      setPaymentError('Vui lòng xác nhận đã thực nhận đủ tiền từ hội viên.')
+      return
+    }
     setSubmitting(true)
     setPaymentError(null)
 
     try {
-      const amount = payModalSubscription.agreedPrice || payModalSubscription.price || 0
+      const amount = payModalSubscription.agreedPrice
       await confirmSubscriptionPayment(payModalSubscription.id, {
         amount,
         paymentMethod,
-        paymentReceived: true,
+        paymentReceived: counterPaymentReceived,
       })
       setSuccessMessage(`Đã xác nhận thanh toán (${paymentMethod}) và kích hoạt gói thành công!`)
       setPayModalSubscription(null)
@@ -1670,7 +1676,7 @@ export default function FrontDeskOperations() {
               {paymentError && <p role="alert" style={{ color: 'var(--theme-red, #b42318)' }}>{paymentError}</p>}
               <div style={{ background: 'var(--manager-raised, #f8fafc)', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div>Gói thẻ: <strong>{payModalSubscription.packageName}</strong></div>
-                <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--manager-success, #059669)', fontSize: 16 }}>{formatVND(payModalSubscription.agreedPrice || payModalSubscription.price)}</strong></div>
+                <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--manager-success, #059669)', fontSize: 16 }}>{payModalSubscription.agreedPrice != null && Number.isFinite(Number(payModalSubscription.agreedPrice)) ? formatVND(payModalSubscription.agreedPrice) : 'Chưa tải được giá đã chốt'}</strong></div>
                 <div>Thời hạn: <strong>{payModalSubscription.durationInDays} ngày</strong></div>
               </div>
 
@@ -1701,12 +1707,16 @@ export default function FrontDeskOperations() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Chọn hình thức thanh toán:</p>
+                  <label className="fdesk-counter-payment-confirm">
+                    <input type="checkbox" checked={counterPaymentReceived} disabled={submitting} onChange={event => setCounterPaymentReceived(event.target.checked)} />
+                    <span><strong>Tôi xác nhận đã thực nhận đủ tiền</strong><small>Áp dụng cho tiền mặt và chuyển khoản trực tiếp. Chỉ xác nhận sau khi kiểm tra số tiền đã nhận.</small></span>
+                  </label>
                   <button
                     type="button"
                     className="fdesk-btn fdesk-btn-success"
                     style={{ justifyContent: 'center', padding: '12px' }}
                     onClick={() => handleConfirmCounterPayment('Cash')}
-                    disabled={submitting}
+                    disabled={submitting || !counterPaymentReceived || !(Number(payModalSubscription.agreedPrice) > 0)}
                   >
                     <Wallet size={16} />
                     Thu tiền mặt tại quầy (Kích hoạt ngay)
@@ -1717,7 +1727,7 @@ export default function FrontDeskOperations() {
                     className="fdesk-btn fdesk-btn-secondary"
                     style={{ justifyContent: 'center', padding: '12px', borderColor: '#2563eb', color: 'var(--manager-info, #2563eb)' }}
                     onClick={() => handleConfirmCounterPayment('BankTransfer')}
-                    disabled={submitting}
+                    disabled={submitting || !counterPaymentReceived || !(Number(payModalSubscription.agreedPrice) > 0)}
                   >
                     <CreditCard size={16} />
                     Chuyển khoản trực tiếp vào tài khoản trung tâm

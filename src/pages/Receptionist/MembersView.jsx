@@ -251,6 +251,10 @@ function ConfirmSubscriptionPaymentDialog({ subscription, onClose, onConfirmed }
       setError('Số tiền phải lớn hơn 0.')
       return
     }
+    if (normalizedAmount !== Number(subscription.agreedPrice)) {
+      setError('Số tiền phải bằng giá đã chốt của đăng ký gói.')
+      return
+    }
     if (!paymentReceived) {
       setError('Vui lòng xác nhận đã thực nhận đủ tiền từ hội viên.')
       return

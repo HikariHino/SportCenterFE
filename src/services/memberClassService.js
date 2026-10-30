@@ -180,16 +180,27 @@ export async function bookClassSessions({ classId, sessionIds }, onProgress = ()
  * POST /api/class-registrations/{id}/cancel
  * @param {number} registrationId
  * @param {string} reason
+ * @param {number} expectedSessionId Buổi được hội viên chọn trên lịch.
  */
-export async function cancelRegistration(registrationId, reason = 'Hội viên tự hủy lịch') {
+export async function cancelRegistration(registrationId, reason = 'Hội viên tự hủy lịch', expectedSessionId) {
+  if (!Number.isSafeInteger(Number(registrationId)) || Number(registrationId) <= 0
+    || (expectedSessionId != null && (!Number.isSafeInteger(Number(expectedSessionId)) || Number(expectedSessionId) <= 0))) {
+    throw new Error('Chưa xác định được đăng ký buổi học cần hủy. Vui lòng làm mới lịch.')
+  }
   const response = await api.post(`/class-registrations/${registrationId}/cancel`, {
     reason: reason.trim() || 'Hội viên tự hủy lịch',
   })
   const body = response.data
-  if (body?.success === false) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
     throw new Error(body.message || 'Không thể hủy lượt đăng ký.')
   }
-  return body?.data ?? body
+  const registration = body?.data ?? body
+  if (String(registration?.id) !== String(registrationId)
+    || (expectedSessionId != null && String(registration.sessionId) !== String(expectedSessionId))
+    || !['cancelled', 'canceled'].includes(String(registration.status).trim().toLowerCase())) {
+    throw new Error('Chưa xác nhận được đúng buổi học đã hủy. Vui lòng làm mới lịch để kiểm tra trạng thái.')
+  }
+  return registration
 }
 
 /**
