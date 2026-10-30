@@ -68,6 +68,8 @@ import { canCancelPayOSPayment, canCheckoutPayOSPayment, canSyncPayOSPayment, pa
 import PayOSQrImage from '../../components/PayOSQrImage'
 import { subscriptionPackageReason, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
+import CounterOrderCancellationDialog from '../../components/CounterOrderCancellationDialog'
+import { counterOrderCancellationReason } from '../../utils/counterOrders'
 import {
   getAllSupportTickets,
   getTicketErrorMessage,
@@ -163,6 +165,7 @@ export default function FrontDeskOperations() {
   const subscriptionRequest = useRef(0)
   const [purchasePackage, setPurchasePackage] = useState(null)
   const [payModalSubscription, setPayModalSubscription] = useState(null)
+  const [cancelOrder, setCancelOrder] = useState(null)
   const [payOsData, setPayOsData] = useState(null) // { qrCode, checkoutUrl }
   const [paymentError, setPaymentError] = useState('')
   const [counterPaymentReceived, setCounterPaymentReceived] = useState(false)
@@ -172,7 +175,7 @@ export default function FrontDeskOperations() {
   const subscriptionReason = subscriptionsReady && selectedSubscriptionPackage ? subscriptionPackageReason(selectedSubscriptionPackage, memberSubscriptions, packages) : ''
   const subscriptionNotice = subscriptionReason || (subscriptionLoadError
       ? 'Chưa kiểm tra được hiệu lực gói tập. Vui lòng thử lại trước khi đăng ký.'
-      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : 'Standard có thể nâng cấp bằng phần chênh lệch; thẻ PT 1-1 được đăng ký độc lập.')
+      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : 'Standard chỉ được nâng cấp lên gói cao hơn. PT chỉ đăng ký song song khi Standard đã kích hoạt và còn hiệu lực.')
 
   // Tab 4: Class & Attendance states
   const [classView, setClassView] = useState('booking')
@@ -431,7 +434,7 @@ export default function FrontDeskOperations() {
     setPurchasePackage(selectedSubscriptionPackage)
   }
 
-  // Confirm direct counter payment (Cash / BankTransfer)
+  // Confirm cash payment received at the counter.
   async function handleConfirmCounterPayment(paymentMethod) {
     if (!payModalSubscription || submitting) return
     if (!counterPaymentReceived) {
@@ -580,6 +583,15 @@ export default function FrontDeskOperations() {
 
   return (
     <div className="fdesk-mgmt">
+      {cancelOrder && <CounterOrderCancellationDialog subscription={cancelOrder} currentPayment={String(payModalSubscription?.id) === String(cancelOrder.id) ? payOsData : null} onClose={() => setCancelOrder(null)} onBusyChange={setSubmitting} onCancelled={updated => {
+        setMemberSubscriptions(current => current.map(item => String(item.id) === String(updated.id) ? { ...item, ...updated } : item))
+        if (String(payModalSubscription?.id) === String(updated.id)) {
+          setPayModalSubscription(null)
+          setPayOsData(null)
+          setPaymentError('')
+        }
+        setSuccessMessage(`Đã hủy đơn thanh toán #${updated.id}.`)
+      }} />}
       {purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} memberId={Number(subMemberId)} onClose={() => setPurchasePackage(null)} onCreated={async newSub => {
         setPurchasePackage(null)
         setSuccessMessage(`Đã tạo đơn gói "${newSub.packageName}". Số tiền cần thu: ${formatVND(newSub.agreedPrice)}.`)
@@ -1213,6 +1225,7 @@ export default function FrontDeskOperations() {
                     className="fdesk-select"
                     value={selectedPackageId}
                     onChange={(e) => setSelectedPackageId(e.target.value)}
+                    disabled={submitting || Boolean(purchasePackage)}
                     required
                   >
                     {packages.map((pkg) => (
@@ -1243,6 +1256,7 @@ export default function FrontDeskOperations() {
                     <p style={{ margin: 0, fontSize: 11, color: 'var(--manager-secondary, #64748b)' }}>
                       {pkg.description || 'Gói tập chất lượng cao tại Sports Center.'}
                     </p>
+                    {subscriptionsReady && subscriptionPackageReason(pkg, memberSubscriptions, packages) && <p className="fdesk-package-registration-reason">{subscriptionPackageReason(pkg, memberSubscriptions, packages)}</p>}
                   </div>
                 ))}
               </div>
@@ -1359,10 +1373,12 @@ export default function FrontDeskOperations() {
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               {isPending ? (
+                                <div className="fdesk-order-actions">
                                 <button
                                   type="button"
                                   className="fdesk-btn fdesk-btn-success"
                                   style={{ padding: '6px 12px', fontSize: 12 }}
+                                  disabled={submitting}
                                   onClick={() => {
                                     setPaymentError(''); setPayModalSubscription(sub)
                                     setPayOsData(null)
@@ -1371,9 +1387,11 @@ export default function FrontDeskOperations() {
                                   <CreditCard size={13} />
                                   Thu tiền / PayOS
                                 </button>
+                                {!counterOrderCancellationReason(sub) && <button type="button" className="fdesk-btn fdesk-btn-danger" disabled={submitting} onClick={() => setCancelOrder(sub)}><Ban size={13} />Hủy đơn thanh toán</button>}
+                                </div>
                               ) : (
-                                <span style={{ fontSize: 12, color: 'var(--manager-success, #059669)', fontWeight: 600 }}>
-                                  Đã thanh toán
+                                <span style={{ fontSize: 12, color: sub.status === 'Cancelled' ? 'var(--manager-secondary, #64748b)' : 'var(--manager-success, #059669)', fontWeight: 600 }}>
+                                  {sub.status === 'Cancelled' ? 'Đã hủy đơn' : ['Active', 'Expired', 'Upgraded'].includes(sub.status) ? 'Đã thanh toán' : '—'}
                                 </span>
                               )}
                             </td>
@@ -1709,7 +1727,7 @@ export default function FrontDeskOperations() {
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Chọn hình thức thanh toán:</p>
                   <label className="fdesk-counter-payment-confirm">
                     <input type="checkbox" checked={counterPaymentReceived} disabled={submitting} onChange={event => setCounterPaymentReceived(event.target.checked)} />
-                    <span><strong>Tôi xác nhận đã thực nhận đủ tiền</strong><small>Áp dụng cho tiền mặt và chuyển khoản trực tiếp. Chỉ xác nhận sau khi kiểm tra số tiền đã nhận.</small></span>
+                    <span><strong>Tôi xác nhận đã thực nhận đủ tiền mặt</strong><small>Chỉ xác nhận sau khi kiểm tra số tiền mặt đã nhận tại quầy.</small></span>
                   </label>
                   <button
                     type="button"
@@ -1720,17 +1738,6 @@ export default function FrontDeskOperations() {
                   >
                     <Wallet size={16} />
                     Thu tiền mặt tại quầy (Kích hoạt ngay)
-                  </button>
-
-                  <button
-                    type="button"
-                    className="fdesk-btn fdesk-btn-secondary"
-                    style={{ justifyContent: 'center', padding: '12px', borderColor: '#2563eb', color: 'var(--manager-info, #2563eb)' }}
-                    onClick={() => handleConfirmCounterPayment('BankTransfer')}
-                    disabled={submitting || !counterPaymentReceived || !(Number(payModalSubscription.agreedPrice) > 0)}
-                  >
-                    <CreditCard size={16} />
-                    Chuyển khoản trực tiếp vào tài khoản trung tâm
                   </button>
 
                   <button
@@ -1747,6 +1754,7 @@ export default function FrontDeskOperations() {
               )}
             </div>
             <div className="fdesk-dialog-footer">
+              {!counterOrderCancellationReason(payModalSubscription, payOsData) && <button type="button" className="fdesk-btn fdesk-btn-danger" disabled={submitting} onClick={() => setCancelOrder(payModalSubscription)}><Ban size={15} />Hủy đơn thanh toán</button>}
               <button
                 type="button"
                 className="fdesk-btn fdesk-btn-secondary"

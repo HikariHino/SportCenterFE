@@ -812,3 +812,12 @@
   line-height: 1.5;
 }
 
+.fdesk-package-card .fdesk-package-registration-reason {
+  margin: 8px 0 0;
+  color: var(--theme-red, #b42318);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.fdesk-order-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.fdesk-order-actions .fdesk-btn { padding: 6px 12px; font-size: 12px; }

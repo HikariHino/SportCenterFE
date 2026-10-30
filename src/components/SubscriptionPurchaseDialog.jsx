@@ -69,7 +69,7 @@ export default function SubscriptionPurchaseDialog({ pkg, memberId, onClose, onC
           <div><dt>Thời hạn gói mới</dt><dd>{purchase.pkg.durationInDays} ngày</dd></div>
           {upgrading && <><div><dt>Ngày bắt đầu giữ nguyên</dt><dd>{date(preview.newStartDate)}</dd></div><div><dt>Ngày hết hạn dự kiến</dt><dd>{date(preview.newEndDate)}</dd></div></>}
         </dl>
-        <p className="subscription-purchase-note"><CheckCircle2 size={18} />{upgrading ? 'Gói cũ vẫn dùng được khi chờ thanh toán. Sau khi thanh toán thành công, gói mới được kích hoạt và gói cũ chuyển sang Đã nâng cấp.' : 'Thẻ Standard và thẻ PT 1-1 được dùng song song. Gói mới chỉ có hiệu lực sau khi thanh toán thành công.'}</p>
+        <p className="subscription-purchase-note"><CheckCircle2 size={18} />{upgrading ? 'Gói cũ vẫn dùng được khi chờ thanh toán. Sau khi thanh toán thành công, gói mới được kích hoạt và gói cũ chuyển sang Đã nâng cấp.' : 'Chỉ đăng ký PT song song khi Standard đã kích hoạt và còn hiệu lực. Gói mới chỉ có hiệu lực sau khi thanh toán thành công.'}</p>
         {!upgrading && <p className="subscription-purchase-note">Thời hạn được tính từ thời điểm kích hoạt sau thanh toán.</p>}
         {purchase.reason && <p role="alert" className="subscription-purchase-error"><AlertCircle size={18} />{purchase.reason}</p>}
       </>}

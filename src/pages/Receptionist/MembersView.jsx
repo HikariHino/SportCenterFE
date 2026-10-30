@@ -3,8 +3,9 @@ import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Clock3, CreditCard,
 import { createMember, getMemberById, getMembers } from '../../services/memberService'
 import { getMembershipPackageById, getMembershipPackages } from '../../services/membershipPackageService'
 import { confirmReceptionistSubscriptionPayment, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
-import { cancelSubscriptionOrder } from '../../services/subscriptionCancellationService'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
+import CounterOrderCancellationDialog from '../../components/CounterOrderCancellationDialog'
+import { counterOrderCancellationReason } from '../../utils/counterOrders'
 import { cancelReceptionistRegistration, checkInReceptionistRegistration, getReceptionistMemberRegistrations } from '../../services/receptionistClassService'
 import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, subscriptionStatusLabel, ViewLoader } from './ReceptionistViewShared'
 
@@ -228,16 +229,16 @@ function MemberSubscriptionsDialog({ memberId, onClose, showNotice }) {
     <section className="reception-dialog reception-subscriptions-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-subscriptions-title">
       <header><div><span>GÓI HỘI VIÊN</span><h2 id="reception-member-subscriptions-title">Các gói của hội viên #{memberId}</h2><p>{subscriptions.length} đăng ký gói được tìm thấy.</p></div><button type="button" aria-label="Đóng danh sách gói" onClick={onClose}><X size={19} /></button></header>
       <div className="reception-subscriptions-body">
-        {loading ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Đang tải các gói hội viên</strong><span>Dữ liệu gói hội viên đang được đồng bộ từ hệ thống.</span></div> : error ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Không thể tải các gói</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscriptions.length ? <div className="reception-subscription-list">{subscriptions.map(item => <article key={item.id}><header><div><small>Đăng ký #{item.id}</small><strong>{item.packageName}</strong></div><b className={String(item.status || '').toLowerCase()}>{subscriptionStatusLabel(item.status)}</b></header><div><span><small>Giá đăng ký</small><strong>{Number(item.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{item.durationInDays} ngày</strong></span><span><small>Ngày tạo</small><strong>{formatMemberDate(item.createdAt)}</strong></span><span><small>Hiệu lực</small><strong>{item.startDate ? `${formatMemberDate(item.startDate)} – ${formatMemberDate(item.endDate)}` : 'Chờ kích hoạt'}</strong></span></div><footer className="reception-subscription-actions"><button type="button" onClick={() => setSelectedSubscriptionId(item.id)}>Xem chi tiết <ArrowRight size={14} /></button>{item.status === 'Pending' && <><button className="payment" type="button" onClick={() => setPaymentSubscription(item)}><WalletCards size={13} />Thu tiền</button><button className="cancel" type="button" onClick={() => setCancelSubscription(item)}><Ban size={13} />Hủy gói</button></>}</footer></article>)}</div> : <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Chưa đăng ký gói</strong><span>Hội viên này chưa có đăng ký gói nào.</span></div>}
+        {loading ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Đang tải các gói hội viên</strong><span>Dữ liệu gói hội viên đang được đồng bộ từ hệ thống.</span></div> : error ? <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Không thể tải các gói</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : subscriptions.length ? <div className="reception-subscription-list">{subscriptions.map(item => <article key={item.id}><header><div><small>Đăng ký #{item.id}</small><strong>{item.packageName}</strong></div><b className={String(item.status || '').toLowerCase()}>{subscriptionStatusLabel(item.status)}</b></header><div><span><small>Giá đăng ký</small><strong>{Number(item.agreedPrice || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{item.durationInDays} ngày</strong></span><span><small>Ngày tạo</small><strong>{formatMemberDate(item.createdAt)}</strong></span><span><small>Hiệu lực</small><strong>{item.startDate ? `${formatMemberDate(item.startDate)} – ${formatMemberDate(item.endDate)}` : 'Chờ kích hoạt'}</strong></span></div><footer className="reception-subscription-actions"><button type="button" onClick={() => setSelectedSubscriptionId(item.id)}>Xem chi tiết <ArrowRight size={14} /></button>{item.status === 'Pending' && <><button className="payment" type="button" onClick={() => setPaymentSubscription(item)}><WalletCards size={13} />Thu tiền</button>{!counterOrderCancellationReason(item) && <button className="cancel" type="button" onClick={() => setCancelSubscription(item)}><Ban size={13} />Hủy đơn thanh toán</button>}</>}</footer></article>)}</div> : <div className="reception-member-detail-state"><CreditCard size={26} /><strong>Chưa đăng ký gói</strong><span>Hội viên này chưa có đăng ký gói nào.</span></div>}
       </div>
       {selectedSubscriptionId !== null && <SubscriptionDetailDialog subscriptionId={selectedSubscriptionId} onClose={() => setSelectedSubscriptionId(null)} />}
       {cancelSubscription && <CancelSubscriptionDialog subscription={cancelSubscription} onClose={() => setCancelSubscription(null)} onCancelled={updated => { setSubscriptions(current => current.map(item => item.id === updated.id ? updated : item)); showNotice(`Đã hủy đăng ký gói #${updated.id}.`) }} />}
-      {paymentSubscription && <ConfirmSubscriptionPaymentDialog subscription={paymentSubscription} onClose={() => setPaymentSubscription(null)} onConfirmed={receipt => { setRequestKey(key => key + 1); showNotice(`Đã xác nhận biên nhận #${receipt.id} và kích hoạt gói.`) }} />}
+      {paymentSubscription && <ConfirmSubscriptionPaymentDialog subscription={paymentSubscription} onClose={() => setPaymentSubscription(null)} onCancelOrder={() => { setCancelSubscription(paymentSubscription); setPaymentSubscription(null) }} onConfirmed={receipt => { setRequestKey(key => key + 1); showNotice(`Đã xác nhận biên nhận #${receipt.id} và kích hoạt gói.`) }} />}
     </section>
   </div>
 }
 
-function ConfirmSubscriptionPaymentDialog({ subscription, onClose, onConfirmed }) {
+function ConfirmSubscriptionPaymentDialog({ subscription, onClose, onConfirmed, onCancelOrder }) {
   const [amount, setAmount] = useState(String(subscription.agreedPrice || ''))
   const [paymentMethod, setPaymentMethod] = useState('Cash')
   const [paymentReceived, setPaymentReceived] = useState(false)
@@ -279,36 +280,13 @@ function ConfirmSubscriptionPaymentDialog({ subscription, onClose, onConfirmed }
   return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
     <section className="reception-dialog reception-subscription-payment-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-confirm-payment-title">
       <header><div><span>XÁC NHẬN THU TIỀN</span><h2 id="reception-confirm-payment-title">Thanh toán đăng ký #{subscription.id}</h2><p>{subscription.packageName} · {Number(subscription.agreedPrice || 0).toLocaleString('vi-VN')} đ</p></div><button type="button" aria-label="Đóng biểu mẫu thanh toán" onClick={onClose} disabled={saving}><X size={19} /></button></header>
-      <form onSubmit={submit}><div className="reception-payment-form-grid"><label>Số tiền đã nhận<input type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} disabled={saving} required /></label><label>Phương thức<select value={paymentMethod} onChange={event => setPaymentMethod(event.target.value)} disabled={saving}><option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản</option><option value="CreditCard">Thẻ tín dụng</option></select></label></div><label className="reception-payment-confirm"><input type="checkbox" checked={paymentReceived} onChange={event => setPaymentReceived(event.target.checked)} disabled={saving} /><span><strong>Tôi xác nhận đã thực nhận đủ tiền</strong><small>Thao tác này ghi nhận khoản tiền đã thu và kích hoạt gói; không tự trừ tiền ngân hàng hoặc thẻ.</small></span></label>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={saving || !paymentReceived}>{saving ? 'Đang xác nhận...' : 'Xác nhận và kích hoạt'}</button></footer></form>
+      <form onSubmit={submit}><div className="reception-payment-form-grid"><label>Số tiền đã nhận<input type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} disabled={saving} required /></label><label>Phương thức<select value={paymentMethod} onChange={event => setPaymentMethod(event.target.value)} disabled={saving}><option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản</option><option value="CreditCard">Thẻ tín dụng</option></select></label></div><label className="reception-payment-confirm"><input type="checkbox" checked={paymentReceived} onChange={event => setPaymentReceived(event.target.checked)} disabled={saving} /><span><strong>Tôi xác nhận đã thực nhận đủ tiền</strong><small>Thao tác này ghi nhận khoản tiền đã thu và kích hoạt gói; không tự trừ tiền ngân hàng hoặc thẻ.</small></span></label>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer>{!counterOrderCancellationReason(subscription) && <button className="danger" type="button" disabled={saving} onClick={onCancelOrder}><Ban size={14} />Hủy đơn thanh toán</button>}<button type="button" onClick={onClose} disabled={saving}>Đóng</button><button type="submit" disabled={saving || !paymentReceived}>{saving ? 'Đang xác nhận...' : 'Xác nhận và kích hoạt'}</button></footer></form>
     </section>
   </div>
 }
 
 function CancelSubscriptionDialog({ subscription, onClose, onCancelled }) {
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async event => {
-    event.preventDefault()
-    setSaving(true)
-    setError('')
-    try {
-      const result = await cancelSubscriptionOrder(subscription.id)
-      onCancelled(result)
-      onClose()
-    } catch (requestError) {
-      setError(requestErrorMessage(requestError, 'Không thể hủy đăng ký gói.'))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
-    <section className="reception-dialog reception-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-cancel-subscription-title">
-      <header><div><span>HỦY GÓI CHỜ THANH TOÁN</span><h2 id="reception-cancel-subscription-title">Đăng ký #{subscription.id}</h2><p>{subscription.packageName}</p></div><button type="button" aria-label="Đóng xác nhận hủy gói" onClick={onClose} disabled={saving}><X size={19} /></button></header>
-      <form onSubmit={submit}><div className="reception-cancel-subscription-copy"><span><Ban size={24} /></span><strong>Xác nhận hủy đăng ký gói?</strong><p>Chỉ gói đang chờ và chưa thanh toán mới có thể hủy. Hệ thống sẽ đóng các liên kết PayOS đang chờ trước khi hủy đơn gói.</p></div>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button className="danger" type="submit" disabled={saving}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
-    </section>
-  </div>
+  return <CounterOrderCancellationDialog subscription={subscription} onClose={onClose} onCancelled={onCancelled} />
 }
 
 function SubscriptionDetailDialog({ subscriptionId, onClose }) {

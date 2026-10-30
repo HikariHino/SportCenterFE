@@ -25,3 +25,5 @@
 .subscription-purchase-dialog button:disabled { opacity: .55; cursor: not-allowed; }
 .subscription-purchase-dialog :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
 @media (max-width: 600px) { .subscription-purchase-dialog header, .subscription-purchase-dialog footer, .subscription-purchase-body { padding: 18px; } .subscription-purchase-breakdown { padding: 14px; } .subscription-purchase-breakdown > div { flex-wrap: wrap; gap: 4px 12px; } .subscription-purchase-breakdown dd { margin-left: auto; } .subscription-purchase-dialog footer button { flex: 1 1 auto; } }
+.subscription-purchase-dialog button.danger { color: #fff; background: #b42318; border-color: #b42318; }
+.subscription-purchase-dialog button.danger:hover:not(:disabled) { background: #8f1b13; }
