@@ -23,11 +23,12 @@ after(async () => {
 })
 
 const pkg = { id: 2, packageName: 'Standard 3 tháng', price: 800000, durationInDays: 90, isActive: true }
-const active = { id: 10, packageId: 1, packageName: 'Standard 1 tháng', agreedPrice: 300000, status: 'Active', startDate: '2099-10-01T00:00:00Z', endDate: '2099-10-31T00:00:00Z' }
+const active = { id: 10, packageId: 1, packageName: 'Standard 1 tháng', agreedPrice: 300000, durationInDays: 30, status: 'Active', startDate: '2020-10-01T00:00:00Z', endDate: '2099-10-31T00:00:00Z' }
+const currentPackage = { id: 1, packageName: active.packageName, price: 300000, durationInDays: 30, isActive: true }
 const upgrade = { canUpgrade: true, message: 'Thanh toán phần chênh lệch', currentSubscriptionId: 10, currentPackageName: active.packageName, currentAgreedPrice: 300000, targetPackageId: 2, targetPackageName: pkg.packageName, targetPackagePrice: 800000, discountAmount: 300000, amountToPay: 500000, newStartDate: active.startDate, newEndDate: '2099-12-30T00:00:00Z' }
 
-function mockPurchase({ target = pkg, subscriptions = [active], preview = upgrade, failRead, loseResponse = false } = {}) {
-  const state = { target: structuredClone(target), subscriptions: structuredClone(subscriptions), preview: structuredClone(preview), calls: [], posts: [], failRead }
+function mockPurchase({ target = pkg, subscriptions = [active], preview = upgrade, catalog = [currentPackage, { ...pkg, id: 9 }], failRead, loseResponse = false } = {}) {
+  const state = { target: structuredClone(target), subscriptions: structuredClone(subscriptions), preview: structuredClone(preview), catalog: structuredClone(catalog), calls: [], posts: [], failRead }
   api.defaults.adapter = async config => {
     state.calls.push({ method: config.method, url: config.url, params: config.params })
     let data
@@ -39,7 +40,10 @@ function mockPurchase({ target = pkg, subscriptions = [active], preview = upgrad
       if (loseResponse) throw new Error('Mất kết nối sau khi tạo đơn')
     } else {
       if (state.failRead === config.url) throw new Error('Không tải được điều kiện mới')
-      if (config.url.startsWith('/membership-packages/')) data = state.target
+      if (config.url.startsWith('/membership-packages/')) {
+        const id = config.url.split('/').at(-1)
+        data = String(state.target.id) === id ? state.target : state.catalog.find(item => String(item.id) === id)
+      }
       else if (config.url === '/member-subscriptions/upgrade-preview') data = state.preview
       else data = state.subscriptions
     }
@@ -77,13 +81,110 @@ test('PT can be purchased alongside Standard and new purchases do not treat shif
   assert.equal(state.posts.length, 1)
 })
 
-test('pending orders for another package do not block a purchase; the exact package does', async () => {
+test('pending Standard orders for any package block creating another Standard order', async () => {
   const state = mockPurchase({ subscriptions: [active, { id: 20, packageId: 9, status: 'Pending' }] })
   const purchase = await service.prepareSubscriptionPurchase(2)
   state.subscriptions.push({ id: 21, packageId: 2, status: 'Pending' })
   const result = await service.createReviewedSubscription(purchase)
   assert.equal(result.changed, true)
   assert.match(result.purchase.reason, /chờ thanh toán/)
+  assert.deepEqual(state.posts, [])
+})
+
+for (const memberId of [undefined, 5]) {
+  const role = memberId == null ? 'Member' : 'CenterManager'
+  test(`${role}: same Standard, equal-value and lower-value packages cannot create an order even if BE preview allows upgrade`, async () => {
+    const upgraded = { ...active, packageId: 9, packageName: 'Standard 6 tháng', agreedPrice: 100000, durationInDays: 180 }
+    for (const target of [{ ...pkg, id: 9, price: 1200000 }, pkg, { ...pkg, price: 1000000 }]) {
+      const state = mockPurchase({ target, subscriptions: [upgraded], catalog: [{ id: 9, packageName: upgraded.packageName, price: 1000000, durationInDays: 180 }], preview: { ...upgrade, targetPackageId: target.id, currentSubscriptionId: upgraded.id } })
+      const purchase = await service.prepareSubscriptionPurchase(target.id, memberId)
+      assert.ok(purchase.reason)
+      assert.equal((await service.createReviewedSubscription(purchase)).changed, true)
+      assert.deepEqual(state.posts, [])
+    }
+  })
+
+  test(`${role}: active Standard requires an explicit upgrade preview, never a second full-price Standard`, async () => {
+    for (const preview of [{ ...upgrade, canUpgrade: false, currentSubscriptionId: null }, { ...upgrade, currentSubscriptionId: 99 }]) {
+      const state = mockPurchase({ preview })
+      const purchase = await service.prepareSubscriptionPurchase(2, memberId)
+      assert.match(purchase.reason, /không thể đăng ký thêm gói Standard/)
+      assert.equal((await service.createReviewedSubscription(purchase)).changed, true)
+      assert.deepEqual(state.posts, [])
+    }
+  })
+
+  test(`${role}: PT requires activated Standard and is rechecked if Standard expires or is cancelled before confirmation`, async () => {
+    const target = { ...pkg, packageName: 'PT 1-1' }
+    const preview = { ...upgrade, canUpgrade: false, currentSubscriptionId: null, currentAgreedPrice: 0, discountAmount: 0, amountToPay: 800000 }
+    for (const subscriptions of [[], [{ ...active, status: 'Pending' }], [{ ...active, endDate: '2020-10-02' }], [{ ...active, startDate: '2099-01-01' }]]) {
+      const state = mockPurchase({ target, preview, subscriptions })
+      const purchase = await service.prepareSubscriptionPurchase(2, memberId)
+      assert.match(purchase.reason, /Standard đã kích hoạt/)
+      assert.equal((await service.createReviewedSubscription(purchase)).changed, true)
+      assert.deepEqual(state.posts, [])
+    }
+    for (const change of [{ status: 'Cancelled' }, { endDate: '2020-10-02' }]) {
+      const state = mockPurchase({ target, preview })
+      const purchase = await service.prepareSubscriptionPurchase(2, memberId)
+      assert.equal(purchase.reason, '')
+      Object.assign(state.subscriptions[0], change)
+      const result = await service.createReviewedSubscription(purchase)
+      assert.equal(result.changed, true)
+      assert.match(result.purchase.reason, /Standard đã kích hoạt/)
+      assert.deepEqual(state.posts, [])
+    }
+  })
+
+  test(`${role}: a new Standard is allowed without membership and PT is allowed alongside activated Standard`, async () => {
+    const state = mockPurchase({ subscriptions: [], preview: { ...upgrade, canUpgrade: false, currentSubscriptionId: null, currentAgreedPrice: 0, discountAmount: 0, amountToPay: 800000 } })
+    const purchase = await service.prepareSubscriptionPurchase(2, memberId)
+    assert.equal(purchase.reason, '')
+    await service.createReviewedSubscription(purchase)
+    assert.equal(state.posts.length, 1)
+    assert.equal(state.posts[0].url, memberId == null ? '/member-subscriptions' : `/member-subscriptions/members/${memberId}`)
+
+    const ptState = mockPurchase({ target: { ...pkg, packageName: 'PT 1-1' }, preview: { ...upgrade, canUpgrade: false, currentSubscriptionId: null, currentAgreedPrice: 0, discountAmount: 0, amountToPay: 800000 } })
+    const ptPurchase = await service.prepareSubscriptionPurchase(2, memberId)
+    assert.equal(ptPurchase.reason, '')
+    await service.createReviewedSubscription(ptPurchase)
+    assert.equal(ptState.posts.length, 1)
+  })
+}
+
+test('current package descriptions and full prices are fetched again before confirmation; failed reads cannot permit registration', async () => {
+  const state = mockPurchase()
+  const purchase = await service.prepareSubscriptionPurchase(2)
+  state.catalog[0].price = 900000
+  const result = await service.createReviewedSubscription(purchase)
+  assert.equal(result.changed, true)
+  assert.match(result.purchase.reason, /cao hơn/)
+  assert.deepEqual(state.posts, [])
+  state.failRead = '/membership-packages/1'
+  await assert.rejects(service.prepareSubscriptionPurchase(2), /Không tải được/)
+  assert.deepEqual(state.posts, [])
+})
+
+test('an upgrade that shortens the actual expiry and inconsistent current package details never create orders', async () => {
+  const state = mockPurchase({ preview: { ...upgrade, newEndDate: '2099-10-30T00:00:00Z' } })
+  const purchase = await service.prepareSubscriptionPurchase(2)
+  assert.match(purchase.reason, /Ngày hết hạn/)
+  assert.equal((await service.createReviewedSubscription(purchase)).changed, true)
+  assert.deepEqual(state.posts, [])
+  for (const changes of [{ price: null }, { price: 'invalid' }, { durationInDays: undefined }, { id: 99 }]) {
+    const invalid = mockPurchase({ catalog: [{ ...currentPackage, ...changes }] })
+    await assert.rejects(service.prepareSubscriptionPurchase(2), /thông tin gói hiện tại/)
+    assert.deepEqual(invalid.posts, [])
+  }
+})
+
+test('a misleading package name cannot make an active PT count as a Standard prerequisite', async () => {
+  const state = mockPurchase({ target: { ...pkg, packageName: 'PT 1-1' },
+    catalog: [{ ...currentPackage, description: 'Huấn luyện viên cá nhân 1-1' }],
+    preview: { ...upgrade, canUpgrade: false, currentSubscriptionId: null } })
+  const purchase = await service.prepareSubscriptionPurchase(2)
+  assert.match(purchase.reason, /Standard đã kích hoạt/)
+  assert.equal((await service.createReviewedSubscription(purchase)).changed, true)
   assert.deepEqual(state.posts, [])
 })
 

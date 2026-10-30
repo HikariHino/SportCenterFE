@@ -4,9 +4,10 @@ import { getSports, getCoaches } from '../../services/classCatalogService'
 import { getAllAvailableSessions, getAllMemberClasses, getAllMyRegistrations, bookClassSessions, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
 import { getMySubscriptions } from '../../services/memberSubscriptionService'
 import { getRooms } from '../../services/roomService'
-import { bookingUnavailableReason, checkInUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../../utils/memberClasses'
+import { bookingUnavailableReason, checkInUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, isCancelledRegistration, partitionMemberRegistrations, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../../utils/memberClasses'
 import { timetableWeekStart } from '../../utils/memberTimetable'
 import MemberWeeklySchedule from './MemberWeeklySchedule'
+import CancelledMemberRegistrations from './CancelledMemberRegistrations'
 import '../../style/member/ClassesView.css'
 import useResource from '../../hooks/useClassResource'
 import SessionDetails, { formatClassDateTime as formatDate } from './MemberSessionDetails'
@@ -43,8 +44,9 @@ function RegistrationDetailsDialog({ item, busy, now, onClose, onAction }) {
     <div className="member-registration-dialog-content">
       <header><h2 id="member-registration-title">Chi tiết buổi học</h2><button type="button" aria-label="Đóng" onClick={onClose}><X size={20} /></button></header>
       <h3>{item.className || `Buổi học #${item.sessionId}`}</h3>
-      <span className="member-classes-badge">{classStatusLabel(item.status)}</span>
+      <span className="member-classes-badge">{isCancelledRegistration(item) ? 'Đã hủy' : classStatusLabel(item.status)}</span>
       <SessionDetails item={item} />
+      {isCancelledRegistration(item) && <p className="member-classes-error">Lý do hủy: {item.cancellationReason?.trim() || 'Chưa cập nhật'}</p>}
       <AttendanceStatus item={item} />
       {item.checkInTime && <p className="member-classes-muted">Giờ điểm danh: {formatDate(item.checkInTime)}</p>}
       {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {item.review?.rating ?? item.rating ?? 'Đã gửi'}{(item.review?.rating ?? item.rating) ? '/5 sao' : ' đánh giá'}</strong>{item.review?.comment && <p>{item.review.comment}</p>}</div>}
@@ -118,6 +120,7 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
       </>}
       {action.type === 'checkIn' && <><p>Chỉ điểm danh từ 30 phút trước giờ học đến trước khi buổi học kết thúc. Xác nhận bạn đã có mặt tại phòng tập để tham gia.</p>{checkInReason && <p className="member-classes-checkin-notice" role="alert"><AlertCircle size={17} />{checkInReason}</p>}</>}
       {action.type === 'cancel' && <>
+        <p>Bạn đang hủy duy nhất buổi học #{action.item.sessionId}, đăng ký #{action.item.id}, vào {formatDate(action.item.startsAt)}.</p>
         <p>Yêu cầu hủy chỉ được chấp nhận trong thời hạn theo chính sách của buổi học.</p>
         <label htmlFor="member-class-cancel-reason">Lý do hủy (không bắt buộc)</label>
         <textarea id="member-class-cancel-reason" rows={3} maxLength={500} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} />
@@ -294,7 +297,8 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
   const hasActiveSubscription = useMemo(() => subscriptions.data ? hasActiveMembership(subscriptions.data, now) : null, [subscriptions.data, now])
 
   const registrations = (mine.data?.items || []).map(item => enrichItem({ ...item, ...patches[item.id] }))
-  const listedRegistrations = registrations.slice((minePage - 1) * PAGE_SIZE, minePage * PAGE_SIZE)
+  const { active: activeRegistrations, cancelled: cancelledRegistrations } = partitionMemberRegistrations(registrations)
+  const listedRegistrations = activeRegistrations.slice((minePage - 1) * PAGE_SIZE, minePage * PAGE_SIZE)
   const selectedRegistration = registrations.find(item => item.id === selectedRegistrationId)
   const registeredSessions = registeredSessionIds(registrations)
   for (const [sessionId, active] of Object.entries(booked)) { if (active) registeredSessions.add(sessionId) }
@@ -302,8 +306,8 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
 
   // If a mutation removes the final item from a page, return to the last available page.
   useEffect(() => {
-    if (mine.data) setMinePage(page => Math.min(page, Math.max(1, Math.ceil(mine.data.total / PAGE_SIZE))))
-  }, [mine.data])
+    if (mine.data) setMinePage(page => Math.min(page, Math.max(1, Math.ceil(activeRegistrations.length / PAGE_SIZE))))
+  }, [mine.data, activeRegistrations.length])
 
   const openAction = (type, rawItem) => {
     if (actionLock.current) return
@@ -331,7 +335,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
     setBusy(true)
     setActionError('')
     const { type, item } = action
-    let attendanceResult
+    let attendanceResult, cancellationResult
     try {
       if (type === 'bookClass') {
         if (hasActiveSubscription !== true) throw new Error('Bạn cần có gói hội viên đang còn hiệu lực để đăng ký buổi học.')
@@ -363,7 +367,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
         if (result.remaining.length || result.skipped.length) throw new Error(result.error || result.skipped[0].reason)
       } else {
         if (!registrationActions(item)[type]) throw new Error(type === 'review' ? reviewUnavailableReason(item) : 'Thao tác không còn khả dụng. Vui lòng đóng cửa sổ và làm mới lịch đã đặt.')
-        if (type === 'cancel') await cancelRegistration(item.id, values.reason)
+        if (type === 'cancel') cancellationResult = await cancelRegistration(item.id, values.reason, item.sessionId)
         if (type === 'checkIn') {
           const reason = checkInUnavailableReason(item, Date.now())
           if (reason) throw new Error(reason)
@@ -377,7 +381,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
         setMinePage(1)
         setWeekStart(timetableWeekStart(item.startsAt))
       } else {
-        const patch = type === 'cancel' ? { status: 'Cancelled' } : type === 'checkIn' ? { attendanceStatus: attendanceResult?.status || 'CheckedIn', checkInTime: attendanceResult?.checkInTime || null } : { hasReviewed: true, review: { rating: values.rating, comment: values.comment.trim() } }
+        const patch = type === 'cancel' ? { status: 'Cancelled', cancellationReason: cancellationResult.cancellationReason || values.reason.trim() || 'Hội viên tự hủy lịch' } : type === 'checkIn' ? { attendanceStatus: attendanceResult?.status || 'CheckedIn', checkInTime: attendanceResult?.checkInTime || null } : { hasReviewed: true, review: { rating: values.rating, comment: values.comment.trim() } }
         setPatches(previous => ({ ...previous, [item.id]: { ...previous[item.id], ...patch } }))
         if (type === 'cancel') setBooked(previous => ({ ...previous, [item.sessionId]: false }))
       }
@@ -386,7 +390,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
       refreshBookingData()
     } catch (error) {
       if (mounted.current) setActionError(getMemberClassErrorMessage(error))
-      if (type === 'review') mine.reload()
+      if (type === 'review' || type === 'cancel') mine.reload()
     } finally {
       actionLock.current = false
       if (mounted.current) { setBusy(false); setBulkProgress(null) }
@@ -439,7 +443,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
     {tab === 'mine' && <section className="member-my-registrations" aria-label="Các lượt đăng ký" aria-busy={mine.loading}>
       {mineLayout === 'list' && <header className="member-schedule-list-heading"><h3>Lịch đã đặt</h3><p>Xem thông tin, điểm danh và quản lý từng buổi học bạn đã đăng ký.</p></header>}
       {mine.backgroundError && <p className="member-classes-checkin-notice" role="status">Chưa thể đồng bộ điểm danh mới: {mine.backgroundError} Dữ liệu đang hiển thị là lần tải gần nhất.</p>}
-      {mineLayout === 'timetable' && !mine.loading && !mine.error ? <MemberWeeklySchedule items={registrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} onBrowse={() => setTab('browse')} /> : mine.loading || mine.error || !mine.data?.items.length ? <ResourceState resource={mine} emptyText={'Bạn chưa đăng ký buổi học nào.'} /> : <div className="member-classes-grid">
+      {mineLayout === 'timetable' && !mine.loading && !mine.error ? <MemberWeeklySchedule items={activeRegistrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} onBrowse={() => setTab('browse')} /> : mine.loading || mine.error || !activeRegistrations.length ? <ResourceState resource={mine} emptyText={'Bạn chưa có buổi học nào trong lịch đã đặt.'} /> : <div className="member-classes-grid">
         {listedRegistrations.map(registration => {
           const allowed = registrationActions(registration, now)
           return <article className="member-classes-card" key={registration.id}>
@@ -459,7 +463,8 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
           </article>
         })}
       </div>}
-      {mineLayout === 'list' && <Pagination resource={{ ...mine, data: mine.data && { ...mine.data, pageSize: PAGE_SIZE } }} page={minePage} onChange={setMinePage} />}
+      {mineLayout === 'list' && <Pagination resource={{ ...mine, data: mine.data && { total: activeRegistrations.length, pageSize: PAGE_SIZE } }} page={minePage} onChange={setMinePage} />}
+      {!mine.loading && !mine.error && <CancelledMemberRegistrations items={cancelledRegistrations} onSelect={setSelectedRegistrationId} />}
     </section>}
 
     {selectedRegistration && <RegistrationDetailsDialog item={selectedRegistration} busy={busy} now={now} onClose={() => setSelectedRegistrationId(null)} onAction={openAction} />}

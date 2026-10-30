@@ -64,22 +64,57 @@ export function currentSubscriptionForPackage(pkg, subscriptions, packages = [],
   }) === type)
 }
 
+function subscriptionPackage(item, packages) {
+  return { ...item, ...packages.find(candidate => String(candidate.id) === String(item.packageId)) }
+}
+
+function hasEffectiveStandard(subscriptions, packages, now) {
+  return subscriptions.some(item => {
+    const start = Date.parse(item.startDate)
+    const end = Date.parse(item.endDate)
+    return subscriptionStatus(item, now) === 'active'
+      && membershipPackageType(subscriptionPackage(item, packages)) === 'Standard'
+      && Number.isFinite(start) && start <= now
+      && (item.endDate == null || (Number.isFinite(end) && end > now))
+  })
+}
+
 export function subscriptionPackageReason(pkg, subscriptions, packages = [], now = Date.now()) {
   const unavailable = subscriptionRegistrationReason(subscriptions, now) || packageRegistrationReason(pkg)
   if (unavailable) return unavailable
   if (subscriptions.some(item => String(item.packageId) === String(pkg.id) && subscriptionStatus(item, now) === 'pending')) {
     return 'Bạn đã có đơn chờ thanh toán cho gói này. Vui lòng thanh toán hoặc hủy đơn đó.'
   }
-  if (membershipPackageType(pkg) === 'PT') {
-    return subscriptions.some(item => String(item.packageId) === String(pkg.id) && subscriptionStatus(item, now) === 'active')
-      ? 'Bạn đã có gói PT này đang hoạt động.' : ''
+  if (subscriptions.some(item => String(item.packageId) === String(pkg.id) && subscriptionStatus(item, now) === 'active')) {
+    return membershipPackageType(pkg) === 'PT'
+      ? 'Bạn đã có gói PT này đang hoạt động. Không thể đăng ký thêm gói đang dùng.'
+      : 'Bạn đang sử dụng gói Standard này. Chỉ có thể nâng cấp lên gói cao hơn, không thể đăng ký thêm gói hiện tại.'
   }
-  const current = currentSubscriptionForPackage(pkg, subscriptions, packages, now)
-  // When the old package is no longer in the catalog, its description may be
-  // unavailable in SubscriptionDTO. Let the BE preview determine its type.
-  const knownCurrent = current && packages.some(item => String(item.id) === String(current.packageId))
-  return knownCurrent && Number(pkg.price) <= Number(current.agreedPrice)
-    ? 'Chỉ có thể nâng cấp Standard lên gói có giá trị cao hơn gói đang dùng.' : ''
+  if (membershipPackageType(pkg) === 'PT') {
+    return hasEffectiveStandard(subscriptions, packages, now)
+      ? '' : 'Cần có gói Standard đã kích hoạt và đang còn hiệu lực trước khi đăng ký gói PT.'
+  }
+  if (subscriptions.some(item => subscriptionStatus(item, now) === 'pending'
+    && membershipPackageType(subscriptionPackage(item, packages)) === 'Standard')) {
+    return 'Bạn đã có đơn gói Standard chờ thanh toán. Vui lòng thanh toán hoặc hủy đơn đó trước khi chọn gói Standard khác.'
+  }
+  const current = subscriptions.filter(item => subscriptionStatus(item, now) === 'active'
+    && membershipPackageType(subscriptionPackage(item, packages)) === 'Standard')
+  for (const item of current) {
+    const catalogPackage = packages.find(candidate => String(candidate.id) === String(item.packageId))
+    // After an upgrade, agreedPrice may contain only the extra amount paid.
+    // Compare against the full package value as well, never just that difference.
+    const currentPrice = Math.max(Number(catalogPackage?.price) || 0, Number(item.agreedPrice) || 0)
+    if (!Number.isFinite(Number(pkg.price)) || Number(pkg.price) <= 0 || currentPrice <= 0) {
+      return 'Chưa xác định được giá trị gói hiện tại. Vui lòng tải lại trước khi nâng cấp.'
+    }
+    if (Number(pkg.price) <= currentPrice) return 'Chỉ có thể nâng cấp Standard lên gói có giá trị cao hơn gói đang dùng. Không thể hạ gói hoặc đăng ký gói ngang giá.'
+    if (!Number.isFinite(Number(item.durationInDays)) || Number(item.durationInDays) <= 0
+      || !Number.isFinite(Number(pkg.durationInDays)) || Number(pkg.durationInDays) < Number(item.durationInDays)) {
+      return 'Gói nâng cấp không được có thời hạn ngắn hơn gói Standard hiện tại.'
+    }
+  }
+  return ''
 }
 
 export function subscriptionPurchaseTerms({ pkg, preview }) {

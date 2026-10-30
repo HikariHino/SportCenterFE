@@ -164,6 +164,35 @@ test('cancelled registrations free the time slot and adjacent sessions remain bo
 
 const completedRegistration = { id: 101, sessionId: 10, classId: 1, status: 'Completed', sessionStatus: 'Completed', attendanceStatus: 'Present', startsAt: '2020-10-19T11:00:00Z', endsAt: '2020-10-19T12:30:00Z', hasReviewed: false }
 
+test('cancelling one date sends one registration request and leaves other sessions of that class untouched', async () => {
+  const registrations = sessions.slice(0, 3).map((session, index) => ({ ...session, id: 100 + index, sessionId: session.id, status: 'Registered' }))
+  const calls = []
+  api.defaults.adapter = async config => {
+    calls.push({ method: config.method, url: config.url, data: JSON.parse(config.data) })
+    const selected = registrations.find(item => config.url === `/class-registrations/${item.id}/cancel`)
+    assert.ok(selected)
+    selected.status = 'Cancelled'
+    return { data: { success: true, data: selected }, status: 200, headers: {}, config }
+  }
+  const cancelled = await service.cancelRegistration(101, '  Bận ngày này  ', 2)
+  assert.equal(cancelled.sessionId, 2)
+  assert.deepEqual(calls, [{ method: 'post', url: '/class-registrations/101/cancel', data: { reason: 'Bận ngày này' } }])
+  assert.deepEqual(registrations.map(item => item.status), ['Registered', 'Cancelled', 'Registered'])
+})
+
+test('cancellation never confirms another registration, another session or a still active registration', async () => {
+  for (const data of [null, { id: 999, sessionId: 2, status: 'Cancelled' },
+    { id: 101, sessionId: 3, status: 'Cancelled' }, { id: 101, sessionId: 2, status: 'Registered' }]) {
+    api.defaults.adapter = async config => ({ data: { success: true, data }, status: 200, headers: {}, config })
+    await assert.rejects(service.cancelRegistration(101, '', 2), /Chưa xác nhận được đúng buổi/)
+  }
+  let calls = 0
+  api.defaults.adapter = async () => { calls++; throw new Error('Unexpected request') }
+  await assert.rejects(service.cancelRegistration(undefined, '', 2))
+  await assert.rejects(service.cancelRegistration(101, '', 0))
+  assert.equal(calls, 0)
+})
+
 function mockReview(registrations, { readError = false, failPost = false } = {}) {
   const calls = [], posts = []
   api.defaults.adapter = async config => {

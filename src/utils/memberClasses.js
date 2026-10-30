@@ -3,6 +3,22 @@ import { sessionsOverlap } from './sessionReschedule.js'
 const normalized = value => String(value || '').toLowerCase().replace(/[\s_-]/g, '')
 const cancelled = value => ['cancelled', 'canceled'].includes(normalized(value))
 
+export const isCancelledRegistration = item => cancelled(item.status) || cancelled(item.sessionStatus)
+
+export function partitionMemberRegistrations(items) {
+  const active = [], cancelledItems = []
+  for (const item of items) {
+    if (isCancelledRegistration(item)) cancelledItems.push(item)
+    else active.push(item)
+  }
+  const timestamp = item => {
+    const value = Date.parse(item.startsAt)
+    return Number.isFinite(value) ? value : 0
+  }
+  cancelledItems.sort((left, right) => timestamp(right) - timestamp(left))
+  return { active, cancelled: cancelledItems }
+}
+
 export function classStatusLabel(value) {
   return {
     scheduled: 'Đã lên lịch', open: 'Đang mở', registered: 'Đã đăng ký',

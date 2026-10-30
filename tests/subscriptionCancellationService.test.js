@@ -71,6 +71,26 @@ test('old orders whose links were already cancelled can finish cancellation with
   assert.deepEqual(state.posts, ['/member-subscriptions/20/cancel'])
 })
 
+test('unpaid counter orders without a PayOS link cancel directly without charging or changing an active package', async () => {
+  const state = mockCancellation({ order: { ...pendingOrder, payments: [] } })
+  const result = await service.cancelSubscriptionOrder(20)
+  assert.equal(result.status, 'Cancelled')
+  assert.deepEqual(state.calls, ['get /member-subscriptions/20', 'post /member-subscriptions/20/cancel'])
+  assert.deepEqual(state.posts, ['/member-subscriptions/20/cancel'])
+})
+
+test('fresh cash receipts and review states block stale counter cancellation requests before any write', async () => {
+  for (const order of [
+    { ...pendingOrder, status: 'Active', payments: [{ ...pendingPayment, paymentMethod: 'Cash', status: 'Completed' }] },
+    { ...pendingOrder, payments: [{ ...pendingPayment, paymentMethod: 'Cash', status: 'Completed' }] },
+    { ...pendingOrder, payments: [{ ...pendingPayment, paymentMethod: 'BankTransfer', status: 'NeedsReview' }] },
+  ]) {
+    const state = mockCancellation({ order })
+    await assert.rejects(service.cancelSubscriptionOrder(20))
+    assert.deepEqual(state.posts, [])
+  }
+})
+
 test('a verified PayOS return cancels its matching subscription without treating the URL as evidence', async () => {
   const state = mockCancellation({ order: { ...pendingOrder, payments: [{ ...pendingPayment, status: 'Cancelled' }] } })
   const result = await service.completeCancelledPaymentSubscription({ ...pendingPayment, status: 'Cancelled' })

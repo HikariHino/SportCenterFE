@@ -325,7 +325,7 @@ export function SubscriptionsView({ showNotice }) {
 
       {activeSubscriptions.length > 0 ? <section className="member-sub-active-packages" aria-label="Các thẻ đang sử dụng">{activeSubscriptions.map(activeSub => <article key={activeSub.id} className="member-sub-current" aria-labelledby={`member-current-package-${activeSub.id}`}>
         <div className="member-sub-current-main">
-          <div className="member-sub-current-heading"><span className="member-sub-card-icon"><ShieldCheck size={24} /></span><div><div className="member-sub-current-meta"><span className="member-sub-status" data-status="active"><span />Đang hiệu lực</span><span>{packageTypeLabel(activeSub)}</span><span>#SUB-{activeSub.id}</span></div><h3 id={`member-current-package-${activeSub.id}`}>{activeSub.packageName}</h3><p>Thẻ đang sử dụng · Standard và PT 1-1 hoạt động độc lập</p></div></div>
+          <div className="member-sub-current-heading"><span className="member-sub-card-icon"><ShieldCheck size={24} /></span><div><div className="member-sub-current-meta"><span className="member-sub-status" data-status="active"><span />Đang hiệu lực</span><span>{packageTypeLabel(activeSub)}</span><span>#SUB-{activeSub.id}</span></div><h3 id={`member-current-package-${activeSub.id}`}>{activeSub.packageName}</h3><p>PT 1-1 chỉ đăng ký song song khi Standard đã kích hoạt và còn hiệu lực.</p></div></div>
           <dl className="member-sub-current-facts"><div><dt>Ngày bắt đầu</dt><dd>{formatDate(activeSub.startDate)}</dd></div><div><dt>Thời hạn</dt><dd>{activeSub.durationInDays ?? '—'} ngày</dd></div><div><dt>Số tiền đã thanh toán</dt><dd>{formatCurrency(activeSub.agreedPrice ?? activeSub.price)}</dd></div></dl>
         </div>
         <div className="member-sub-current-aside"><span>Ngày hết hạn</span><strong>{formatDate(activeSub.endDate)}</strong><button type="button" className="member-button" onClick={() => handleOpenSubDetail(activeSub)}><Eye size={15} />Xem chi tiết</button>{packageTypeLabel(activeSub) === 'Standard' && <button type="button" className="member-btn-checkout" onClick={() => { setPackageTypeFilter('Standard'); setTab('catalog') }}><Sparkles size={15} />Nâng cấp gói</button>}</div>
@@ -358,7 +358,7 @@ export function SubscriptionsView({ showNotice }) {
 
       {tab === 'catalog' && <section className="member-sub-catalog" aria-labelledby="member-package-catalog">
         <div className="member-sub-section-heading"><div><h3 id="member-package-catalog">Chọn gói tập phù hợp</h3><p>Xem thông tin và thời hạn trước khi tạo đơn đăng ký.</p></div><span>{filteredPackages.length} gói</span></div>
-        <div className="member-sub-message" role="note"><Info size={18} /><p>Bạn có thể dùng đồng thời thẻ Standard và PT 1-1. Với Standard đang còn hạn, chọn gói có giá cao hơn để xem số tiền chênh lệch và ngày hết hạn mới trước khi nâng cấp.</p></div>
+        <div className="member-sub-message" role="note"><Info size={18} /><p>Standard đang còn hạn chỉ được nâng cấp lên gói có giá cao hơn và thời hạn không ngắn hơn. Không thể mua thêm gói hiện tại hoặc hạ gói. PT chỉ đăng ký song song khi Standard đã kích hoạt và còn hiệu lực.</p></div>
         {registrationReason && <div id="member-sub-registration-lock" className="member-sub-message" role="status"><LockKeyhole size={18} /><p>{registrationReason}</p></div>}
         <div className="member-sub-toolbar">
           <label className="member-sub-search"><Search size={17} aria-hidden="true" /><input type="search" maxLength={200} value={packageSearch} onChange={event => setPackageSearch(event.target.value)} placeholder="Tìm tên gói hoặc từ khóa..." aria-label="Tìm gói tập" /></label>
@@ -445,7 +445,7 @@ export function SubscriptionsView({ showNotice }) {
                   <div style={{ background: 'var(--theme-raised, #edf2fa)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12, display: 'flex', gap: 10 }}>
                     <Info size={18} style={{ color: 'var(--theme-accent, #1557d5)', flexShrink: 0, marginTop: 2 }} />
                     <small style={{ color: 'var(--theme-accent, #1557d5)', fontSize: 11, lineHeight: 1.5 }}>
-                      Chọn tiếp tục để xem điều kiện, số tiền cần thanh toán và thời hạn được trung tâm xác nhận. Standard có thể nâng cấp bằng phần chênh lệch; thẻ PT 1-1 được đăng ký độc lập.
+                      Chọn tiếp tục để xem điều kiện, số tiền cần thanh toán và thời hạn được trung tâm xác nhận. Standard chỉ được nâng cấp lên gói cao hơn; PT chỉ đăng ký khi Standard đã kích hoạt và còn hiệu lực.
                     </small>
                   </div>
                 </>

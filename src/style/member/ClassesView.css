@@ -400,3 +400,21 @@
   .member-session-selection-footer > div:last-child > button { flex: 1 1 auto; padding: 10px; font-size: 11px; }
 }
 
+.member-cancelled-registrations { margin-top: 20px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); overflow: hidden; }
+.member-cancelled-registrations > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; color: var(--theme-text); font-size: 14px; font-weight: 700; cursor: pointer; list-style: none; }
+.member-cancelled-registrations > summary::-webkit-details-marker { display: none; }
+.member-cancelled-registrations > summary > span:first-child { display: flex; align-items: center; gap: 8px; }
+.member-cancelled-registrations > summary::after { content: '+'; color: var(--theme-muted); font-size: 20px; }
+.member-cancelled-registrations[open] > summary::after { content: '−'; }
+.member-cancelled-count { margin-left: auto; padding: 3px 9px; border-radius: 20px; background: var(--theme-red-bg, #fff0f2); color: var(--theme-red, #b42318); font-size: 12px; white-space: nowrap; }
+.member-cancelled-body { padding: 0 20px 20px; }
+.member-cancelled-body > p { margin: 0 0 16px; color: var(--theme-muted); font-size: 12px; line-height: 1.7; }
+.member-cancelled-list { margin: 0; padding: 0; list-style: none; }
+.member-cancelled-list > li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding: 16px 0; border-top: 1px solid var(--theme-border); }
+.member-cancelled-list > li > div { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.member-cancelled-list small { color: var(--theme-muted); font-size: 11px; }
+.member-cancelled-list h4 { margin: 6px 0; color: var(--theme-text); font-size: 14px; }
+.member-cancelled-list p { margin: 6px 0 0; color: var(--theme-muted); font-size: 12px; line-height: 1.7; }
+.member-cancelled-list .member-cancelled-reason { color: var(--theme-red, #b42318); }
+.member-cancelled-registrations > summary:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: -3px; }
+

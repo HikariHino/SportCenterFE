@@ -784,3 +784,40 @@
 }
 
 
+.fdesk-counter-payment-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--manager-border, #e2e8f0);
+  border-radius: 10px;
+  color: var(--manager-text, #0f172a);
+  cursor: pointer;
+}
+
+.fdesk-counter-payment-confirm input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.fdesk-counter-payment-confirm span {
+  display: grid;
+  gap: 4px;
+}
+
+.fdesk-counter-payment-confirm small {
+  color: var(--manager-secondary, #64748b);
+  line-height: 1.5;
+}
+
+.fdesk-package-card .fdesk-package-registration-reason {
+  margin: 8px 0 0;
+  color: var(--theme-red, #b42318);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.fdesk-order-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.fdesk-order-actions .fdesk-btn { padding: 6px 12px; font-size: 12px; }
