@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, CircleAlert, Clock3, PencilLine, Plus, Sparkles, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
-import { checkInCoachRegistration, getCoachClasses, getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
+import { checkInCoachRegistration, getCoachClassDetails, getCoachClasses, getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
 import { createTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { getWorkoutRecommendation, getWorkoutRecommendationError } from '../../services/aiService'
 import { aiTrainingPlanDemoSteps } from '../../utils/aiTrainingPlanDemo'
@@ -80,6 +80,7 @@ function WorkoutRecommendationResult({ recommendation, startDate, endDate, onClo
 
 function TrainingPlanDialog({ student, onClose, onCreated }) {
   const aiDemoRunRef = useRef(0)
+  const aiRequestControllerRef = useRef(null)
   const today = new Date()
   const defaultEndDate = new Date(today)
   defaultEndDate.setDate(defaultEndDate.getDate() + 28)
@@ -104,6 +105,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
 
   useEffect(() => () => {
     aiDemoRunRef.current += 1
+    aiRequestControllerRef.current?.abort()
   }, [])
 
   useEffect(() => {
@@ -165,6 +167,9 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
     let recommendationRequest
     try {
       const goal = trainingGoalLabel(form.goal)
+      aiRequestControllerRef.current?.abort()
+      const controller = new AbortController()
+      aiRequestControllerRef.current = controller
       recommendationRequest = getWorkoutRecommendation({
         memberId: student.memberId,
         goal: buildWorkoutGoalContext({
@@ -175,7 +180,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
         }),
         level: aiOptions.level,
         daysPerWeek: aiOptions.daysPerWeek,
-      }).then(answer => ({ answer: { ...answer, goal, sportName: registeredSportName } })).catch(requestError => ({ requestError }))
+      }, { signal: controller.signal }).then(answer => ({ answer: { ...answer, goal, sportName: registeredSportName } })).catch(requestError => ({ requestError }))
     } catch (requestError) {
       setError(getWorkoutRecommendationError(requestError))
       return
@@ -192,6 +197,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
 
     if (aiDemoRunRef.current !== runId) return
     const result = await recommendationRequest
+    aiRequestControllerRef.current = null
     if (aiDemoRunRef.current !== runId) return
     if (result.requestError) {
       setAiDemoProgress(null)
@@ -262,6 +268,14 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
   }
 
   const aiDemoLoading = aiDemoProgress !== null
+  const stopAiRecommendation = () => {
+    aiDemoRunRef.current += 1
+    aiRequestControllerRef.current?.abort()
+    aiRequestControllerRef.current = null
+    setAiDemoProgress(null)
+    setAiDemoMessage('')
+    setError('Đã dừng tạo giáo án bằng AI.')
+  }
 
   return <div className="coach-plan-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving && !aiDemoLoading) onClose() }}>
     <section className="coach-plan-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-plan-title">
@@ -307,7 +321,8 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
             return <li className={state} key={step}><span>{state === 'done' ? <CheckCircle2 size={15} /> : index + 1}</span>{step.replace(/^Đang /, '')}</li>
           })}
         </ol>
-        <small>Đang gửi yêu cầu tới dịch vụ AI của Sports Center.</small>
+        <small>AI có tối đa 35 giây để phản hồi.</small>
+        <button type="button" className="coach-ai-progress-cancel" onClick={stopAiRecommendation}>Dừng tạo</button>
       </section>
     </div>}
   </div>
@@ -439,7 +454,17 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
         const result = sessionResult.value
         if (!active) return
         setSessions(result.items)
-        setClassCatalog(classResult.status === 'fulfilled' ? classResult.value.items : [])
+        const listedClasses = classResult.status === 'fulfilled' ? classResult.value.items : []
+        const listedClassIds = new Set(listedClasses.map(item => String(item.id)))
+        const missingClassIds = [...new Set(result.items
+          .map(session => String(session.classId || ''))
+          .filter(classId => classId && !listedClassIds.has(classId)))]
+        const missingClassResults = await Promise.allSettled(missingClassIds.map(getCoachClassDetails))
+        if (!active) return
+        setClassCatalog([
+          ...listedClasses,
+          ...missingClassResults.filter(item => item.status === 'fulfilled').map(item => item.value),
+        ])
         const restoredSession = result.items.find(session => String(session.id) === String(selectedSessionId))
         if (restoredSession) {
           setSelectedClassId(String(restoredSession.classId))

@@ -11,6 +11,23 @@ export async function getCoachClasses({ page = 1, pageSize = 100 } = {}) {
   }
 }
 
+/** GET /api/classes/{id} — lấy cả lớp cũ không còn xuất hiện trong danh mục đang mở. */
+export async function getCoachClassDetails(classId) {
+  const normalizedClassId = Number(classId)
+  if (!Number.isSafeInteger(normalizedClassId) || normalizedClassId < 1) {
+    throw new Error('Không xác định được lớp học để lấy bộ môn.')
+  }
+
+  const response = await api.get(`/classes/${normalizedClassId}`)
+  const body = response.data
+  if (body?.success === false) throw new Error(body.message || 'Không thể tải thông tin lớp học.')
+  const payload = body?.data ?? body
+  if (!payload || Number(payload.id) !== normalizedClassId) {
+    throw new Error('Thông tin lớp học không hợp lệ.')
+  }
+  return payload
+}
+
 export async function getMyCoachSessions({ from, to, page = 1, pageSize = 100 }) {
   const response = await api.get('/class-sessions/mine', {
     params: { from, to, page, pageSize },
