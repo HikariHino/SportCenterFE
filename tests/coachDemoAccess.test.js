@@ -17,7 +17,7 @@ test('only the Coach demo location can suppress development auth redirects', () 
 
 test('AI plan preview creates a demo student only for the explicit development URL', () => {
   assert.deepEqual(getCoachPlanDemoStudent('?demo=coach&planDemo=ai', true), {
-    memberId: 'DEMO', name: 'Học viên Demo', isDemo: true,
+    memberId: 'DEMO', name: 'Học viên Demo', className: 'Gym Demo', sportName: 'Gym', isDemo: true,
   })
   assert.equal(getCoachPlanDemoStudent('?demo=coach&planDemo=ai', false), null)
   assert.equal(getCoachPlanDemoStudent('?demo=coach', true), null)

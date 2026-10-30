@@ -73,6 +73,18 @@ test('exercise count and available catalog names are included in the supported A
   assert.throws(() => buildWorkoutGoalContext({ goal: 'Tăng cơ', exercisesPerSession: 0 }), /1 đến 10/)
 })
 
+test('Coach workout context includes the sport of the selected student registration', () => {
+  const context = buildWorkoutGoalContext({
+    goal: 'Tăng sức bền',
+    sportName: 'Yoga',
+    exercisesPerSession: 4,
+    exerciseCatalog: [{ exerciseName: 'Plank' }],
+  })
+
+  assert.equal(context, 'Tăng sức bền. Bộ môn: Yoga. Mỗi buổi phải có đúng 4 bài tập. Chỉ dùng tên bài trong kho: Plank')
+  assert.ok(context.length <= 200)
+})
+
 test('AI exercises are added to the training plan using matching catalog IDs', () => {
   const recommendation = {
     sessions: [

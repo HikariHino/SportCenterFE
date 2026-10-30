@@ -6,7 +6,7 @@ test('AI training plan demo exposes the expected progress stages', () => {
   assert.deepEqual(aiTrainingPlanDemoSteps, [
     'Đang lấy mục tiêu của học viên',
     'Đang xác định thời gian giáo án',
-    'Đang lấy môn thể thao đã chọn',
+    'Đang lấy bộ môn học viên đăng ký với Coach',
     'Đang hoàn thiện gợi ý bài tập',
   ])
 })
