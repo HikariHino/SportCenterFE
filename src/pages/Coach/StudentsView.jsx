@@ -59,6 +59,7 @@ function WorkoutRecommendationResult({ recommendation, startDate, endDate, onClo
     <header><span><Sparkles size={16} />Gợi ý từ AI</span><button type="button" aria-label="Đóng gợi ý AI" onClick={onClose}><X size={15} /></button></header>
     <div className="coach-plan-ai-summary">
       <span><small>Mục tiêu</small><strong>{recommendation.goal}</strong></span>
+      <span><small>Bộ môn</small><strong>{recommendation.sportName || 'Chưa xác định'}</strong></span>
       <span><small>Trình độ</small><strong>{workoutLevelLabels[recommendation.level] || recommendation.level}</strong></span>
       <span><small>Lịch tập</small><strong>{recommendation.daysPerWeek} buổi/tuần</strong></span>
       <span><small>Số bài</small><strong>{recommendation.exercisesPerSession} bài/buổi</strong></span>
@@ -99,6 +100,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
   const [aiDemoProgress, setAiDemoProgress] = useState(null)
   const [aiRecommendation, setAiRecommendation] = useState(null)
   const [aiOptions, setAiOptions] = useState({ level: 'Beginner', daysPerWeek: 3, exercisesPerSession: 5 })
+  const registeredSportName = String(student.sportName || '').trim()
 
   useEffect(() => () => {
     aiDemoRunRef.current += 1
@@ -146,6 +148,10 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
       setError('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.')
       return
     }
+    if (!registeredSportName) {
+      setError('Không xác định được bộ môn học viên đang đăng ký với Coach trong lớp đã chọn.')
+      return
+    }
     if (catalogLoading || !exerciseCatalog.length) {
       setError(catalogError || 'Kho bài tập chưa sẵn sàng. Vui lòng thử lại sau khi tải xong.')
       return
@@ -163,12 +169,13 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
         memberId: student.memberId,
         goal: buildWorkoutGoalContext({
           goal,
+          sportName: registeredSportName,
           exercisesPerSession,
           exerciseCatalog,
         }),
         level: aiOptions.level,
         daysPerWeek: aiOptions.daysPerWeek,
-      }).then(answer => ({ answer: { ...answer, goal } })).catch(requestError => ({ requestError }))
+      }).then(answer => ({ answer: { ...answer, goal, sportName: registeredSportName } })).catch(requestError => ({ requestError }))
     } catch (requestError) {
       setError(getWorkoutRecommendationError(requestError))
       return
@@ -204,7 +211,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
       ? ` ${mappedResult.unmatchedNames.length} bài chưa có trong kho nên chưa được thêm: ${mappedResult.unmatchedNames.join(', ')}.`
       : ''
     setAiDemoMessage(mappedResult.exercises.length
-      ? `Đã dùng mục tiêu, trình độ, ${aiOptions.daysPerWeek} buổi/tuần, ${exercisesPerSession} bài/buổi và thời gian ${form.startDate} – ${form.endDate}; ${mappedResult.exercises.length} bài tập đã được thêm vào giáo án.${missingMessage}`
+      ? `Đã dùng bộ môn ${registeredSportName}, mục tiêu, trình độ, ${aiOptions.daysPerWeek} buổi/tuần, ${exercisesPerSession} bài/buổi và thời gian ${form.startDate} – ${form.endDate}; ${mappedResult.exercises.length} bài tập đã được thêm vào giáo án.${missingMessage}`
       : `AI đã tạo gợi ý nhưng chưa có tên bài nào khớp kho bài tập.${missingMessage}`)
   }
 
@@ -258,8 +265,13 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
 
   return <div className="coach-plan-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving && !aiDemoLoading) onClose() }}>
     <section className="coach-plan-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-plan-title">
-      <header><div><span>TẠO GIÁO ÁN</span><h2 id="coach-plan-title">{student.name}</h2><p>Member #{student.memberId}</p></div><button type="button" aria-label="Đóng tạo giáo án" disabled={saving || aiDemoLoading} onClick={onClose}><X size={19} /></button></header>
+      <header><div><span>TẠO GIÁO ÁN</span><h2 id="coach-plan-title">{student.name}</h2><p>Member #{student.memberId}{registeredSportName ? ` · ${registeredSportName}` : ''}</p></div><button type="button" aria-label="Đóng tạo giáo án" disabled={saving || aiDemoLoading} onClick={onClose}><X size={19} /></button></header>
       <form onSubmit={handleSubmit}>
+        <div className={`coach-plan-sport-context ${registeredSportName ? '' : 'is-missing'}`}>
+          <span>BỘ MÔN ĐANG ĐĂNG KÝ VỚI COACH</span>
+          <strong>{registeredSportName || 'Chưa xác định được bộ môn'}</strong>
+          <small>{student.className ? `Lớp ${student.className}` : 'Hãy mở giáo án từ học viên trong một buổi huấn luyện cụ thể.'}</small>
+        </div>
         <div className="coach-plan-form-grid"><label><span>Tên giáo án</span><input value={form.planName} maxLength={150} onChange={event => setForm(current => ({ ...current, planName: event.target.value }))} /></label><label><span>Mục tiêu</span><select value={form.goal} onChange={event => setForm(current => ({ ...current, goal: event.target.value }))}>{trainingGoals.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>Ngày bắt đầu</span><input type="date" value={form.startDate} onChange={event => setForm(current => ({ ...current, startDate: event.target.value }))} /></label><label><span>Ngày kết thúc</span><input type="date" min={form.startDate} value={form.endDate} onChange={event => setForm(current => ({ ...current, endDate: event.target.value }))} /></label></div>
         <div className="coach-plan-ai-demo">
           <span><Sparkles size={19} /><span><strong>Trợ lý giáo án AI</strong><small>AI tạo gợi ý để Coach xem trước, không tự động lưu.</small></span></span>
@@ -267,7 +279,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
             <label><span>Trình độ</span><select value={aiOptions.level} onChange={event => setAiOptions(current => ({ ...current, level: event.target.value }))}><option value="Beginner">Mới bắt đầu</option><option value="Intermediate">Trung cấp</option><option value="Advanced">Nâng cao</option></select></label>
             <label><span>Buổi/tuần</span><input type="number" min="1" max="7" value={aiOptions.daysPerWeek} onChange={event => setAiOptions(current => ({ ...current, daysPerWeek: event.target.value }))} /></label>
             <label><span>Số bài/buổi</span><input type="number" min="1" max="10" value={aiOptions.exercisesPerSession} onChange={event => setAiOptions(current => ({ ...current, exercisesPerSession: event.target.value }))} /></label>
-            <button type="button" disabled={saving || aiDemoLoading || catalogLoading || !exerciseCatalog.length || student.isDemo} onClick={applyAiDemo}><Sparkles size={15} />{aiDemoLoading ? 'Đang tạo...' : 'Tạo bằng AI'}</button>
+            <button type="button" disabled={saving || aiDemoLoading || catalogLoading || !exerciseCatalog.length || !registeredSportName || student.isDemo} onClick={applyAiDemo}><Sparkles size={15} />{aiDemoLoading ? 'Đang tạo...' : 'Tạo bằng AI'}</button>
           </div>
         </div>
         {aiDemoMessage && <p className="coach-plan-ai-message" role="status" aria-live="polite">{aiDemoMessage}</p>}
@@ -455,6 +467,8 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
       if (!values.has(classId)) values.set(classId, {
         id: classId,
         className: session.className || catalogClass?.className || `Lớp #${classId}`,
+        sportId: session.sportId || catalogClass?.sportId || null,
+        sportName: session.sportName || catalogClass?.sportName || '',
       })
     })
     return [...values.values()].sort((left, right) => left.className.localeCompare(right.className, 'vi'))
@@ -516,6 +530,7 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
   })
   const selected = students.find(student => student.id === selectedId)
   const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
+  const selectedClass = classes.find(item => String(item.id) === String(selectedSession?.classId))
   const selectionEmptyTitle = !selectedClassId ? 'Chọn lớp huấn luyện' : !selectedDate ? 'Chọn ngày tập' : 'Chọn khung giờ'
   const selectionEmptyText = !selectedClassId
     ? 'Chọn lớp Coach đang phụ trách để xem các ngày tập.'
@@ -579,7 +594,7 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
       </section>
 
       <aside className="coach-card coach-student-profile">
-        {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div>{checkInError && <p className="coach-profile-action-error" role="alert">{checkInError}</p>}<div className="coach-profile-actions"><button type="button" disabled={selected.attendanceTone !== 'pending' || checkingInRegistrationId !== null} onClick={() => handleCheckIn(selected)}><UserCheck size={15} />{checkingInRegistrationId === selected.registrationId ? 'Đang check-in...' : selected.attendanceTone === 'pending' ? 'Check-in học viên' : 'Đã check-in'}</button><button type="button" onClick={() => setPlanStudent(selected)}><Plus size={15} />Tạo giáo án</button><button type="button" onClick={() => setPlansStudent(selected)}><BookOpen size={15} />Xem giáo án</button></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
+        {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}{selectedClass?.sportName ? ` · ${selectedClass.sportName}` : ''}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div>{checkInError && <p className="coach-profile-action-error" role="alert">{checkInError}</p>}<div className="coach-profile-actions"><button type="button" disabled={selected.attendanceTone !== 'pending' || checkingInRegistrationId !== null} onClick={() => handleCheckIn(selected)}><UserCheck size={15} />{checkingInRegistrationId === selected.registrationId ? 'Đang check-in...' : selected.attendanceTone === 'pending' ? 'Check-in học viên' : 'Đã check-in'}</button><button type="button" onClick={() => setPlanStudent({ ...selected, classId: selectedClass?.id || selectedSession?.classId, className: selectedClass?.className || selectedSession?.className, sportId: selectedClass?.sportId || selectedSession?.sportId, sportName: selectedClass?.sportName || selectedSession?.sportName || '' })}><Plus size={15} />Tạo giáo án</button><button type="button" onClick={() => setPlansStudent(selected)}><BookOpen size={15} />Xem giáo án</button></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </aside>
     </div>
     </>}

@@ -10,5 +10,5 @@ export function isCoachDemoLocation(location, isDevelopment) {
 export function getCoachPlanDemoStudent(search, isDevelopment) {
   const params = new URLSearchParams(search)
   if (!canUseCoachDemo(search, isDevelopment) || params.get('planDemo') !== 'ai') return null
-  return { memberId: 'DEMO', name: 'Học viên Demo', isDemo: true }
+  return { memberId: 'DEMO', name: 'Học viên Demo', className: 'Gym Demo', sportName: 'Gym', isDemo: true }
 }

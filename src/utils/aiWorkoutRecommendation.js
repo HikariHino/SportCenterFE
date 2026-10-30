@@ -5,15 +5,16 @@ const promptCatalogName = value => String(value || '')
   .replace(/\s+/g, ' ')
   .trim()
 
-export function buildWorkoutGoalContext({ goal, exercisesPerSession, exerciseCatalog }) {
+export function buildWorkoutGoalContext({ goal, sportName, exercisesPerSession, exerciseCatalog }) {
   const normalizedGoal = String(goal || '').trim()
+  const normalizedSportName = String(sportName || '').trim()
   const normalizedCount = Number(exercisesPerSession)
   if (!normalizedGoal) throw new Error('Mục tiêu tập luyện không hợp lệ.')
   if (!Number.isSafeInteger(normalizedCount) || normalizedCount < 1 || normalizedCount > 10) {
     throw new Error('Số bài mỗi buổi phải từ 1 đến 10.')
   }
 
-  let context = `${normalizedGoal}. Mỗi buổi phải có đúng ${normalizedCount} bài tập.`
+  let context = `${normalizedGoal}.${normalizedSportName ? ` Bộ môn: ${normalizedSportName}.` : ''} Mỗi buổi phải có đúng ${normalizedCount} bài tập.`
   const names = [...new Set((Array.isArray(exerciseCatalog) ? exerciseCatalog : [])
     .map(item => promptCatalogName(item?.exerciseName))
     .filter(Boolean))]
