@@ -10,6 +10,8 @@ services:
     envVars:
       - key: VITE_API_BASE
         value: https://sportscenterbe-2.onrender.com/api
+      - key: VITE_GOOGLE_CLIENT_ID
+        value: 1077200298696-38gkrj4g532iflase9la3crc3t6j4mla.apps.googleusercontent.com
     routes:
       - type: rewrite
         source: /*

@@ -289,6 +289,11 @@
 .coach-exercise-catalog-state { margin-top: 12px; padding: 12px; border: 1px dashed #d7dfeb; border-radius: 9px; color: #7e899b; background: #fafcff; font-size: 12px; text-align: center; }.coach-exercise-catalog-state.error { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-style: solid; border-color: #f0b7bd; color: #a62d3a; background: #fff0f2; text-align: left; }.coach-exercise-catalog-state button { flex-shrink: 0; min-height: 30px; padding: 0 10px; border: 1px solid currentColor; border-radius: 7px; color: inherit; background: transparent; font-size: 11px; font-weight: 800; }
 .coach-plan-exercises-empty { margin: 12px 0 0; padding: 16px; border: 1px dashed #d7dfeb; border-radius: 9px; color: #8792a5; background: #fafcff; font-size: 12px; text-align: center; }.coach-plan-form-error { margin-top: 14px; padding: 10px 12px; border: 1px solid #f0b7bd; border-radius: 8px; color: #a62d3a; background: #fff0f2; font-size: 12px; font-weight: 700; }
 .coach-plan-dialog form > footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding: 16px 0 0; border-top: 1px solid #e9edf4; background: transparent; }.coach-plan-dialog form > footer button { min-height: 37px; padding: 0 16px; border: 1px solid #d9e1ed; border-radius: 8px; color: #5d6a7f; background: #fff; font-size: 12px; font-weight: 800; }.coach-plan-dialog form > footer button[type='submit'] { border-color: var(--coach-blue); color: #fff; background: var(--coach-blue); }.coach-plan-dialog form > footer button:disabled { opacity: .6; cursor: wait; }
+.coach-plan-create-dialog { display: flex; flex-direction: column; max-height: min(760px, calc(100dvh - 48px)); overflow: hidden; }
+.coach-plan-create-dialog > header { flex-shrink: 0; }
+.coach-plan-create-dialog > form { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
+.coach-plan-form-body { min-height: 0; padding: 20px 21px; overflow-y: auto; overscroll-behavior: contain; }
+.coach-plan-create-dialog > form > footer { flex-shrink: 0; margin-top: 0; padding: 16px 21px; background: var(--theme-surface, #fff); }
 .coach-plan-list-body { padding: 18px 21px 21px; }
 .coach-plan-list-state { min-height: 260px; display: grid; place-items: center; align-content: center; gap: 8px; color: #8792a5; text-align: center; }.coach-plan-list-state > svg { color: var(--coach-blue); }.coach-plan-list-state strong { color: var(--coach-ink); font-size: 15px; }.coach-plan-list-state span { max-width: 340px; font-size: 12px; line-height: 1.55; }.coach-plan-list-state button { min-height: 34px; margin-top: 3px; padding: 0 13px; border: 1px solid #c8d7f3; border-radius: 7px; color: var(--coach-blue); background: #f1f5ff; font-size: 12px; font-weight: 800; }
 .coach-member-plan-list { display: grid; gap: 12px; }.coach-member-plan { overflow: hidden; border: 1px solid #e1e7f0; border-radius: 11px; background: #fbfcff; }.coach-member-plan > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 15px; border-bottom: 1px solid #e9edf4; }.coach-member-plan > header span { color: var(--coach-blue); font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }.coach-member-plan > header h3 { margin: 4px 0 0; font-size: 15px; }.coach-member-plan > header b { flex-shrink: 0; padding: 5px 8px; border-radius: 20px; color: #697386; background: #edf1f6; font-size: 11px; }.coach-member-plan > header b.active { color: #087857; background: #e3f8f0; }
@@ -414,6 +419,10 @@
   .coach-plan-dialog-backdrop { padding: 10px; }
   .coach-plan-dialog { max-height: calc(100vh - 20px); }
   .coach-plan-dialog > header, .coach-plan-dialog form, .coach-plan-list-body { padding: 15px; }
+  .coach-plan-create-dialog { max-height: calc(100dvh - 20px); }
+  .coach-plan-create-dialog > form { padding: 0; }
+  .coach-plan-form-body { padding: 15px; }
+  .coach-plan-create-dialog > form > footer { padding: 15px; }
   .coach-member-plan-meta { grid-template-columns: 1fr; }
   .coach-member-exercise-head { align-items: flex-start; flex-direction: column; gap: 8px; }
   .coach-member-exercise-head > button { width: 100%; justify-content: center; }
@@ -585,6 +594,13 @@
 [data-theme='dark'] .coach-schedule-detail-heading>b.live { color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .coach-schedule-detail-heading>b.done { color:var(--theme-muted); background:var(--theme-raised); }
 [data-theme='dark'] .coach-schedule-detail-heading>b.cancelled { color:var(--theme-red); background:var(--theme-red-bg); }
+[data-theme='dark'] .coach-plan-sport-context { border-color:var(--theme-border); background:var(--theme-blue-bg); }
+[data-theme='dark'] .coach-plan-sport-context>span { color:var(--theme-accent); }
+[data-theme='dark'] .coach-plan-sport-context>strong { color:var(--theme-text); }
+[data-theme='dark'] .coach-plan-sport-context>small { color:var(--theme-muted); }
+[data-theme='dark'] .coach-plan-sport-context.is-missing { background:var(--theme-red-bg); }
+[data-theme='dark'] .coach-plan-sport-context.is-missing>span,
+[data-theme='dark'] .coach-plan-sport-context.is-missing>strong { color:var(--theme-red); }
 @media(max-width:760px) {
   .coach-schedule-detail-heading { display:grid; gap:10px; }
   .coach-schedule-detail-heading h2 { font-size:21px; }
