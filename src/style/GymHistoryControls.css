@@ -1,0 +1,19 @@
+.gym-history-query { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px 12px; padding: 14px 16px; border: 1px solid var(--theme-border, #d8e0ed); border-radius: 10px; background: var(--theme-surface, #fff); color: var(--theme-text, #17243c); }
+.gym-history-query > label { display: flex; flex-direction: column; gap: 6px; min-width: 140px; font-size: 11px; font-weight: 600; }
+.gym-history-query :is(input, select) { box-sizing: border-box; width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--theme-border, #c6d0de); border-radius: 7px; background: var(--theme-bg, #f5f7fb); color: inherit; font: inherit; font-size: 12px; }
+.gym-history-query > .gym-history-search { flex: 1 1 210px; }
+.gym-history-query button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 8px 11px; border: 1px solid var(--theme-border, #c6d0de); border-radius: 7px; background: var(--theme-surface, #fff); color: var(--theme-text, #17243c); font: inherit; font-size: 11px; cursor: pointer; }
+.gym-history-query button[type='submit'] { background: #1557d5; border-color: #1557d5; color: #fff; }
+.gym-history-query button[type='submit']:hover:enabled { background: #1044a8; border-color: #1044a8; }
+.gym-history-query button:hover:enabled { border-color: var(--theme-accent, #1557d5); }
+.gym-history-query button:disabled { opacity: .5; cursor: not-allowed; }
+.gym-history-presets { display: flex; flex-wrap: wrap; gap: 5px; }
+.gym-history-range-error { flex-basis: 100%; margin: 0; color: var(--theme-red, #b42318); font-size: 11px; }
+.gym-checkin-status { display: inline-flex; align-items: center; width: fit-content; padding: 5px 9px; border-radius: 20px; color: var(--theme-muted, #475569); background: var(--theme-raised, #edf2fa); font-size: 11px; font-weight: 600; line-height: 1.6; white-space: nowrap; }
+.gym-checkin-status[data-status='InGym'] { color: var(--theme-green, #096445); background: var(--theme-green-bg, #e1f6ee); }
+.gym-checkin-status[data-status='ForgotCheckOut'] { color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fff0f0); }
+@media (max-width: 600px) {
+  .gym-history-query { gap: 10px; padding: 12px; }
+  .gym-history-query > label { flex: 1 1 130px; min-width: 0; }
+  .gym-history-presets { flex: 1 1 100%; }
+}

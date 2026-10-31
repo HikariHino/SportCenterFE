@@ -1,0 +1,19 @@
+.fdesk-gym-history { min-width: 0; }
+.fdesk-gym-history .fdesk-card-header h3 { display: flex; align-items: center; gap: 8px; }
+.fdesk-gym-history .fdesk-card-header p { margin-top: 5px; color: var(--manager-muted, #748096); font-size: 12px; line-height: 1.7; }
+.fdesk-gym-history-body { display: grid; gap: 12px; padding: 16px 20px; }
+.fdesk-gym-history-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
+.fdesk-gym-history-tabs > button { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 8px 12px; border: 1px solid var(--manager-line, #d8e0ed); border-radius: 8px; background: var(--manager-surface, #fff); color: var(--manager-text, #17243c); font: inherit; font-size: 12px; cursor: pointer; }
+.fdesk-gym-history-tabs > button[aria-pressed='true'] { color: var(--manager-blue, #2463eb); border-color: var(--manager-blue, #2463eb); background: var(--manager-info-bg, #eff6ff); }
+.fdesk-gym-history-count { font-size: 12px; color: var(--manager-secondary, #64748b); }
+.fdesk-gym-history-state { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; padding: 36px 20px; color: var(--manager-muted, #748096); font-size: 13px; }
+.fdesk-gym-history-state.is-error { color: var(--manager-danger, #b42318); }
+.fdesk-gym-history-table { min-width: 900px; }
+.fdesk-gym-history-table td { vertical-align: middle; }
+.fdesk-gym-history-table td > small { display: block; margin-top: 4px; color: var(--manager-muted, #748096); }
+.fdesk-gym-history-table .fdesk-btn { white-space: nowrap; }
+.fdesk-gym-history-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--manager-line, #d8e0ed); font-size: 12px; color: var(--manager-muted, #748096); }
+.fdesk-gym-history-pagination > div { display: flex; gap: 6px; }
+.fdesk-gym-today-fallback > summary { padding: 14px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.fdesk-gym-today-fallback > p { padding: 0 20px 14px; font-size: 12px; color: var(--manager-muted, #748096); }
+@media (max-width: 600px) { .fdesk-gym-history-body { padding: 12px; } }

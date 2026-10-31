@@ -1,28 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
 import QRCode from 'qrcode'
 import { getMyQrCode, getMyGymCheckInHistory, getCheckInErrorMessage } from '../../services/gymCheckInService'
+import { GymCheckInStatus, GymDateRangeFields } from '../../components/GymHistoryControls'
+import { formatGymDate, GYM_TIME_ZONE, gymCheckInStatus, gymDateRangeReason, gymDurationLabel, gymDurationMinutes, gymTimestamp } from '../../utils/gymCheckInHistory'
 import '../../style/member/GymCheckInView.css'
 
 const PAGE_SIZE = 10
 
 function formatDate(value, dateOnly = false) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleString('vi-VN', dateOnly
-    ? { dateStyle: 'short' }
-    : { dateStyle: 'short', timeStyle: 'short' })
+  return formatGymDate(value, dateOnly)
 }
 
 function duration(item) {
-  if (!item.checkOutTime) return '—'
-  const start = new Date(item.checkInTime).getTime()
-  const end = new Date(item.checkOutTime).getTime()
-  if (!item.checkInTime || !Number.isFinite(start) || !Number.isFinite(end) || end < start) return '—'
-  const minutes = Math.floor((end - start) / 60000)
-  if (minutes < 1) return 'Dưới 1 phút'
-  return minutes < 60 ? `${minutes} phút` : `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`
+  return gymDurationLabel(gymDurationMinutes(item))
 }
 
 function packageLabel(status) {
@@ -33,8 +24,8 @@ function packageLabel(status) {
   return labels[String(status || '').toLowerCase()] || status || 'Chưa có thông tin gói tập'
 }
 
-async function loadQr() {
-  const info = await getMyQrCode()
+async function loadQr(options) {
+  const info = await getMyQrCode(options)
   if (typeof info?.qrData !== 'string' || !info.qrData.trim()) {
     throw new Error('Chưa có mã QR thẻ số. Vui lòng liên hệ lễ tân để kiểm tra thông tin hội viên.')
   }
@@ -52,13 +43,14 @@ function useGymData(loader, fallback) {
 
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
     setState({ data: null, loading: true, error: '' })
-    loader().then(data => {
+    loader({ signal: controller.signal }).then(data => {
       if (active) setState({ data, loading: false, error: '' })
     }).catch(error => {
       if (active) setState({ data: null, loading: false, error: getCheckInErrorMessage(error, fallback) })
     })
-    return () => { active = false }
+    return () => { active = false; controller.abort() }
   }, [loader, fallback, revision])
 
   return { ...state, reload: () => setRevision(value => value + 1) }
@@ -80,12 +72,16 @@ function ErrorState({ message, retry }) {
 
 export function GymCheckInView() {
   const qr = useGymData(loadQr, 'Không thể tải mã QR hội viên.')
-  const history = useGymData(getMyGymCheckInHistory, 'Không thể tải lịch sử ra/vào phòng gym.')
-  const [filter, setFilter] = useState('all')
+  const [dateRange, setDateRange] = useState({ fromDate: '', toDate: '' })
+  const [dateDraft, setDateDraft] = useState(dateRange)
+  const [rangeError, setRangeError] = useState('')
+  const historyLoader = useCallback(options => getMyGymCheckInHistory(dateRange, options), [dateRange])
+  const history = useGymData(historyLoader, 'Không thể tải lịch sử ra/vào phòng gym.')
+  const [filter, setFilter] = useState('All')
   const [page, setPage] = useState(1)
   const records = [...(history.data || [])].sort((a, b) =>
-    (Date.parse(b.checkInTime) || 0) - (Date.parse(a.checkInTime) || 0))
-  const filtered = records.filter(item => filter === 'all' || (filter === 'completed' ? Boolean(item.checkOutTime) : !item.checkOutTime))
+    (gymTimestamp(b.checkInTime) || 0) - (gymTimestamp(a.checkInTime) || 0))
+  const filtered = records.filter(item => filter === 'All' || gymCheckInStatus(item) === filter)
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const visibleRecords = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -97,13 +93,20 @@ export function GymCheckInView() {
   }
 
   const latest = records[0]
-  const completed = records.filter(item => item.checkOutTime).length
+  const completed = records.filter(item => gymCheckInStatus(item) === 'CheckedOut').length
+  const forgotten = records.filter(item => gymCheckInStatus(item) === 'ForgotCheckOut').length
   const historyReady = !history.loading && !history.error
   const filters = [
-    { value: 'all', label: 'Tất cả', count: records.length },
-    { value: 'ongoing', label: 'Chưa check-out', count: records.length - completed },
-    { value: 'completed', label: 'Đã hoàn tất', count: completed },
+    { value: 'All', label: 'Tất cả', count: records.length },
+    { value: 'InGym', label: 'Đang tập', count: records.filter(item => gymCheckInStatus(item) === 'InGym').length },
+    { value: 'CheckedOut', label: 'Đã ra về', count: completed },
+    { value: 'ForgotCheckOut', label: 'Quên check-out', count: forgotten },
   ]
+  const applyRange = value => {
+    const reason = gymDateRangeReason(value)
+    setRangeError(reason)
+    if (!reason) { setDateRange(value); setDateDraft(value); setPage(1) }
+  }
 
   return (
     <div className="gym-checkin-view">
@@ -118,8 +121,14 @@ export function GymCheckInView() {
         </button>
       </header>
 
+      <form className="gym-history-query" aria-label="Lọc lịch sử tập luyện theo ngày Việt Nam" onSubmit={event => { event.preventDefault(); applyRange(dateDraft) }}>
+        <GymDateRangeFields value={dateDraft} onChange={setDateDraft} onPreset={applyRange} />
+        <button type="submit">Xem lịch sử</button>
+        {rangeError && <p className="gym-history-range-error" role="alert">{rangeError}</p>}
+      </form>
+
       <section className="gym-stats" aria-label="Tổng quan tập luyện">
-        {[{ label: 'Tổng lượt tập', value: records.length, icon: History }, { label: 'Đã hoàn tất', value: completed, icon: CheckCircle2 }, { label: 'Chưa check-out', value: records.length - completed, icon: Clock3 }].map(({ label, value, icon: Icon }) =>
+        {[{ label: dateRange.fromDate || dateRange.toDate ? 'Lượt tập trong khoảng chọn' : 'Tổng lượt tập', value: records.length, icon: History }, { label: 'Đã ra về', value: completed, icon: CheckCircle2 }, { label: 'Quên check-out', value: forgotten, icon: Clock3 }].map(({ label, value, icon: Icon }) =>
           <div className="gym-panel" key={label}><Icon size={18} /><span>{label}</span><strong>{historyReady ? value : '—'}</strong></div>
         )}
       </section>
@@ -149,7 +158,7 @@ export function GymCheckInView() {
 
         <div className="gym-checkin-side">
           <section className="gym-panel gym-latest" aria-labelledby="gym-latest-title" aria-busy={history.loading}>
-            <div className="gym-card-heading"><h3 id="gym-latest-title"><Clock3 size={18} /> Lượt tập gần nhất</h3>{historyReady && latest && <SessionStatus item={latest} />}</div>
+            <div className="gym-card-heading"><h3 id="gym-latest-title"><Clock3 size={18} /> Lượt gần nhất trong lịch sử đang xem</h3>{historyReady && latest && <SessionStatus item={latest} />}</div>
             {history.loading ? <LoadingState>Đang tải thông tin lượt tập...</LoadingState>
               : history.error ? <ErrorState message={history.error} retry={reloadHistory} />
                 : latest ? <>
@@ -160,7 +169,7 @@ export function GymCheckInView() {
                     <div><span>Thời lượng</span><strong>{duration(latest)}</strong></div>
                   </div>
                   {!latest.checkOutTime && <p className="gym-latest-note">Lượt tập này chưa được ghi nhận giờ ra. Khi kết thúc, hãy nhờ lễ tân xác nhận check-out.</p>}
-                </> : <div className="gym-checkin-state"><History size={28} /><p>Chưa có lượt tập nào được ghi nhận.<br />Xuất trình thẻ QR tại lễ tân để bắt đầu buổi tập đầu tiên.</p></div>}
+                </> : <div className="gym-checkin-state"><History size={28} /><p>Không có lượt tập trong khoảng ngày đã chọn.</p></div>}
           </section>
 
           <details className="gym-panel gym-checkin-guide">
@@ -185,7 +194,7 @@ export function GymCheckInView() {
         <div className="gym-panel gym-history-content">
           {history.loading ? <LoadingState>Đang tải lịch sử tập luyện...</LoadingState>
             : history.error ? <ErrorState message={history.error} retry={reloadHistory} />
-              : filtered.length === 0 ? <div className="gym-checkin-state" role="status"><History size={30} /><strong>{records.length ? 'Chưa có lượt tập phù hợp' : 'Lịch sử tập luyện đang trống'}</strong><p>{records.length ? 'Thử chọn trạng thái khác để xem các lượt tập của bạn.' : 'Các lượt vào và ra sẽ xuất hiện ở đây sau khi lễ tân ghi nhận.'}</p>{filter !== 'all' && <button type="button" className="gym-button" onClick={() => { setFilter('all'); setPage(1) }}>Xem tất cả lượt tập</button>}</div>
+              : filtered.length === 0 ? <div className="gym-checkin-state" role="status"><History size={30} /><strong>Không có lượt tập phù hợp</strong><p>Thử đổi khoảng ngày hoặc trạng thái để xem các lượt tập của bạn.</p>{filter !== 'All' && <button type="button" className="gym-button" onClick={() => { setFilter('All'); setPage(1) }}>Xem tất cả trạng thái</button>}</div>
                 : <>
                   <div className="gym-history-labels" aria-hidden="true"><span>Ngày tập</span><span>Giờ vào / Giờ ra</span><span>Thời lượng</span><span>Trạng thái</span></div>
                   <ol className="gym-history-list" aria-label="Các lượt ra/vào phòng gym">
@@ -212,14 +221,14 @@ export function GymCheckInView() {
 }
 
 function SessionStatus({ item }) {
-  return <span className="gym-session-status" data-completed={Boolean(item.checkOutTime)}>{item.checkOutTime ? <CheckCircle2 size={14} /> : <Clock3 size={14} />}{item.checkOutTime ? 'Đã hoàn tất' : 'Chưa check-out'}</span>
+  return <GymCheckInStatus item={item} />
 }
 
 function VisitTime({ label, value, outgoing = false }) {
-  const date = new Date(value)
+  const date = new Date(gymTimestamp(value))
   const valid = value && !Number.isNaN(date.getTime())
   return <div className="gym-visit-time">
     <span>{outgoing ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}{label}</span>
-    {valid ? <time dateTime={value}><strong>{date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</strong><small>{formatDate(value, true)}</small></time> : <strong className="gym-time-missing">{outgoing ? 'Chưa ghi nhận' : '—'}</strong>}
+    {valid ? <time dateTime={value}><strong>{date.toLocaleTimeString('vi-VN', { timeZone: GYM_TIME_ZONE, hour: '2-digit', minute: '2-digit' })}</strong><small>{formatDate(value, true)}</small></time> : <strong className="gym-time-missing">{outgoing ? 'Chưa ghi nhận' : '—'}</strong>}
   </div>
 }
