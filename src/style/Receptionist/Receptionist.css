@@ -943,3 +943,6 @@
   .reception-active-session-actions { width:100%; }
   .reception-active-session-actions button { flex:1; justify-content:center; }
 }
+
+.reception-registration-card-actions button.checkin:disabled { opacity:.5; cursor:not-allowed; }
+.reception-registration-list .reception-registration-checkin-hint { margin:0; padding:0 13px 12px; color:var(--rc-muted); font-size:12px; line-height:1.5; }
