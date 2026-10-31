@@ -278,9 +278,9 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
   }
 
   return <div className="coach-plan-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving && !aiDemoLoading) onClose() }}>
-    <section className="coach-plan-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-plan-title">
+    <section className="coach-plan-dialog coach-plan-create-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-plan-title">
       <header><div><span>TẠO GIÁO ÁN</span><h2 id="coach-plan-title">{student.name}</h2><p>Member #{student.memberId}{registeredSportName ? ` · ${registeredSportName}` : ''}</p></div><button type="button" aria-label="Đóng tạo giáo án" disabled={saving || aiDemoLoading} onClick={onClose}><X size={19} /></button></header>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}><div className="coach-plan-form-body">
         <div className={`coach-plan-sport-context ${registeredSportName ? '' : 'is-missing'}`}>
           <span>BỘ MÔN ĐANG ĐĂNG KÝ VỚI COACH</span>
           <strong>{registeredSportName || 'Chưa xác định được bộ môn'}</strong>
@@ -304,6 +304,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
           {exercises.length ? exercises.map((exercise, index) => <article key={index}><div className="coach-plan-exercise-title"><strong>Bài tập {index + 1}</strong><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div><div><label className="exercise-picker"><span>Tên bài tập</span><select value={exercise.exerciseId} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} required><option value="">Chọn bài tập</option>{exerciseCatalog.map(option => <option value={option.id} key={option.id}>{option.exerciseName}{option.muscleGroup ? ` · ${option.muscleGroup}` : ''}</option>)}</select></label><label><span>Số hiệp</span><input type="number" min="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} required /></label><label><span>Số lần</span><input type="number" min="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} required /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={500} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article>) : !catalogLoading && !catalogError && exerciseCatalog.length ? <p className="coach-plan-exercises-empty">Nhấn “Thêm bài tập” để chọn bài tập theo tên từ kho.</p> : null}
         </div>
         {error && <div className="coach-plan-form-error" role="alert">{error}</div>}
+        </div>
         <footer><button type="button" disabled={saving || aiDemoLoading} onClick={onClose}>Hủy</button><button type="submit" disabled={saving || aiDemoLoading || student.isDemo}>{student.isDemo ? 'Bản xem trước · Không lưu' : saving ? 'Đang tạo...' : 'Tạo giáo án'}</button></footer>
       </form>
     </section>
