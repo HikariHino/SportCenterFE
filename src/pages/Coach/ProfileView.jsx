@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, IdCard, Mail, PencilLine, Phone, UserRound, X } from 'lucide-react'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
 import { getFullNameValidationError, getVietnamPhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_LENGTH } from '../../utils/profileValidation'
 import { ViewLoader } from './CoachViewShared'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
+import useCoachViewRefresh, { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
 
 const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -11,7 +12,7 @@ const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   year: 'numeric',
 })
 
-export function CoachProfileView({ showNotice }) {
+export function CoachProfileView({ active = true, showNotice }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -20,17 +21,22 @@ export function CoachProfileView({ showNotice }) {
   const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState('')
   const [form, setForm] = useState({ fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' })
+  const loaded = useRef(false)
+  const editingRef = useRef(false)
+  editingRef.current = editing || saving
+  const refreshKey = useCoachViewRefresh(active && !editing && !saving, 'profile')
 
   useEffect(() => {
     let active = true
     const loadProfile = async () => {
-      setLoading(true)
+      setLoading(!loaded.current)
       setError('')
       try {
         const result = await getProfile()
         if (active) {
+          loaded.current = true
           setProfile(result)
-          setForm({ fullName: result.fullName || '', email: result.email || '', phoneNumber: result.phoneNumber || '', currentPassword: '', password: '' })
+          if (!editingRef.current) setForm({ fullName: result.fullName || '', email: result.email || '', phoneNumber: result.phoneNumber || '', currentPassword: '', password: '' })
         }
       } catch (requestError) {
         if (active) setError(getProfileErrorMessage(requestError, 'Không thể tải hồ sơ Coach.'))
@@ -40,7 +46,7 @@ export function CoachProfileView({ showNotice }) {
     }
     loadProfile()
     return () => { active = false }
-  }, [requestKey])
+  }, [requestKey, refreshKey])
 
   const updateField = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }))
 
@@ -70,6 +76,7 @@ export function CoachProfileView({ showNotice }) {
       setProfile(result)
       setForm({ fullName: result.fullName || '', email: result.email || '', phoneNumber: result.phoneNumber || '', currentPassword: '', password: '' })
       setEditing(false)
+      notifyCoachDataChanged('profile')
       showNotice?.('Đã cập nhật hồ sơ Coach.')
     } catch (requestError) {
       setActionError(getProfileErrorMessage(requestError, 'Không thể cập nhật hồ sơ Coach.'))

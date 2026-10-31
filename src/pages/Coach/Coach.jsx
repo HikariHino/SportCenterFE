@@ -172,12 +172,13 @@ export default function Coach() {
     navigate('/login', { replace: true })
   }
 
-  const renderActiveView = () => {
-    if (activeNav === 'Lịch huấn luyện') return <AttendanceView query={query} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
-    if (activeNav === 'Phòng tập') return <CoachRoomsView />
-    if (activeNav === 'Học viên') return <StudentsView query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
-    if (activeNav === 'Hồ sơ') return <CoachProfileView showNotice={showNotice} />
-    return <OverviewView onNavigate={selectNavigation} showNotice={showNotice} />
+  const renderView = view => {
+    const active = activeNav === view
+    if (view === 'Lịch huấn luyện') return <AttendanceView active={active} query={query} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
+    if (view === 'Phòng tập') return <CoachRoomsView active={active} />
+    if (view === 'Học viên') return <StudentsView active={active} query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
+    if (view === 'Hồ sơ') return <CoachProfileView active={active} showNotice={showNotice} />
+    return <OverviewView active={active} onNavigate={selectNavigation} showNotice={showNotice} />
   }
 
   const ActiveNavIcon = navigation.find(([, label]) => label === activeNav)?.[0] || LayoutDashboard
@@ -213,7 +214,7 @@ export default function Coach() {
         <section className="coach-page-heading"><div><p><ActiveNavIcon size={16} />{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div>{['Học viên', 'Lịch huấn luyện'].includes(activeNav) && <label className="coach-content-search"><Search size={16} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm học viên..." aria-label="Tìm học viên" /></label>}</section>
 
         {notice && <div className="coach-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
-        <div className="coach-view-content" key={activeNav}><Suspense fallback={<ViewLoader />}>{renderActiveView()}</Suspense></div>
+        {coachViews.map(view => <div className="coach-view-content" key={view} hidden={view !== activeNav}><Suspense fallback={<ViewLoader />}>{renderView(view)}</Suspense></div>)}
       </div>
     </section>
   </main>

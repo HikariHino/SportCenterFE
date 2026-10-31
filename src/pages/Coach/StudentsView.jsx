@@ -7,6 +7,7 @@ import { aiTrainingPlanDemoSteps } from '../../utils/aiTrainingPlanDemo'
 import { applyExercisesPerSession, buildWorkoutGoalContext, mapWorkoutRecommendationToPlanExercises } from '../../utils/aiWorkoutRecommendation'
 import { getCoachPlanDemoStudent } from '../../utils/coachDemoAccess'
 import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, timeFormatter, ViewLoader } from './CoachViewShared'
+import useCoachViewRefresh, { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
 
 const toDateInput = date => {
   const year = date.getFullYear()
@@ -424,7 +425,7 @@ function TrainingPlanListDialog({ student, onClose }) {
   </div>
 }
 
-export function StudentsView({ query, showNotice, selectedSessionId, onSelectSession }) {
+export function StudentsView({ active = true, query, showNotice, selectedSessionId, onSelectSession }) {
   const [status, setStatus] = useState('Tất cả')
   const [sessions, setSessions] = useState([])
   const [classCatalog, setClassCatalog] = useState([])
@@ -441,10 +442,14 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
   const [checkInError, setCheckInError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
 
+  const loaded = useRef(false)
+  const loadedRoster = useRef(null)
+  const refreshKey = useCoachViewRefresh(active, 'students')
+
   useEffect(() => {
     let active = true
     const loadSessions = async () => {
-      setSessionsLoading(true)
+      setSessionsLoading(!loaded.current)
       setError('')
       try {
         const [sessionResult, classResult] = await Promise.allSettled([
@@ -454,6 +459,7 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
         if (sessionResult.status === 'rejected') throw sessionResult.reason
         const result = sessionResult.value
         if (!active) return
+        loaded.current = true
         setSessions(result.items)
         const listedClasses = classResult.status === 'fulfilled' ? classResult.value.items : []
         const listedClassIds = new Set(listedClasses.map(item => String(item.id)))
@@ -466,11 +472,6 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
           ...listedClasses,
           ...missingClassResults.filter(item => item.status === 'fulfilled').map(item => item.value),
         ])
-        const restoredSession = result.items.find(session => String(session.id) === String(selectedSessionId))
-        if (restoredSession) {
-          setSelectedClassId(String(restoredSession.classId))
-          setSelectedDate(toDateInput(new Date(restoredSession.startsAt)))
-        }
       } catch (requestError) {
         if (active) {
           setSessions([])
@@ -482,7 +483,15 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
     }
     loadSessions()
     return () => { active = false }
-  }, [onSelectSession, requestKey])
+  }, [requestKey, refreshKey])
+
+  useEffect(() => {
+    const restoredSession = sessions.find(session => String(session.id) === String(selectedSessionId))
+    if (restoredSession) {
+      setSelectedClassId(String(restoredSession.classId))
+      setSelectedDate(toDateInput(new Date(restoredSession.startsAt)))
+    }
+  }, [selectedSessionId, sessions])
 
   const classes = useMemo(() => {
     const catalogById = new Map(classCatalog.map(item => [String(item.id), item]))
@@ -517,6 +526,7 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
   useEffect(() => {
     let active = true
     if (!selectedSessionId || !sessions.some(session => String(session.id) === String(selectedSessionId))) {
+      loadedRoster.current = null
       setStudents([])
       setSelectedId(null)
       setRosterLoading(false)
@@ -524,13 +534,17 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
     }
 
     const loadRoster = async () => {
-      setRosterLoading(true)
+      const sameSession = loadedRoster.current === selectedSessionId
+      setRosterLoading(!sameSession)
       setError('')
-      setStudents([])
-      setSelectedId(null)
+      if (!sameSession) {
+        setStudents([])
+        setSelectedId(null)
+      }
       try {
         const result = await getCoachSessionRoster(selectedSessionId)
         if (!active) return
+        loadedRoster.current = selectedSessionId
         const mapped = result.map(mapRosterStudent)
         setStudents(mapped)
         setSelectedId(current => mapped.some(student => student.id === current) ? current : mapped[0]?.id ?? null)
@@ -546,7 +560,7 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
     }
     loadRoster()
     return () => { active = false }
-  }, [requestKey, selectedSessionId, sessions])
+  }, [requestKey, selectedSessionId, sessions, refreshKey])
 
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
   const filtered = students.filter(student => {
@@ -581,6 +595,7 @@ export function StudentsView({ query, showNotice, selectedSessionId, onSelectSes
         checkInTime: attendance.checkInTime,
       })
       setStudents(current => current.map(item => item.id === student.id ? updatedStudent : item))
+      notifyCoachDataChanged('students')
       showNotice?.(`Đã check-in ${student.name}.`)
     } catch (requestError) {
       setCheckInError(getStudentsError(requestError))

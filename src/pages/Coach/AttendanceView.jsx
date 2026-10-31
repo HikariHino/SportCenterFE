@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, Clock3, UserCheck, Users } from 'lucide-react'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
 import { getCoachSessionAttendances, getCoachSessionRoster, getMyCoachSessions, markCoachAttendance } from '../../services/coachService'
 import { shiftTimetableDate, timetableWeekStart } from '../../utils/memberTimetable'
 import { attendanceOptions, EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent } from './CoachViewShared'
+import useCoachViewRefresh, { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
 
 const isCancelledSession = session => ['cancelled', 'canceled'].includes(String(session?.status || '').trim().toLowerCase())
 
@@ -24,7 +25,7 @@ const getSessionStatusLabel = (session, now = Date.now()) => {
   return 'Sắp diễn ra'
 }
 
-export function AttendanceView({ query, showNotice, selectedSession: sharedSelectedSession, selectedSessionId, onSelectSession }) {
+export function AttendanceView({ active = true, query, showNotice, selectedSession: sharedSelectedSession, selectedSessionId, onSelectSession }) {
   const [weekStart, setWeekStart] = useState(() => timetableWeekStart(sharedSelectedSession?.startsAt || Date.now()))
   const [sessions, setSessions] = useState([])
   const [students, setStudents] = useState([])
@@ -39,6 +40,9 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
   const [scheduleRequestKey, setScheduleRequestKey] = useState(0)
   const [rosterRequestKey, setRosterRequestKey] = useState(0)
   const [attendancePageOpen, setAttendancePageOpen] = useState(false)
+  const loadedWeek = useRef(null)
+  const loadedRoster = useRef(null)
+  const refreshKey = useCoachViewRefresh(active, 'attendance')
 
   useEffect(() => {
     if (sharedSelectedSession?.startsAt) setWeekStart(timetableWeekStart(sharedSelectedSession.startsAt))
@@ -50,11 +54,14 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
     const to = new Date(`${shiftTimetableDate(weekStart, 7)}T00:00:00+07:00`)
 
     const loadSessions = async () => {
-      setScheduleLoading(true)
+      setScheduleLoading(loadedWeek.current !== weekStart)
       setScheduleError('')
       try {
         const result = await getMyCoachSessions({ from: from.toISOString(), to: to.toISOString(), pageSize: 100 })
-        if (active) setSessions(result.items.filter(session => !isCancelledSession(session)))
+        if (active) {
+          loadedWeek.current = weekStart
+          setSessions(result.items.filter(session => !isCancelledSession(session)))
+        }
       } catch (requestError) {
         if (active) {
           setSessions([])
@@ -67,11 +74,12 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
 
     loadSessions()
     return () => { active = false }
-  }, [scheduleRequestKey, weekStart])
+  }, [scheduleRequestKey, weekStart, refreshKey])
 
   useEffect(() => {
     let active = true
     if (!attendancePageOpen || !selectedSessionId) {
+      loadedRoster.current = null
       setStudents([])
       setRosterError('')
       setRosterLoading(false)
@@ -79,7 +87,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
     }
 
     const loadAttendances = async () => {
-      setRosterLoading(true)
+      setRosterLoading(loadedRoster.current !== selectedSessionId)
       setRosterError('')
       setActionError('')
       try {
@@ -88,6 +96,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
           getCoachSessionAttendances(selectedSessionId),
         ])
         if (!active) return
+        loadedRoster.current = selectedSessionId
         const attendanceByMember = new Map(attendances.map(item => [Number(item.memberId), item]))
         const mappedStudents = roster.map(student => {
           const attendance = attendanceByMember.get(Number(student.memberId))
@@ -110,7 +119,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
     }
     loadAttendances()
     return () => { active = false }
-  }, [attendancePageOpen, rosterRequestKey, selectedSessionId])
+  }, [attendancePageOpen, rosterRequestKey, selectedSessionId, refreshKey])
 
   const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
     || (String(sharedSelectedSession?.id) === String(selectedSessionId) ? sharedSelectedSession : null)
@@ -154,6 +163,7 @@ export function AttendanceView({ query, showNotice, selectedSession: sharedSelec
       })
       setStudents(current => current.map(item => item.id === student.id ? updated : item))
       setAttendanceSelections(current => ({ ...current, [student.id]: updated.attendanceValue }))
+      notifyCoachDataChanged('attendance')
       showNotice(`Đã cập nhật ${student.name}: ${updated.attendanceStatus}.`)
     } catch (requestError) {
       setActionError(getStudentsError(requestError))
