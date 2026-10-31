@@ -8,7 +8,6 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
-  Clock,
   Clock3,
   CreditCard,
   DoorOpen,
@@ -19,7 +18,6 @@ import {
   Layers,
   LifeBuoy,
   LogIn,
-  LogOut,
   Mail,
   MapPin,
   MessageSquare,
@@ -80,6 +78,7 @@ import '../../style/CenterManager/FrontDeskOperations.css'
 import FrontDeskClassBooking from './FrontDeskClassBooking'
 import FrontDeskClassAttendance from './FrontDeskClassAttendance'
 import FrontDeskMemberPicker from './FrontDeskMemberPicker'
+import FrontDeskGymHistory from './FrontDeskGymHistory'
 import { FrontDeskPackageCards, FrontDeskPackageSelect } from './FrontDeskPackagePicker'
 
 function formatVND(value) {
@@ -127,6 +126,7 @@ export default function FrontDeskOperations() {
   // Data states
   const [members, setMembers] = useState([])
   const [todayCheckIns, setTodayCheckIns] = useState([])
+  const [checkInHistoryRevision, setCheckInHistoryRevision] = useState(0)
   const [packages, setPackages] = useState([])
   const [tickets, setTickets] = useState([])
 
@@ -230,6 +230,7 @@ export default function FrontDeskOperations() {
     try {
       const data = await getTodayCheckIns()
       setTodayCheckIns(data)
+      setCheckInHistoryRevision(value => value + 1)
     } catch (err) {
       setErrorMessage(getCheckInErrorMessage(err, 'Không thể tải danh sách check-in hôm nay.'))
     } finally {
@@ -1080,126 +1081,7 @@ export default function FrontDeskOperations() {
             </div>
           </div>
 
-          {/* Today Check-in History Table */}
-          <div className="fdesk-card">
-            <div className="fdesk-card-header">
-              <div>
-                <h3>Danh sách khách ra vào trong ngày</h3>
-                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
-                  Theo dõi thời gian vào/ra và số lượng người đang tập luyện thực tế.
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="fdesk-live-pill">
-                  <span className="fdesk-live-dot" />
-                  {gymStats.currentlyInGymCount} người đang có mặt
-                </span>
-                <span className="fdesk-badge info">{todayCheckIns.length} lượt hôm nay</span>
-              </div>
-            </div>
-
-            {loadingCheckIns ? (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--manager-secondary, #64748b)' }}>
-                <RefreshCw size={28} className="fdesk-spin" />
-                <p style={{ marginTop: 10 }}>Đang tải lịch sử check-in...</p>
-              </div>
-            ) : todayCheckIns.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--manager-secondary, #64748b)' }}>
-                <DoorOpen size={32} />
-                <p style={{ marginTop: 10 }}>Hôm nay chưa có lượt check-in nào được ghi nhận.</p>
-              </div>
-            ) : (
-              <div className="fdesk-table-scroll">
-                <table className="fdesk-table">
-                  <thead>
-                    <tr>
-                      <th>Hội viên</th>
-                      <th>Số điện thoại</th>
-                      <th>Gói tập sử dụng</th>
-                      <th>Thời gian vào</th>
-                      <th>Thời gian ra</th>
-                      <th>Trạng thái</th>
-                      <th>Nhân viên trực</th>
-                      <th style={{ textAlign: 'right' }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {todayCheckIns.map((ci) => {
-                      const isStillInGym = !ci.checkOutTime
-
-                      return (
-                        <tr key={ci.id}>
-                          <td>
-                            <strong>{ci.memberName || 'Hội viên'}</strong>
-                            <div style={{ fontSize: 11, color: 'var(--manager-muted, #748096)' }}>
-                              Mã: #{ci.memberCode || ci.memberId}
-                            </div>
-                          </td>
-                          <td>{ci.phoneNumber || '—'}</td>
-                          <td>
-                            <span style={{ fontWeight: 600, color: 'var(--manager-blue, #2463eb)' }}>
-                              {ci.packageName || 'Gói tập tiêu chuẩn'}
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--manager-success, #059669)', fontWeight: 600 }}>
-                              <Clock size={13} />
-                              {formatDateTime(ci.checkInTime)}
-                            </div>
-                          </td>
-                          <td>
-                            {ci.checkOutTime ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--manager-secondary, #64748b)' }}>
-                                <Clock3 size={13} />
-                                {formatDateTime(ci.checkOutTime)}
-                              </div>
-                            ) : (
-                              <span style={{ color: 'var(--manager-warning, #d97706)', fontSize: 12, fontWeight: 600 }}>
-                                Chưa check-out
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            {isStillInGym ? (
-                              <span className="fdesk-badge present">
-                                <span className="fdesk-live-dot" /> Đang tập
-                              </span>
-                            ) : (
-                              <span className="fdesk-badge" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #64748b)' }}>
-                                Đã về
-                              </span>
-                            )}
-                          </td>
-                          <td style={{ fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
-                            {ci.checkedByStaffName || 'Lễ tân / Quản lý'}
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            {isStillInGym ? (
-                              <button
-                                type="button"
-                                className="fdesk-btn fdesk-btn-secondary"
-                                style={{ padding: '6px 12px', fontSize: 12, color: 'var(--manager-warning, #d97706)', borderColor: 'var(--manager-warning-border, #fde68a)' }}
-                                onClick={() => handleCheckOut(ci.id, ci.memberName)}
-                                disabled={submitting}
-                                title="Xác nhận khách ra về"
-                              >
-                                <LogOut size={13} />
-                                Check-out
-                              </button>
-                            ) : (
-                              <span style={{ fontSize: 11, color: 'var(--manager-secondary, #94a3b8)' }}>
-                                Hoàn tất
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <FrontDeskGymHistory reloadKey={checkInHistoryRevision} disabled={submitting} onCheckOut={handleCheckOut} todayItems={todayCheckIns} />
         </div>
       )}
 

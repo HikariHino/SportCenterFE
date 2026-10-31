@@ -6,16 +6,19 @@ const session = { status: 'Scheduled', startsAt: '2026-10-20T18:00:00+07:00', en
 const student = { registrationStatus: 'Registered' }
 const start = Date.parse(session.startsAt), end = Date.parse(session.endsAt)
 
-test('check-in follows the server window: inclusive 30 minutes before start, exclusive end', () => {
+test('staff attendance opens 30 minutes before start and includes the 12-hour deadline after the end', () => {
   assert.ok(frontDeskCheckInReason(session, student, start - 30 * 60_000 - 1))
   assert.equal(frontDeskCheckInReason(session, student, start - 30 * 60_000), '')
   assert.equal(frontDeskCheckInReason(session, student, start), '')
   assert.equal(frontDeskCheckInReason(session, student, end - 1), '')
-  assert.ok(frontDeskCheckInReason(session, student, end))
+  assert.equal(frontDeskCheckInReason(session, student, end), '')
+  assert.equal(frontDeskCheckInReason(session, student, end + 12 * 60 * 60_000), '')
+  assert.ok(frontDeskCheckInReason(session, student, end + 12 * 60 * 60_000 + 1))
 })
 
-test('cancelled/completed sessions and cancelled registrations cannot be checked in', () => {
-  for (const status of ['Cancelled', 'Canceled', 'Completed']) assert.ok(frontDeskCheckInReason({ ...session, status }, student, start))
+test('completed sessions allow staff attendance within the window while cancelled sessions and registrations remain blocked', () => {
+  assert.equal(frontDeskCheckInReason({ ...session, status: 'Completed' }, { registrationStatus: 'Completed' }, end), '')
+  for (const status of ['Cancelled', 'Canceled']) assert.ok(frontDeskCheckInReason({ ...session, status }, student, start))
   assert.ok(frontDeskCheckInReason(session, { ...student, registrationStatus: 'Cancelled' }, start))
   assert.ok(frontDeskCheckInReason({ ...session, endsAt: 'invalid' }, student, start))
   assert.ok(frontDeskCheckInReason({ ...session, endsAt: session.startsAt }, student, start))

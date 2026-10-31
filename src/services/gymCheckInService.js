@@ -1,4 +1,45 @@
 import api from './api'
+import { filterGymHistoryDates, gymHistoryParams, gymTimestamp, summarizeGymHistory } from '../utils/gymCheckInHistory.js'
+
+function readHistoryArray(body, summary = false) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) throw new Error(body.message || 'Không thể tải lịch sử check-in.')
+  const items = body?.data ?? body
+  if (!Array.isArray(items) || items.some(item => !item || !Number.isSafeInteger(Number(summary ? item.memberId : item.id))
+    || Number(summary ? item.memberId : item.id) <= 0 || !Number.isFinite(gymTimestamp(summary ? item.lastCheckInTime : item.checkInTime))
+    || (summary && (!Number.isFinite(Number(item.totalCheckIns)) || Number(item.totalCheckIns) < 0
+      || !Number.isFinite(Number(item.totalDurationMinutes)) || Number(item.totalDurationMinutes) < 0)))) {
+    throw new Error('Dữ liệu lịch sử ra/vào không hợp lệ. Vui lòng thử lại sau.')
+  }
+  return items
+}
+
+async function requestGymHistory(url, params, signal) {
+  try { return await api.get(url, { params, signal }) }
+  catch (error) {
+    if (error.response?.status !== 404) throw error
+    const unavailable = new Error('Máy chủ đang kết nối chưa được cập nhật chức năng lịch sử check-in mới. Vui lòng thử lại sau khi bản BE mới được triển khai.')
+    unavailable.code = 'GYM_HISTORY_UNAVAILABLE'
+    throw unavailable
+  }
+}
+
+/** Manager/Receptionist history, filtered by Vietnam calendar dates. */
+export async function getGymCheckInHistory(filters = {}, { signal } = {}) {
+  const params = gymHistoryParams(filters)
+  const response = await requestGymHistory('/GymCheckIns/history', params, signal)
+  return filterGymHistoryDates(readHistoryArray(response.data), filters)
+}
+
+export async function getGymCheckInSummaryByMember(filters = {}, { signal } = {}) {
+  const { fromDate, toDate, search } = gymHistoryParams({ fromDate: filters.fromDate, toDate: filters.toDate, search: filters.search })
+  const request = requestGymHistory('/GymCheckIns/summary-by-member', { fromDate, toDate, search }, signal)
+  if (!filters.fromDate && !filters.toDate) return readHistoryArray((await request).data, true)
+  // The summary endpoint also rounds to UTC days. Reconcile its range with
+  // detailed records to prevent counting visits outside the selected VN dates.
+  const [response, items] = await Promise.all([request, getGymCheckInHistory({ fromDate: filters.fromDate, toDate: filters.toDate, search: filters.search }, { signal })])
+  readHistoryArray(response.data, true)
+  return summarizeGymHistory(items)
+}
 
 /**
  * Trích xuất lỗi từ backend cho Check-in
@@ -84,8 +125,8 @@ export async function getTodayCheckIns() {
  * GET /api/GymCheckIns/my-qr
  * @returns {Promise<{ memberId: number, memberCode: string, qrData: string, fullName: string, phoneNumber: string, packageName?: string, packageStatus: string, expireDate?: string }>}
  */
-export async function getMyQrCode() {
-  const response = await api.get('/GymCheckIns/my-qr')
+export async function getMyQrCode({ signal } = {}) {
+  const response = await api.get('/GymCheckIns/my-qr', { signal })
   const body = response.data
   if (body?.success === false) {
     throw new Error(body.message || 'Không thể lấy mã QR hội viên.')
@@ -98,17 +139,10 @@ export async function getMyQrCode() {
  * GET /api/GymCheckIns/my-history
  * @returns {Promise<Array<{ id: number, memberId: number, memberCode: string, memberName: string, phoneNumber: string, packageName: string, checkInTime: string, checkOutTime: string|null, checkedByStaffName: string|null, notes: string|null }>>}
  */
-export async function getMyGymCheckInHistory() {
-  const response = await api.get('/GymCheckIns/my-history')
-  const body = response.data
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể tải lịch sử check-in.')
-  }
-  const payload = body?.data ?? body
-  if (!Array.isArray(payload)) {
-    throw new Error('Dữ liệu lịch sử ra/vào không hợp lệ. Vui lòng thử lại sau.')
-  }
-  return payload
+export async function getMyGymCheckInHistory(filters = {}, { signal } = {}) {
+  const params = gymHistoryParams({ fromDate: filters.fromDate, toDate: filters.toDate })
+  const response = await api.get('/GymCheckIns/my-history', { params, signal })
+  return filterGymHistoryDates(readHistoryArray(response.data), filters)
 }
 
 export default {
@@ -119,5 +153,7 @@ export default {
   getTodayCheckIns,
   getMyQrCode,
   getMyGymCheckInHistory,
+  getGymCheckInHistory,
+  getGymCheckInSummaryByMember,
 }
 

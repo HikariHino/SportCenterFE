@@ -47,8 +47,6 @@
 .gym-visit-times > div > strong, .gym-visit-times .gym-visit-time strong { font-size: 17px; line-height: 1.6; overflow-wrap: anywhere; }
 .gym-checkin-view .gym-visit-time .gym-time-missing { font-size: 12px; color: var(--theme-muted); font-weight: 500; }
 .gym-checkin-view .gym-latest-note { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--theme-gold-bg, #fff7e5); color: var(--theme-gold, #805200); font-size: 11px; line-height: 1.7; }
-.gym-session-status { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; padding: 5px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; background: var(--theme-gold-bg, #fff7e5); color: var(--theme-gold, #805200); }
-.gym-session-status[data-completed='true'] { background: var(--theme-green-bg, #e1f6ee); color: var(--theme-green, #096445); }
 .gym-checkin-guide { padding: 0; }
 .gym-checkin-guide summary { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer; list-style: none; }
 .gym-checkin-guide summary::-webkit-details-marker { display: none; }
@@ -105,7 +103,7 @@
   .gym-history-labels { display: none; }
   .gym-record-main { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
   .gym-record-date { grid-column: 1; grid-row: 1; }
-  .gym-record-main > .gym-session-status { grid-column: 2; grid-row: 1; }
+  .gym-record-main > .gym-checkin-status { grid-column: 2; grid-row: 1; }
   .gym-record-times { grid-column: 1 / -1; grid-row: 2; }
   .gym-record-duration { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; }
   .gym-record-duration > span { display: inline; color: var(--theme-muted); font-size: 11px; }
