@@ -5,8 +5,8 @@ FE dùng nút chính thức của Google Identity Services, mở hộp chọn t�
 ## Cấu hình môi trường
 
 1. Trong Google Cloud, tạo OAuth client loại **Web application**, cấu hình Branding/Audience. Khi ứng dụng đang ở chế độ Testing, thêm email thử nghiệm nếu Google yêu cầu.
-2. Thêm `http://localhost` và `http://localhost:3000` vào **Authorized JavaScript origins**. Khi triển khai, thêm origin HTTPS của FE.
-3. Chạy cả FE và BE local: cấu hình FE `.env.local` như sau:
+2. Thêm `http://localhost`, `http://localhost:3000` và `https://sportcenter-fe.onrender.com` vào **Authorized JavaScript origins**. Origin không có đường dẫn hoặc dấu `/` cuối. Mở FE local bằng `localhost` để khớp origin đã đăng ký.
+3. Chạy FE local kết nối BE trên Render: cấu hình FE `.env.local` như sau:
 
    ```dotenv
    VITE_API_BASE=
@@ -21,6 +21,21 @@ FE dùng nút chính thức của Google Identity Services, mở hộp chọn t�
 5. Chạy `npm run dev` trong thư mục FE và mở `http://localhost:3000/login`; không cần khởi động BE local. Khởi động lại Vite sau khi sửa `.env.local`. Với FE build tĩnh, build lại sau khi đổi biến `VITE_...`.
 
 Nếu thiếu Client ID hoặc còn dùng giá trị mẫu, nút Google hiển thị chưa sẵn sàng. SDK bị chặn hoặc mất mạng có nút thử lại; đăng nhập bằng mật khẩu vẫn sử dụng được.
+
+## Triển khai trên Render
+
+Client ID dùng cho ứng dụng hiện tại:
+
+```text
+1077200298696-38gkrj4g532iflase9la3crc3t6j4mla.apps.googleusercontent.com
+```
+
+- FE `sportcenter-fe`: đặt `VITE_GOOGLE_CLIENT_ID` bằng Client ID trên. `render.yaml` đã khai báo giá trị này cho Blueprint. Nếu service được tạo thủ công, thêm biến tại **Environment** của service rồi build/deploy lại FE; chỉ khởi động lại service không cập nhật giá trị đã nhúng trong JavaScript.
+- BE `sportscenterbe-2`: đặt `GoogleAuth__ClientId` bằng cùng Client ID rồi deploy lại BE.
+- Google Cloud: kiểm tra OAuth client thuộc loại **Web application** và danh sách **Authorized JavaScript origins** có `https://sportcenter-fe.onrender.com` cùng các origin local ở trên.
+- CORS của BE: policy `AllowFrontend` phải cho phép `https://sportcenter-fe.onrender.com` cùng header `Content-Type` và phương thức `POST`. Đây là cấu hình riêng với origin được phép trong Google Cloud.
+
+Client ID là định danh công khai được nhúng trong FE. Không đưa Client Secret vào biến `VITE_...`. Luồng hiện tại nhận ID token từ nút Google và gửi đến BE để xác minh, không dùng Client Secret.
 
 ## Kiểm tra với Google thật
 
