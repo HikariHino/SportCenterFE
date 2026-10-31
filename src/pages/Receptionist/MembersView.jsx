@@ -6,8 +6,10 @@ import { confirmReceptionistSubscriptionPayment, getReceptionistMemberSubscripti
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import CounterOrderCancellationDialog from '../../components/CounterOrderCancellationDialog'
 import { counterOrderCancellationReason } from '../../utils/counterOrders'
-import { cancelReceptionistRegistration, checkInReceptionistRegistration, getReceptionistMemberRegistrations } from '../../services/receptionistClassService'
-import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, subscriptionStatusLabel, ViewLoader } from './ReceptionistViewShared'
+import { cancelReceptionistRegistration, getReceptionistMemberRegistrations } from '../../services/receptionistClassService'
+import { checkInReceptionistMemberRegistration } from '../../services/receptionistCheckInService'
+import { receptionistCheckInReason } from '../../utils/receptionistCheckIn'
+import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, sessionDateTimeFormatter, subscriptionStatusLabel, ViewLoader } from './ReceptionistViewShared'
 
 function CreateMemberDialog({ onClose, onCreated }) {
   const [form, setForm] = useState(emptyMemberForm)
@@ -369,6 +371,12 @@ function MemberRegistrationsDialog({ memberId, onClose, showNotice }) {
   const [checkingInId, setCheckingInId] = useState(null)
   const [checkIns, setCheckIns] = useState({})
   const [actionError, setActionError] = useState(null)
+  const [now, setNow] = useState(Date.now)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -402,10 +410,16 @@ function MemberRegistrationsDialog({ memberId, onClose, showNotice }) {
   }
 
   const handleCheckIn = async registration => {
+    if (checkingInId !== null) return
+    const reason = receptionistCheckInReason(registration)
+    if (reason) {
+      setActionError({ id: registration.id, message: reason })
+      return
+    }
     setCheckingInId(registration.id)
     setActionError(null)
     try {
-      const attendance = await checkInReceptionistRegistration(registration.id)
+      const attendance = await checkInReceptionistMemberRegistration(memberId, registration.id)
       setCheckIns(current => ({ ...current, [registration.id]: attendance }))
       showNotice(`Đã check-in hội viên #${attendance.memberId} cho buổi học #${attendance.sessionId}.`)
     } catch (requestError) {
@@ -422,7 +436,7 @@ function MemberRegistrationsDialog({ memberId, onClose, showNotice }) {
     <section className="reception-dialog reception-registrations-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-member-registrations-title">
       <header><div><span>LỊCH SỬ BUỔI HỌC</span><h2 id="reception-member-registrations-title">Lượt đăng ký của hội viên #{memberId}</h2><p>{registrations.total} lượt đăng ký được tìm thấy.</p></div><button type="button" aria-label="Đóng lịch sử đăng ký" onClick={onClose}><X size={19} /></button></header>
       <div className="reception-registrations-body">
-        {loading ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Đang tải lượt đăng ký</strong><span>Dữ liệu đăng ký buổi học đang được đồng bộ từ hệ thống.</span></div> : error ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Không thể tải lượt đăng ký</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : registrations.items.length ? <div className="reception-registration-list">{registrations.items.map(item => <article key={item.id}><header><div><small>Mã đăng ký #{item.id}</small><strong>{item.className}</strong></div><div className="reception-registration-card-actions"><b className={String(item.status || '').toLowerCase()}>{item.status}</b>{item.status === 'Registered' && item.sessionId && <>{checkIns[item.id] ? <span className="reception-registration-checked"><CheckCircle2 size={12} />Đã check-in</span> : <button className="checkin" type="button" disabled={checkingInId === item.id} onClick={() => handleCheckIn(item)}><LogIn size={13} />{checkingInId === item.id ? 'Đang check-in...' : 'Check-in'}</button>}{!checkIns[item.id] && <button className="cancel" type="button" disabled={checkingInId === item.id} onClick={() => setCancelRegistration(item)}><Ban size={13} />Hủy đăng ký</button>}</>}</div></header><div><span><small>Mã buổi học</small><strong>{item.sessionId ? `#${item.sessionId}` : 'Chưa gắn buổi'}</strong></span><span><small>Thời gian bắt đầu</small><strong>{item.startsAt ? sessionDateTimeFormatter.format(new Date(item.startsAt)) : 'Chưa xác định'}</strong></span><span><small>Ngày đăng ký</small><strong>{formatMemberDate(item.registrationDate)}</strong></span></div>{actionError?.id === item.id && <p className="reception-registration-action-error" role="alert">{actionError.message}</p>}</article>)}</div> : <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Chưa có lượt đăng ký</strong><span>Hội viên này chưa đăng ký buổi học nào.</span></div>}
+        {loading ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Đang tải lượt đăng ký</strong><span>Dữ liệu đăng ký buổi học đang được đồng bộ từ hệ thống.</span></div> : error ? <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Không thể tải lượt đăng ký</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : registrations.items.length ? <div className="reception-registration-list">{registrations.items.map(item => <article key={item.id}><header><div><small>Mã đăng ký #{item.id}</small><strong>{item.className}</strong></div><div className="reception-registration-card-actions"><b className={String(item.status || '').toLowerCase()}>{item.status}</b>{item.status === 'Registered' && item.sessionId && <>{checkIns[item.id] ? <span className="reception-registration-checked"><CheckCircle2 size={12} />Đã check-in</span> : <button className="checkin" type="button" disabled={checkingInId !== null || Boolean(receptionistCheckInReason(item, now))} title={receptionistCheckInReason(item, now) || 'Điểm danh buổi học'} onClick={() => handleCheckIn(item)}><LogIn size={13} />{checkingInId === item.id ? 'Đang check-in...' : 'Check-in'}</button>}{!checkIns[item.id] && <button className="cancel" type="button" disabled={checkingInId === item.id} onClick={() => setCancelRegistration(item)}><Ban size={13} />Hủy đăng ký</button>}</>}</div></header><div><span><small>Mã buổi học</small><strong>{item.sessionId ? `#${item.sessionId}` : 'Chưa gắn buổi'}</strong></span><span><small>Thời gian bắt đầu</small><strong>{item.startsAt ? sessionDateTimeFormatter.format(new Date(item.startsAt)) : 'Chưa xác định'}</strong></span><span><small>Ngày đăng ký</small><strong>{formatMemberDate(item.registrationDate)}</strong></span></div>{!checkIns[item.id] && item.status === 'Registered' && receptionistCheckInReason(item, now) && <p className="reception-registration-checkin-hint">{receptionistCheckInReason(item, now)}</p>}{actionError?.id === item.id && <p className="reception-registration-action-error" role="alert">{actionError.message}</p>}</article>)}</div> : <div className="reception-member-detail-state"><CalendarDays size={26} /><strong>Chưa có lượt đăng ký</strong><span>Hội viên này chưa đăng ký buổi học nào.</span></div>}
       </div>
       {!loading && !error && pageCount > 1 && <footer className="reception-registration-pagination"><button type="button" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>Trang trước</button><span>{page}/{pageCount}</span><button type="button" disabled={page >= pageCount} onClick={() => setPage(current => current + 1)}>Trang sau</button></footer>}
       {cancelRegistration && <CancelRegistrationDialog registration={cancelRegistration} onClose={() => setCancelRegistration(null)} onCancelled={handleCancelled} />}
