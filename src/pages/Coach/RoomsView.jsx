@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, ChevronRight, Clock3, DoorOpen, MapPin, X } from 'lucide-react'
 import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
 import { ViewLoader } from './CoachViewShared'
+import useCoachViewRefresh from '../../hooks/useCoachViewRefresh'
 
 function CoachRoomDetailDialog({ roomId, onClose }) {
   const [room, setRoom] = useState(null)
@@ -60,23 +61,28 @@ function CoachRoomDetailDialog({ roomId, onClose }) {
   </div>
 }
 
-export function CoachRoomsView() {
+export function CoachRoomsView({ active = true }) {
   const [rooms, setRooms] = useState([])
   const [filter, setFilter] = useState('active')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [selectedRoomId, setSelectedRoomId] = useState(null)
+  const loadedFilter = useRef(null)
+  const refreshKey = useCoachViewRefresh(active, 'rooms')
 
   useEffect(() => {
     let active = true
     const loadRooms = async () => {
-      setLoading(true)
+      setLoading(loadedFilter.current !== filter)
       setError('')
       try {
         const isActive = filter === 'all' ? null : filter === 'active'
         const result = await getRooms(isActive)
-        if (active) setRooms(result)
+        if (active) {
+          loadedFilter.current = filter
+          setRooms(result)
+        }
       } catch (requestError) {
         if (active) {
           setRooms([])
@@ -88,7 +94,7 @@ export function CoachRoomsView() {
     }
     loadRooms()
     return () => { active = false }
-  }, [filter, requestKey])
+  }, [filter, requestKey, refreshKey])
 
   if (loading) return <ViewLoader />
 

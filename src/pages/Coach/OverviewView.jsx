@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CalendarCheck2,
   CalendarDays,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
 import { initials, timeFormatter, ViewLoader } from './CoachViewShared'
+import useCoachViewRefresh from '../../hooks/useCoachViewRefresh'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue', target: 'Lịch huấn luyện' },
@@ -82,7 +83,7 @@ const sessionPresentation = session => {
   }
 }
 
-export function OverviewView({ onNavigate }) {
+export function OverviewView({ active = true, onNavigate }) {
   const [metrics, setMetrics] = useState([])
   const [sessions, setSessions] = useState([])
   const [weekSessions, setWeekSessions] = useState([])
@@ -91,11 +92,13 @@ export function OverviewView({ onNavigate }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const loaded = useRef(false)
+  const refreshKey = useCoachViewRefresh(active, 'overview')
 
   useEffect(() => {
     let active = true
     const loadOverview = async () => {
-      setLoading(true)
+      setLoading(!loaded.current)
       setError('')
       const from = new Date()
       from.setHours(0, 0, 0, 0)
@@ -143,6 +146,7 @@ export function OverviewView({ onNavigate }) {
         const completedCount = today.filter(session => String(session.status).toLowerCase() === 'completed').length
 
         if (active) {
+          loaded.current = true
           setSessions(today)
           setWeekSessions(activeWeek)
           setStudents(studentItems)
@@ -156,11 +160,6 @@ export function OverviewView({ onNavigate }) {
         }
       } catch (requestError) {
         if (active) {
-          setSessions([])
-          setWeekSessions([])
-          setStudents([])
-          setAttendance({ present: 0, absent: 0, excused: 0, pending: 0 })
-          setMetrics([])
           setError(requestError.response?.data?.message || requestError.message || 'Không thể tải tổng quan Coach.')
         }
       } finally {
@@ -169,7 +168,7 @@ export function OverviewView({ onNavigate }) {
     }
     loadOverview()
     return () => { active = false }
-  }, [requestKey])
+  }, [requestKey, refreshKey])
 
   const nextSession = useMemo(() => {
     const now = new Date()
