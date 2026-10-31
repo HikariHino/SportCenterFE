@@ -34,7 +34,7 @@ export function loadGoogleIdentity() {
 
 // GIS initialization is shared across React remounts. Only the mounted button
 // receives credentials; callbacks from a removed button are ignored.
-export function mountGoogleSignInButton(sdk, host, clientId, onCredential) {
+export function mountGoogleSignInButton(sdk, host, clientId, onCredential, theme = 'light') {
   if (sdk !== initializedSdk || clientId !== initializedClientId) {
     sdk.initialize({
       client_id: clientId,
@@ -58,7 +58,7 @@ export function mountGoogleSignInButton(sdk, host, clientId, onCredential) {
     previousWidth = width
     host.replaceChildren()
     sdk.renderButton(host, {
-      type: 'standard', theme: 'outline', size: 'large', text: 'signin_with',
+      type: 'standard', theme: theme === 'dark' ? 'filled_black' : 'outline', size: 'large', text: 'signin_with',
       shape: 'rectangular', logo_alignment: 'left', locale: 'vi',
       width: String(width), state: button.state,
     })

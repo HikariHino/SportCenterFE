@@ -60,7 +60,7 @@ test('an SDK that never responds times out instead of leaving login loading fore
   assert.equal(scripts[0].parentNode, null)
 })
 
-test('GIS initializes once, ignores removed button callbacks and retains responsive branded options', async t => {
+test('GIS initializes once across theme changes, ignores removed callbacks and retains responsive branded options', async t => {
   const { service } = await isolated(t)
   let initialization, buttonOptions, initializationCount = 0
   const sdk = {
@@ -72,6 +72,7 @@ test('GIS initializes once, ignores removed button callbacks and retains respons
   const dispose = service.mountGoogleSignInButton(sdk, host, 'client-id', token => received.push(token))
   const firstState = buttonOptions.state
   assert.equal(buttonOptions.width, '350')
+  assert.equal(buttonOptions.theme, 'outline')
   assert.equal(buttonOptions.locale, 'vi')
   assert.equal(initialization.ux_mode, 'popup')
   assert.equal(initialization.auto_select, false)
@@ -79,9 +80,10 @@ test('GIS initializes once, ignores removed button callbacks and retains respons
   dispose()
   initialization.callback({ credential: 'after-unmount', state: firstState })
   host.clientWidth = 800
-  const disposeAgain = service.mountGoogleSignInButton(sdk, host, 'client-id', token => received.push(token))
+  const disposeAgain = service.mountGoogleSignInButton(sdk, host, 'client-id', token => received.push(token), 'dark')
   assert.equal(initializationCount, 1)
   assert.equal(buttonOptions.width, '400')
+  assert.equal(buttonOptions.theme, 'filled_black')
   initialization.callback({ credential: 'stale-popup', state: firstState })
   initialization.callback({ credential: 'second', state: buttonOptions.state })
   assert.deepEqual(received, ['first', 'second'])

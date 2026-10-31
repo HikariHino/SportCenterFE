@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadGoogleIdentity, mountGoogleSignInButton } from '../services/googleIdentityService'
 import { getGoogleClientId } from '../utils/googleAuth'
+import { useTheme } from '../contexts/ThemeContext'
 
 export default function GoogleSignInButton({ disabled, onCredential }) {
+  const { theme } = useTheme()
   const clientId = getGoogleClientId(import.meta.env.VITE_GOOGLE_CLIENT_ID)
   const host = useRef(null)
   const callback = useRef(onCredential)
@@ -17,11 +19,11 @@ export default function GoogleSignInButton({ disabled, onCredential }) {
     setStatus('loading')
     loadGoogleIdentity().then(sdk => {
       if (!active) return
-      dispose = mountGoogleSignInButton(sdk, host.current, clientId, credential => callback.current(credential))
+      dispose = mountGoogleSignInButton(sdk, host.current, clientId, credential => callback.current(credential), theme)
       setStatus('ready')
     }).catch(() => { if (active) setStatus('error') })
     return () => { active = false; dispose?.() }
-  }, [clientId, attempt])
+  }, [clientId, attempt, theme])
 
   return <div className="login-google-signin" aria-busy={status === 'loading'}>
     <div className="login-google-host" ref={host} inert={disabled ? true : undefined} aria-disabled={disabled || undefined} />
