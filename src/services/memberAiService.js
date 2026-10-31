@@ -1,4 +1,5 @@
 import api from './api'
+import { extractWorkoutRecommendation } from '../utils/aiWorkoutRecommendation'
 
 export const AI_QUESTION_MAX_LENGTH = 1000
 export const AI_WORKOUT_GOAL_MAX_LENGTH = 200
@@ -8,8 +9,13 @@ export const AI_WORKOUT_LEVELS = [
   { value: 'Advanced', label: 'Nâng cao' },
 ]
 
+function unwrapAi(body) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) throw new Error(body.message || 'Chưa thể nhận dữ liệu AI. Vui lòng thử lại.')
+  return body?.data ?? body
+}
+
 function readAiAnswer(body) {
-  if (body?.success === false) throw new Error(body.message || 'Chưa thể nhận câu trả lời. Vui lòng thử lại.')
+  unwrapAi(body)
   const answer = (body?.data ?? body)?.answer
   if (typeof answer !== 'string' || !answer.trim()) throw new Error('AI chưa trả về nội dung. Vui lòng thử lại.')
   return answer.trim()
@@ -41,7 +47,52 @@ export async function getMemberWorkoutRecommendation(request, { signal } = {}) {
   // The member's identity comes from JWT; never send another member's ID.
   const payload = { goal: request.goal.trim(), level: request.level, daysPerWeek: Number(request.daysPerWeek) }
   const { data: body } = await api.post('/ai/workout-recommendations', payload, { signal, timeout: 90000 })
-  return readAiAnswer(body)
+  const data = unwrapAi(body)
+  // Older servers returned markdown; the current API returns WorkoutPlanResponse.
+  return typeof data?.answer === 'string' ? readAiAnswer(body) : extractWorkoutRecommendation(data)
+}
+
+const validId = value => typeof value === 'number' ? Number.isSafeInteger(value) && value > 0 : typeof value === 'string' && /^[1-9]\d*$/.test(value)
+const pageNumber = (value, max) => Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= max
+
+async function readHistory(url, { page = 1, pageSize = 20 } = {}, { signal } = {}, validate) {
+  if (!pageNumber(page, 100000) || !pageNumber(pageSize, 100)) throw new Error('Trang hoặc số bản ghi lịch sử không hợp lệ.')
+  const { data: body } = await api.get(url, { params: { page: Number(page), pageSize: Number(pageSize) }, signal })
+  const data = unwrapAi(body)
+  const total = Number(data?.total ?? data?.totalCount)
+  if (!Array.isArray(data?.items) || !Number.isInteger(total) || total < 0
+    || Number(data.pageNumber ?? data.page) !== Number(page) || Number(data.pageSize) !== Number(pageSize)
+    || data.items.length > Number(pageSize) || data.items.length > total
+    || data.items.some(item => !validId(item?.id) || !validate(item))
+    || new Set(data.items.map(item => String(item.id))).size !== data.items.length) {
+    throw new Error('Dữ liệu lịch sử AI không hợp lệ. Vui lòng tải lại.')
+  }
+  return { items: data.items, total, page: Number(page), pageSize: Number(pageSize) }
+}
+
+export const getMemberAiChatHistory = (params, options) => readHistory('/ai/chat/history', params, options,
+  item => typeof item.question === 'string' && Boolean(item.question.trim()) && typeof item.answer === 'string' && Boolean(item.answer.trim()))
+
+export const getMemberAiWorkoutHistory = (params, options) => readHistory('/ai/workout-recommendations/history', params, options,
+  item => typeof item.goal === 'string' && AI_WORKOUT_LEVELS.some(level => level.value === item.level) && pageNumber(item.daysPerWeek, 7))
+
+export async function getMemberAiWorkoutHistoryDetail(id, { signal } = {}) {
+  if (!validId(id)) throw new Error('Mã bản gợi ý bài tập không hợp lệ.')
+  const { data: body } = await api.get(`/ai/workout-recommendations/history/${id}`, { signal })
+  const detail = unwrapAi(body)
+  if (String(detail?.id) !== String(id)) throw new Error('Bản gợi ý trả về không khớp. Vui lòng tải lại.')
+  return { ...detail, plan: extractWorkoutRecommendation(detail.plan) }
+}
+
+export async function deleteMemberAiWorkoutHistory(id) {
+  if (!validId(id)) throw new Error('Mã bản gợi ý bài tập không hợp lệ.')
+  const response = await api.delete(`/ai/workout-recommendations/history/${id}`)
+  unwrapAi(response.data)
+}
+
+export async function clearMemberAiChatHistory() {
+  const response = await api.delete('/ai/chat/history')
+  unwrapAi(response.data)
 }
 
 export function getMemberAiErrorMessage(error) {

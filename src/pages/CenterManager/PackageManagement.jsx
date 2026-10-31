@@ -34,6 +34,18 @@ import {
   updateMembershipPackage,
 } from '../../services/membershipPackageService'
 import '../../style/CenterManager/PackageManagement.css'
+import { membershipPackageType, membershipPackageTypeLabel } from '../../utils/memberSubscriptions'
+
+export function PackageTypeField({ id, value, onChange, disabled }) {
+  return <div className="pkg-form-group">
+    <label htmlFor={id}>Loại gói <span className="required">*</span></label>
+    <select id={id} name="packageType" className="pkg-form-select" value={value} onChange={event => onChange(event.target.value)} disabled={disabled} required>
+      <option value="Standard">Standard — Gói tập chung / cơ bản</option>
+      <option value="PT">PT — Gói tập kèm HLV 1-1</option>
+    </select>
+    <span className="pkg-form-help">Loại gói được lưu riêng với tên và mô tả quyền lợi.</span>
+  </div>
+}
 
 const PRESET_DURATIONS = [
   { label: '1 Tháng (30 ngày)', days: 30 },
@@ -101,6 +113,7 @@ export default function PackageManagement() {
   // Package Form State
   const [packageForm, setPackageForm] = useState({
     packageName: '',
+    packageType: 'Standard',
     description: '',
     price: 600000,
     durationInDays: 30,
@@ -180,6 +193,7 @@ export default function PackageManagement() {
   const handleOpenCreate = () => {
     setPackageForm({
       packageName: 'Gói Hội Viên 1 Tháng (Basic)',
+      packageType: 'Standard',
       description: 'Không giới hạn giờ tập tại trung tâm. Miễn phí tủ đồ cá nhân và đo chỉ số InBody.',
       price: 600000,
       durationInDays: 30,
@@ -194,6 +208,7 @@ export default function PackageManagement() {
     setEditingPackage(pkg)
     setPackageForm({
       packageName: pkg.packageName || '',
+      packageType: membershipPackageType(pkg),
       description: pkg.description || '',
       price: pkg.price || 0,
       durationInDays: pkg.durationInDays || 30,
@@ -233,6 +248,7 @@ export default function PackageManagement() {
     try {
       const created = await createMembershipPackage({
         packageName: packageForm.packageName.trim(),
+        packageType: packageForm.packageType,
         description: packageForm.description ? packageForm.description.trim() : null,
         price: Number(packageForm.price),
         durationInDays: Number(packageForm.durationInDays),
@@ -269,6 +285,7 @@ export default function PackageManagement() {
     try {
       const updated = await updateMembershipPackage(editingPackage.id, {
         packageName: packageForm.packageName.trim(),
+        packageType: packageForm.packageType,
         description: packageForm.description ? packageForm.description.trim() : null,
         price: Number(packageForm.price),
         durationInDays: Number(packageForm.durationInDays),
@@ -299,6 +316,7 @@ export default function PackageManagement() {
       } else {
         const updated = await updateMembershipPackage(pkg.id, {
           packageName: pkg.packageName,
+          packageType: membershipPackageType(pkg),
           description: pkg.description,
           price: pkg.price,
           durationInDays: pkg.durationInDays,
@@ -320,10 +338,11 @@ export default function PackageManagement() {
   // Export CSV
   const handleExportCSV = () => {
     const rows = [
-      ['Mã gói', 'Tên gói hội viên', 'Giá niêm yết (VND)', 'Thời hạn (ngày)', 'Mô tả & Quyền lợi', 'Trạng thái'],
+      ['Mã gói', 'Tên gói hội viên', 'Loại gói', 'Giá niêm yết (VND)', 'Thời hạn (ngày)', 'Mô tả & Quyền lợi', 'Trạng thái'],
       ...filteredPackages.map((p) => [
         `#${p.id}`,
         p.packageName,
+        membershipPackageType(p),
         p.price,
         p.durationInDays,
         p.description || 'Chưa cập nhật',
@@ -561,6 +580,7 @@ export default function PackageManagement() {
                   </span>
                 </div>
                 <div className="package-card-title"><h3>{pkg.packageName}</h3>{isVip && <span className="package-vip-label"><Crown size={13} />VIP</span>}</div>
+                <span className="package-code">Loại gói: {membershipPackageTypeLabel(pkg)}</span>
 
                 <div className="package-pricing">
                   <strong>{formatCurrency(pkg.price)}</strong>
@@ -612,6 +632,7 @@ export default function PackageManagement() {
               <tr>
                 <th>MÃ GÓI</th>
                 <th>TÊN GÓI THẺ</th>
+                <th>LOẠI GÓI</th>
                 <th>GIÁ BÁN</th>
                 <th>THỜI HẠN</th>
                 <th>ƯỚC TÍNH / NGÀY</th>
@@ -632,6 +653,7 @@ export default function PackageManagement() {
                         {pkg.packageName}
                       </div>
                     </td>
+                    <td>{membershipPackageTypeLabel(pkg)}</td>
                     <td>
                       <strong style={{ color: 'var(--manager-ink)' }}>{formatCurrency(pkg.price)}</strong>
                     </td>
@@ -698,6 +720,7 @@ export default function PackageManagement() {
             </div>
             <form onSubmit={handleCreateSubmit}>
               <div className="pkg-modal-body">
+                <PackageTypeField id="create-package-type" value={packageForm.packageType} onChange={packageType => setPackageForm(current => ({ ...current, packageType }))} disabled={submitting} />
                 <div className="pkg-form-group">
                   <label>
                     Tên gói thẻ <span className="required">*</span>
@@ -851,6 +874,7 @@ export default function PackageManagement() {
             </div>
             <form onSubmit={handleEditSubmit}>
               <div className="pkg-modal-body">
+                <PackageTypeField id="edit-package-type" value={packageForm.packageType} onChange={packageType => setPackageForm(current => ({ ...current, packageType }))} disabled={submitting} />
                 <div className="pkg-form-group">
                   <label>
                     Tên gói thẻ <span className="required">*</span>
@@ -1009,6 +1033,7 @@ export default function PackageManagement() {
                   <span style={{ color: 'var(--manager-muted)' }}>Mã gói thẻ: </span>
                   <strong>#{selectedPackageForDetail.id}</strong>
                 </div>
+                <div><span style={{ color: 'var(--manager-muted)' }}>Loại gói: </span><strong>{membershipPackageTypeLabel(selectedPackageForDetail)}</strong></div>
                 <div>
                   <span style={{ color: 'var(--manager-muted)' }}>Chi phí trung bình: </span>
                   <strong>

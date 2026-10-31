@@ -36,3 +36,56 @@ test('subscription application errors never resolve as successful reads or regis
   await assert.rejects(service.getMySubscriptions(), /hiệu lực/)
   await assert.rejects(service.createMemberSubscription(2), /hiệu lực/)
 })
+
+test('member subscriptions prefer /me, retain explicit packageType and fall back to /mine only for missing routes', async () => {
+  const rows = [{ id: 1, status: 'Active', packageType: 'PT', packageName: 'Basic' }]
+  const calls = []
+  let legacy = false
+  api.defaults.adapter = async config => {
+    calls.push(config.url)
+    if (legacy && config.url.endsWith('/me')) throw Object.assign(new Error('Not found'), { response: { status: 404 } })
+    return { data: { success: true, data: rows }, status: 200, headers: {}, config }
+  }
+  assert.deepEqual(await service.getMySubscriptions(), rows)
+  assert.deepEqual(calls, ['/member-subscriptions/me'])
+  calls.length = 0
+  legacy = true
+  assert.deepEqual(await service.getMySubscriptions(), rows)
+  assert.deepEqual(calls, ['/member-subscriptions/me', '/member-subscriptions/mine'])
+})
+
+const validPreview = { targetPackageId: 2, canUpgrade: true, currentSubscriptionId: 10, targetPackagePrice: 800000,
+  discountAmount: 300000, amountToPay: 500000, currentAgreedPrice: 300000, newStartDate: '2026-10-01', newEndDate: '2027-01-01' }
+
+test('staff preview scopes memberId in the route, with a read-only compatibility fallback on 404/405', async () => {
+  for (const missingStatus of [null, 404, 405]) {
+    const calls = []
+    api.defaults.adapter = async config => {
+      calls.push({ url: config.url, params: config.params })
+      if (missingStatus && config.url.includes('/members/')) throw Object.assign(new Error('Route missing'), { response: { status: missingStatus } })
+      return { data: { success: true, data: validPreview }, status: 200, headers: {}, config }
+    }
+    assert.deepEqual(await service.getSubscriptionUpgradePreview(2, 5), validPreview)
+    assert.deepEqual(calls[0], { url: '/member-subscriptions/members/5/upgrade-preview', params: { targetPackageId: 2 } })
+    assert.equal(calls.length, missingStatus ? 2 : 1)
+    if (missingStatus) assert.deepEqual(calls[1], { url: '/member-subscriptions/upgrade-preview', params: { targetPackageId: 2, memberId: 5 } })
+  }
+})
+
+test('authentication, validation, business errors and server errors never trigger legacy-route retries', async () => {
+  for (const status of [400, 401, 403, 409, 500]) {
+    const calls = []
+    api.defaults.adapter = async config => {
+      calls.push(config.url)
+      throw Object.assign(new Error('Request rejected'), { response: { status, data: { message: 'Request rejected' } } })
+    }
+    // skipAuth prevents the global refresh/login interceptor in this route test.
+    const interceptor = config => { config.skipAuth = true; return config }
+    const id = api.interceptors.request.use(interceptor)
+    try {
+      await assert.rejects(service.getMySubscriptions())
+      await assert.rejects(service.getSubscriptionUpgradePreview(2, 5))
+    } finally { api.interceptors.request.eject(id) }
+    assert.deepEqual(calls, ['/member-subscriptions/me', '/member-subscriptions/members/5/upgrade-preview'])
+  }
+})

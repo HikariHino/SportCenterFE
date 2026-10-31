@@ -8,7 +8,21 @@ export function getUserInitials(user) {
     .map(part => Array.from(part)[0]).join('').toLocaleUpperCase('vi-VN')
 }
 
-const sessionKeys = ['user', 'token', 'refreshTokenKey']
+const sessionKeys = ['user', 'token', 'refreshTokenKey', 'loginSessionId']
+
+const newLoginSessionId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+// Separate from JWTs: refreshing an access token must not start a new chat.
+export function getLoginSessionId() {
+  hydrateTabSession()
+  let id = sessionStorage.getItem('loginSessionId')
+  if (!id) {
+    id = newLoginSessionId()
+    sessionStorage.setItem('loginSessionId', id)
+    if (sessionStorage.getItem('token') && sessionStorage.getItem('token') === localStorage.getItem('token')) localStorage.setItem('loginSessionId', id)
+  }
+  return id
+}
 
 function hydrateTabSession() {
   if (sessionStorage.getItem('token') || !localStorage.getItem('token')) return
@@ -101,11 +115,13 @@ export function saveSession(userData, token, remember = true) {
   }
   clearSession()
   const refreshTokenKey = userData?.refreshTokenKey || userData?.refreshToken
+  const loginSessionId = newLoginSessionId()
   const storages = remember ? [sessionStorage, localStorage] : [sessionStorage]
 
   for (const storage of storages) {
     storage.setItem('user', JSON.stringify(user))
     storage.setItem('token', accessToken.trim())
+    storage.setItem('loginSessionId', loginSessionId)
     if (typeof refreshTokenKey === 'string' && refreshTokenKey.trim()) {
       storage.setItem('refreshTokenKey', refreshTokenKey.trim())
     }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { membershipPackageType, mergeConfirmedSubscriptionCancellations, packageRegistrationReason, subscriptionDisplayStatusLabel, subscriptionPackageReason, subscriptionPaymentState, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../src/utils/memberSubscriptions.js'
+import { currentSubscriptionForPackage, membershipPackageType, mergeConfirmedSubscriptionCancellations, packageRegistrationReason, subscriptionDisplayStatusLabel, subscriptionPackageReason, subscriptionPackageType, subscriptionPaymentState, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../src/utils/memberSubscriptions.js'
 
 const now = Date.parse('2026-10-24T06:00:00Z')
 const standard = { id: 1, packageName: 'Standard 1 tháng', price: 300000, durationInDays: 30 }
@@ -16,12 +16,12 @@ test('active Standard allows a higher-value upgrade and an independent PT card',
   assert.match(subscriptionPackageReason(standard, [active], catalog, now), /cao hơn/)
   assert.match(subscriptionPackageReason({ ...quarterly, price: 250000, durationInDays: 120 }, [active], catalog, now), /cao hơn/)
 })
-test('one pending Standard blocks another Standard order while PT still requires an activated Standard', () => {
+test('pending Standard orders do not block an independent PT purchase', () => {
   const pending = { packageId: quarterly.id, status: 'Pending' }
   assert.match(subscriptionPackageReason(quarterly, [active, pending], catalog, now), /chờ thanh toán/)
   assert.equal(subscriptionPackageReason(pt, [active, pending], catalog, now), '')
   assert.match(subscriptionPackageReason({ ...quarterly, id: 4 }, [active, pending], catalog, now), /Standard chờ thanh toán/)
-  assert.match(subscriptionPackageReason(pt, [pending], catalog, now), /Standard đã kích hoạt/)
+  assert.equal(subscriptionPackageReason(pt, [pending], catalog, now), '')
 })
 
 test('PT cards remain independent and the same active PT package cannot be bought twice', () => {
@@ -37,33 +37,46 @@ test('the current Standard cannot be purchased twice even after paying only an u
   assert.match(subscriptionPackageReason({ ...quarterly, price: 900000 }, [upgraded], catalog, now), /không thể đăng ký thêm/)
 })
 
-test('downgrade checks use full current package value and duration rather than the last upgrade difference', () => {
+test('Standard eligibility compares against agreedPrice from the active subscription as specified by BE', () => {
   const upgraded = { ...active, packageId: 2, packageName: quarterly.packageName, agreedPrice: 200000, durationInDays: 90 }
-  for (const target of [standard, { ...quarterly, id: 4, price: 500000 }, { ...quarterly, id: 4 }]) {
+  for (const target of [{ ...standard, price: 150000 }, { ...quarterly, id: 4, price: 200000 }]) {
     assert.match(subscriptionPackageReason(target, [upgraded], catalog, now), /cao hơn/)
   }
-  assert.match(subscriptionPackageReason({ ...quarterly, id: 4, price: 900000, durationInDays: 30 }, [upgraded], catalog, now), /thời hạn ngắn hơn/)
+  assert.equal(subscriptionPackageReason({ ...quarterly, id: 4, price: 500000, durationInDays: 30 }, [upgraded], catalog, now), '')
   assert.equal(subscriptionPackageReason({ ...quarterly, id: 4, price: 900000, durationInDays: 180 }, [upgraded], catalog, now), '')
-  // A catalog price reduction must not erase the value already paid.
   assert.match(subscriptionPackageReason({ ...quarterly, id: 4, price: 900000 }, [{ ...upgraded, agreedPrice: 1000000 }], catalog, now), /cao hơn/)
 })
 
-test('PT requires a currently effective Standard, not Pending, expired, future-dated or invalid activation', () => {
+test('PT can be purchased independently of Standard activation or expiry', () => {
   for (const rows of [[], [{ ...active, status: 'Pending' }], [{ ...active, status: 'Expired' }],
     [{ ...active, status: 'Cancelled' }], [{ ...active, status: 'Upgraded' }],
     [{ ...active, endDate: new Date(now).toISOString() }],
     [{ ...active, startDate: new Date(now + 1).toISOString() }],
     [{ ...active, startDate: null }], [{ ...active, endDate: 'invalid' }],
     [{ ...active, packageId: 3, packageName: pt.packageName }]]) {
-    assert.match(subscriptionPackageReason({ ...pt, id: 4 }, rows, catalog, now), /Standard đã kích hoạt/)
+    assert.equal(subscriptionPackageReason({ ...pt, id: 4 }, rows, catalog, now), '')
   }
   assert.equal(subscriptionPackageReason(pt, [{ ...active, startDate: new Date(now).toISOString() }], catalog, now), '')
   assert.equal(subscriptionPackageReason(pt, [{ ...active, endDate: null }], catalog, now), '')
 })
 
-test('package descriptions identify an active PT that must not count as Standard', () => {
+test('legacy package descriptions still classify PT without requiring Standard', () => {
   const describedPt = { ...standard, description: 'Huấn luyện viên cá nhân 1-1' }
-  assert.match(subscriptionPackageReason(pt, [active], [describedPt, pt], now), /Standard đã kích hoạt/)
+  assert.equal(subscriptionPackageReason(pt, [active], [describedPt, pt], now), '')
+})
+
+test('explicit API packageType overrides misleading names and descriptions', () => {
+  assert.equal(membershipPackageType({ packageType: 'Standard', packageName: 'VIP PT benefits', description: 'Huấn luyện viên 1-1' }), 'Standard')
+  assert.equal(membershipPackageType({ packageType: 'PT', packageName: 'Gói Basic', description: 'Tập chung' }), 'PT')
+  const activeStandard = { ...active, packageType: 'Standard', packageName: 'PT ưu đãi' }
+  const activePt = { ...active, id: 20, packageId: 3, packageType: 'PT', packageName: 'Basic' }
+  const changedCatalog = [{ ...standard, packageType: 'PT' }, { ...pt, packageType: 'Standard' }]
+  assert.equal(subscriptionPackageType(activeStandard, changedCatalog), 'Standard')
+  assert.equal(subscriptionPackageType(activePt, changedCatalog), 'PT')
+  assert.equal(currentSubscriptionForPackage({ ...quarterly, packageType: 'Standard' }, [activePt, activeStandard], changedCatalog, now).id, active.id)
+  assert.match(subscriptionPackageReason({ ...quarterly, packageType: 'Standard', price: 200000 }, [activePt, activeStandard], changedCatalog, now), /cao hơn/)
+  assert.match(subscriptionPackageReason({ ...pt, packageType: 'PT' }, [activePt, activeStandard], changedCatalog, now), /PT này/)
+  assert.equal(subscriptionPackageReason({ ...pt, id: 4, packageType: 'PT' }, [activePt, activeStandard], changedCatalog, now), '')
 })
 
 test('package classification follows BE name and description rules exactly', () => {

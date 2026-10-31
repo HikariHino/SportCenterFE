@@ -146,17 +146,17 @@ export function PaymentsView({ showNotice }) {
   }
 
   return <div className="member-payments-view">
-    <header className="mpay-page-heading"><div><p className="member-eyebrow"><ReceiptText size={16} />THANH TOÁN & HÓA ĐƠN</p><h2>Thanh toán trực tuyến & Hóa đơn</h2><p>Quản lý giao dịch, kiểm tra trạng thái PayOS và tải hóa đơn của bạn.</p></div><button type="button" className="mpay-button" disabled={loading || busy} onClick={loadPayments}><RefreshCw size={16} className={loading ? 'member-spin' : undefined} />Làm mới</button></header>
+    <header className="mpay-page-heading"><div><p className="member-eyebrow"><ReceiptText size={16} />QUẢN LÝ GIAO DỊCH</p><h2>Thanh toán & Hóa đơn</h2><p>Quản lý giao dịch, kiểm tra trạng thái PayOS và tải hóa đơn của bạn.</p></div><button type="button" className="mpay-button" disabled={loading || busy} onClick={loadPayments} aria-label="Làm mới" title="Làm mới giao dịch"><RefreshCw size={16} className={loading ? 'member-spin' : undefined} /><span>Làm mới</span></button></header>
     {loadError && <Message error>{loadError}{hasLoaded ? ' Dữ liệu đang hiển thị là lần tải gần nhất.' : ''}</Message>}
     {actionError && !viewing && !cancelling && <Message error>{actionError}</Message>}
     {notice && <Message>{notice}</Message>}
 
     <div className="mpay-overview">
-      <section className="mpay-total" aria-label="Tổng tiền đã thanh toán"><span className="mpay-overview-icon"><Banknote size={25} /></span><div><p>Tổng đã thanh toán</p><strong>{hasLoaded ? currency(summary.paid) : '—'}</strong><small>{hasLoaded ? `${summary.completed} giao dịch được xác nhận thanh toán thành công` : 'Đang tải thông tin giao dịch'}</small></div></section>
-      <section className="mpay-pending-overview"><span className="mpay-overview-icon"><Clock3 size={24} /></span><div><h3>{hasLoaded ? `${summary.pending} giao dịch chờ thanh toán` : 'Đang kiểm tra giao dịch'}</h3><p>{summary.pending ? 'Kiểm tra chi tiết và tiếp tục thanh toán qua PayOS.' : 'Xem lịch sử giao dịch và tải hóa đơn đã thanh toán.'}</p><button type="button" disabled={!hasLoaded} onClick={() => { setSearch(''); setStatusFilter(summary.pending ? 'pending' : 'all') }}>Xem giao dịch<ArrowRight size={15} /></button></div></section>
+      <section className="mpay-total" aria-label="Tổng tiền đã thanh toán"><span className="mpay-overview-icon"><Banknote size={25} /></span><div><p>Tổng đã thanh toán</p><strong>{hasLoaded ? currency(summary.paid) : '—'}</strong><small>{hasLoaded ? `${summary.completed} giao dịch thành công` : 'Đang tải thông tin giao dịch'}</small></div></section>
+      <section className="mpay-pending-overview"><span className="mpay-overview-icon"><Clock3 size={24} /></span><div><h3>{hasLoaded ? `${summary.pending} giao dịch chờ thanh toán` : 'Đang kiểm tra giao dịch'}</h3></div><button type="button" disabled={!hasLoaded} onClick={() => { setSearch(''); setStatusFilter(summary.pending ? 'pending' : 'all') }}>Xem giao dịch<ArrowRight size={15} /></button></section>
     </div>
     <div className="mpay-stats" role="group" aria-label="Lọc nhanh giao dịch">
-      {[[ReceiptText, 'Tổng giao dịch', summary.total, 'all'], [CheckCircle2, 'Đã thanh toán', summary.completed, 'completed'], [Clock3, 'Chờ thanh toán', summary.pending, 'pending'], [XCircle, 'Giao dịch đã đóng', summary.closed, 'closed']].map(([Icon, label, count, filter]) => <button type="button" key={filter} aria-pressed={statusFilter === filter} disabled={!hasLoaded} onClick={() => { setStatusFilter(filter); setSearch('') }} data-tone={filter}><Icon size={20} /><span>{label}<strong>{hasLoaded ? count : '—'}</strong></span></button>)}
+      {[[ReceiptText, 'Tổng giao dịch', summary.total, 'all'], [CheckCircle2, 'Đã thanh toán', summary.completed, 'completed'], [Clock3, 'Chờ thanh toán', summary.pending, 'pending'], [XCircle, 'Giao dịch đã đóng', summary.closed, 'closed']].map(([Icon, label, count, filter]) => <button type="button" key={filter} aria-pressed={statusFilter === filter} disabled={!hasLoaded} onClick={() => { setStatusFilter(filter); setSearch('') }} data-tone={filter}><Icon size={18} /><span>{label}</span><strong>{hasLoaded ? count : '—'}</strong></button>)}
     </div>
     {summary.review > 0 && <Message>{summary.review} giao dịch cần đối soát. Xem chi tiết giao dịch hoặc liên hệ lễ tân để được hỗ trợ.</Message>}
 

@@ -17,7 +17,35 @@ const dateLabel = (value, options) => {
   return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', ...options }).format(date) : 'Chưa cập nhật'
 }
 const sessionTime = item => `${dateLabel(item.startsAt, { hour: '2-digit', minute: '2-digit' })} – ${dateLabel(item.endsAt, { hour: '2-digit', minute: '2-digit' })}`
-const heroPhoto = 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=1100&q=85'
+const heroPhoto = '/images/landing/training-hero.jpg'
+const coachPhotos = [
+  { src: '/images/landing/coach-conditioning.jpg', alt: 'Tập luyện sức mạnh với tạ trong phòng gym', position: '50% 40%' },
+  { src: '/images/landing/coach-mobility.jpg', alt: 'Buổi tập vận động và giãn cơ tại studio', position: '50% 45%' },
+  { src: '/images/landing/coach-boxing.jpg', alt: 'Găng boxing chuẩn bị cho buổi tập', position: '50% 48%' },
+  { src: '/images/landing/coach-strength.jpg', alt: 'Bài tập cơ bụng trên thảm tập', position: '50% 55%' },
+]
+
+function CoachCard({ coach }) {
+  const specialty = String(coach.specialization || '').toLocaleLowerCase('vi')
+  const photo = /yoga|pilates|mobility|giãn cơ/.test(specialty) ? coachPhotos[1]
+    : /boxing|quyền anh|kick/.test(specialty) ? coachPhotos[2]
+      : /gym|sức mạnh|strength|thể hình|thể lực|sức bền|conditioning|fitness/.test(specialty) ? coachPhotos[0]
+        : coachPhotos[(coach.id - 1) % coachPhotos.length]
+  return <article className="lp-coach-card">
+    <div className="lp-coach-photo">
+      <span className="lp-coach-placeholder" aria-hidden="true">{getUserInitials({ fullName: coach.fullName })}</span>
+      <img src={photo.src} alt={photo.alt} loading="lazy" decoding="async" width="800" height="500" style={{ objectPosition: photo.position }} onError={event => { event.currentTarget.hidden = true }} />
+      <span className="lp-coach-photo-tag"><Dumbbell size={14} />OLYMPUS TRAINING</span>
+      <small>Ảnh tập luyện minh họa</small>
+    </div>
+    <div className="lp-coach-info">
+      <span className="lp-coach-avatar" aria-hidden="true">{getUserInitials({ fullName: coach.fullName })}</span>
+      <p>{coach.specialization || 'Huấn luyện viên'}</p><h3>{coach.fullName}</h3>
+      {Number(coach.yearsOfExperience) > 0 && <span>{coach.yearsOfExperience} năm kinh nghiệm</span>}
+      {coach.bio && <small>{coach.bio}</small>}
+    </div>
+  </article>
+}
 
 function ActionLink({ action, children, className = '', ...props }) {
   return <Link to={action.to} state={action.state} className={className} {...props}>{children}</Link>
@@ -127,7 +155,15 @@ export default function SportDashboard() {
 
     <section className="lp-hero" id="landing-content"><div className="lp-container lp-hero-grid">
       <div className="lp-hero-copy"><p className="lp-eyebrow"><span />MỖI BUỔI TẬP, MỘT BƯỚC TIẾN</p><h1>Chủ động lịch tập.<br /><span>Bứt phá</span> mỗi ngày.</h1><p className="lp-hero-description">Từ tập luyện tự do đến đồng hành cùng PT 1-1. Chọn gói phù hợp, đăng ký buổi học và theo dõi hành trình của bạn cùng Olympus.</p><div className="lp-hero-actions"><a className="lp-button lp-button-primary" href="#memberships">Khám phá gói tập <ArrowUpRight size={18} /></a><a className="lp-button lp-button-secondary" href="#schedule"><CalendarDays size={18} />Xem lịch lớp học</a></div><div className="lp-hero-assurances"><span><Check size={15} />Standard & PT 1-1</span><span><Check size={15} />Đăng ký buổi học trực tuyến</span><span><Check size={15} />Thanh toán PayOS</span></div><div className="lp-hero-note"><span className="lp-note-icon"><ShieldCheck size={20} /></span><p><strong>Kế hoạch của bạn, trong một tài khoản.</strong><span>Lịch tập, gói hội viên và thanh toán luôn ở cùng một nơi.</span></p></div></div>
-      <div className="lp-hero-visual"><div className="lp-hero-photo"><img src={heroPhoto} alt="Hoạt động tập luyện thể thao" fetchPriority="high" /><div className="lp-photo-shade" /><span className="lp-photo-caption"><span />MOVE WITH PURPOSE.</span><div className="lp-visual-type"><Dumbbell size={17} /><span>STANDARD <i>+</i> PT 1-1</span></div></div><div className="lp-next-session"><span className="lp-next-icon"><CalendarDays size={21} /></span><div><small>BUỔI HỌC SẮP TỚI</small><strong>{nextSession?.className || (sessions.loading ? 'Đang cập nhật lịch học…' : 'Chọn nhịp tập của riêng bạn')}</strong><span>{nextSession ? `${dateLabel(nextSession.startsAt, { day: '2-digit', month: '2-digit' })} · ${sessionTime(nextSession)}` : 'Khám phá lịch lớp học bên dưới'}</span></div><a href="#schedule" aria-label="Xem lịch lớp học"><ArrowUpRight size={21} /></a></div><span className="lp-visual-label">A LITTLE STRONGER. EVERY DAY.</span></div>
+      <div className="lp-hero-visual">
+        <div className="lp-hero-photo">
+          <img src={heroPhoto} alt="Vận động viên tập nâng tạ trong phòng gym" width="1100" height="733" fetchPriority="high" />
+          <div className="lp-photo-shade" /><span className="lp-photo-caption"><span />MOVE WITH PURPOSE.</span>
+          <span className="lp-photo-word" aria-hidden="true">MOVE.</span>
+          <div className="lp-visual-type"><Dumbbell size={17} /><span>STANDARD <i>+</i> PT 1-1</span></div>
+        </div>
+        <div className="lp-next-session"><span className="lp-next-icon"><CalendarDays size={21} /></span><div><small>BUỔI HỌC SẮP TỚI</small><strong>{nextSession?.className || (sessions.loading ? 'Đang cập nhật lịch học…' : 'Chọn nhịp tập của riêng bạn')}</strong><span>{nextSession ? `${dateLabel(nextSession.startsAt, { day: '2-digit', month: '2-digit' })} · ${sessionTime(nextSession)}` : 'Khám phá lịch lớp học bên dưới'}</span></div><a href="#schedule" aria-label="Xem lịch lớp học"><ArrowUpRight size={21} /></a></div>
+      </div>
     </div></section>
 
     <section className="lp-journey-strip" aria-label="Hành trình hội viên"><div className="lp-container"><div><span>01</span><p><strong>Chọn cách bạn tập</strong><small>Gói Standard hoặc PT 1-1</small></p></div><div><span>02</span><p><strong>Sắp xếp lịch phù hợp</strong><small>Đăng ký từng buổi học</small></p></div><div><span>03</span><p><strong>Theo dõi mọi thay đổi</strong><small>Lịch bù, thông báo & thanh toán</small></p></div></div></section>
@@ -148,12 +184,12 @@ export default function SportDashboard() {
       <div className="lp-upgrade-note"><span><Layers size={23} /></span><div><strong>Muốn đổi sang gói Standard cao hơn?</strong><p>Đăng nhập để xem điều kiện nâng cấp và số tiền chênh lệch trước khi xác nhận.</p></div><ActionLink action={packageAction} className="lp-text-link">Xem gói của bạn<ArrowRight size={17} /></ActionLink></div>
     </div></section>
 
-    <section className="lp-section lp-coaches" id="coaches"><div className="lp-container"><SectionHeading eyebrow="THÊM HƯỚNG DẪN, THÊM TỰ TIN" title="Cùng bạn qua từng buổi tập." action={<ActionLink action={classAction} className="lp-text-link">Xem lịch các lớp<ArrowUpRight size={17} /></ActionLink>}>Tìm hiểu đội ngũ huấn luyện viên của trung tâm và các buổi học đang mở.</SectionHeading>{catalog.coaches.loading || catalog.coaches.error || !catalog.coaches.items.length ? <ResourceState resource={catalog.coaches} empty="Thông tin huấn luyện viên đang được trung tâm cập nhật." onRetry={retryCatalog} /> : <div className="lp-coach-grid">{catalog.coaches.items.slice(0, 6).map((coach, index) => <article className="lp-coach-card" key={coach.id}><div className={`lp-coach-monogram lp-coach-tone-${index % 3}`}><span>{getUserInitials({ fullName: coach.fullName })}</span><Dumbbell size={100} strokeWidth={.8} aria-hidden="true" /><small>OLYMPUS COACH</small></div><div className="lp-coach-info"><p>{coach.specialization || 'Huấn luyện viên'}</p><h3>{coach.fullName}</h3>{Number(coach.yearsOfExperience) > 0 && <span>{coach.yearsOfExperience} năm kinh nghiệm</span>}{coach.bio && <small>{coach.bio}</small>}</div></article>)}</div>}</div></section>
+    <section className="lp-section lp-coaches" id="coaches"><div className="lp-container"><SectionHeading eyebrow="THÊM HƯỚNG DẪN, THÊM TỰ TIN" title="Cùng bạn qua từng buổi tập." action={<ActionLink action={classAction} className="lp-text-link">Xem lịch các lớp<ArrowUpRight size={17} /></ActionLink>}>Tìm hiểu đội ngũ huấn luyện viên của trung tâm và các buổi học đang mở.</SectionHeading>{catalog.coaches.loading || catalog.coaches.error || !catalog.coaches.items.length ? <ResourceState resource={catalog.coaches} empty="Thông tin huấn luyện viên đang được trung tâm cập nhật." onRetry={retryCatalog} /> : <div className="lp-coach-grid">{catalog.coaches.items.slice(0, 6).map(coach => <CoachCard key={coach.id} coach={coach} />)}</div>}</div></section>
 
     <section className="lp-section lp-how" id="how-it-works"><div className="lp-container lp-how-grid"><div><p className="lp-eyebrow">BẮT ĐẦU THẬT ĐƠN GIẢN</p><h2>Sẵn sàng cho<br />buổi tập đầu tiên?</h2><p>Thiết lập tài khoản một lần. Chủ động theo dõi lịch tập và dịch vụ trong cổng hội viên.</p><ActionLink action={portal} className="lp-button lp-button-primary">{portal.label}<ArrowUpRight size={18} /></ActionLink></div><ol className="lp-steps"><li><span>01</span><div><h3>Tạo tài khoản hội viên</h3><p>Đăng ký, xác thực email và cập nhật hồ sơ cá nhân.</p></div></li><li><span>02</span><div><h3>Chọn gói tập phù hợp</h3><p>Xem giá, thời hạn và thanh toán qua PayOS hoặc tại quầy. Gói có hiệu lực khi hệ thống xác nhận thanh toán.</p></div></li><li><span>03</span><div><h3>Đăng ký buổi học & bắt đầu tập</h3><p>Chọn buổi còn chỗ, kiểm tra lịch của mình và theo dõi thông báo từ trung tâm.</p></div></li></ol></div></section>
 
     <section className="lp-section lp-faq" id="faq"><div className="lp-container lp-faq-grid"><div><p className="lp-eyebrow">GIẢI ĐÁP TRƯỚC KHI BẮT ĐẦU</p><h2>Bạn cần biết thêm?</h2><p>Thông tin để bạn dễ dàng lựa chọn và sắp xếp việc tập luyện.</p><ActionLink action={getLandingAction(currentUser, 'support')} className="lp-text-link">Gửi yêu cầu hỗ trợ<ArrowUpRight size={17} /></ActionLink></div><div>{[
-      ['Tôi có thể dùng thẻ Standard và PT 1-1 cùng lúc không?', 'Có. Bạn chỉ có thể đăng ký PT 1-1 khi gói Standard đã kích hoạt và còn hiệu lực. Bạn có thể xem hiệu lực của từng gói trong cổng hội viên.'],
+      ['Tôi có thể dùng thẻ Standard và PT 1-1 cùng lúc không?', 'Có. Standard và PT 1-1 được đăng ký độc lập và sử dụng song song. Gói PT thanh toán nguyên giá, không khấu trừ giá trị gói Standard. Bạn có thể xem hiệu lực của từng gói trong cổng hội viên.'],
       ['Tôi cần làm gì để đăng ký một buổi học?', 'Đăng nhập tài khoản hội viên và có gói tập còn hiệu lực. Trong mục Lớp học, chọn buổi phù hợp; hệ thống kiểm tra điều kiện, số chỗ và lịch đã đăng ký trước khi xác nhận.'],
       ['Thanh toán xong thì gói tập có hiệu lực khi nào?', 'Gói được kích hoạt sau khi hệ thống xác nhận giao dịch thanh toán thành công. Bạn có thể xem trạng thái và đồng bộ lại giao dịch trong mục Thanh toán trực tuyến & Hóa đơn.'],
       ['Tôi xem lịch bù hoặc thay đổi buổi học ở đâu?', 'Thông báo về lịch học và lịch bù xuất hiện trong cổng hội viên. Bạn có thể mở mục Thông báo hệ thống để xem lại các cập nhật liên quan đến mình.'],

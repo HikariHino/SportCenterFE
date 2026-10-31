@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, ArrowUpRight, CheckCircle2, CreditCard, LoaderCircle, RefreshCw, X } from 'lucide-react'
 import { createReviewedSubscription, prepareSubscriptionPurchase } from '../services/subscriptionPurchaseService'
 import { getPackageErrorMessage } from '../services/membershipPackageService'
-import { membershipPackageTypeLabel } from '../utils/memberSubscriptions'
+import { membershipPackageType, membershipPackageTypeLabel } from '../utils/memberSubscriptions'
 import '../style/SubscriptionPurchaseDialog.css'
 
 const money = value => `${Number(value).toLocaleString('vi-VN')} đ`
@@ -54,9 +54,9 @@ export default function SubscriptionPurchaseDialog({ pkg, memberId, onClose, onC
     }
   }
   const preview = purchase?.preview
-  const upgrading = preview?.canUpgrade === true
+  const upgrading = membershipPackageType(purchase?.pkg || pkg) === 'Standard' && preview?.canUpgrade === true
   return <dialog ref={dialogRef} className="subscription-purchase-dialog" aria-labelledby="subscription-purchase-title" onCancel={event => { event.preventDefault(); if (!locked.current) onClose() }}>
-    <header><div><p>{membershipPackageTypeLabel(pkg)}{memberId ? ` · Hội viên #${memberId}` : ''}</p><h2 id="subscription-purchase-title">{upgrading ? 'Xác nhận nâng cấp gói' : 'Xác nhận đăng ký gói'}</h2></div><button type="button" aria-label="Đóng xác nhận đăng ký gói" disabled={saving} onClick={onClose}><X size={20} /></button></header>
+    <header><div><p>{membershipPackageTypeLabel(purchase?.pkg || pkg)}{memberId ? ` · Hội viên #${memberId}` : ''}</p><h2 id="subscription-purchase-title">{upgrading ? 'Xác nhận nâng cấp gói' : 'Xác nhận đăng ký gói'}</h2></div><button type="button" aria-label="Đóng xác nhận đăng ký gói" disabled={saving} onClick={onClose}><X size={20} /></button></header>
     <div className="subscription-purchase-body">
       <h3>{preview?.targetPackageName || pkg.packageName}</h3>
       {loading ? <p role="status"><LoaderCircle className="member-spin" size={20} />Đang kiểm tra điều kiện và số tiền từ trung tâm...</p> : preview && <>
@@ -69,7 +69,7 @@ export default function SubscriptionPurchaseDialog({ pkg, memberId, onClose, onC
           <div><dt>Thời hạn gói mới</dt><dd>{purchase.pkg.durationInDays} ngày</dd></div>
           {upgrading && <><div><dt>Ngày bắt đầu giữ nguyên</dt><dd>{date(preview.newStartDate)}</dd></div><div><dt>Ngày hết hạn dự kiến</dt><dd>{date(preview.newEndDate)}</dd></div></>}
         </dl>
-        <p className="subscription-purchase-note"><CheckCircle2 size={18} />{upgrading ? 'Gói cũ vẫn dùng được khi chờ thanh toán. Sau khi thanh toán thành công, gói mới được kích hoạt và gói cũ chuyển sang Đã nâng cấp.' : 'Chỉ đăng ký PT song song khi Standard đã kích hoạt và còn hiệu lực. Gói mới chỉ có hiệu lực sau khi thanh toán thành công.'}</p>
+        <p className="subscription-purchase-note"><CheckCircle2 size={18} />{upgrading ? 'Gói cũ vẫn dùng được khi chờ thanh toán. Sau khi thanh toán thành công, gói mới được kích hoạt và gói cũ chuyển sang Đã nâng cấp.' : 'Gói PT được đăng ký độc lập với Standard và thanh toán nguyên giá. Gói mới chỉ có hiệu lực sau khi thanh toán thành công.'}</p>
         {!upgrading && <p className="subscription-purchase-note">Thời hạn được tính từ thời điểm kích hoạt sau thanh toán.</p>}
         {purchase.reason && <p role="alert" className="subscription-purchase-error"><AlertCircle size={18} />{purchase.reason}</p>}
       </>}

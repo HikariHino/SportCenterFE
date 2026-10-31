@@ -3,16 +3,15 @@ import { createMemberSubscription, createReceptionistMemberSubscription, getMySu
 import { membershipPackageType, packageRegistrationReason, subscriptionPackageReason, subscriptionPurchaseTerms, subscriptionStatus, currentSubscriptionForPackage } from '../utils/memberSubscriptions.js'
 
 export async function prepareSubscriptionPurchase(packageId, memberId) {
-  const [pkg, subscriptions, preview] = await Promise.all([
+  const [pkg, subscriptions] = await Promise.all([
     getMembershipPackageById(packageId),
     memberId == null ? getMySubscriptions() : getReceptionistMemberSubscriptions(memberId),
-    getSubscriptionUpgradePreview(packageId, memberId),
   ])
   if (!pkg || String(pkg.id) !== String(packageId)) throw new Error('Không tìm thấy gói đã chọn. Vui lòng tải lại.')
-  // SubscriptionDTO omits descriptions and full prices. Resolve current packages
-  // so an earlier upgrade's partial payment cannot make a downgrade look valid.
+  // Only legacy subscription responses need a catalog lookup to identify type.
   const currentPackageIds = [...new Set(subscriptions
     .filter(item => ['active', 'pending'].includes(subscriptionStatus(item)))
+    .filter(item => !['Standard', 'PT'].includes(item.packageType))
     .map(item => String(item.packageId)))]
   const packages = await Promise.all(currentPackageIds.map(async id => {
     if (id === String(pkg.id)) return pkg
@@ -23,6 +22,15 @@ export async function prepareSubscriptionPurchase(packageId, memberId) {
     }
     return currentPackage
   }))
+  const preview = membershipPackageType(pkg) === 'Standard'
+    ? await getSubscriptionUpgradePreview(packageId, memberId)
+    : {
+      canUpgrade: false, message: 'Gói PT được đăng ký độc lập, thanh toán nguyên giá và không khấu trừ gói Standard.',
+      currentSubscriptionId: null, currentAgreedPrice: 0,
+      targetPackageId: pkg.id, targetPackageName: pkg.packageName, targetPackagePrice: pkg.price,
+      discountAmount: 0, amountToPay: pkg.price, newStartDate: null, newEndDate: null,
+    }
+  if (!Number.isFinite(Number(preview.amountToPay)) || Number(preview.amountToPay) <= 0) throw new Error('Giá gói tập không hợp lệ. Vui lòng tải lại.')
   let reason = subscriptionPackageReason(pkg, subscriptions, packages)
   const current = currentSubscriptionForPackage(pkg, subscriptions, packages)
   if (!reason && membershipPackageType(pkg) === 'Standard'
@@ -32,10 +40,6 @@ export async function prepareSubscriptionPurchase(packageId, memberId) {
   }
   if (!reason && membershipPackageType(pkg) === 'Standard' && preview.currentSubscriptionId != null && !preview.canUpgrade) {
     reason = preview.message || 'Chỉ có thể nâng cấp lên gói Standard có giá trị cao hơn.'
-  }
-  if (!reason && membershipPackageType(pkg) === 'Standard' && current && Number.isFinite(Date.parse(current.endDate))
-    && Date.parse(preview.newEndDate) < Date.parse(current.endDate)) {
-    reason = 'Ngày hết hạn sau nâng cấp không được sớm hơn ngày hết hạn của gói Standard hiện tại.'
   }
   return { pkg, subscriptions, preview, memberId, reason: packageRegistrationReason(pkg) || reason }
 }

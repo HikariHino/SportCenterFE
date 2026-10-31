@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
-import { canUsePayments, getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getLoginRedirectPath, getSavedUser, getToken, saveSession } from '../src/utils/auth.js'
+import { canUsePayments, clearSession, getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getLoginRedirectPath, getLoginSessionId, getSavedUser, getToken, saveSession, updateSessionTokens } from '../src/utils/auth.js'
 
 function memoryStorage() {
   const values = new Map()
@@ -24,6 +24,26 @@ const authResponse = {
   token: 'test-access-token',
   refreshTokenKey: 'test-refresh-token',
 }
+
+test('login identity survives token refresh but changes on every explicit login, preserving cached chats', () => {
+  localStorage.setItem('sportcenter.ai.conversations.v1:12', 'saved-conversations')
+  saveSession(authResponse, authResponse.token, true)
+  const loginId = getLoginSessionId()
+  assert.ok(loginId)
+  assert.equal(localStorage.getItem('loginSessionId'), loginId)
+  updateSessionTokens('refreshed-token', 'refreshed-key')
+  assert.equal(getLoginSessionId(), loginId)
+  // Rehydrating a remembered login in a new tab keeps its login identity.
+  globalThis.sessionStorage = memoryStorage()
+  assert.equal(getToken(), 'refreshed-token')
+  assert.equal(getLoginSessionId(), loginId)
+  clearSession()
+  assert.equal(localStorage.getItem('sportcenter.ai.conversations.v1:12'), 'saved-conversations')
+  saveSession(authResponse, authResponse.token, false)
+  assert.notEqual(getLoginSessionId(), loginId)
+  assert.equal(localStorage.getItem('loginSessionId'), null)
+  assert.equal(localStorage.getItem('sportcenter.ai.conversations.v1:12'), 'saved-conversations')
+})
 
 test('payment returns are available to BE payment roles while external redirects and unrelated roles remain blocked', () => {
   const callback = '/payment/success?orderCode=15&status=PAID#receipt'
