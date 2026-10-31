@@ -37,14 +37,32 @@ test('the current Standard cannot be purchased twice even after paying only an u
   assert.match(subscriptionPackageReason({ ...quarterly, price: 900000 }, [upgraded], catalog, now), /không thể đăng ký thêm/)
 })
 
-test('Standard eligibility compares against agreedPrice from the active subscription as specified by BE', () => {
+test('Standard eligibility uses the full current tier rather than only the last upgrade surcharge', () => {
   const upgraded = { ...active, packageId: 2, packageName: quarterly.packageName, agreedPrice: 200000, durationInDays: 90 }
-  for (const target of [{ ...standard, price: 150000 }, { ...quarterly, id: 4, price: 200000 }]) {
+  for (const target of [{ ...standard, price: 150000 }, { ...standard, price: 300000 },
+    { ...quarterly, id: 4, price: 200000 }, { ...quarterly, id: 4, price: 500000 }, { ...quarterly, id: 4, price: 800000 }]) {
     assert.match(subscriptionPackageReason(target, [upgraded], catalog, now), /cao hơn/)
   }
-  assert.equal(subscriptionPackageReason({ ...quarterly, id: 4, price: 500000, durationInDays: 30 }, [upgraded], catalog, now), '')
   assert.equal(subscriptionPackageReason({ ...quarterly, id: 4, price: 900000, durationInDays: 180 }, [upgraded], catalog, now), '')
   assert.match(subscriptionPackageReason({ ...quarterly, id: 4, price: 900000 }, [{ ...upgraded, agreedPrice: 1000000 }], catalog, now), /cao hơn/)
+})
+
+test('the highest active Standard blocks every lower or equal Standard while PT remains independent', () => {
+  const highest = { ...quarterly, id: 5, price: 2000000, packageType: 'Standard' }
+  const rows = [{ ...active, packageId: highest.id, packageType: 'Standard', agreedPrice: 100000 }]
+  const packages = [...catalog, highest, { ...highest, id: 6 }]
+  for (const target of packages.filter(pkg => membershipPackageType(pkg) === 'Standard')) {
+    assert.match(subscriptionPackageReason(target, rows, packages, now), /cao hơn/)
+  }
+  assert.equal(subscriptionPackageReason(pt, rows, packages, now), '')
+  assert.equal(subscriptionPackageReason(standard, [{ ...rows[0], status: 'Expired' }], packages, now), '')
+})
+
+test('unknown or invalid full current package prices cannot enable a downgrade based on a surcharge', () => {
+  const upgraded = { ...active, packageId: 2, packageType: 'Standard', agreedPrice: 100000 }
+  for (const packages of [[], [standard], [{ ...quarterly, price: 0 }], [{ ...quarterly, price: null }], [{ ...quarterly, price: 'invalid' }]]) {
+    assert.match(subscriptionPackageReason(standard, [upgraded], packages, now), /Chưa xác định/)
+  }
 })
 
 test('PT can be purchased independently of Standard activation or expiry', () => {

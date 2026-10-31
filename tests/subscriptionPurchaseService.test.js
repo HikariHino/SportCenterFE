@@ -28,8 +28,9 @@ const active = { id: 10, packageId: 1, packageType: 'Standard', packageName: 'St
 const upgrade = { canUpgrade: true, message: 'Thanh toán phần chênh lệch', currentSubscriptionId: 10, currentPackageName: active.packageName, currentAgreedPrice: 300000, targetPackageId: 2, targetPackageName: pkg.packageName, targetPackagePrice: 800000, discountAmount: 300000, amountToPay: 500000, newStartDate: active.startDate, newEndDate: '2099-12-30T00:00:00Z' }
 const newPurchase = { ...upgrade, canUpgrade: false, currentSubscriptionId: null, currentAgreedPrice: 0, discountAmount: 0, amountToPay: 800000 }
 
-function mockPurchase({ target = pkg, subscriptions = [active], preview = upgrade, failRead, loseResponse = false } = {}) {
-  const state = { target: structuredClone(target), subscriptions: structuredClone(subscriptions), preview: structuredClone(preview), calls: [], posts: [], failRead }
+function mockPurchase({ target = pkg, subscriptions = [active], preview = upgrade, failRead, loseResponse = false,
+  referencePackages = [{ id: 1, packageType: 'Standard', packageName: 'Gói cũ', price: 300000, durationInDays: 30 }] } = {}) {
+  const state = { target: structuredClone(target), subscriptions: structuredClone(subscriptions), preview: structuredClone(preview), referencePackages: structuredClone(referencePackages), calls: [], posts: [], failRead }
   api.defaults.adapter = async config => {
     state.calls.push({ method: config.method, url: config.url, params: config.params })
     let data
@@ -45,7 +46,7 @@ function mockPurchase({ target = pkg, subscriptions = [active], preview = upgrad
       if (state.failRead === config.url) throw new Error('Không tải được điều kiện mới')
       if (config.url.startsWith('/membership-packages/')) {
         const id = Number(config.url.split('/').at(-1))
-        data = id === state.target.id ? state.target : { id, packageType: 'Standard', packageName: 'Gói cũ', price: 300000, durationInDays: 30 }
+        data = id === state.target.id ? state.target : state.referencePackages.find(pkg => pkg.id === id)
       } else if (config.url.endsWith('/upgrade-preview')) data = state.preview
       else if (config.url === '/member-subscriptions/me' || /^\/member-subscriptions\/members\/\d+$/.test(config.url)) data = state.subscriptions
       else throw new Error('Unexpected request ' + config.url)
@@ -67,7 +68,7 @@ for (const memberId of [undefined, 5]) {
     assert.equal(purchase.preview.discountAmount, 300000)
     assert.equal(purchase.preview.amountToPay, 500000)
     assert.deepEqual(state.calls.find(item => item.url === previewUrl).params, { targetPackageId: 2 })
-    assert.equal(state.calls.some(item => item.url === '/membership-packages/1'), false)
+    assert.equal(state.calls.some(item => item.url === '/membership-packages/1'), true)
     const result = await service.createReviewedSubscription(purchase)
     assert.equal(result.changed, false)
     assert.equal(result.subscription.agreedPrice, 500000)
@@ -80,6 +81,19 @@ for (const memberId of [undefined, 5]) {
       const state = mockPurchase({ target: { ...pkg, price } })
       const purchase = await service.prepareSubscriptionPurchase(2, memberId)
       assert.match(purchase.reason, /cao hơn/)
+      assert.equal((await service.createReviewedSubscription(purchase)).changed, true)
+      assert.deepEqual(state.posts, [])
+    }
+  })
+
+  test(role + ': a highest-tier subscription paid as a small surcharge cannot downgrade even with a permissive BE preview', async () => {
+    for (const price of [500000, 1000000]) {
+      const state = mockPurchase({ target: { ...pkg, price }, subscriptions: [{ ...active, agreedPrice: 100000 }],
+        referencePackages: [{ id: 1, packageType: 'Standard', price: 1000000, durationInDays: 180, isActive: false }] })
+      const purchase = await service.prepareSubscriptionPurchase(2, memberId)
+      assert.match(purchase.reason, /cao hơn/)
+      assert.equal(purchase.preview, null)
+      assert.equal(state.calls.some(call => call.url.endsWith('/upgrade-preview')), false)
       assert.equal((await service.createReviewedSubscription(purchase)).changed, true)
       assert.deepEqual(state.posts, [])
     }
@@ -151,6 +165,35 @@ test('legacy responses without packageType still resolve their package details',
   const state = mockPurchase({ subscriptions: [{ ...active, packageType: undefined }] })
   assert.equal((await service.prepareSubscriptionPurchase(2)).reason, '')
   assert.ok(state.calls.some(item => item.url === '/membership-packages/1'))
+})
+
+test('a changed full current package price is rechecked before creating the reviewed order', async () => {
+  const state = mockPurchase()
+  const purchase = await service.prepareSubscriptionPurchase(2)
+  state.referencePackages[0].price = 1000000
+  const result = await service.createReviewedSubscription(purchase)
+  assert.equal(result.changed, true)
+  assert.match(result.purchase.reason, /cao hơn/)
+  assert.deepEqual(state.posts, [])
+})
+
+test('unreadable current package values cannot be bypassed through direct confirmation', async () => {
+  for (const options of [{ failRead: '/membership-packages/1' }, { referencePackages: [] },
+    { referencePackages: [{ id: 1, price: 0 }] }]) {
+    const state = mockPurchase(options)
+    await assert.rejects(service.prepareSubscriptionPurchase(2))
+    assert.deepEqual(state.posts, [])
+  }
+})
+
+test('staff form loads the full active package value even when it is absent from the sale catalog', async () => {
+  const highest = { id: 1, packageType: 'Standard', packageName: 'Gói cao nhất', price: 1000000, durationInDays: 180, isActive: false }
+  const state = mockPurchase({ subscriptions: [{ ...active, agreedPrice: 100000 }], referencePackages: [highest] })
+  const references = await service.loadSubscriptionPackageReferences(state.subscriptions, [state.target])
+  assert.equal(references.find(pkg => pkg.id === 1).price, highest.price)
+  assert.equal(references.find(pkg => pkg.id === 1).isActive, false)
+  assert.equal(references.find(pkg => pkg.id === 2).id, state.target.id)
+  assert.deepEqual(state.posts, [])
 })
 
 test('a lost creation response is reconciled with the pending order before a second POST', async () => {

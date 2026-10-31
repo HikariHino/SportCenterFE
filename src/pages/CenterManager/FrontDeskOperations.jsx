@@ -63,10 +63,11 @@ import {
   getReceptionistMemberSubscriptions,
 } from '../../services/memberSubscriptionService'
 import { createPayment, syncPayment } from '../../services/paymentService'
+import { loadSubscriptionPackageReferences } from '../../services/subscriptionPurchaseService'
 import { cancelOpenPayment } from '../../services/subscriptionCancellationService'
 import { canCancelPayOSPayment, canCheckoutPayOSPayment, canSyncPayOSPayment, paymentCheckoutMessage, paymentStatusLabel } from '../../utils/memberPayments'
 import PayOSQrImage from '../../components/PayOSQrImage'
-import { membershipPackageTypeLabel, subscriptionPackageReason, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
+import { membershipPackageType, subscriptionPackageReason, subscriptionPackageType, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import CounterOrderCancellationDialog from '../../components/CounterOrderCancellationDialog'
 import { counterOrderCancellationReason } from '../../utils/counterOrders'
@@ -79,6 +80,7 @@ import '../../style/CenterManager/FrontDeskOperations.css'
 import FrontDeskClassBooking from './FrontDeskClassBooking'
 import FrontDeskClassAttendance from './FrontDeskClassAttendance'
 import FrontDeskMemberPicker from './FrontDeskMemberPicker'
+import { FrontDeskPackageCards, FrontDeskPackageSelect } from './FrontDeskPackagePicker'
 
 function formatVND(value) {
   const number = Number(value) || 0
@@ -160,6 +162,7 @@ export default function FrontDeskOperations() {
   const [subMemberId, setSubMemberId] = useState('')
   const [selectedPackageId, setSelectedPackageId] = useState('')
   const [memberSubscriptions, setMemberSubscriptions] = useState([])
+  const [memberPackageReferences, setMemberPackageReferences] = useState([])
   const [subscriptionsMemberId, setSubscriptionsMemberId] = useState('')
   const [subscriptionLoadError, setSubscriptionLoadError] = useState('')
   const subscriptionRequest = useRef(0)
@@ -172,10 +175,20 @@ export default function FrontDeskOperations() {
   useEffect(() => { setCounterPaymentReceived(false) }, [payModalSubscription?.id])
   const subscriptionsReady = Boolean(subMemberId && subscriptionsMemberId === subMemberId && !loadingSubscriptions && !subscriptionLoadError)
   const selectedSubscriptionPackage = packages.find(item => String(item.id) === String(selectedPackageId))
-  const subscriptionReason = subscriptionsReady && selectedSubscriptionPackage ? subscriptionPackageReason(selectedSubscriptionPackage, memberSubscriptions, packages) : ''
+  const subscriptionPackages = [...packages.filter(pkg => !memberPackageReferences.some(reference => String(reference.id) === String(pkg.id))), ...memberPackageReferences]
+  const reasonForPackage = pkg => subscriptionsReady ? subscriptionPackageReason(pkg, memberSubscriptions, subscriptionPackages) : ''
+  const subscriptionReason = selectedSubscriptionPackage ? reasonForPackage(selectedSubscriptionPackage) : ''
+  const hasActiveStandard = memberSubscriptions.some(sub => subscriptionStatus(sub) === 'active' && subscriptionPackageType(sub, subscriptionPackages) === 'Standard')
+  const upgradingStandard = hasActiveStandard && selectedSubscriptionPackage && membershipPackageType(selectedSubscriptionPackage) === 'Standard'
+  const hasStandardUpgrade = subscriptionsReady && packages.some(pkg => membershipPackageType(pkg) === 'Standard' && !reasonForPackage(pkg))
+  const packagePickerProps = { packages, selectedId: selectedPackageId, onSelect: setSelectedPackageId,
+    disabled: !subscriptionsReady || loadingPackages || submitting || Boolean(purchasePackage), reasonForPackage }
   const subscriptionNotice = subscriptionReason || (subscriptionLoadError
       ? 'Chưa kiểm tra được hiệu lực gói tập. Vui lòng thử lại trước khi đăng ký.'
-      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : 'Standard chỉ nâng cấp lên gói có giá cao hơn giá trị đã chốt. PT được đăng ký độc lập và thanh toán nguyên giá.')
+      : !subMemberId ? 'Chọn hội viên để kiểm tra điều kiện đăng ký và nâng cấp gói.'
+      : !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...'
+      : hasActiveStandard && !loadingPackages && !hasStandardUpgrade ? 'Hiện chưa có gói Standard phù hợp để nâng cấp cho hội viên này. Không thể hạ gói hoặc mua lại gói đang dùng. PT vẫn được đăng ký độc lập, không mua trùng gói PT đang dùng.'
+      : 'Standard chỉ nâng cấp lên gói có giá cao hơn giá đầy đủ của gói đang dùng, không so với riêng tiền bù nâng cấp. PT được đăng ký độc lập và thanh toán nguyên giá.')
 
   // Tab 4: Class & Attendance states
   const [classView, setClassView] = useState('booking')
@@ -231,9 +244,6 @@ export default function FrontDeskOperations() {
       const data = await getMembershipPackages()
       const activePkgs = data.filter((p) => p.isActive !== false)
       setPackages(activePkgs)
-      if (activePkgs.length > 0 && !selectedPackageId) {
-        setSelectedPackageId(String(activePkgs[0].id))
-      }
     } catch (err) {
       setErrorMessage(err.message || 'Không thể tải danh sách gói tập.')
     } finally {
@@ -395,6 +405,8 @@ export default function FrontDeskOperations() {
   async function handleLoadMemberSubscriptions(memId) {
     const requestId = ++subscriptionRequest.current
     setMemberSubscriptions([])
+    setMemberPackageReferences([])
+    setSelectedPackageId('')
     setSubscriptionsMemberId('')
     setSubscriptionLoadError('')
     if (!memId) {
@@ -404,8 +416,11 @@ export default function FrontDeskOperations() {
     setLoadingSubscriptions(true)
     try {
       const data = await getReceptionistMemberSubscriptions(Number(memId))
+      if (requestId !== subscriptionRequest.current) return null
+      const references = await loadSubscriptionPackageReferences(data)
       if (requestId === subscriptionRequest.current) {
         setMemberSubscriptions(data)
+        setMemberPackageReferences(references)
         setSubscriptionsMemberId(String(memId))
         return data
       }
@@ -429,7 +444,7 @@ export default function FrontDeskOperations() {
       setErrorMessage('Vui lòng chọn hội viên và gói tập.')
       return
     }
-    if (!subscriptionsReady || subscriptionReason || !selectedSubscriptionPackage) return
+    if (!subscriptionsReady || loadingPackages || subscriptionReason || !selectedSubscriptionPackage) return
     setErrorMessage(null)
     setPurchasePackage(selectedSubscriptionPackage)
   }
@@ -1209,7 +1224,7 @@ export default function FrontDeskOperations() {
                   label="Chọn hội viên"
                   members={members}
                   loading={loadingMembers}
-                  disabled={submitting}
+                  disabled={submitting || Boolean(purchasePackage)}
                   value={subMemberId}
                   onChange={(memberId) => {
                     setSubMemberId(memberId)
@@ -1218,49 +1233,11 @@ export default function FrontDeskOperations() {
                   required
                 />
 
-                <div className="fdesk-input-group">
-                  <label htmlFor="sub-package-select">Chọn gói thẻ (*):</label>
-                  <select
-                    id="sub-package-select"
-                    className="fdesk-select"
-                    value={selectedPackageId}
-                    onChange={(e) => setSelectedPackageId(e.target.value)}
-                    disabled={submitting || Boolean(purchasePackage)}
-                    required
-                  >
-                    {packages.map((pkg) => (
-                      <option key={pkg.id} value={pkg.id}>
-                        {membershipPackageTypeLabel(pkg)} · {pkg.packageName} — {formatVND(pkg.price)} ({pkg.durationInDays} ngày)
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FrontDeskPackageSelect {...packagePickerProps} />
               </div>
 
               {/* Package cards preview */}
-              <div className="fdesk-package-grid" style={{ padding: 0 }}>
-                {packages.map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    className={`fdesk-package-card ${selectedPackageId === String(pkg.id) ? 'selected' : ''}`}
-                    onClick={() => setSelectedPackageId(String(pkg.id))}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong>{pkg.packageName}</strong>
-                      {selectedPackageId === String(pkg.id) && <CheckCircle2 size={16} color="var(--manager-blue, #2463eb)" />}
-                    </div>
-                    <div className="fdesk-package-price">{formatVND(pkg.price)}</div>
-                    <small>{membershipPackageTypeLabel(pkg)}</small>
-                    <div style={{ fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
-                      Thời hạn: <strong>{pkg.durationInDays} ngày</strong>
-                    </div>
-                    <p style={{ margin: 0, fontSize: 11, color: 'var(--manager-secondary, #64748b)' }}>
-                      {pkg.description || 'Gói tập chất lượng cao tại Sports Center.'}
-                    </p>
-                    {subscriptionsReady && subscriptionPackageReason(pkg, memberSubscriptions, packages) && <p className="fdesk-package-registration-reason">{subscriptionPackageReason(pkg, memberSubscriptions, packages)}</p>}
-                  </div>
-                ))}
-              </div>
+              <FrontDeskPackageCards {...packagePickerProps} />
 
               <div className="fdesk-form-actions">
                 {subscriptionNotice && (
@@ -1275,11 +1252,11 @@ export default function FrontDeskOperations() {
                 <button
                   type="submit"
                   className="fdesk-btn fdesk-btn-primary"
-                  disabled={submitting || !selectedPackageId || !subscriptionsReady || Boolean(subscriptionReason)}
+                  disabled={submitting || loadingPackages || Boolean(purchasePackage) || !selectedSubscriptionPackage || !subscriptionsReady || Boolean(subscriptionReason)}
                   aria-describedby={subscriptionNotice ? 'subscription-registration-notice' : undefined}
                 >
                   <Plus size={16} />
-                  {submitting ? 'Đang tạo...' : 'Đăng ký gói tập'}
+                  {submitting ? 'Đang tạo...' : subscriptionReason ? 'Không thể đăng ký gói này' : upgradingStandard ? 'Nâng cấp gói tập' : 'Đăng ký gói tập'}
                 </button>
               </div>
             </form>

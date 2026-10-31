@@ -1,6 +1,26 @@
 import { getMembershipPackageById } from './membershipPackageService'
 import { createMemberSubscription, createReceptionistMemberSubscription, getMySubscriptions, getReceptionistMemberSubscriptions, getSubscriptionUpgradePreview } from './memberSubscriptionService'
-import { membershipPackageType, packageRegistrationReason, subscriptionPackageReason, subscriptionPurchaseTerms, subscriptionStatus, currentSubscriptionForPackage } from '../utils/memberSubscriptions.js'
+import { membershipPackageType, packageRegistrationReason, subscriptionPackageReason, subscriptionPackageType, subscriptionPurchaseTerms, subscriptionStatus, currentSubscriptionForPackage } from '../utils/memberSubscriptions.js'
+
+export async function loadSubscriptionPackageReferences(subscriptions, packages = [], includeStandardPrices = true) {
+  const missingIds = [...new Set(subscriptions
+    .filter(item => ['active', 'pending'].includes(subscriptionStatus(item)))
+    .filter(item => {
+      const pkg = packages.find(candidate => String(candidate.id) === String(item.packageId))
+      const legacyType = !['standard', 'pt'].includes(String(item.packageType || '').trim().toLowerCase())
+      const needsPrice = includeStandardPrices && subscriptionStatus(item) === 'active' && subscriptionPackageType(item, packages) === 'Standard'
+      return (!pkg && legacyType) || (needsPrice && (!pkg || !Number.isFinite(Number(pkg.price)) || Number(pkg.price) <= 0))
+    })
+    .map(item => String(item.packageId)))]
+  const details = await Promise.all(missingIds.map(async id => {
+    const pkg = await getMembershipPackageById(id)
+    if (!pkg || String(pkg.id) !== id || !Number.isFinite(Number(pkg.price)) || Number(pkg.price) <= 0) {
+      throw new Error('Chưa tải được giá đầy đủ của gói hiện tại. Vui lòng tải lại trước khi đăng ký.')
+    }
+    return pkg
+  }))
+  return [...packages.filter(pkg => !missingIds.includes(String(pkg.id))), ...details]
+}
 
 export async function prepareSubscriptionPurchase(packageId, memberId) {
   const [pkg, subscriptions] = await Promise.all([
@@ -8,20 +28,9 @@ export async function prepareSubscriptionPurchase(packageId, memberId) {
     memberId == null ? getMySubscriptions() : getReceptionistMemberSubscriptions(memberId),
   ])
   if (!pkg || String(pkg.id) !== String(packageId)) throw new Error('Không tìm thấy gói đã chọn. Vui lòng tải lại.')
-  // Only legacy subscription responses need a catalog lookup to identify type.
-  const currentPackageIds = [...new Set(subscriptions
-    .filter(item => ['active', 'pending'].includes(subscriptionStatus(item)))
-    .filter(item => !['Standard', 'PT'].includes(item.packageType))
-    .map(item => String(item.packageId)))]
-  const packages = await Promise.all(currentPackageIds.map(async id => {
-    if (id === String(pkg.id)) return pkg
-    const currentPackage = await getMembershipPackageById(id)
-    if (!currentPackage || String(currentPackage.id) !== id || !Number.isFinite(Number(currentPackage.price))
-      || Number(currentPackage.price) <= 0 || !Number.isInteger(Number(currentPackage.durationInDays)) || Number(currentPackage.durationInDays) <= 0) {
-      throw new Error('Chưa tải được thông tin gói hiện tại. Vui lòng tải lại trước khi đăng ký.')
-    }
-    return currentPackage
-  }))
+  const packages = await loadSubscriptionPackageReferences(subscriptions, [pkg], membershipPackageType(pkg) === 'Standard')
+  let reason = subscriptionPackageReason(pkg, subscriptions, packages)
+  if (reason) return { pkg, subscriptions, preview: null, memberId, reason }
   const preview = membershipPackageType(pkg) === 'Standard'
     ? await getSubscriptionUpgradePreview(packageId, memberId)
     : {
@@ -31,7 +40,6 @@ export async function prepareSubscriptionPurchase(packageId, memberId) {
       discountAmount: 0, amountToPay: pkg.price, newStartDate: null, newEndDate: null,
     }
   if (!Number.isFinite(Number(preview.amountToPay)) || Number(preview.amountToPay) <= 0) throw new Error('Giá gói tập không hợp lệ. Vui lòng tải lại.')
-  let reason = subscriptionPackageReason(pkg, subscriptions, packages)
   const current = currentSubscriptionForPackage(pkg, subscriptions, packages)
   if (!reason && membershipPackageType(pkg) === 'Standard'
     && ((current && (!preview.canUpgrade || String(preview.currentSubscriptionId) !== String(current.id)))

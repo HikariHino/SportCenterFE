@@ -71,8 +71,8 @@ export default function SubscriptionPurchaseDialog({ pkg, memberId, onClose, onC
         </dl>
         <p className="subscription-purchase-note"><CheckCircle2 size={18} />{upgrading ? 'Gói cũ vẫn dùng được khi chờ thanh toán. Sau khi thanh toán thành công, gói mới được kích hoạt và gói cũ chuyển sang Đã nâng cấp.' : 'Gói PT được đăng ký độc lập với Standard và thanh toán nguyên giá. Gói mới chỉ có hiệu lực sau khi thanh toán thành công.'}</p>
         {!upgrading && <p className="subscription-purchase-note">Thời hạn được tính từ thời điểm kích hoạt sau thanh toán.</p>}
-        {purchase.reason && <p role="alert" className="subscription-purchase-error"><AlertCircle size={18} />{purchase.reason}</p>}
       </>}
+      {!loading && purchase?.reason && <p role="alert" className="subscription-purchase-error"><AlertCircle size={18} />{purchase.reason}</p>}
       {error && <p role="alert" className="subscription-purchase-error"><AlertCircle size={18} />{error}</p>}
     </div>
     <footer><button type="button" disabled={saving} onClick={onClose}>Quay lại</button>{error && <button type="button" disabled={loading || saving} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />Tải lại</button>}<button type="button" className="primary" disabled={loading || saving || !purchase || Boolean(purchase.reason)} onClick={submit}>{saving ? <LoaderCircle className="member-spin" size={16} /> : upgrading ? <ArrowUpRight size={16} /> : <CreditCard size={16} />}{saving ? 'Đang tạo đơn...' : upgrading ? 'Tạo đơn nâng cấp' : 'Tạo đơn đăng ký'}</button></footer>
