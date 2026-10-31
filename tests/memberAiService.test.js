@@ -119,3 +119,95 @@ test('workout failures and empty responses do not become valid recommendations',
   }
   await assert.rejects(service.getMemberWorkoutRecommendation(request, { signal: controller.signal }), error => error.code === 'ERR_CANCELED')
 })
+
+const plan = { goal: 'Tăng cơ', level: 'Intermediate', daysPerWeek: 1,
+  sessions: [{ day: 1, title: 'Toàn thân', durationMinutes: 45, exercises: [{ exerciseName: 'Squat', sets: 3, reps: 12, restSeconds: 60, note: 'Giữ lưng thẳng' }] }],
+  warnings: ['Đây là gợi ý để HLV xem xét.'] }
+const historyPage = (items, page = 1, totalCount = items.length, pageSize = 20) => ({ items, totalCount, pageNumber: page, pageSize, totalPages: Math.ceil(totalCount / pageSize) })
+const reply = (config, data) => ({ data: { success: true, data }, status: 200, headers: {}, config })
+
+test('the current workout POST parses structured sessions and preserves the server goal, exercises and warnings', async () => {
+  api.defaults.adapter = async config => reply(config, plan)
+  assert.deepEqual(await service.getMemberWorkoutRecommendation({ goal: 'Tăng cơ', level: 'Intermediate', daysPerWeek: 1 }), plan)
+})
+
+test('chat and workout history use authenticated paginated GETs with the actual BE PageNumber/TotalCount schema', async () => {
+  const chat = { id: 9, question: 'Lịch tập?', answer: 'Thứ hai', createdAt: '2026-10-31T03:00:00Z' }
+  const workout = { id: 10, memberId: 5, goal: 'Tăng cơ', level: 'Intermediate', daysPerWeek: 1, createdAt: chat.createdAt }
+  const calls = []
+  const controller = new AbortController()
+  api.defaults.adapter = async config => {
+    calls.push(config)
+    return reply(config, historyPage([config.url.includes('/chat/') ? chat : workout], 2, 30))
+  }
+  assert.deepEqual((await service.getMemberAiChatHistory({ page: 2, pageSize: 20 }, { signal: controller.signal })).items, [chat])
+  assert.deepEqual((await service.getMemberAiWorkoutHistory({ page: 2, pageSize: 20 }, { signal: controller.signal })).items, [workout])
+  assert.deepEqual(calls.map(item => item.url), ['/ai/chat/history', '/ai/workout-recommendations/history'])
+  for (const config of calls) {
+    assert.equal(config.method, 'get')
+    assert.deepEqual(config.params, { page: 2, pageSize: 20 })
+    assert.equal(config.signal, controller.signal)
+    assert.notEqual(config.skipAuth, true)
+    assert.equal(config.data, undefined)
+  }
+})
+
+test('history detail validates the requested ID and renders the saved structured plan, without calling AI again', async () => {
+  let calls = 0
+  api.defaults.adapter = async config => {
+    calls++
+    assert.equal(config.method, 'get')
+    assert.equal(config.url, '/ai/workout-recommendations/history/10')
+    return reply(config, { id: 10, memberId: 5, createdAt: '2026-10-31T03:00:00Z', plan })
+  }
+  assert.deepEqual((await service.getMemberAiWorkoutHistoryDetail(10)).plan, plan)
+  assert.equal(calls, 1)
+  for (const data of [{ id: 99, plan }, { id: 10, plan: {} }, null]) {
+    api.defaults.adapter = async config => reply(config, data)
+    await assert.rejects(service.getMemberAiWorkoutHistoryDetail(10))
+  }
+})
+
+test('chat clear and workout delete use the two DELETE routes and accept NoContent', async () => {
+  const calls = []
+  api.defaults.adapter = async config => { calls.push({ method: config.method, url: config.url, data: config.data }); return { data: '', status: 204, headers: {}, config } }
+  await service.clearMemberAiChatHistory()
+  await service.deleteMemberAiWorkoutHistory(10)
+  assert.deepEqual(calls, [
+    { method: 'delete', url: '/ai/chat/history', data: undefined },
+    { method: 'delete', url: '/ai/workout-recommendations/history/10', data: undefined },
+  ])
+})
+
+test('invalid IDs and paging never reach the server', async () => {
+  let calls = 0
+  api.defaults.adapter = async config => { calls++; return reply(config, {}) }
+  for (const id of [0, -1, 1.5, null, undefined, '10/cancel', true, Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(service.getMemberAiWorkoutHistoryDetail(id))
+    await assert.rejects(service.deleteMemberAiWorkoutHistory(id))
+  }
+  for (const options of [{ page: 0 }, { page: 100001 }, { pageSize: 101 }, { pageSize: 1.5 }]) {
+    await assert.rejects(service.getMemberAiChatHistory(options))
+    await assert.rejects(service.getMemberAiWorkoutHistory(options))
+  }
+  assert.equal(calls, 0)
+})
+
+test('failed or malformed history pages never look like an empty history', async () => {
+  const item = { id: 10, question: 'Câu hỏi', answer: 'Trả lời' }
+  for (const body of [null, {}, { success: false, message: 'Không thể tải lịch sử' },
+    { statusCode: 500, message: 'Lỗi máy chủ' }, { data: historyPage([item, item]) },
+    { data: { ...historyPage([item]), pageNumber: 2 } }, { data: { ...historyPage([item]), totalCount: -1 } },
+    { data: historyPage([{ ...item, answer: '' }]) }]) {
+    api.defaults.adapter = async config => ({ data: body, status: 200, headers: {}, config })
+    await assert.rejects(service.getMemberAiChatHistory())
+  }
+  api.defaults.adapter = async config => reply(config, historyPage([]))
+  assert.equal((await service.getMemberAiChatHistory()).total, 0)
+})
+
+test('failed DELETEs propagate instead of reporting that server history was erased', async () => {
+  api.defaults.adapter = async config => ({ data: { success: false, message: 'Không xóa được lịch sử' }, status: 200, headers: {}, config })
+  await assert.rejects(service.clearMemberAiChatHistory(), /Không xóa được/)
+  await assert.rejects(service.deleteMemberAiWorkoutHistory(10), /Không xóa được/)
+})

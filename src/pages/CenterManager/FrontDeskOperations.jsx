@@ -66,7 +66,7 @@ import { createPayment, syncPayment } from '../../services/paymentService'
 import { cancelOpenPayment } from '../../services/subscriptionCancellationService'
 import { canCancelPayOSPayment, canCheckoutPayOSPayment, canSyncPayOSPayment, paymentCheckoutMessage, paymentStatusLabel } from '../../utils/memberPayments'
 import PayOSQrImage from '../../components/PayOSQrImage'
-import { subscriptionPackageReason, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
+import { membershipPackageTypeLabel, subscriptionPackageReason, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import CounterOrderCancellationDialog from '../../components/CounterOrderCancellationDialog'
 import { counterOrderCancellationReason } from '../../utils/counterOrders'
@@ -175,7 +175,7 @@ export default function FrontDeskOperations() {
   const subscriptionReason = subscriptionsReady && selectedSubscriptionPackage ? subscriptionPackageReason(selectedSubscriptionPackage, memberSubscriptions, packages) : ''
   const subscriptionNotice = subscriptionReason || (subscriptionLoadError
       ? 'Chưa kiểm tra được hiệu lực gói tập. Vui lòng thử lại trước khi đăng ký.'
-      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : 'Standard chỉ được nâng cấp lên gói cao hơn. PT chỉ đăng ký song song khi Standard đã kích hoạt và còn hiệu lực.')
+      : subMemberId && !subscriptionsReady ? 'Đang kiểm tra hiệu lực gói tập của hội viên...' : 'Standard chỉ nâng cấp lên gói có giá cao hơn giá trị đã chốt. PT được đăng ký độc lập và thanh toán nguyên giá.')
 
   // Tab 4: Class & Attendance states
   const [classView, setClassView] = useState('booking')
@@ -1230,7 +1230,7 @@ export default function FrontDeskOperations() {
                   >
                     {packages.map((pkg) => (
                       <option key={pkg.id} value={pkg.id}>
-                        {pkg.packageName} — {formatVND(pkg.price)} ({pkg.durationInDays} ngày)
+                        {membershipPackageTypeLabel(pkg)} · {pkg.packageName} — {formatVND(pkg.price)} ({pkg.durationInDays} ngày)
                       </option>
                     ))}
                   </select>
@@ -1250,6 +1250,7 @@ export default function FrontDeskOperations() {
                       {selectedPackageId === String(pkg.id) && <CheckCircle2 size={16} color="var(--manager-blue, #2463eb)" />}
                     </div>
                     <div className="fdesk-package-price">{formatVND(pkg.price)}</div>
+                    <small>{membershipPackageTypeLabel(pkg)}</small>
                     <div style={{ fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
                       Thời hạn: <strong>{pkg.durationInDays} ngày</strong>
                     </div>

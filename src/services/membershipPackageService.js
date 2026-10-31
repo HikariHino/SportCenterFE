@@ -1,5 +1,11 @@
 import api from './api'
 
+function packageTypeFields(packageType) {
+  if (packageType == null) return {}
+  if (!['Standard', 'PT'].includes(packageType)) throw new Error('Loại gói phải là Standard hoặc PT.')
+  return { packageType }
+}
+
 /**
  * Trích xuất thông báo lỗi từ backend
  */
@@ -20,6 +26,7 @@ export function getPackageErrorMessage(error, fallback = 'Có lỗi xảy ra khi
  * @property {number} id
  * @property {string} packageName
  * @property {string} description
+ * @property {'Standard'|'PT'} packageType
  * @property {number} price
  * @property {number} durationInDays
  * @property {boolean} isActive
@@ -48,12 +55,13 @@ export async function getMembershipPackages() {
  * @returns {Promise<MembershipPackage>}
  * HTTP errors propagate with the backend body at error.response.data.
  */
-export async function createMembershipPackage({ packageName, description, price, durationInDays }) {
+export async function createMembershipPackage({ packageName, description, price, durationInDays, packageType }) {
   const response = await api.post('/membership-packages', {
     packageName,
     description,
     price,
     durationInDays,
+    ...packageTypeFields(packageType),
   })
   const body = response.data
 
@@ -88,13 +96,14 @@ export async function getMembershipPackageById(id) {
  * @returns {Promise<MembershipPackage>}
  * HTTP errors propagate with the backend body at error.response.data.
  */
-export async function updateMembershipPackage(id, { packageName, description, price, durationInDays, isActive }) {
+export async function updateMembershipPackage(id, { packageName, description, price, durationInDays, isActive, packageType }) {
   const response = await api.put(`/membership-packages/${id}`, {
     packageName,
     description,
     price,
     durationInDays,
     isActive,
+    ...packageTypeFields(packageType),
   })
   const body = response.data
 

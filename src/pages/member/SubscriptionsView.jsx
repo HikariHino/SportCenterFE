@@ -14,7 +14,7 @@ import {
 import { createPayment } from '../../services/paymentService'
 import { canCheckoutPayOSPayment, paymentCheckoutMessage } from '../../utils/memberPayments'
 import { cancelSubscriptionOrder } from '../../services/subscriptionCancellationService'
-import { currentSubscriptionForPackage, membershipPackageType, membershipPackageTypeLabel, mergeConfirmedSubscriptionCancellations, subscriptionDisplayStatusLabel, subscriptionPackageReason, subscriptionPaymentState, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
+import { currentSubscriptionForPackage, membershipPackageType, membershipPackageTypeLabel, mergeConfirmedSubscriptionCancellations, subscriptionDisplayStatusLabel, subscriptionPackageReason, subscriptionPackageType, subscriptionPaymentState, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import '../../style/member/SubscriptionsView.css'
 import '../../style/member/SubscriptionsLayout.css'
@@ -302,7 +302,7 @@ export function SubscriptionsView({ showNotice }) {
   const registrationDisabled = loading || Boolean(registrationReason) || subscribingId !== null || cancelLoading
   const packageReason = pkg => registrationReason || subscriptionPackageReason(pkg, subscriptions, packages, now)
   const isUpgradePackage = pkg => membershipPackageType(pkg) === 'Standard' && Boolean(currentSubscriptionForPackage(pkg, subscriptions, packages, now))
-  const packageTypeLabel = sub => membershipPackageTypeLabel({ ...sub, ...packages.find(pkg => String(pkg.id) === String(sub.packageId)) })
+  const packageTypeLabel = sub => membershipPackageTypeLabel({ packageType: subscriptionPackageType(sub, packages) })
 
   if (loading) {
     return (
@@ -323,17 +323,20 @@ export function SubscriptionsView({ showNotice }) {
       {registrationError && !viewingPackage && <div className="member-sub-message is-error" role="alert"><AlertCircle size={18} /><p>{registrationError}</p></div>}
       {!viewingSub && !registrationSuccessSub && <CheckoutFeedback feedback={checkoutFeedback} />}
 
-      {activeSubscriptions.length > 0 ? <section className="member-sub-active-packages" aria-label="Các thẻ đang sử dụng">{activeSubscriptions.map(activeSub => <article key={activeSub.id} className="member-sub-current" aria-labelledby={`member-current-package-${activeSub.id}`}>
-        <div className="member-sub-current-main">
-          <div className="member-sub-current-heading"><span className="member-sub-card-icon"><ShieldCheck size={24} /></span><div><div className="member-sub-current-meta"><span className="member-sub-status" data-status="active"><span />Đang hiệu lực</span><span>{packageTypeLabel(activeSub)}</span><span>#SUB-{activeSub.id}</span></div><h3 id={`member-current-package-${activeSub.id}`}>{activeSub.packageName}</h3><p>PT 1-1 chỉ đăng ký song song khi Standard đã kích hoạt và còn hiệu lực.</p></div></div>
-          <dl className="member-sub-current-facts"><div><dt>Ngày bắt đầu</dt><dd>{formatDate(activeSub.startDate)}</dd></div><div><dt>Thời hạn</dt><dd>{activeSub.durationInDays ?? '—'} ngày</dd></div><div><dt>Số tiền đã thanh toán</dt><dd>{formatCurrency(activeSub.agreedPrice ?? activeSub.price)}</dd></div></dl>
-        </div>
-        <div className="member-sub-current-aside"><span>Ngày hết hạn</span><strong>{formatDate(activeSub.endDate)}</strong><button type="button" className="member-button" onClick={() => handleOpenSubDetail(activeSub)}><Eye size={15} />Xem chi tiết</button>{packageTypeLabel(activeSub) === 'Standard' && <button type="button" className="member-btn-checkout" onClick={() => { setPackageTypeFilter('Standard'); setTab('catalog') }}><Sparkles size={15} />Nâng cấp gói</button>}</div>
-      </article>)}</section> : <div className="member-sub-welcome"><span className="member-sub-card-icon"><CreditCard size={25} /></span><div><h3>{pendingSubsCount ? 'Bạn có đơn đang chờ thanh toán' : 'Sẵn sàng cho hành trình tập luyện'}</h3><p>{pendingSubsCount ? 'Thanh toán đơn đã đăng ký để kích hoạt gói và bắt đầu sử dụng.' : 'Khám phá danh mục và chọn gói tập phù hợp với lịch trình của bạn.'}</p></div><button type="button" className="member-button" onClick={() => setTab(pendingSubsCount ? 'mine' : 'catalog')}>{pendingSubsCount ? 'Xem đơn của tôi' : 'Khám phá gói tập'}<ArrowRight size={16} /></button></div>}
-
       <div className="member-sub-stats" aria-label="Tổng quan gói tập">
         {[['Tổng đơn đăng ký', totalSubsCount, 'all'], ['Đang hiệu lực', activeSubsCount, 'active'], ['Chờ thanh toán', pendingSubsCount, 'pending'], ['Đã kết thúc / Nâng cấp', closedSubsCount, 'closed']].map(([label, count, tone]) => <div key={tone} data-tone={tone}><span>{label}</span><strong>{count}</strong></div>)}
       </div>
+
+      {activeSubscriptions.length > 0 ? <section className="member-sub-active-packages" aria-label="Các thẻ đang sử dụng">
+        <div className="member-sub-active-heading"><h3>Thẻ đang sử dụng <span>{activeSubscriptions.length}</span></h3><p>Standard và PT 1-1 được đăng ký độc lập.</p></div>
+        <div className="member-sub-active-grid">{activeSubscriptions.map(activeSub => <article key={activeSub.id} className="member-sub-current" aria-labelledby={`member-current-package-${activeSub.id}`}>
+        <div className="member-sub-current-main">
+          <div className="member-sub-current-heading"><span className="member-sub-card-icon"><ShieldCheck size={21} /></span><div><div className="member-sub-current-meta"><span className="member-sub-status" data-status="active"><span />Đang hiệu lực</span><span>{packageTypeLabel(activeSub)}</span><span>#SUB-{activeSub.id}</span></div><h3 id={`member-current-package-${activeSub.id}`}>{activeSub.packageName}</h3></div></div>
+          <dl className="member-sub-current-facts"><div><dt>Ngày bắt đầu</dt><dd>{formatDate(activeSub.startDate)}</dd></div><div><dt>Thời hạn</dt><dd>{activeSub.durationInDays ?? '—'} ngày</dd></div><div><dt>Đã thanh toán</dt><dd>{formatCurrency(activeSub.agreedPrice ?? activeSub.price)}</dd></div><div className="member-sub-current-expiry"><dt>Hết hạn</dt><dd>{formatDate(activeSub.endDate)}</dd></div></dl>
+        </div>
+        <div className="member-sub-current-actions"><button type="button" className="member-button" onClick={() => handleOpenSubDetail(activeSub)}><Eye size={15} />Xem chi tiết</button>{packageTypeLabel(activeSub) === 'Standard' && <button type="button" className="member-btn-checkout" onClick={() => { setPackageTypeFilter('Standard'); setTab('catalog') }}><Sparkles size={15} />Nâng cấp gói</button>}</div>
+      </article>)}</div></section> : <div className="member-sub-welcome"><span className="member-sub-card-icon"><CreditCard size={25} /></span><div><h3>{pendingSubsCount ? 'Bạn có đơn đang chờ thanh toán' : 'Sẵn sàng cho hành trình tập luyện'}</h3><p>{pendingSubsCount ? 'Thanh toán đơn đã đăng ký để kích hoạt gói và bắt đầu sử dụng.' : 'Khám phá danh mục và chọn gói tập phù hợp với lịch trình của bạn.'}</p></div><button type="button" className="member-button" onClick={() => setTab(pendingSubsCount ? 'mine' : 'catalog')}>{pendingSubsCount ? 'Xem đơn của tôi' : 'Khám phá gói tập'}<ArrowRight size={16} /></button></div>}
+
       <div className="member-sub-tabs" role="group" aria-label="Nội dung gói tập">
         <button type="button" aria-pressed={tab === 'mine'} onClick={() => setTab('mine')}><CreditCard size={17} />Gói của tôi<span>{subscriptions.length}</span></button>
         <button type="button" aria-pressed={tab === 'catalog'} onClick={() => setTab('catalog')}><Sparkles size={17} />Khám phá gói tập<span>{packages.length}</span></button>
@@ -358,7 +361,7 @@ export function SubscriptionsView({ showNotice }) {
 
       {tab === 'catalog' && <section className="member-sub-catalog" aria-labelledby="member-package-catalog">
         <div className="member-sub-section-heading"><div><h3 id="member-package-catalog">Chọn gói tập phù hợp</h3><p>Xem thông tin và thời hạn trước khi tạo đơn đăng ký.</p></div><span>{filteredPackages.length} gói</span></div>
-        <div className="member-sub-message" role="note"><Info size={18} /><p>Standard đang còn hạn chỉ được nâng cấp lên gói có giá cao hơn và thời hạn không ngắn hơn. Không thể mua thêm gói hiện tại hoặc hạ gói. PT chỉ đăng ký song song khi Standard đã kích hoạt và còn hiệu lực.</p></div>
+        <div className="member-sub-message" role="note"><Info size={18} /><p>Standard đang còn hạn chỉ được nâng cấp lên gói có giá cao hơn giá trị đã chốt của gói đang dùng. PT được đăng ký độc lập với Standard, thanh toán nguyên giá và không mua trùng đúng gói PT đang Active.</p></div>
         {registrationReason && <div id="member-sub-registration-lock" className="member-sub-message" role="status"><LockKeyhole size={18} /><p>{registrationReason}</p></div>}
         <div className="member-sub-toolbar">
           <label className="member-sub-search"><Search size={17} aria-hidden="true" /><input type="search" maxLength={200} value={packageSearch} onChange={event => setPackageSearch(event.target.value)} placeholder="Tìm tên gói hoặc từ khóa..." aria-label="Tìm gói tập" /></label>
@@ -445,7 +448,7 @@ export function SubscriptionsView({ showNotice }) {
                   <div style={{ background: 'var(--theme-raised, #edf2fa)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12, display: 'flex', gap: 10 }}>
                     <Info size={18} style={{ color: 'var(--theme-accent, #1557d5)', flexShrink: 0, marginTop: 2 }} />
                     <small style={{ color: 'var(--theme-accent, #1557d5)', fontSize: 11, lineHeight: 1.5 }}>
-                      Chọn tiếp tục để xem điều kiện, số tiền cần thanh toán và thời hạn được trung tâm xác nhận. Standard chỉ được nâng cấp lên gói cao hơn; PT chỉ đăng ký khi Standard đã kích hoạt và còn hiệu lực.
+                      Chọn tiếp tục để xem điều kiện, số tiền cần thanh toán và thời hạn được trung tâm xác nhận. Standard chỉ được nâng cấp lên gói cao hơn giá trị đã chốt; PT được đăng ký độc lập và thanh toán nguyên giá.
                     </small>
                   </div>
                 </>

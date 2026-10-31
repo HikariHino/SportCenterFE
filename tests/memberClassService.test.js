@@ -30,7 +30,7 @@ function mockApi({ catalog = sessions, registrations = [], subscriptions = [acti
   const state = { catalog: [...catalog], registrations: [...registrations], posts: [], reads: [] }
   api.defaults.adapter = async config => {
     let data
-    if (config.url === '/member-subscriptions/mine') data = subscriptions
+    if (config.url === '/member-subscriptions/me') data = subscriptions
     else if (config.method === 'post') {
       const id = Number(config.url.match(/class-sessions\/(\d+)\/registrations/)[1])
       state.posts.push(id)

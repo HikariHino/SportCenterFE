@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronLeft, ChevronRight, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
+import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
 import QRCode from 'qrcode'
 import { getMyQrCode, getMyGymCheckInHistory, getCheckInErrorMessage } from '../../services/gymCheckInService'
 import '../../style/member/GymCheckInView.css'
@@ -118,6 +118,12 @@ export function GymCheckInView() {
         </button>
       </header>
 
+      <section className="gym-stats" aria-label="Tổng quan tập luyện">
+        {[{ label: 'Tổng lượt tập', value: records.length, icon: History }, { label: 'Đã hoàn tất', value: completed, icon: CheckCircle2 }, { label: 'Chưa check-out', value: records.length - completed, icon: Clock3 }].map(({ label, value, icon: Icon }) =>
+          <div className="gym-panel" key={label}><Icon size={18} /><span>{label}</span><strong>{historyReady ? value : '—'}</strong></div>
+        )}
+      </section>
+
       <div className="gym-checkin-overview">
         <section className="gym-panel gym-member-card" aria-labelledby="gym-qr-title" aria-busy={qr.loading}>
           <div className="gym-card-heading">
@@ -126,28 +132,22 @@ export function GymCheckInView() {
           </div>
           {qr.loading ? <LoadingState>Đang tải thẻ hội viên...</LoadingState>
             : qr.error ? <ErrorState message={qr.error} retry={qr.reload} />
-              : info && <>
+              : info && <div className="gym-member-card-body">
                 <div className="gym-checkin-identity">
                   <strong className="gym-checkin-name">{info.fullName || 'Hội viên'}</strong>
                   <span className="gym-member-code">{info.memberCode || 'Chưa có mã hội viên'}</span>
-                  <div className="gym-checkin-qr"><img src={info.image} width="256" height="256" alt="Mã QR thẻ hội viên để lễ tân quét khi vào tập" /></div>
-                  <p>Xuất trình mã QR này tại quầy lễ tân.</p>
                 </div>
+                <div className="gym-checkin-qr"><img src={info.image} width="200" height="200" alt="Mã QR thẻ hội viên để lễ tân quét khi vào tập" /></div>
                 <dl className="gym-checkin-details">
                   <div><dt>Gói tập</dt><dd>{info.packageName || 'Chưa có thông tin'}</dd></div>
                   <div><dt>Trạng thái</dt><dd><span className="gym-package-status" data-active={String(info.packageStatus).toLowerCase() === 'active'}>{packageLabel(info.packageStatus)}</span></dd></div>
                   <div><dt>Hết hạn ngày</dt><dd>{formatDate(info.expireDate, true)}</dd></div>
                 </dl>
-              </>}
+                <p className="gym-qr-caption">Xuất trình mã QR này tại quầy lễ tân.</p>
+              </div>}
         </section>
 
         <div className="gym-checkin-side">
-          <section className="gym-stats" aria-label="Tổng quan tập luyện">
-            {[{ label: 'Tổng lượt tập', value: records.length, icon: History }, { label: 'Đã hoàn tất', value: completed, icon: CheckCircle2 }, { label: 'Chưa check-out', value: records.length - completed, icon: Clock3 }].map(({ label, value, icon: Icon }) =>
-              <div className="gym-panel" key={label}><Icon size={19} /><strong>{historyReady ? value : '—'}</strong><span>{label}</span></div>
-            )}
-          </section>
-
           <section className="gym-panel gym-latest" aria-labelledby="gym-latest-title" aria-busy={history.loading}>
             <div className="gym-card-heading"><h3 id="gym-latest-title"><Clock3 size={18} /> Lượt tập gần nhất</h3>{historyReady && latest && <SessionStatus item={latest} />}</div>
             {history.loading ? <LoadingState>Đang tải thông tin lượt tập...</LoadingState>
@@ -163,24 +163,24 @@ export function GymCheckInView() {
                 </> : <div className="gym-checkin-state"><History size={28} /><p>Chưa có lượt tập nào được ghi nhận.<br />Xuất trình thẻ QR tại lễ tân để bắt đầu buổi tập đầu tiên.</p></div>}
           </section>
 
-          <aside className="gym-panel gym-checkin-guide" aria-labelledby="gym-guide-title">
-            <h3 id="gym-guide-title"><ScanLine size={18} /> Sử dụng thẻ trong 3 bước</h3>
+          <details className="gym-panel gym-checkin-guide">
+            <summary><ScanLine size={18} /><span>Sử dụng thẻ trong 3 bước</span><ChevronDown size={16} /></summary>
             <ol>
               <li><span>1</span><div><strong>Mở thẻ QR</strong><p>Chuẩn bị mã QR cá nhân khi đến phòng tập.</p></div></li>
               <li><span>2</span><div><strong>Quét mã tại lễ tân</strong><p>Lễ tân quét mã để ghi nhận giờ vào.</p></div></li>
               <li><span>3</span><div><strong>Xác nhận khi ra về</strong><p>Nhờ lễ tân check-out, sau đó làm mới lịch sử.</p></div></li>
             </ol>
-          </aside>
+          </details>
         </div>
       </div>
 
       <section className="gym-checkin-history" aria-labelledby="gym-history-title" aria-busy={history.loading}>
         <div className="gym-history-heading">
           <div><h3 id="gym-history-title">Lịch sử tập luyện</h3><p>Theo dõi thời gian vào, ra và thông tin từng lượt tập.</p></div>
-          <button type="button" className="gym-button" disabled={history.loading} onClick={reloadHistory}><RefreshCw size={15} /> Làm mới lịch sử</button>
-        </div>
-        <div className="gym-history-filters" role="group" aria-label="Lọc lịch sử theo trạng thái">
-          {filters.map(({ value, label, count }) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setPage(1) }}>{label}<span>{historyReady ? count : '—'}</span></button>)}
+          <div className="gym-history-filters" role="group" aria-label="Lọc lịch sử theo trạng thái">
+            {filters.map(({ value, label, count }) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setPage(1) }}>{label}<span>{historyReady ? count : '—'}</span></button>)}
+          </div>
+          <button type="button" className="gym-button" disabled={history.loading} onClick={reloadHistory} aria-label="Làm mới lịch sử" title="Làm mới lịch sử"><RefreshCw size={15} /><span>Làm mới lịch sử</span></button>
         </div>
         <div className="gym-panel gym-history-content">
           {history.loading ? <LoadingState>Đang tải lịch sử tập luyện...</LoadingState>

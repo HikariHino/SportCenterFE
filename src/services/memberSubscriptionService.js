@@ -9,9 +9,16 @@ function unwrap(body, fallback) {
   return body?.data ?? body
 }
 
-/** GET /api/member-subscriptions/mine */
+const isMissingRoute = error => [404, 405].includes(Number(error.response?.status))
+
+/** GET /api/member-subscriptions/me (legacy: /mine). */
 export async function getMySubscriptions() {
-  const response = await api.get('/member-subscriptions/mine')
+  let response
+  try { response = await api.get('/member-subscriptions/me') }
+  catch (error) {
+    if (!isMissingRoute(error)) throw error
+    response = await api.get('/member-subscriptions/mine')
+  }
   const payload = unwrap(response.data, 'Không thể tải danh sách đăng ký gói.')
   if (!Array.isArray(payload)) throw new Error('Dữ liệu gói đã đăng ký không hợp lệ. Vui lòng tải lại.')
   return payload
@@ -25,9 +32,15 @@ export async function createMemberSubscription(packageId) {
 
 /** GET /api/member-subscriptions/upgrade-preview */
 export async function getSubscriptionUpgradePreview(targetPackageId, memberId) {
-  const response = await api.get('/member-subscriptions/upgrade-preview', {
-    params: { targetPackageId, ...(memberId == null ? {} : { memberId }) },
-  })
+  let response
+  try {
+    response = await api.get(memberId == null ? '/member-subscriptions/upgrade-preview' : `/member-subscriptions/members/${memberId}/upgrade-preview`, {
+      params: { targetPackageId },
+    })
+  } catch (error) {
+    if (memberId == null || !isMissingRoute(error)) throw error
+    response = await api.get('/member-subscriptions/upgrade-preview', { params: { targetPackageId, memberId } })
+  }
   const preview = unwrap(response.data, 'Không thể xem trước thông tin nâng cấp gói.')
   if (!preview || String(preview.targetPackageId) !== String(targetPackageId) || typeof preview.canUpgrade !== 'boolean'
     || !['targetPackagePrice', 'discountAmount', 'amountToPay', 'currentAgreedPrice'].every(field => preview[field] != null && Number.isFinite(Number(preview[field])) && Number(preview[field]) >= 0)

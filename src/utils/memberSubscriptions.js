@@ -48,8 +48,10 @@ export function packageRegistrationReason(pkg) {
   return ''
 }
 
-// Match PackageTypeHelper in BE: type is derived from the name and description.
+// Explicit API types take precedence; names are only for legacy responses.
 export function membershipPackageType(pkg) {
+  if (String(pkg?.packageType || '').trim().toLowerCase() === 'pt') return 'PT'
+  if (String(pkg?.packageType || '').trim().toLowerCase() === 'standard') return 'Standard'
   const name = String(pkg?.packageName || '').toLowerCase()
   const description = String(pkg?.description || '').toLowerCase()
   return name.includes('pt') || ['pt', 'huấn luyện viên', '1-1'].some(text => description.includes(text)) ? 'PT' : 'Standard'
@@ -59,24 +61,12 @@ export const membershipPackageTypeLabel = pkg => membershipPackageType(pkg) === 
 
 export function currentSubscriptionForPackage(pkg, subscriptions, packages = [], now = Date.now()) {
   const type = membershipPackageType(pkg)
-  return subscriptions.find(item => subscriptionStatus(item, now) === 'active' && membershipPackageType({
-    ...item, ...packages.find(candidate => String(candidate.id) === String(item.packageId)),
-  }) === type)
+  return subscriptions.find(item => subscriptionStatus(item, now) === 'active' && subscriptionPackageType(item, packages) === type)
 }
 
-function subscriptionPackage(item, packages) {
-  return { ...item, ...packages.find(candidate => String(candidate.id) === String(item.packageId)) }
-}
-
-function hasEffectiveStandard(subscriptions, packages, now) {
-  return subscriptions.some(item => {
-    const start = Date.parse(item.startDate)
-    const end = Date.parse(item.endDate)
-    return subscriptionStatus(item, now) === 'active'
-      && membershipPackageType(subscriptionPackage(item, packages)) === 'Standard'
-      && Number.isFinite(start) && start <= now
-      && (item.endDate == null || (Number.isFinite(end) && end > now))
-  })
+export function subscriptionPackageType(item, packages = []) {
+  if (['standard', 'pt'].includes(String(item?.packageType || '').trim().toLowerCase())) return membershipPackageType(item)
+  return membershipPackageType({ ...item, ...packages.find(candidate => String(candidate.id) === String(item.packageId)) })
 }
 
 export function subscriptionPackageReason(pkg, subscriptions, packages = [], now = Date.now()) {
@@ -85,34 +75,27 @@ export function subscriptionPackageReason(pkg, subscriptions, packages = [], now
   if (subscriptions.some(item => String(item.packageId) === String(pkg.id) && subscriptionStatus(item, now) === 'pending')) {
     return 'Bạn đã có đơn chờ thanh toán cho gói này. Vui lòng thanh toán hoặc hủy đơn đó.'
   }
-  if (subscriptions.some(item => String(item.packageId) === String(pkg.id) && subscriptionStatus(item, now) === 'active')) {
+  if (subscriptions.some(item => String(item.packageId) === String(pkg.id) && subscriptionStatus(item, now) === 'active'
+    && subscriptionPackageType(item, packages) === membershipPackageType(pkg))) {
     return membershipPackageType(pkg) === 'PT'
       ? 'Bạn đã có gói PT này đang hoạt động. Không thể đăng ký thêm gói đang dùng.'
       : 'Bạn đang sử dụng gói Standard này. Chỉ có thể nâng cấp lên gói cao hơn, không thể đăng ký thêm gói hiện tại.'
   }
   if (membershipPackageType(pkg) === 'PT') {
-    return hasEffectiveStandard(subscriptions, packages, now)
-      ? '' : 'Cần có gói Standard đã kích hoạt và đang còn hiệu lực trước khi đăng ký gói PT.'
+    return ''
   }
   if (subscriptions.some(item => subscriptionStatus(item, now) === 'pending'
-    && membershipPackageType(subscriptionPackage(item, packages)) === 'Standard')) {
+    && subscriptionPackageType(item, packages) === 'Standard')) {
     return 'Bạn đã có đơn gói Standard chờ thanh toán. Vui lòng thanh toán hoặc hủy đơn đó trước khi chọn gói Standard khác.'
   }
   const current = subscriptions.filter(item => subscriptionStatus(item, now) === 'active'
-    && membershipPackageType(subscriptionPackage(item, packages)) === 'Standard')
+    && subscriptionPackageType(item, packages) === 'Standard')
   for (const item of current) {
-    const catalogPackage = packages.find(candidate => String(candidate.id) === String(item.packageId))
-    // After an upgrade, agreedPrice may contain only the extra amount paid.
-    // Compare against the full package value as well, never just that difference.
-    const currentPrice = Math.max(Number(catalogPackage?.price) || 0, Number(item.agreedPrice) || 0)
-    if (!Number.isFinite(Number(pkg.price)) || Number(pkg.price) <= 0 || currentPrice <= 0) {
+    const currentPrice = Number(item.agreedPrice)
+    if (!Number.isFinite(Number(pkg.price)) || Number(pkg.price) <= 0 || !Number.isFinite(currentPrice) || currentPrice <= 0) {
       return 'Chưa xác định được giá trị gói hiện tại. Vui lòng tải lại trước khi nâng cấp.'
     }
     if (Number(pkg.price) <= currentPrice) return 'Chỉ có thể nâng cấp Standard lên gói có giá trị cao hơn gói đang dùng. Không thể hạ gói hoặc đăng ký gói ngang giá.'
-    if (!Number.isFinite(Number(item.durationInDays)) || Number(item.durationInDays) <= 0
-      || !Number.isFinite(Number(pkg.durationInDays)) || Number(pkg.durationInDays) < Number(item.durationInDays)) {
-      return 'Gói nâng cấp không được có thời hạn ngắn hơn gói Standard hiện tại.'
-    }
   }
   return ''
 }
