@@ -969,3 +969,20 @@
 [data-theme='dark'] .reception-qr-checkin-error { border-color:#6d3a41; color:var(--theme-red); background:var(--theme-red-bg); }
 [data-theme='dark'] .reception-qr-camera-body .reception-qr-camera-error { border-color:#6d3a41; color:var(--theme-red); background:var(--theme-red-bg); }
 @media(max-width:520px) { .reception-qr-camera-body { padding:15px; }.reception-qr-camera-dialog>footer { padding:12px 15px; }.reception-gym-checkin-card>form { grid-template-columns:1fr; } }
+
+/* Keep long Receptionist lists inside their cards, with column labels in view. */
+.reception-table-scroll { height:clamp(260px,60dvh,560px); overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; scrollbar-width:thin; scrollbar-color:#9cabc0 transparent; }
+.reception-table-scroll:focus-visible { outline:3px solid var(--rc-accent); outline-offset:-3px; }
+.reception-table-scroll .reception-table-heading,.reception-table-scroll .reception-table-row { display:grid; min-width:720px; grid-template-columns:minmax(0,.8fr) minmax(0,1.15fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr); }
+.reception-table-scroll .reception-table-heading,.reception-table-scroll .reception-gym-today-heading { position:sticky; top:0; z-index:2; box-shadow:0 1px 0 var(--rc-line); }
+.reception-table-scroll .reception-table-row>span { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reception-table-scroll>.reception-empty,.reception-table-scroll>.reception-inline-error>.reception-empty { min-height:260px; }
+.reception-table-scroll--checkins { height:auto; max-height:clamp(260px,55dvh,480px); }
+.reception-table-scroll--checkins .reception-gym-today-heading,.reception-table-scroll--checkins article { min-width:780px; }
+[data-theme='dark'] .reception-table-scroll { scrollbar-color:#52637d transparent; }
+[data-theme='dark'] .reception-gym-today-heading { color:var(--theme-muted); background:var(--theme-raised); }
+[data-theme='dark'] .reception-gym-today-table article { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-surface); }
+[data-theme='dark'] .reception-gym-today-table article small { color:var(--theme-muted); }
+[data-theme='dark'] .reception-gym-today-table article>button:not(:disabled) { color:var(--theme-bg); }
+[data-theme='dark'] .reception-gym-today-table article>button:disabled { border-color:var(--theme-border); color:var(--theme-muted); background:var(--theme-raised); }
+[data-theme='dark'] .reception-gym-today-card .reception-card-head>button { border-color:var(--theme-border); color:var(--theme-accent); background:var(--theme-raised); }
