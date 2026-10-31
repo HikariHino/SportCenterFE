@@ -594,6 +594,13 @@
 [data-theme='dark'] .coach-schedule-detail-heading>b.live { color:var(--theme-green); background:var(--theme-green-bg); }
 [data-theme='dark'] .coach-schedule-detail-heading>b.done { color:var(--theme-muted); background:var(--theme-raised); }
 [data-theme='dark'] .coach-schedule-detail-heading>b.cancelled { color:var(--theme-red); background:var(--theme-red-bg); }
+[data-theme='dark'] .coach-plan-sport-context { border-color:var(--theme-border); background:var(--theme-blue-bg); }
+[data-theme='dark'] .coach-plan-sport-context>span { color:var(--theme-accent); }
+[data-theme='dark'] .coach-plan-sport-context>strong { color:var(--theme-text); }
+[data-theme='dark'] .coach-plan-sport-context>small { color:var(--theme-muted); }
+[data-theme='dark'] .coach-plan-sport-context.is-missing { background:var(--theme-red-bg); }
+[data-theme='dark'] .coach-plan-sport-context.is-missing>span,
+[data-theme='dark'] .coach-plan-sport-context.is-missing>strong { color:var(--theme-red); }
 @media(max-width:760px) {
   .coach-schedule-detail-heading { display:grid; gap:10px; }
   .coach-schedule-detail-heading h2 { font-size:21px; }
