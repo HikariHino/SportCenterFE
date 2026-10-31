@@ -947,8 +947,13 @@
 .reception-registration-card-actions button.checkin:disabled { opacity:.5; cursor:not-allowed; }
 .reception-registration-list .reception-registration-checkin-hint { margin:0; padding:0 13px 12px; color:var(--rc-muted); font-size:12px; line-height:1.5; }
 
-.reception-gym-checkin-card form>.reception-qr-camera-open { border:1px solid var(--rc-accent); color:var(--rc-accent); background:transparent; }
-.reception-qr-scan-message { grid-column:1/-1; display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #b8ddd9; border-radius:8px; color:#087e74; background:#effaf8; font-size:12px; line-height:1.5; }
+.reception-qr-checkin-actions { display:grid; justify-items:stretch; gap:10px; padding:18px; }
+.reception-qr-checkin-actions>button { min-height:41px; display:flex; align-items:center; justify-content:center; gap:7px; padding:0 13px; border:1px solid var(--rc-accent); border-radius:8px; color:var(--rc-accent); background:transparent; font-size:13px; font-weight:800; }
+.reception-qr-checkin-actions>p { margin:0; color:var(--rc-muted); font-size:12px; line-height:1.5; }
+.reception-qr-checkin-actions>.reception-qr-manual-toggle { justify-self:start; min-height:34px; padding:0; border:0; font-size:12px; }
+.reception-qr-checkin-actions>button:disabled { opacity:.6; cursor:wait; }
+.reception-qr-checkin-status { margin:0 18px 18px; color:var(--rc-muted); font-size:12px; line-height:1.5; }
+.reception-qr-checkin-error { margin:0 18px 18px; padding:10px 12px; border:1px solid #f0b7bd; border-radius:8px; color:#a62d3a; background:#fff0f2; font-size:12px; line-height:1.5; }
 .reception-qr-camera-backdrop { z-index:90; }
 .reception-qr-camera-dialog { width:min(560px,100%); }
 .reception-qr-camera-body { padding:18px 21px; }
@@ -961,6 +966,6 @@
 .reception-qr-camera-dialog>footer button,.reception-qr-camera-loading button { min-height:38px; display:flex; align-items:center; justify-content:center; gap:6px; padding:0 13px; border:1px solid var(--rc-line); border-radius:8px; color:var(--rc-ink); background:var(--theme-surface,#fff); font-size:12px; font-weight:750; }
 .reception-qr-camera-dialog>footer .reception-qr-camera-retry { border-color:var(--rc-accent); color:var(--rc-accent); }
 .reception-qr-camera-loading { position:fixed; inset:0; z-index:90; display:grid; place-content:center; justify-items:center; gap:15px; color:#fff; background:#071327d9; }
-[data-theme='dark'] .reception-qr-scan-message { border-color:#2c6554; color:var(--theme-green); background:var(--theme-green-bg); }
+[data-theme='dark'] .reception-qr-checkin-error { border-color:#6d3a41; color:var(--theme-red); background:var(--theme-red-bg); }
 [data-theme='dark'] .reception-qr-camera-body .reception-qr-camera-error { border-color:#6d3a41; color:var(--theme-red); background:var(--theme-red-bg); }
 @media(max-width:520px) { .reception-qr-camera-body { padding:15px; }.reception-qr-camera-dialog>footer { padding:12px 15px; }.reception-gym-checkin-card>form { grid-template-columns:1fr; } }
