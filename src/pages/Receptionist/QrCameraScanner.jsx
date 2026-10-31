@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Camera, RefreshCw, X } from 'lucide-react'
 import { createReceptionistQrCamera } from '../../services/receptionistQrCamera'
 
-export default function QrCameraScanner({ onScan, onClose }) {
+export default function QrCameraScanner({ onScan, onClose, onManualEntry }) {
   const video = useRef(null)
   const closeButton = useRef(null)
   const callbacks = useRef({ onScan, onClose })
@@ -55,9 +55,9 @@ export default function QrCameraScanner({ onScan, onClose }) {
       <div className="reception-qr-camera-body">
         <div className="reception-qr-camera-preview"><video ref={video} autoPlay muted playsInline aria-label="Hình ảnh camera quét mã QR" />{status !== 'scanning' && <div><Camera size={34} /><span>{status === 'starting' ? 'Đang mở camera...' : 'Camera chưa sẵn sàng'}</span></div>}</div>
         {error ? <p className="reception-qr-camera-error" role="alert">{error}</p> : <p role="status">{status === 'starting' ? 'Chọn Cho phép khi trình duyệt hỏi quyền sử dụng camera.' : 'Đang tìm mã QR. Giữ mã rõ nét và đủ ánh sáng.'}</p>}
-        <p>Quét thành công sẽ điền mã QR. Kiểm tra mã rồi nhấn xác nhận để check-in.</p>
+        <p>Quét được mã QR sẽ tự động check-in cho hội viên.</p>
       </div>
-      <footer><button type="button" onClick={onClose}>Nhập mã thủ công</button>{status === 'error' && <button className="reception-qr-camera-retry" type="button" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={15} />Thử lại</button>}</footer>
+      <footer><button type="button" onClick={onManualEntry}>Xác nhận thủ công</button>{status === 'error' && <button className="reception-qr-camera-retry" type="button" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={15} />Thử lại</button>}</footer>
     </section>
   </div>
 }
