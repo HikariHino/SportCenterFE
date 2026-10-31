@@ -614,6 +614,10 @@
 
 .fdesk-package-card {
   min-width: 0;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   border: 1px solid var(--manager-line, #e9edf3);
   border-radius: 10px;
   padding: 16px;
@@ -625,11 +629,18 @@
   transition: all 0.2s ease;
 }
 
-.fdesk-package-card:hover, .fdesk-package-card.selected {
+.fdesk-package-card:hover:not(:disabled), .fdesk-package-card.selected {
   border-color: var(--manager-blue, #2463eb);
   box-shadow: 0 4px 12px rgba(36, 99, 235, 0.12);
   background: var(--manager-raised, #f8fafc);
 }
+
+.fdesk-package-card:disabled { cursor: not-allowed; background: var(--manager-raised, #f8fafc); }
+.fdesk-package-card:disabled .fdesk-package-price { color: var(--manager-muted, #748096); }
+.fdesk-package-card-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
+.fdesk-package-card-heading > svg { flex-shrink: 0; color: var(--manager-blue, #2463eb); }
+.fdesk-package-duration { font-size: 12px; color: var(--manager-muted, #748096); }
+.fdesk-package-description { font-size: 11px; color: var(--manager-secondary, #64748b); }
 
 .fdesk-package-price {
   font-size: 18px;

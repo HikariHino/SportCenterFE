@@ -69,6 +69,16 @@ export function subscriptionPackageType(item, packages = []) {
   return membershipPackageType({ ...item, ...packages.find(candidate => String(candidate.id) === String(item.packageId)) })
 }
 
+// An upgraded subscription's agreedPrice may be only the upgrade surcharge.
+// Compare package tiers against the full current package price as well.
+export function subscriptionPackageValue(item, packages = []) {
+  const currentPackage = packages.find(pkg => String(pkg.id) === String(item.packageId))
+  const packagePrice = Number(currentPackage?.price)
+  const agreedPrice = Number(item.agreedPrice)
+  if (!Number.isFinite(packagePrice) || packagePrice <= 0 || !Number.isFinite(agreedPrice) || agreedPrice <= 0) return null
+  return Math.max(packagePrice, agreedPrice)
+}
+
 export function subscriptionPackageReason(pkg, subscriptions, packages = [], now = Date.now()) {
   const unavailable = subscriptionRegistrationReason(subscriptions, now) || packageRegistrationReason(pkg)
   if (unavailable) return unavailable
@@ -91,7 +101,7 @@ export function subscriptionPackageReason(pkg, subscriptions, packages = [], now
   const current = subscriptions.filter(item => subscriptionStatus(item, now) === 'active'
     && subscriptionPackageType(item, packages) === 'Standard')
   for (const item of current) {
-    const currentPrice = Number(item.agreedPrice)
+    const currentPrice = subscriptionPackageValue(item, packages)
     if (!Number.isFinite(Number(pkg.price)) || Number(pkg.price) <= 0 || !Number.isFinite(currentPrice) || currentPrice <= 0) {
       return 'Chưa xác định được giá trị gói hiện tại. Vui lòng tải lại trước khi nâng cấp.'
     }
