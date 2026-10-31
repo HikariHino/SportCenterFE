@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react'
-import { CheckCircle2, QrCode, ScanLine, ShieldCheck, UserCheck } from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Camera, CheckCircle2, QrCode, ScanLine, ShieldCheck, UserCheck } from 'lucide-react'
 import { checkOutGymMember, getCheckInErrorMessage, getTodayCheckIns, manualCheckIn, scanQrCheckIn } from '../../services/gymCheckInService'
 import { EmptyState, formatDateTime, ViewLoader } from './ReceptionistViewShared'
+
+const QrCameraScanner = lazy(() => import('./QrCameraScanner'))
 
 export function CheckInView({ showNotice }) {
   const [qrForm, setQrForm] = useState({ qrCode: '', notes: '' })
   const [qrResult, setQrResult] = useState(null)
   const [qrSaving, setQrSaving] = useState(false)
   const [qrError, setQrError] = useState('')
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const [scanMessage, setScanMessage] = useState('')
+  const qrInput = useRef(null)
   const [manualForm, setManualForm] = useState({ memberId: '', phoneNumber: '', notes: '' })
   const [manualSaving, setManualSaving] = useState(false)
   const [manualError, setManualError] = useState('')
@@ -41,6 +46,7 @@ export function CheckInView({ showNotice }) {
 
   const submitQrCheckIn = async event => {
     event.preventDefault()
+    if (qrSaving || cameraOpen) return
     setQrSaving(true)
     setQrError('')
     try {
@@ -48,6 +54,7 @@ export function CheckInView({ showNotice }) {
       setQrResult(result)
       setTodayCheckIns(current => [result, ...current.filter(item => item.id !== result.id)])
       setQrForm(current => ({ ...current, qrCode: '' }))
+      setScanMessage('')
       showNotice?.(`Đã check-in ${result.memberName || `hội viên #${result.memberId}`} bằng QR.`)
     } catch (requestError) {
       setQrResult(null)
@@ -55,6 +62,19 @@ export function CheckInView({ showNotice }) {
     } finally {
       setQrSaving(false)
     }
+  }
+
+  const closeCamera = () => {
+    setCameraOpen(false)
+    qrInput.current?.focus()
+  }
+
+  const handleScannedQr = qrCode => {
+    setQrForm(current => ({ ...current, qrCode }))
+    setQrError('')
+    setScanMessage('Đã quét mã QR. Vui lòng kiểm tra và xác nhận check-in.')
+    setCameraOpen(false)
+    qrInput.current?.focus()
   }
 
   const submitManualCheckIn = async event => {
@@ -100,7 +120,7 @@ export function CheckInView({ showNotice }) {
     <div className="reception-gym-checkin-layout">
       <section className="reception-card reception-gym-checkin-card">
         <div className="reception-card-head"><div><span>XÁC THỰC HỘI VIÊN</span><h2>Quét mã QR hội viên</h2></div><QrCode size={20} /></div>
-        <form onSubmit={submitQrCheckIn}><label>Mã QR<input value={qrForm.qrCode} onChange={event => setQrForm(current => ({ ...current, qrCode: event.target.value }))} placeholder="Dán hoặc quét nội dung QR" required /></label><label>Ghi chú<input value={qrForm.notes} onChange={event => setQrForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label>{qrError && <p role="alert">{qrError}</p>}<button type="submit" disabled={qrSaving}><ScanLine size={16} />{qrSaving ? 'Đang xác minh...' : 'Check-in bằng QR'}</button></form>
+        <form onSubmit={submitQrCheckIn}><button type="button" className="reception-qr-camera-open" disabled={qrSaving || cameraOpen} onClick={() => { setQrError(''); setScanMessage(''); setCameraOpen(true) }}><Camera size={17} />Quét QR bằng camera</button><label>Mã QR<input ref={qrInput} value={qrForm.qrCode} onChange={event => { setQrForm(current => ({ ...current, qrCode: event.target.value })); setScanMessage('') }} placeholder="Dán hoặc quét nội dung QR" required /></label><label>Ghi chú<input value={qrForm.notes} onChange={event => setQrForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label>{scanMessage && <div className="reception-qr-scan-message" role="status"><CheckCircle2 size={16} />{scanMessage}</div>}{qrError && <p role="alert">{qrError}</p>}<button type="submit" disabled={qrSaving || cameraOpen || !qrForm.qrCode.trim()}><ScanLine size={16} />{qrSaving ? 'Đang xác minh...' : 'Xác nhận check-in bằng QR'}</button></form>
       </section>
       <section className="reception-card reception-gym-result">
         <div className="reception-card-head"><div><span>KẾT QUẢ CHECK-IN</span><h2>Thông tin lượt vào phòng gym</h2></div><ShieldCheck size={20} /></div>
@@ -115,5 +135,6 @@ export function CheckInView({ showNotice }) {
       <div className="reception-card-head"><div><span>HOẠT ĐỘNG HÔM NAY</span><h2>Hội viên đang sử dụng phòng gym</h2></div><button type="button" onClick={() => setTodayRequestKey(key => key + 1)} disabled={todayLoading}>{todayLoading ? 'Đang tải...' : 'Làm mới'}</button></div>
       {todayLoading ? <EmptyState icon={UserCheck} title="Đang tải check-in hôm nay" text="Dữ liệu check-in đang được đồng bộ từ hệ thống." /> : todayError ? <div className="reception-inline-error"><EmptyState icon={UserCheck} title="Không thể tải check-in hôm nay" text={todayError} /><button type="button" onClick={() => setTodayRequestKey(key => key + 1)}>Thử lại</button></div> : todayCheckIns.length ? <div className="reception-gym-today-table"><div className="reception-gym-today-heading"><span>Hội viên</span><span>Gói tập</span><span>Giờ vào</span><span>Giờ ra</span><span>Thao tác</span></div>{todayCheckIns.map(item => <article key={item.id}><span><strong>{item.memberName}</strong><small>{item.memberCode} · {item.phoneNumber || 'Chưa có SĐT'}</small></span><span>{item.packageName || 'Chưa có gói'}</span><span>{formatDateTime(item.checkInTime)}</span><span>{item.checkOutTime ? formatDateTime(item.checkOutTime) : 'Đang ở phòng gym'}</span><button type="button" disabled={Boolean(item.checkOutTime) || checkOutSavingId !== null} onClick={() => handleCheckOut(item)}>{checkOutSavingId === item.id ? 'Đang xử lý...' : item.checkOutTime ? 'Đã ra về' : 'Check-out'}</button></article>)}</div> : <EmptyState icon={UserCheck} title="Chưa có lượt check-in" text="Hôm nay chưa có hội viên nào vào phòng gym." />}
     </section>
+    {cameraOpen && <Suspense fallback={<div className="reception-qr-camera-loading" role="status">Đang tải trình quét QR...<button type="button" onClick={closeCamera}>Hủy</button></div>}><QrCameraScanner onScan={handleScannedQr} onClose={closeCamera} /></Suspense>}
   </div>
 }
