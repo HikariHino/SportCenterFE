@@ -381,7 +381,7 @@ export function ProfileView({ user, showNotice }) {
           <section className="member-profile-security" aria-labelledby="member-security-title">
             <div className="member-profile-security-heading"><ShieldCheck size={18} /><div><h3 id="member-security-title">Bảo mật tài khoản</h3><p>Quản lý email đăng nhập và mật khẩu của bạn.</p></div></div>
             <div className="member-profile-security-grid">
-              <ChangeEmailForm currentEmail={profile?.email || formData.email} disabled={saving || passwordSaving} />
+              <ChangeEmailForm currentEmail={profile?.email || formData.email} disabled={saving || passwordSaving} allowAnyEmailDomain />
 
               {/* Đổi mật khẩu tài khoản */}
               <article className="member-card member-profile-password" aria-labelledby="member-password-title">

@@ -59,6 +59,7 @@ import CancelClassSessionsDialog from './CancelClassSessionsDialog'
 import CloseClassDialog from './CloseClassDialog'
 import { applyRoomSessionCancellations } from '../../utils/roomTimetable'
 import '../../style/CenterManager/ClassManagement.css'
+import { MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
 
 // Sport icon helper based on keywords
 function getSportIcon(name) {
@@ -2187,6 +2188,7 @@ export default function ClassManagement() {
                     type="text"
                     className="class-form-input"
                     placeholder="Ví dụ: Gym, Yoga, Boxing, Bơi lội, Pickleball..."
+                    maxLength={MANAGER_FORM_LIMITS.sport.name}
                     value={sportForm.name}
                     onChange={(e) => setSportForm({ ...sportForm, name: e.target.value })}
                     required
@@ -2199,6 +2201,7 @@ export default function ClassManagement() {
                   <textarea
                     className="class-form-textarea"
                     placeholder="Mô tả lợi ích, trang thiết bị yêu cầu hoặc đối tượng phù hợp..."
+                    maxLength={MANAGER_FORM_LIMITS.sport.description}
                     value={sportForm.description}
                     onChange={(e) => setSportForm({ ...sportForm, description: e.target.value })}
                   />
@@ -2265,6 +2268,7 @@ export default function ClassManagement() {
                   <input
                     type="text"
                     className="class-form-input"
+                    maxLength={MANAGER_FORM_LIMITS.sport.name}
                     value={sportForm.name}
                     onChange={(e) => setSportForm({ ...sportForm, name: e.target.value })}
                     required
@@ -2275,6 +2279,7 @@ export default function ClassManagement() {
                   <label>Mô tả chi tiết</label>
                   <textarea
                     className="class-form-textarea"
+                    maxLength={MANAGER_FORM_LIMITS.sport.description}
                     value={sportForm.description}
                     onChange={(e) => setSportForm({ ...sportForm, description: e.target.value })}
                   />

@@ -1,4 +1,5 @@
 import api from './api'
+import { getManagerFormTextError } from '../utils/managerFormValidation.js'
 
 function packageTypeFields(packageType) {
   if (packageType == null) return {}
@@ -56,6 +57,8 @@ export async function getMembershipPackages() {
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function createMembershipPackage({ packageName, description, price, durationInDays, packageType }) {
+  const error = getManagerFormTextError('package', { packageName, description })
+  if (error) throw new Error(error)
   const response = await api.post('/membership-packages', {
     packageName,
     description,
@@ -97,6 +100,8 @@ export async function getMembershipPackageById(id) {
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function updateMembershipPackage(id, { packageName, description, price, durationInDays, isActive, packageType }) {
+  const error = getManagerFormTextError('package', { packageName, description })
+  if (error) throw new Error(error)
   const response = await api.put(`/membership-packages/${id}`, {
     packageName,
     description,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Headset, LoaderCircle, MessageSquare, Plus, RefreshCw, Send, X } from 'lucide-react'
 import { createSupportTicket, getMySupportTickets, getTicketErrorMessage } from '../../services/supportTicketService'
 import '../../style/member/SupportTicketsView.css'
+import { getTextLengthValidationError, SUPPORT_DESCRIPTION_MAX_LENGTH } from '../../utils/textLengthValidation'
 
 const PAGE_SIZE = 8
 const statuses = { open: 'Chờ tiếp nhận', inprogress: 'Đang xử lý', resolved: 'Đã giải quyết', closed: 'Đã đóng' }
@@ -42,6 +43,8 @@ function CreateTicketDialog({ onClose, onCreated }) {
   const submit = async event => {
     event.preventDefault()
     if (locked.current) return
+    const descriptionError = getTextLengthValidationError(form.description, 'Nội dung hỗ trợ', SUPPORT_DESCRIPTION_MAX_LENGTH)
+    if (descriptionError) { setError(descriptionError); return }
     if (!form.title.trim() || !form.description.trim()) {
       setError('Vui lòng nhập tiêu đề và nội dung yêu cầu hỗ trợ.')
       return
@@ -83,7 +86,8 @@ function CreateTicketDialog({ onClose, onCreated }) {
         </div>
         <div className="member-support-field">
           <label htmlFor="member-support-description">Nội dung chi tiết <span aria-hidden="true">*</span></label>
-          <textarea id="member-support-description" required rows={5} disabled={saving} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Mô tả vấn đề, thời gian xảy ra và thông tin liên quan..." />
+          <textarea id="member-support-description" required rows={5} maxLength={SUPPORT_DESCRIPTION_MAX_LENGTH} aria-describedby="member-support-description-count" disabled={saving} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Mô tả vấn đề, thời gian xảy ra và thông tin liên quan..." />
+          <small id="member-support-description-count">{form.description.length}/{SUPPORT_DESCRIPTION_MAX_LENGTH} ký tự</small>
         </div>
         {error && <p className="member-support-error" role="alert">{error}</p>}
       </div>

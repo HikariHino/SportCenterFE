@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { AlertCircle, BookOpen, CalendarDays, Check, ChevronRight, Clock3, MapPin, RefreshCw, Search, Trash2, UserRound, Users, X } from 'lucide-react'
 import { loadSchedulingPages } from '../../services/sessionSchedulingService'
 import { cancelReceptionistRegistration, getReceptionistSessionRoster } from '../../services/receptionistClassService'
-import { markReceptionistAttendance } from '../../services/receptionistAttendanceService'
+import { markManagerAttendance } from '../../services/managerFrontDeskService'
 import { getClassErrorMessage } from '../../services/sportClassService'
 import { frontDeskCheckInReason, frontDeskSessionStatus, isFrontDeskPresent } from '../../utils/frontDeskAttendance'
 import { getRoomForClass } from '../../utils/memberClasses'
@@ -52,7 +52,7 @@ export default function FrontDeskClassAttendance({ reloadKey = 0, disabled = fal
   const presentCount = students.filter(isFrontDeskPresent).length
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 15000)
+    const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [])
 
@@ -109,7 +109,7 @@ export default function FrontDeskClassAttendance({ reloadKey = 0, disabled = fal
     setBusy(true); onBusyChange?.(true); setFeedback(null)
     try {
       if (cancel) await cancelReceptionistRegistration(student.registrationId, cancelReason.trim() || 'Hủy tại quầy lễ tân')
-      else await markReceptionistAttendance({ memberId: student.memberId, sessionId: selectedSession.id, status: 'Present' })
+      else await markManagerAttendance({ classId, memberId: student.memberId, sessionId: selectedSession.id, registrationId: student.registrationId })
       setFeedback({ error: false, message: cancel ? `Đã hủy chỗ của ${student.fullName}.` : `Đã điểm danh có mặt cho ${student.fullName}.` })
       setCancelStudent(null); setCancelReason('')
       if (cancel) onRegistrationsChanged?.()
@@ -137,7 +137,7 @@ export default function FrontDeskClassAttendance({ reloadKey = 0, disabled = fal
             {loadingSessions ? <p className="fdesk-booking-state" role="status">Đang tải các buổi học...</p> : sessions.error ? <div className="fdesk-alert-danger" role="alert">{sessions.error}<button type="button" className="fdesk-btn fdesk-btn-secondary" onClick={() => { setClassId(''); setSessionId('') }}>Chọn lại lớp</button></div> : <>
               {scheduledSessions.length ? <div className="fdesk-booking-session-list fdesk-attendance-scheduled">{scheduledSessions.map(item => <SessionButton key={item.id} item={item} selected={String(item.id) === sessionId} disabled={blocked} onSelect={chooseSession} now={now} />)}</div> : <p className="fdesk-booking-state">Lớp không có buổi học nào ở trạng thái đã lên lịch.</p>}
               <details className="fdesk-attendance-cancelled" key={`${classId}-completed`}><summary>Buổi học đã hoàn thành <span>{completedSessions.length} buổi</span></summary>
-                <p className="fdesk-booking-state">Có thể bổ sung điểm danh trong vòng 12 giờ sau khi kết thúc buổi học.</p>
+                <p className="fdesk-booking-state">Buổi đã hoàn thành chỉ xem danh sách và kết quả điểm danh.</p>
                 {completedSessions.length ? <div className="fdesk-booking-session-list">{completedSessions.map(item => <SessionButton key={item.id} item={item} selected={String(item.id) === sessionId} disabled={blocked} onSelect={chooseSession} now={now} />)}</div> : <p className="fdesk-booking-state">Chưa có buổi học đã hoàn thành.</p>}
               </details>
               <details className="fdesk-attendance-cancelled" key={classId}><summary>Buổi học đã hủy <span>{cancelledSessions.length} buổi</span></summary>
@@ -153,7 +153,7 @@ export default function FrontDeskClassAttendance({ reloadKey = 0, disabled = fal
         {feedback && <p className={feedback.error ? 'fdesk-alert-danger' : 'fdesk-booking-result'} role={feedback.error ? 'alert' : 'status'}>{feedback.message}</p>}
         {!selectedSession ? <div className="fdesk-booking-placeholder"><CalendarDays size={32} /><strong>Chọn buổi học để xem danh sách và điểm danh</strong></div> : loadingRoster ? <p className="fdesk-booking-state" role="status">Đang tải danh sách học viên...</p> : roster.error ? <div className="fdesk-alert-danger" role="alert"><AlertCircle size={16} />{roster.error}<button type="button" className="fdesk-btn fdesk-btn-secondary" onClick={() => setRosterRevision(value => value + 1)}>Thử lại</button></div> : <>
           <div className="fdesk-attendance-stats"><span>{students.length} học viên đăng ký</span><span>{presentCount} có mặt</span><span>{students.length - presentCount} chưa có mặt</span></div>
-          <p className="fdesk-booking-state">Điểm danh mở từ 30 phút trước giờ học đến 12 giờ sau khi kết thúc. Buổi đã hủy hoặc quá hạn chỉ xem danh sách.</p>
+          <p className="fdesk-booking-state">Chỉ điểm danh đúng ngày học (giờ Việt Nam), từ 30 phút trước giờ bắt đầu đến trước khi buổi học kết thúc. Buổi đã hủy hoặc hoàn thành chỉ xem danh sách.</p>
           {!students.length ? <p className="fdesk-booking-state">Buổi học này chưa có học viên nào đăng ký.</p> : <div className="fdesk-table-scroll"><table className="fdesk-table"><thead><tr><th>Học viên</th><th>Đăng ký</th><th>Điểm danh</th><th>Thời gian điểm danh</th><th>Thao tác</th></tr></thead><tbody>{students.map(student => {
             const present = isFrontDeskPresent(student)
             const reason = frontDeskCheckInReason(selectedSession, student, now)

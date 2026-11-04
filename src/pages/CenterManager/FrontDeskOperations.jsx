@@ -54,7 +54,6 @@ import {
   checkOutGymMember,
   getCheckInErrorMessage,
   getTodayCheckIns,
-  manualCheckIn,
   scanQrCheckIn,
 } from '../../services/gymCheckInService'
 import { getMembershipPackages, getPackageErrorMessage } from '../../services/membershipPackageService'
@@ -74,8 +73,11 @@ import { counterOrderCancellationReason } from '../../utils/counterOrders'
 import {
   getAllSupportTickets,
   getTicketErrorMessage,
-  resolveSupportTicket,
 } from '../../services/supportTicketService'
+import { manualManagerCheckIn, resolveManagerSupportTicket } from '../../services/managerFrontDeskService'
+import { getReceptionistManualCheckInValidationError, RECEPTIONIST_PHONE_MESSAGE, RECEPTIONIST_PHONE_PATTERN } from '../../utils/receptionistValidation'
+import { canUpdateSupportTicket } from '../../utils/supportTickets'
+import { getSupportResolutionValidationError, SUPPORT_RESOLUTION_MAX_LENGTH } from '../../utils/textLengthValidation'
 import '../../style/CenterManager/FrontDeskOperations.css'
 import FrontDeskClassBooking from './FrontDeskClassBooking'
 import FrontDeskClassAttendance from './FrontDeskClassAttendance'
@@ -147,6 +149,8 @@ export default function FrontDeskOperations() {
   // Modals - Members
   const [showCreateMemberModal, setShowCreateMemberModal] = useState(false)
   const [memberCreateError, setMemberCreateError] = useState(null)
+  const [manualCheckInError, setManualCheckInError] = useState('')
+  const [ticketResolveError, setTicketResolveError] = useState('')
   const [memberForm, setMemberForm] = useState(emptyMemberForm)
   const [memberToDeactivate, setMemberToDeactivate] = useState(null)
   const [selectedMemberDetail, setSelectedMemberDetail] = useState(null)
@@ -372,26 +376,26 @@ export default function FrontDeskOperations() {
   // Check-in via MemberId or Phone
   async function handleManualCheckIn(e) {
     e.preventDefault()
-    if (!manualMemberId.trim() && !manualPhone.trim()) {
-      setErrorMessage('Vui lòng nhập Mã hội viên HOẶC Số điện thoại để check-in.')
+    if (submitting) return
+    const form = { memberId: manualMemberId, phoneNumber: manualPhone, notes: checkInNotes }
+    const validationError = getReceptionistManualCheckInValidationError(form)
+    if (validationError) {
+      setManualCheckInError(validationError.message)
+      e.currentTarget.elements.namedItem(validationError.field)?.focus()
       return
     }
-
+    setManualCheckInError('')
     setSubmitting(true)
     setErrorMessage(null)
     try {
-      const result = await manualCheckIn({
-        memberId: manualMemberId ? Number(manualMemberId) : null,
-        phoneNumber: manualPhone || null,
-        notes: checkInNotes,
-      })
+      const result = await manualManagerCheckIn(form)
       setSuccessMessage(`Check-in thành công cho khách hàng: ${result.memberName || 'Hội viên'}!`)
       setManualMemberId('')
       setManualPhone('')
       setCheckInNotes('')
       await loadTodayCheckInsData(false)
     } catch (err) {
-      setErrorMessage(getCheckInErrorMessage(err, 'Check-in thủ công thất bại.'))
+      setManualCheckInError(getCheckInErrorMessage(err, 'Check-in thủ công thất bại.'))
     } finally {
       setSubmitting(false)
     }
@@ -526,21 +530,24 @@ export default function FrontDeskOperations() {
   // Resolve Ticket
   async function handleResolveTicket(e) {
     e.preventDefault()
-    if (!ticketToResolve) return
+    if (!ticketToResolve || submitting) return
+    if (!canUpdateSupportTicket(ticketToResolve)) { setTicketResolveError('Phiếu đã đóng và không thể cập nhật thêm.'); return }
+    const form = { status: resolutionStatus, resolutionNote }
+    const validationError = getSupportResolutionValidationError(form)
+    if (validationError) { setTicketResolveError(validationError); return }
+    if (!resolutionNote.trim()) { setTicketResolveError('Vui lòng nhập nội dung phản hồi.'); return }
+    setTicketResolveError('')
 
     setSubmitting(true)
     setErrorMessage(null)
     try {
-      await resolveSupportTicket(ticketToResolve.id, {
-        status: resolutionStatus,
-        resolutionNote: resolutionNote || 'Đã tiếp nhận và hỗ trợ tại quầy lễ tân.',
-      })
+      await resolveManagerSupportTicket(ticketToResolve.id, form)
       setSuccessMessage(`Đã xử lý phiếu hỗ trợ #${ticketToResolve.id} thành công!`)
       setTicketToResolve(null)
       setResolutionNote('')
       await loadTicketsData(false)
     } catch (err) {
-      setErrorMessage(getTicketErrorMessage(err, 'Không thể cập nhật phiếu hỗ trợ.'))
+      setTicketResolveError(getTicketErrorMessage(err, 'Không thể cập nhật phiếu hỗ trợ.'))
     } finally {
       setSubmitting(false)
     }
@@ -1061,22 +1068,32 @@ export default function FrontDeskOperations() {
                   <label htmlFor="manual-member-id">Mã hội viên (Member ID):</label>
                   <input
                     id="manual-member-id"
+                    name="memberId"
                     type="number"
+                    min="1"
+                    max="2147483647"
+                    step="1"
                     className="fdesk-input"
                     placeholder="Nhập mã số hội viên (vd: 12)"
                     value={manualMemberId}
-                    onChange={(e) => setManualMemberId(e.target.value)}
+                    onChange={(e) => { setManualMemberId(e.target.value); setManualCheckInError('') }}
                   />
                 </div>
                 <div className="fdesk-input-group">
                   <label htmlFor="manual-phone">Hoặc Số điện thoại:</label>
                   <input
                     id="manual-phone"
+                    name="phoneNumber"
                     type="tel"
+                    inputMode="numeric"
+                    pattern={RECEPTIONIST_PHONE_PATTERN}
+                    title={RECEPTIONIST_PHONE_MESSAGE}
+                    minLength="10"
+                    maxLength="10"
                     className="fdesk-input"
                     placeholder="Số điện thoại hội viên đăng ký (vd: 0987654321)"
                     value={manualPhone}
-                    onChange={(e) => setManualPhone(e.target.value)}
+                    onChange={(e) => { setManualPhone(e.target.value); setManualCheckInError('') }}
                   />
                 </div>
                 <button
@@ -1087,6 +1104,7 @@ export default function FrontDeskOperations() {
                   <LogIn size={16} />
                   Check-in thủ công
                 </button>
+                {manualCheckInError && <p className="fdesk-alert fdesk-alert-danger" role="alert">{manualCheckInError}</p>}
               </form>
             </div>
           </div>
@@ -1442,11 +1460,12 @@ export default function FrontDeskOperations() {
                             )}
                           </td>
                           <td style={{ textAlign: 'right' }}>
-                            <button
+                            {canUpdateSupportTicket(t) && <button
                               type="button"
                               className="fdesk-btn fdesk-btn-primary"
                               style={{ padding: '6px 12px', fontSize: 11 }}
                               onClick={() => {
+                                setTicketResolveError('')
                                 setTicketToResolve(t)
                                 setResolutionStatus(t.status === 'Resolved' ? 'Closed' : 'Resolved')
                                 setResolutionNote(t.resolutionNote || '')
@@ -1455,7 +1474,7 @@ export default function FrontDeskOperations() {
                             >
                               <MessageSquare size={13} />
                               {isPending ? 'Xử lý ticket' : 'Cập nhật lại'}
-                            </button>
+                            </button>}
                           </td>
                         </tr>
                       )
@@ -1484,6 +1503,7 @@ export default function FrontDeskOperations() {
             </div>
             <form onSubmit={handleResolveTicket}>
               <div className="fdesk-dialog-body">
+                {ticketResolveError && <p className="fdesk-alert fdesk-alert-danger" role="alert">{ticketResolveError}</p>}
                 <div style={{ background: 'var(--manager-raised, #f8fafc)', padding: 14, borderRadius: 10, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div>Hội viên gửi: <strong>{ticketToResolve.memberName}</strong></div>
                   <div>Tiêu đề: <strong>{ticketToResolve.title}</strong></div>
@@ -1503,7 +1523,7 @@ export default function FrontDeskOperations() {
                   >
                     <option value="Resolved">Đã giải quyết (Resolved)</option>
                     <option value="Closed">Đóng phiếu hỗ trợ (Closed)</option>
-                    <option value="In Progress">Đang xử lý (In Progress)</option>
+                    <option value="InProgress">Đang xử lý (In Progress)</option>
                   </select>
                 </div>
 
@@ -1511,14 +1531,17 @@ export default function FrontDeskOperations() {
                   <label htmlFor="resolve-note-input">Nội dung giải quyết / Phản hồi tới hội viên (*):</label>
                   <textarea
                     id="resolve-note-input"
+                    maxLength={SUPPORT_RESOLUTION_MAX_LENGTH}
+                    aria-describedby="manager-support-note-count"
                     rows={4}
                     required
                     className="fdesk-input"
                     placeholder="Ghi rõ giải pháp đã hỗ trợ (vd: Đã kiểm tra và đổi lịch học / Đã hướng dẫn tại quầy)..."
                     value={resolutionNote}
-                    onChange={(e) => setResolutionNote(e.target.value)}
+                    onChange={(e) => { setResolutionNote(e.target.value); setTicketResolveError('') }}
                     style={{ resize: 'vertical' }}
                   />
+                  <small id="manager-support-note-count">{resolutionNote.length}/{SUPPORT_RESOLUTION_MAX_LENGTH} ký tự</small>
                 </div>
               </div>
 
