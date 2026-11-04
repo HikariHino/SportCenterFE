@@ -1,4 +1,5 @@
 import api from './api'
+import { getManagerFormTextError } from '../utils/managerFormValidation.js'
 
 /**
  * GET /api/sports (requires authentication, no parameters).
@@ -24,6 +25,8 @@ export async function getSports() {
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function createSport({ name, description, isActive }) {
+  const error = getManagerFormTextError('sport', { name, description })
+  if (error) throw new Error(error)
   const response = await api.post('/sports', {
     name,
     description,
@@ -46,6 +49,8 @@ export async function createSport({ name, description, isActive }) {
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function updateSport(id, { name, description, isActive }) {
+  const error = getManagerFormTextError('sport', { name, description })
+  if (error) throw new Error(error)
   const response = await api.put(`/sports/${id}`, {
     name,
     description,

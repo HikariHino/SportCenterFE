@@ -35,6 +35,7 @@ import {
 } from '../../services/membershipPackageService'
 import '../../style/CenterManager/PackageManagement.css'
 import { membershipPackageType, membershipPackageTypeLabel } from '../../utils/memberSubscriptions'
+import { MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
 
 export function PackageTypeField({ id, value, onChange, disabled }) {
   return <div className="pkg-form-group">
@@ -729,6 +730,7 @@ export default function PackageManagement() {
                     type="text"
                     className="pkg-form-input"
                     placeholder="Ví dụ: Gói 1 Tháng, Gói 6 Tháng VIP, Thẻ Tập Sinh Viên..."
+                    maxLength={MANAGER_FORM_LIMITS.package.packageName}
                     value={packageForm.packageName}
                     onChange={(e) => setPackageForm({ ...packageForm, packageName: e.target.value })}
                     required
@@ -814,6 +816,7 @@ export default function PackageManagement() {
                   <textarea
                     className="pkg-form-textarea"
                     placeholder="Mô tả các tiện ích, quyền lợi lớp học kèm theo, số buổi PT, v.v..."
+                    maxLength={MANAGER_FORM_LIMITS.package.description}
                     value={packageForm.description}
                     onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
                   />
@@ -882,6 +885,7 @@ export default function PackageManagement() {
                   <input
                     type="text"
                     className="pkg-form-input"
+                    maxLength={MANAGER_FORM_LIMITS.package.packageName}
                     value={packageForm.packageName}
                     onChange={(e) => setPackageForm({ ...packageForm, packageName: e.target.value })}
                     required
@@ -950,6 +954,7 @@ export default function PackageManagement() {
                   <label>Mô tả quyền lợi & Chính sách lớp học</label>
                   <textarea
                     className="pkg-form-textarea"
+                    maxLength={MANAGER_FORM_LIMITS.package.description}
                     value={packageForm.description}
                     onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
                   />

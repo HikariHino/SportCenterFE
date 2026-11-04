@@ -37,6 +37,7 @@ import {
 } from '../../services/roomService'
 import '../../style/CenterManager/RoomManagement.css'
 import RoomTimetableDialog from './RoomTimetableDialog'
+import { MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
 
 const ROOM_TYPE_OPTIONS = [
   { value: 'Yoga', label: 'Phòng Yoga / Pilates', icon: Zap, iconClass: 'yoga' },
@@ -800,6 +801,7 @@ export default function RoomManagement() {
                     type="text"
                     className="room-form-input"
                     placeholder="Ví dụ: Phòng Yoga 01, Sân Pickleball P01, Phòng Gym VIP..."
+                    maxLength={MANAGER_FORM_LIMITS.room.name}
                     value={roomForm.name}
                     onChange={(e) => setRoomForm({ ...roomForm, name: e.target.value })}
                     required
@@ -862,6 +864,7 @@ export default function RoomManagement() {
                       type="text"
                       className="room-form-input"
                       placeholder="Ví dụ: Tầng 2 - Tòa A"
+                      maxLength={MANAGER_FORM_LIMITS.room.location}
                       value={roomForm.location}
                       onChange={(e) => setRoomForm({ ...roomForm, location: e.target.value })}
                     />
@@ -916,6 +919,7 @@ export default function RoomManagement() {
                   <input
                     type="text"
                     className="room-form-input"
+                    maxLength={MANAGER_FORM_LIMITS.room.name}
                     value={roomForm.name}
                     onChange={(e) => setRoomForm({ ...roomForm, name: e.target.value })}
                     required
@@ -960,6 +964,7 @@ export default function RoomManagement() {
                     <input
                       type="text"
                       className="room-form-input"
+                      maxLength={MANAGER_FORM_LIMITS.room.location}
                       value={roomForm.location}
                       onChange={(e) => setRoomForm({ ...roomForm, location: e.target.value })}
                     />

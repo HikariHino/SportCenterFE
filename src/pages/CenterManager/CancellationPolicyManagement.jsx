@@ -31,6 +31,7 @@ import {
   updateCancellationPolicy,
 } from '../../services/cancellationPolicyService'
 import '../../style/CenterManager/CancellationPolicyManagement.css'
+import { MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
 
 const PRESET_HOURS = [
   { label: '2 Giờ (Tối thiểu)', hours: 2 },
@@ -642,6 +643,7 @@ export default function CancellationPolicyManagement() {
                     type="text"
                     className="policy-form-input"
                     placeholder="Ví dụ: Chính sách Tiêu chuẩn (2h), Chính sách 24h..."
+                    maxLength={MANAGER_FORM_LIMITS.policy.name}
                     value={policyForm.name}
                     onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })}
                     required
@@ -792,6 +794,7 @@ export default function CancellationPolicyManagement() {
                   <input
                     type="text"
                     className="policy-form-input"
+                    maxLength={MANAGER_FORM_LIMITS.policy.name}
                     value={policyForm.name}
                     onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })}
                     required

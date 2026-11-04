@@ -1,4 +1,5 @@
 import api from './api'
+import { getTextLengthValidationError, SUPPORT_DESCRIPTION_MAX_LENGTH } from '../utils/textLengthValidation.js'
 
 /**
  * Trích xuất lỗi từ backend cho Support Tickets
@@ -55,6 +56,8 @@ export async function resolveSupportTicket(ticketId, { status, resolutionNote })
  * @param {{ title: string, description: string, priority?: string }} payload
  */
 export async function createSupportTicket({ title, description, priority = 'Normal' }) {
+  const descriptionError = getTextLengthValidationError(description, 'Nội dung hỗ trợ', SUPPORT_DESCRIPTION_MAX_LENGTH)
+  if (descriptionError) throw new Error(descriptionError)
   if (!title?.trim() || !description?.trim()) {
     throw new Error('Vui lòng nhập tiêu đề và nội dung yêu cầu hỗ trợ.')
   }
