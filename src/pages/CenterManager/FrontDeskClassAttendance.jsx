@@ -7,6 +7,7 @@ import { getClassErrorMessage } from '../../services/sportClassService'
 import { frontDeskCheckInReason, frontDeskSessionStatus, isFrontDeskPresent } from '../../utils/frontDeskAttendance'
 import { getRoomForClass } from '../../utils/memberClasses'
 import { isCancelledSession, isScheduledSession } from '../../utils/sessionScheduling'
+import { CANCELLATION_REASON_MAX_LENGTH, getTextLengthValidationError } from '../../utils/textLengthValidation'
 import '../../style/CenterManager/FrontDeskClassBooking.css'
 import '../../style/CenterManager/FrontDeskClassAttendance.css'
 
@@ -104,6 +105,10 @@ export default function FrontDeskClassAttendance({ reloadKey = 0, disabled = fal
   }
   const mutate = async (student, cancel = false) => {
     if (lock.current || blocked || loadingRoster || !selectedSession || roster.error) return
+    if (cancel) {
+      const reasonError = getTextLengthValidationError(cancelReason, 'Lý do hủy', CANCELLATION_REASON_MAX_LENGTH)
+      if (reasonError) { setFeedback({ error: true, message: reasonError }); return }
+    }
     if (!cancel && frontDeskCheckInReason(selectedSession, student)) return
     lock.current = true
     setBusy(true); onBusyChange?.(true); setFeedback(null)
@@ -163,6 +168,6 @@ export default function FrontDeskClassAttendance({ reloadKey = 0, disabled = fal
         </>}
       </div>
     </div>
-    {cancelStudent && <div className="fdesk-dialog-overlay" onClick={() => { if (!busy) setCancelStudent(null) }}><div className="fdesk-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-cancel-title`} onClick={event => event.stopPropagation()}><div className="fdesk-dialog-header"><h3 id={`${id}-cancel-title`}>Hủy đăng ký buổi học</h3><button type="button" className="fdesk-dialog-close" aria-label="Đóng" disabled={busy} onClick={() => setCancelStudent(null)}><X size={18} /></button></div><div className="fdesk-dialog-body"><p>Hủy chỗ của <strong>{cancelStudent.fullName}</strong> trong buổi học {dateTime(selectedSession?.startsAt)}?</p><label className="fdesk-input-group" htmlFor={`${id}-cancel-reason`}>Lý do hủy<input id={`${id}-cancel-reason`} className="fdesk-input" value={cancelReason} disabled={busy} onChange={event => setCancelReason(event.target.value)} placeholder="Học viên yêu cầu hủy tại quầy..." /></label>{feedback?.error && <p role="alert" className="fdesk-alert-danger">{feedback.message}</p>}</div><div className="fdesk-dialog-footer"><button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={busy} onClick={() => setCancelStudent(null)}>Giữ lại</button><button type="button" className="fdesk-btn fdesk-btn-danger" disabled={blocked} onClick={() => mutate(cancelStudent, true)}>{busy ? 'Đang hủy...' : 'Xác nhận hủy chỗ'}</button></div></div></div>}
+    {cancelStudent && <div className="fdesk-dialog-overlay" onClick={() => { if (!busy) setCancelStudent(null) }}><div className="fdesk-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-cancel-title`} onClick={event => event.stopPropagation()}><div className="fdesk-dialog-header"><h3 id={`${id}-cancel-title`}>Hủy đăng ký buổi học</h3><button type="button" className="fdesk-dialog-close" aria-label="Đóng" disabled={busy} onClick={() => setCancelStudent(null)}><X size={18} /></button></div><div className="fdesk-dialog-body"><p>Hủy chỗ của <strong>{cancelStudent.fullName}</strong> trong buổi học {dateTime(selectedSession?.startsAt)}?</p><label className="fdesk-input-group" htmlFor={`${id}-cancel-reason`}>Lý do hủy<input id={`${id}-cancel-reason`} className="fdesk-input" maxLength={CANCELLATION_REASON_MAX_LENGTH} value={cancelReason} disabled={busy} onChange={event => setCancelReason(event.target.value)} placeholder="Học viên yêu cầu hủy tại quầy..." /></label>{feedback?.error && <p role="alert" className="fdesk-alert-danger">{feedback.message}</p>}</div><div className="fdesk-dialog-footer"><button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={busy} onClick={() => setCancelStudent(null)}>Giữ lại</button><button type="button" className="fdesk-btn fdesk-btn-danger" disabled={blocked} onClick={() => mutate(cancelStudent, true)}>{busy ? 'Đang hủy...' : 'Xác nhận hủy chỗ'}</button></div></div></div>}
   </section>
 }

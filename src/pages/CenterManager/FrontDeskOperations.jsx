@@ -54,7 +54,6 @@ import {
   checkOutGymMember,
   getCheckInErrorMessage,
   getTodayCheckIns,
-  scanQrCheckIn,
 } from '../../services/gymCheckInService'
 import { getMembershipPackages, getPackageErrorMessage } from '../../services/membershipPackageService'
 import {
@@ -74,10 +73,10 @@ import {
   getAllSupportTickets,
   getTicketErrorMessage,
 } from '../../services/supportTicketService'
-import { manualManagerCheckIn, resolveManagerSupportTicket } from '../../services/managerFrontDeskService'
+import { manualManagerCheckIn, resolveManagerSupportTicket, scanManagerQrCheckIn } from '../../services/managerFrontDeskService'
 import { getReceptionistManualCheckInValidationError, RECEPTIONIST_PHONE_MESSAGE, RECEPTIONIST_PHONE_PATTERN } from '../../utils/receptionistValidation'
 import { canUpdateSupportTicket } from '../../utils/supportTickets'
-import { getSupportResolutionValidationError, SUPPORT_RESOLUTION_MAX_LENGTH } from '../../utils/textLengthValidation'
+import { CHECK_IN_NOTES_MAX_LENGTH, getSupportResolutionValidationError, getTextLengthValidationError, SUPPORT_RESOLUTION_MAX_LENGTH } from '../../utils/textLengthValidation'
 import '../../style/CenterManager/FrontDeskOperations.css'
 import FrontDeskClassBooking from './FrontDeskClassBooking'
 import FrontDeskClassAttendance from './FrontDeskClassAttendance'
@@ -356,12 +355,15 @@ export default function FrontDeskOperations() {
   // Check-in via QR
   async function handleScanQrCheckIn(e) {
     e.preventDefault()
+    if (submitting) return
     if (!qrCodeInput.trim()) return
+    const notesError = getTextLengthValidationError(checkInNotes, 'Ghi chú check-in', CHECK_IN_NOTES_MAX_LENGTH)
+    if (notesError) { setErrorMessage(notesError); return }
 
     setSubmitting(true)
     setErrorMessage(null)
     try {
-      const result = await scanQrCheckIn({ qrCode: qrCodeInput, notes: checkInNotes })
+      const result = await scanManagerQrCheckIn({ qrCode: qrCodeInput, notes: checkInNotes })
       setSuccessMessage(`Check-in thành công cho hội viên: ${result.memberName || result.memberCode}!`)
       setQrCodeInput('')
       setCheckInNotes('')
@@ -384,6 +386,8 @@ export default function FrontDeskOperations() {
       e.currentTarget.elements.namedItem(validationError.field)?.focus()
       return
     }
+    const notesError = getTextLengthValidationError(checkInNotes, 'Ghi chú check-in', CHECK_IN_NOTES_MAX_LENGTH)
+    if (notesError) { setManualCheckInError(notesError); return }
     setManualCheckInError('')
     setSubmitting(true)
     setErrorMessage(null)
@@ -1036,6 +1040,7 @@ export default function FrontDeskOperations() {
                   <label htmlFor="qr-notes-input">Ghi chú (tùy chọn):</label>
                   <input
                     id="qr-notes-input"
+                    maxLength={CHECK_IN_NOTES_MAX_LENGTH}
                     type="text"
                     className="fdesk-input"
                     placeholder="Ghi chú check-in nếu có..."

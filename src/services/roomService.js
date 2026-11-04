@@ -1,5 +1,5 @@
 import api from './api'
-import { getManagerFormTextError } from '../utils/managerFormValidation.js'
+import { getManagerFormValidationError } from '../utils/managerFormValidation.js'
 
 /**
  * Trích xuất thông báo lỗi từ backend
@@ -60,12 +60,12 @@ export async function checkRoomAvailability(id, startsAt, endsAt) {
  * @param {{ name: string, roomType: string, capacity: number, location: string|null }} data
  */
 export async function createRoom(data) {
-  const error = getManagerFormTextError('room', data)
+  const error = getManagerFormValidationError('room', data)
   if (error) throw new Error(error)
   const response = await api.post('/Rooms', {
     name: data.name.trim(),
     roomType: data.roomType ? data.roomType.trim() : 'General',
-    capacity: Number(data.capacity) || 30,
+    capacity: Number(data.capacity),
     location: data.location ? data.location.trim() : null,
   })
   const body = response.data
@@ -79,12 +79,12 @@ export async function createRoom(data) {
  * @param {{ name: string, roomType: string, capacity: number, location: string|null, isActive: boolean }} data
  */
 export async function updateRoom(id, data) {
-  const error = getManagerFormTextError('room', data)
+  const error = getManagerFormValidationError('room', data)
   if (error) throw new Error(error)
   const response = await api.put(`/Rooms/${id}`, {
     name: data.name.trim(),
     roomType: data.roomType ? data.roomType.trim() : 'General',
-    capacity: Number(data.capacity) || 30,
+    capacity: Number(data.capacity),
     location: data.location ? data.location.trim() : null,
     isActive: data.isActive !== false,
   })

@@ -8,6 +8,7 @@ import { getAuthErrorMessage } from '../utils/auth'
 import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } from '../utils/otpValidation'
 import { getNewPasswordValidationError, NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../utils/passwordValidation'
 import '../style/Login.css'
+import { ACCOUNT_EMAIL_MAX_LENGTH } from '../utils/emailValidation'
 
 function Brand() {
   return <Link to="/" className="login-brand"><span className="login-brand-icon"><Trophy size={26} /></span><span><strong>SportPulse</strong><small>Trung tâm Thể thao Olympus</small></span></Link>
@@ -111,7 +112,7 @@ export default function ForgotPassword() {
       <div className="login-content login-reset-content">
         <header><h2 id="reset-title">{otpRequested ? 'Xác minh và đặt mật khẩu mới' : 'Quên mật khẩu?'}</h2><p>{otpRequested ? <>Mã OTP đã được gửi đến <strong>{email}</strong>.</> : 'Nhập email tài khoản để nhận mã OTP khôi phục mật khẩu.'}</p></header>
         <form onSubmit={handleSubmit} className="login-form" aria-busy={isSubmitting} onChange={() => setMessage('')}>
-          {!otpRequested && <div><label htmlFor="reset-email">Email</label><div className="login-input"><Mail size={19} /><input id="reset-email" name="email" type="email" autoComplete="email" placeholder="name@olympus.vn" required /></div></div>}
+          {!otpRequested && <div><label htmlFor="reset-email">Email</label><div className="login-input"><Mail size={19} /><input id="reset-email" name="email" type="email" maxLength={ACCOUNT_EMAIL_MAX_LENGTH} autoComplete="email" placeholder="name@olympus.vn" required /></div></div>}
           {otpRequested && <>
             <div><label htmlFor="reset-otp">Mã OTP</label><div className="login-input"><MessageCircle size={19} /><input id="reset-otp" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required /></div></div>
             <div><label htmlFor="reset-password">Mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-password" name="newPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} placeholder="Tối thiểu 8 ký tự" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>

@@ -31,7 +31,7 @@ import {
   updateCancellationPolicy,
 } from '../../services/cancellationPolicyService'
 import '../../style/CenterManager/CancellationPolicyManagement.css'
-import { MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
+import { getManagerFormValidationError, MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
 
 const PRESET_HOURS = [
   { label: '2 Giờ (Tối thiểu)', hours: 2 },
@@ -176,6 +176,8 @@ export default function CancellationPolicyManagement() {
   // Submit Create Policy
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
+    const validationError = getManagerFormValidationError('policy', policyForm)
+    if (validationError) { setError(validationError); return }
     if (!policyForm.name.trim()) {
       setError('Vui lòng nhập tên chính sách hủy lịch.')
       return
@@ -207,6 +209,8 @@ export default function CancellationPolicyManagement() {
   // Submit Edit Policy
   const handleEditSubmit = async (e) => {
     e.preventDefault()
+    const validationError = getManagerFormValidationError('policy', policyForm)
+    if (validationError) { setError(validationError); return }
     if (!editingPolicy) return
     if (!policyForm.name.trim()) {
       setError('Vui lòng nhập tên chính sách hủy lịch.')

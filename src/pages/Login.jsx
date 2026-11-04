@@ -8,6 +8,7 @@ import { login as loginApi, loginWithGoogle } from '../services/authService'
 import { getAuthDestination, getLoginErrorMessage } from '../utils/auth'
 import { getGoogleLoginErrorMessage } from '../utils/googleAuth'
 import '../style/Login.css'
+import { ACCOUNT_EMAIL_MAX_LENGTH, getAccountEmailValidationError } from '../utils/emailValidation'
 
 const features = [
   [CalendarDays, 'Đặt sân 30s', 'Khóa lịch tức thì không độ trễ'],
@@ -79,8 +80,9 @@ export default function Login() {
     const formData = new FormData(event.currentTarget)
     const email = formData.get('email').trim()
     const password = formData.get('password')
-    if (!email) {
-      setError('Vui lòng nhập email của bạn.')
+    const emailError = getAccountEmailValidationError(email)
+    if (emailError) {
+      setError(emailError)
       return
     }
     if (!password) {
@@ -117,7 +119,7 @@ export default function Login() {
         <div className="login-divider">Hoặc đăng nhập bằng email</div>
         <form ref={formRef} onSubmit={handleSubmit} onChange={() => { if (error) setError('') }} className="login-form" aria-busy={isSubmitting} aria-describedby={error ? 'login-error' : undefined}>
           {error && <div id="login-error" ref={errorRef} className="login-error" role="alert" tabIndex={-1}><AlertCircle size={20} aria-hidden="true" /><div><strong>Đăng nhập không thành công</strong><p>{error}</p></div></div>}
-          <div><label htmlFor="login-email">Email</label><div className="login-input"><Mail size={19} /><input id="login-email" defaultValue={location.state?.email || ''} name="email" type="email" autoComplete="username" placeholder="vd: athlete@sportpulse.vn" required /></div></div>
+          <div><label htmlFor="login-email">Email</label><div className="login-input"><Mail size={19} /><input id="login-email" defaultValue={location.state?.email || ''} name="email" type="email" maxLength={ACCOUNT_EMAIL_MAX_LENGTH} autoComplete="username" placeholder="vd: athlete@sportpulse.vn" required /></div></div>
           <div><div className="login-label-row"><label htmlFor="login-password">Mật khẩu</label><Link className="login-text-button" to="/forgot-password">Quên mật khẩu?</Link></div><div className="login-input"><LockKeyhole size={19} /><input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Nhập mật khẩu của bạn" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
           <label className="login-remember"><input name="remember" type="checkbox" defaultChecked /> Ghi nhớ đăng nhập trên thiết bị này</label>
           <button className="login-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập ngay'}<ArrowRight size={19} /></button>

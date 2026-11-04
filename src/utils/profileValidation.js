@@ -1,3 +1,5 @@
+import { getNewPasswordValidationError } from './passwordValidation.js'
+
 export const PROFILE_LIMITS = { fullName: 200, phoneNumber: 30, gender: 10, address: 500, fitnessGoal: 100, emergencyContact: 100 }
 const labels = { fullName: 'Họ và tên', phoneNumber: 'Số điện thoại', gender: 'Giới tính', address: 'Địa chỉ thường trú', fitnessGoal: 'Mục tiêu tập luyện', emergencyContact: 'Liên hệ khẩn cấp' }
 const fields = [...Object.keys(PROFILE_LIMITS), 'dateOfBirth', 'password', 'currentPassword']
@@ -38,7 +40,8 @@ export function profileValidationErrors(values, { partial = false, requirePhone 
     else if (key > profileDateLimit(now)) errors.dateOfBirth = 'Ngày sinh không được ở tương lai.'
   }
   if (values.password != null) {
-    if (typeof values.password !== 'string' || values.password.length < 8 || values.password.length > 72) errors.password = 'Mật khẩu mới phải từ 8 đến 72 ký tự.'
+    const passwordError = getNewPasswordValidationError(values.password)
+    if (passwordError) errors.password = passwordError
     else if (values.password === values.currentPassword) errors.password = 'Mật khẩu mới phải khác mật khẩu hiện tại.'
     if (typeof values.currentPassword !== 'string' || !values.currentPassword.length) errors.currentPassword = 'Vui lòng nhập mật khẩu hiện tại.'
   }

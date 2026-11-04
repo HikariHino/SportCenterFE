@@ -4,6 +4,7 @@ import { getRegistrationResult } from '../utils/registration'
 import { getOtpValidationError, normalizeOtp } from '../utils/otpValidation'
 import { getAuthRegistrationValidationError } from '../utils/authRegistrationValidation'
 import { getNewPasswordValidationError } from '../utils/passwordValidation'
+import { getAccountEmailValidationError } from '../utils/emailValidation'
 
 // Login returns validated session data; registration OTP responses are normalized.
 // Other methods return the complete API body.
@@ -19,6 +20,8 @@ function getPasswordResetResult(data) {
  * @param {{ email: string, password: string }} credentials
  */
 export async function login({ email, password }) {
+  const emailError = getAccountEmailValidationError(email)
+  if (emailError) throw new Error(emailError)
   const response = await api.post('/Auth/login', { email: email.trim(), password }, { skipAuth: true, timeout: 15000 })
   return getLoginData(response.data)
 }
@@ -93,7 +96,9 @@ export async function verifyRegisterOtp({ email, otp }) {
 
 /** POST /api/Auth/request-reset-password */
 export async function requestResetPassword({ email }) {
-  const response = await api.post('/Auth/request-reset-password', { email }, { skipAuth: true })
+  const emailError = getAccountEmailValidationError(email)
+  if (emailError) throw new Error(emailError)
+  const response = await api.post('/Auth/request-reset-password', { email: email.trim() }, { skipAuth: true })
   return getPasswordResetResult(response.data)
 }
 

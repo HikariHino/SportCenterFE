@@ -4,6 +4,7 @@ import { getCoaches, getSports } from '../../services/classCatalogService'
 import { getReceptionistClasses, getReceptionistClassSessions, getReceptionistClassSessionsByClass, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
 import { completeReceptionistSession, getReceptionistSessionRoster, registerMemberForSession } from '../../services/receptionistClassService'
 import { EmptyState, formatDateTime, requestErrorMessage, sessionDateTimeFormatter, ViewLoader } from './ReceptionistViewShared'
+import { BACKEND_ID_MAX } from '../../utils/numberValidation'
 
 const toDateKey = date => {
   const year = date.getFullYear()
@@ -125,7 +126,7 @@ function AddMemberDialog({ sportClass, preferredSession, onClose, onRegistered }
       {registration ? <div className="reception-add-member-success"><span><CheckCircle2 size={28} /></span><h3>Đã thêm hội viên thành công</h3><p>Hội viên #{registration.memberId} đã được đăng ký vào buổi học #{registration.sessionId}.</p><button type="button" onClick={onClose}>Hoàn tất</button></div> : <form onSubmit={submit}>
         <div className="reception-add-member-class"><span><Trophy size={20} /></span><div><small>LỚP ĐANG CHỌN</small><strong>{sportClass.className}</strong></div><b>#{sportClass.id}</b></div>
         <label className="reception-add-member-field">Buổi học<select value={sessionId} onChange={event => setSessionId(event.target.value)} disabled={loading || !sessions.length} required><option value="">{loading ? 'Đang tải buổi học...' : 'Chọn buổi học'}</option>{sessions.map(session => <option key={session.id} value={session.id}>#{session.id} · {formatDateTime(session.startsAt)} · {session.availableSeats}/{session.capacity} chỗ trống</option>)}</select></label>
-        <label className="reception-add-member-field">Mã hội viên<input type="number" min="1" value={memberId} onChange={event => setMemberId(event.target.value)} placeholder="Nhập mã hội viên" required /></label>
+        <label className="reception-add-member-field">Mã hội viên<input type="number" min="1" max={BACKEND_ID_MAX} step="1" value={memberId} onChange={event => setMemberId(event.target.value)} placeholder="Nhập mã hội viên" required /></label>
         {loadError && <p className="reception-form-error" role="alert">{loadError}</p>}
         {!loading && !loadError && !sessions.length && <p className="reception-form-error">Lớp này chưa có buổi học khả dụng để đăng ký.</p>}
         {error && <p className="reception-form-error" role="alert">{error}</p>}

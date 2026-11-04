@@ -1,7 +1,7 @@
-import { manualCheckIn } from './gymCheckInService'
+import { manualCheckIn, scanQrCheckIn } from './gymCheckInService'
 import { getAllSupportTickets, resolveSupportTicket } from './supportTicketService'
 import { getReceptionistManualCheckInValidationError } from '../utils/receptionistValidation.js'
-import { getSupportResolutionValidationError } from '../utils/textLengthValidation.js'
+import { CHECK_IN_NOTES_MAX_LENGTH, getSupportResolutionValidationError, getTextLengthValidationError } from '../utils/textLengthValidation.js'
 import { canUpdateSupportTicket } from '../utils/supportTickets.js'
 import { loadSchedulingPages } from './sessionSchedulingService'
 import { getReceptionistSessionRoster } from './receptionistClassService'
@@ -11,8 +11,16 @@ import { frontDeskCheckInReason } from '../utils/frontDeskAttendance.js'
 export async function manualManagerCheckIn(form) {
   const error = getReceptionistManualCheckInValidationError(form)
   if (error) throw Object.assign(new Error(error.message), { field: error.field })
+  const notesError = getTextLengthValidationError(form.notes, 'Ghi chú check-in', CHECK_IN_NOTES_MAX_LENGTH)
+  if (notesError) throw Object.assign(new Error(notesError), { field: 'notes' })
   return manualCheckIn({ ...form, memberId: typeof form.memberId === 'string' ? form.memberId.trim() : form.memberId,
     phoneNumber: form.phoneNumber?.trim() || null })
+}
+
+export async function scanManagerQrCheckIn(form) {
+  const error = getTextLengthValidationError(form.notes, 'Ghi chú check-in', CHECK_IN_NOTES_MAX_LENGTH)
+  if (error) throw new Error(error)
+  return scanQrCheckIn(form)
 }
 
 export async function resolveManagerSupportTicket(ticketId, form) {
