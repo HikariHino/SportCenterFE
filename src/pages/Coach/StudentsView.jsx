@@ -8,6 +8,8 @@ import { applyExercisesPerSession, buildWorkoutGoalContext, mapWorkoutRecommenda
 import { getCoachPlanDemoStudent } from '../../utils/coachDemoAccess'
 import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, timeFormatter, ViewLoader } from './CoachViewShared'
 import useCoachViewRefresh, { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
+import useCoachAttendanceWindow from '../../hooks/useCoachAttendanceWindow'
+import { getCoachAttendanceAvailability } from '../../utils/coachAttendance'
 
 const toDateInput = date => {
   const year = date.getFullYear()
@@ -570,6 +572,7 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
   })
   const selected = students.find(student => student.id === selectedId)
   const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
+  const attendanceAvailability = useCoachAttendanceWindow(selectedSession, active)
   const selectedClass = classes.find(item => String(item.id) === String(selectedSession?.classId))
   const selectionEmptyTitle = !selectedClassId ? 'Chọn lớp huấn luyện' : !selectedDate ? 'Chọn ngày tập' : 'Chọn khung giờ'
   const selectionEmptyText = !selectedClassId
@@ -582,10 +585,12 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
 
   const handleCheckIn = async student => {
     if (!student || checkingInRegistrationId !== null || student.attendanceTone !== 'pending') return
+    const availability = getCoachAttendanceAvailability(selectedSession)
+    if (!availability.open) { setCheckInError(availability.message); return }
     setCheckingInRegistrationId(student.registrationId)
     setCheckInError('')
     try {
-      const attendance = await checkInCoachRegistration(student.registrationId)
+      const attendance = await checkInCoachRegistration(student.registrationId, { sessionId: selectedSession.id })
       const updatedStudent = mapRosterStudent({
         registrationId: student.registrationId,
         memberId: student.memberId,
@@ -623,6 +628,8 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
       <article><span className="purple"><UserRound size={21} /></span><div><small>Vắng mặt</small><strong>{absentCount}</strong><p>Theo trạng thái chuyên cần</p></div></article>
     </section>
 
+    <div className={`coach-checkin-window ${attendanceAvailability.open ? 'open' : ''}`}><Clock3 size={16} /><span><strong>{attendanceAvailability.open ? 'Có thể check-in học viên' : 'Không thể check-in học viên'}</strong><small>{attendanceAvailability.message}.</small></span></div>
+
     <div className="coach-student-layout">
       <section className="coach-card coach-roster">
         <div className="coach-view-toolbar"><div><strong>Danh sách học viên theo buổi</strong><span>{rosterLoading ? 'Đang tải roster...' : `${filtered.length} kết quả`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã điểm danh', 'Chưa điểm danh', 'Vắng mặt'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
@@ -635,7 +642,7 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
       </section>
 
       <aside className="coach-card coach-student-profile">
-        {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}{selectedClass?.sportName ? ` · ${selectedClass.sportName}` : ''}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div>{checkInError && <p className="coach-profile-action-error" role="alert">{checkInError}</p>}<div className="coach-profile-actions"><button type="button" disabled={selected.attendanceTone !== 'pending' || checkingInRegistrationId !== null} onClick={() => handleCheckIn(selected)}><UserCheck size={15} />{checkingInRegistrationId === selected.registrationId ? 'Đang check-in...' : selected.attendanceTone === 'pending' ? 'Check-in học viên' : 'Đã check-in'}</button><button type="button" onClick={() => setPlanStudent({ ...selected, classId: selectedClass?.id || selectedSession?.classId, className: selectedClass?.className || selectedSession?.className, sportId: selectedClass?.sportId || selectedSession?.sportId, sportName: selectedClass?.sportName || selectedSession?.sportName || '' })}><Plus size={15} />Tạo giáo án</button><button type="button" onClick={() => setPlansStudent(selected)}><BookOpen size={15} />Xem giáo án</button></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
+        {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}{selectedClass?.sportName ? ` · ${selectedClass.sportName}` : ''}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div>{checkInError && <p className="coach-profile-action-error" role="alert">{checkInError}</p>}<div className="coach-profile-actions"><button type="button" disabled={!attendanceAvailability.open || selected.attendanceTone !== 'pending' || checkingInRegistrationId !== null} title={!attendanceAvailability.open ? attendanceAvailability.message : undefined} onClick={() => handleCheckIn(selected)}><UserCheck size={15} />{checkingInRegistrationId === selected.registrationId ? 'Đang check-in...' : selected.attendanceTone === 'pending' ? 'Check-in học viên' : 'Đã check-in'}</button><button type="button" onClick={() => setPlanStudent({ ...selected, classId: selectedClass?.id || selectedSession?.classId, className: selectedClass?.className || selectedSession?.className, sportId: selectedClass?.sportId || selectedSession?.sportId, sportName: selectedClass?.sportName || selectedSession?.sportName || '' })}><Plus size={15} />Tạo giáo án</button><button type="button" onClick={() => setPlansStudent(selected)}><BookOpen size={15} />Xem giáo án</button></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </aside>
     </div>
     </>}

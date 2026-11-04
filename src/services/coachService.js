@@ -1,4 +1,5 @@
 import api from './api'
+import { getCoachAttendanceAvailability } from '../utils/coachAttendance.js'
 
 export async function getCoachClasses({ page = 1, pageSize = 100 } = {}) {
   const response = await api.get('/classes', { params: { page, pageSize } })
@@ -34,7 +35,7 @@ export async function getMyCoachSessions({ from, to, page = 1, pageSize = 100 })
   })
 
   const body = response.data
-  if (body?.success === false) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
     throw new Error(body.message || 'Không thể tải lịch huấn luyện.')
   }
 
@@ -42,6 +43,8 @@ export async function getMyCoachSessions({ from, to, page = 1, pageSize = 100 })
   return {
     items: Array.isArray(payload?.items) ? payload.items : [],
     total: Number(payload?.total || 0),
+    page: Number(payload?.page || page),
+    pageSize: Number(payload?.pageSize || pageSize),
   }
 }
 
@@ -64,7 +67,29 @@ export async function getCoachSessionAttendances(sessionId) {
   return Array.isArray(payload) ? payload : []
 }
 
+async function getCoachSessionForAttendance(sessionId) {
+  const id = Number(sessionId)
+  if (!Number.isSafeInteger(id) || id < 1) throw new Error('Không xác định được buổi huấn luyện để điểm danh.')
+  const seen = new Set()
+  for (let page = 1; ; page += 1) {
+    const result = await getMyCoachSessions({ page, pageSize: 100 })
+    const session = result.items.find(item => Number(item.id) === id)
+    if (session) {
+      const availability = getCoachAttendanceAvailability(session)
+      if (!availability.open) throw new Error(availability.message)
+      return session
+    }
+    const unseen = result.items.filter(item => !seen.has(String(item.id)))
+    if (!unseen.length || (result.total > 0 && result.page * result.pageSize >= result.total)) break
+    unseen.forEach(item => seen.add(String(item.id)))
+  }
+  throw new Error('Không tìm thấy buổi học trong lịch huấn luyện hiện tại. Vui lòng tải lại danh sách.')
+}
+
 export async function markCoachAttendance({ memberId, sessionId, status }) {
+  // Read the saved schedule immediately before writing, including after a tab
+  // has stayed open or another staff member has moved/cancelled the session.
+  await getCoachSessionForAttendance(sessionId)
   const response = await api.post('/Attendances/mark', {
     memberId,
     sessionId,
@@ -109,7 +134,16 @@ export async function getCoachSessionReviews(sessionId, { page = 1, pageSize = 5
   }
 }
 
-export async function checkInCoachRegistration(registrationId) {
+export async function checkInCoachRegistration(registrationId, { sessionId } = {}) {
+  const session = await getCoachSessionForAttendance(sessionId)
+  const roster = await getCoachSessionRoster(sessionId)
+  const student = roster.find(item => String(item.registrationId) === String(registrationId))
+  if (!student || String(student.registrationStatus).toLowerCase() !== 'registered') {
+    throw new Error('Không tìm thấy lượt đăng ký hợp lệ trong buổi huấn luyện đã chọn.')
+  }
+  if (student.attendanceStatus || student.checkInTime) throw new Error('Học viên đã có kết quả điểm danh cho buổi học này.')
+  const availability = getCoachAttendanceAvailability(session)
+  if (!availability.open) throw new Error(availability.message)
   const response = await api.post(`/class-registrations/${registrationId}/check-in`)
   const body = response.data
 

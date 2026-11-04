@@ -3,11 +3,11 @@ import { LoaderCircle, Mail, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getProfileErrorMessage, requestChangeEmailOtp, verifyChangeEmailOtp } from '../services/profileService'
-import { changeEmailError, isChangeEmailConflict, normalizeChangeEmail } from '../utils/changeEmailValidation'
+import { changeEmailError, getStaffEmailValidationError, isChangeEmailConflict, normalizeChangeEmail } from '../utils/changeEmailValidation'
 import { getEmailValidationError } from '../utils/profileValidation'
 import '../style/ChangeEmailForm.css'
 
-export default function ChangeEmailForm({ currentEmail, disabled = false }) {
+export default function ChangeEmailForm({ currentEmail, disabled = false, allowAnyEmailDomain = false }) {
   const id = useId()
   const navigate = useNavigate()
   const { endSession } = useAuth()
@@ -26,7 +26,8 @@ export default function ChangeEmailForm({ currentEmail, disabled = false }) {
   const remaining = Math.max(0, Math.ceil((expiresAt - now) / 1000))
   const resendAfter = Math.max(0, remaining - 270)
   const targetEmail = normalizeChangeEmail(requestedEmail || email)
-  const emailError = changeEmailError(targetEmail, currentEmail, rejectedEmails) || getEmailValidationError(targetEmail)
+  const emailError = changeEmailError(targetEmail, currentEmail, rejectedEmails)
+    || (allowAnyEmailDomain ? getStaffEmailValidationError(targetEmail) : getEmailValidationError(targetEmail))
   const visibleEmailError = targetEmail ? emailError : ''
 
   function rememberEmailConflict(err, target) {
@@ -118,7 +119,7 @@ export default function ChangeEmailForm({ currentEmail, disabled = false }) {
     <p>Mã xác nhận sẽ được gửi đến email mới và có hiệu lực trong 5 phút. Sau khi xác nhận, bạn sẽ đăng nhập lại bằng email mới.</p>
     <form onSubmit={requestedEmail ? verifyCode : sendCode} aria-busy={Boolean(busy)}>
       <label htmlFor={`${id}-email`}>Email mới</label>
-      <input id={`${id}-email`} type="email" autoComplete="email" maxLength={254} pattern="[^ @]+@[^ @]+[.]com" title="Email phải có @ và kết thúc bằng .com" required value={requestedEmail || email} readOnly={Boolean(requestedEmail)} disabled={disabled || Boolean(busy)} aria-invalid={Boolean(visibleEmailError)} aria-describedby={visibleEmailError ? `${id}-email-error` : undefined} onChange={event => { setEmail(event.target.value); setError('') }} placeholder="ten@example.com" />
+      <input id={`${id}-email`} type="email" autoComplete="email" maxLength={254} pattern={allowAnyEmailDomain ? undefined : '[^ @]+@[^ @]+[.]com'} title={allowAnyEmailDomain ? 'Vui lòng nhập địa chỉ email hợp lệ' : 'Email phải có @ và kết thúc bằng .com'} required value={requestedEmail || email} readOnly={Boolean(requestedEmail)} disabled={disabled || Boolean(busy)} aria-invalid={Boolean(visibleEmailError)} aria-describedby={visibleEmailError ? `${id}-email-error` : undefined} onChange={event => { setEmail(event.target.value); setError('') }} placeholder="ten@example.com" />
       {visibleEmailError && <p id={`${id}-email-error`} className="account-email-error" role="alert">{visibleEmailError}</p>}
       {requestedEmail && <>
         <p className="account-email-sent" role="status"><ShieldCheck size={16} /> Đã gửi mã đến {requestedEmail}. Kiểm tra cả thư mục spam.</p>

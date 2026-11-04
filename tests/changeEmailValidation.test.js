@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { changeEmailError, isChangeEmailConflict, normalizeChangeEmail } from '../src/utils/changeEmailValidation.js'
+import { changeEmailError, getStaffEmailValidationError, isChangeEmailConflict, normalizeChangeEmail } from '../src/utils/changeEmailValidation.js'
+
+test('Coach and Receptionist accept education, Vietnam and other email domains', () => {
+  for (const email of ['anhhe186313@fpt.edu.vn', 'coach@example.vn', 'user@example.com.vn', 'member+new@example.org', ' NEW@FPT.EDU.VN ']) {
+    assert.equal(getStaffEmailValidationError(email), '')
+    assert.equal(changeEmailError(email, 'current@example.com'), '')
+  }
+})
+
+test('staff email validation still rejects malformed and oversized email addresses', () => {
+  for (const email of [undefined, null, '', '  ', 'no-at-sign', 'a@@b.com', 'a b@fpt.edu.vn', 'a@fpt..edu.vn', 'a@-example.vn', 'a@example-.vn', 'a@example.vn.', 'a,b@example.com', 'a'.repeat(250) + '@fpt.edu.vn']) {
+    assert.ok(getStaffEmailValidationError(email))
+  }
+})
 
 test('current email is blocked regardless of case and surrounding spaces', () => {
   assert.equal(normalizeChangeEmail(' User@Example.COM '), 'user@example.com')
