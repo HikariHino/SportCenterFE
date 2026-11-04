@@ -27,6 +27,7 @@ import { createManagerStaff } from "../../services/managerAccountService"
 import { getManagerStaffValidationError, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN } from "../../utils/managerAccountValidation"
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from "../../utils/passwordValidation"
 import "../../style/CenterManager/StaffManagement.css"
+import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from "../../utils/fullNameValidation"
 
 const ROLE_OPTIONS = [
   { value: "Manager", label: "Quản lý", tone: "role-manager", icon: ShieldCheck, desc: "Toàn quyền quản trị trung tâm, tài khoản và chính sách." },
@@ -584,7 +585,7 @@ export default function StaffManagement() {
 
                 <div className="staff-form-group">
                   <label htmlFor="staff-fullname">Họ và tên *</label>
-                  <input
+                  <input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE}
                     id="staff-fullname"
                     name="fullName"
                     maxLength={MANAGER_ACCOUNT_LIMITS.fullName}

@@ -1,6 +1,7 @@
 import { getVietnamPhoneValidationError } from './profileValidation.js'
 import { getNewPasswordValidationError } from './passwordValidation.js'
 import { getTextLengthValidationError } from './textLengthValidation.js'
+import { getFullNameCharactersError } from './fullNameValidation.js'
 
 export const RECEPTIONIST_PHONE_PATTERN = '0[0-9]{9}'
 export const RECEPTIONIST_PHONE_MESSAGE = 'Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0.'
@@ -15,6 +16,8 @@ export function getReceptionistMemberValidationError({ fullName, phone, password
     return { field: 'fullName', message: 'Vui lòng nhập họ và tên, không chỉ gồm khoảng trắng.' }
   }
   if (fullName.trim().length > 100) return { field: 'fullName', message: 'Họ và tên không được vượt quá 100 ký tự.' }
+  const nameError = getFullNameCharactersError(fullName)
+  if (nameError) return { field: 'fullName', message: nameError }
   const phoneError = phoneValidationError(phone)
   if (phoneError) return { field: 'phone', message: phoneError }
   const passwordError = getNewPasswordValidationError(password)

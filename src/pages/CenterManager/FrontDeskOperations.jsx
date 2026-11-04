@@ -83,6 +83,7 @@ import FrontDeskClassAttendance from './FrontDeskClassAttendance'
 import FrontDeskMemberPicker from './FrontDeskMemberPicker'
 import FrontDeskGymHistory from './FrontDeskGymHistory'
 import { FrontDeskPackageCards, FrontDeskPackageSelect } from './FrontDeskPackagePicker'
+import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 
 function formatVND(value) {
   const number = Number(value) || 0
@@ -1685,7 +1686,7 @@ export default function FrontDeskOperations() {
                 {memberCreateError && <div id="manager-member-create-error" className="fdesk-alert fdesk-alert-danger" role="alert"><AlertCircle size={16} /><span>{memberCreateError.message}</span></div>}
                 <div className="fdesk-input-group">
                   <label>Họ và tên (*):</label>
-                  <input
+                  <input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE}
                     type="text"
                     required
                     className="fdesk-input"

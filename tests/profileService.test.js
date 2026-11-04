@@ -98,8 +98,8 @@ test('profile payloads normalize whitespace and phone separators, while keeping 
     payload = JSON.parse(config.data)
     return { data: { ...payload, userId: 1 }, status: 200, headers: {}, config }
   }
-  await service.updateProfile({ fullName: '  Nguyễn-Văn An  ', phoneNumber: '+84 912 345 678', emergencyContact: '  Mẹ: 0912 345 678  ' })
-  assert.deepEqual(payload, { fullName: 'Nguyễn-Văn An', phoneNumber: '+84912345678', emergencyContact: 'Mẹ: 0912 345 678' })
+  await service.updateProfile({ fullName: '  Nguyễn Văn An  ', phoneNumber: '+84 912 345 678', emergencyContact: '  Mẹ: 0912 345 678  ' })
+  assert.deepEqual(payload, { fullName: 'Nguyễn Văn An', phoneNumber: '+84912345678', emergencyContact: 'Mẹ: 0912 345 678' })
 })
 
 test('profile validation errors returned in a success HTTP envelope retain their field details', async () => {

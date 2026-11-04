@@ -10,6 +10,7 @@ import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } fr
 import { AUTH_REGISTRATION_LIMITS, getAuthRegistrationValidationError } from '../utils/authRegistrationValidation'
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../utils/passwordValidation'
 import '../style/Register.css'
+import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../utils/fullNameValidation'
 
 const benefits = [
   [Gift, 'Tích điểm thưởng', 'quy đổi giờ chơi miễn phí và voucher phụ kiện'],
@@ -181,7 +182,7 @@ export default function Register() {
           }
         }} aria-busy={isSubmitting || isSendingOtp}>
           <fieldset className="register-fields" disabled={isSubmitting || isSendingOtp}>
-          <Field id="fullname" label="Họ và tên đầy đủ" icon={UserRound} maxLength={AUTH_REGISTRATION_LIMITS.fullName} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
+          <Field pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} id="fullname" label="Họ và tên đầy đủ" icon={UserRound} maxLength={AUTH_REGISTRATION_LIMITS.fullName} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
           <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" maxLength={AUTH_REGISTRATION_LIMITS.email} autoComplete="email" placeholder="name@olympus.vn" error={emailError} /></div>
           <div className="register-row">
             <Field id="dateOfBirth" label="Ngày sinh" icon={CalendarCheck} type="date" autoComplete="bday" max={new Date().toISOString().slice(0, 10)} />

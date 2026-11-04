@@ -1,4 +1,5 @@
 import { getNewPasswordValidationError } from './passwordValidation.js'
+import { getFullNameCharactersError } from './fullNameValidation.js'
 
 export const PROFILE_LIMITS = { fullName: 200, phoneNumber: 30, gender: 10, address: 500, fitnessGoal: 100, emergencyContact: 100 }
 const labels = { fullName: 'Họ và tên', phoneNumber: 'Số điện thoại', gender: 'Giới tính', address: 'Địa chỉ thường trú', fitnessGoal: 'Mục tiêu tập luyện', emergencyContact: 'Liên hệ khẩn cấp' }
@@ -21,6 +22,10 @@ export function profileValidationErrors(values, { partial = false, requirePhone 
     else if (values[field].trim().length > max) errors[field] = `${labels[field]} không được vượt quá ${max} ký tự.`
   }
   if ((!partial || values.fullName != null) && !String(values.fullName || '').trim()) errors.fullName = 'Vui lòng nhập họ và tên, không chỉ gồm khoảng trắng.'
+  if (values.fullName != null && !errors.fullName) {
+    const nameError = getFullNameCharactersError(values.fullName)
+    if (nameError) errors.fullName = nameError
+  }
   const phone = typeof values.phoneNumber === 'string' ? values.phoneNumber.trim() : ''
   if (requirePhone && !phone) errors.phoneNumber = 'Vui lòng nhập số điện thoại.'
   else if (phone && !errors.phoneNumber && !/^(?:0|\+84)[0-9]{9}$/.test(normalizeProfilePhone(phone))) {
@@ -91,7 +96,7 @@ export function getFullNameValidationError(value) {
   const fullName = String(value || '').trim()
   if (!fullName) return 'Họ và tên không được để trống.'
   if ([...fullName].length > PROFILE_FULL_NAME_MAX_LENGTH) return `Họ và tên không được vượt quá ${PROFILE_FULL_NAME_MAX_LENGTH} ký tự.`
-  return ''
+  return getFullNameCharactersError(value)
 }
 
 export function getVietnamPhoneValidationError(value, { required = false } = {}) {
