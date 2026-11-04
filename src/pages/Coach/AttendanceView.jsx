@@ -5,14 +5,10 @@ import { getCoachSessionAttendances, getCoachSessionRoster, getMyCoachSessions, 
 import { shiftTimetableDate, timetableWeekStart } from '../../utils/memberTimetable'
 import { attendanceOptions, EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent } from './CoachViewShared'
 import useCoachViewRefresh, { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
+import useCoachAttendanceWindow from '../../hooks/useCoachAttendanceWindow'
+import { getCoachAttendanceAvailability } from '../../utils/coachAttendance'
 
 const isCancelledSession = session => ['cancelled', 'canceled'].includes(String(session?.status || '').trim().toLowerCase())
-
-const getAttendanceAvailability = session => {
-  if (!session) return { open: false, message: 'Chưa chọn buổi huấn luyện' }
-  if (isCancelledSession(session)) return { open: false, message: 'Buổi học đã bị hủy' }
-  return { open: true, message: 'Có thể ghi nhận hoặc cập nhật trạng thái điểm danh' }
-}
 
 const getSessionStatusLabel = (session, now = Date.now()) => {
   const status = String(session?.status || '').trim().toLowerCase()
@@ -123,7 +119,7 @@ export function AttendanceView({ active = true, query, showNotice, selectedSessi
 
   const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
     || (String(sharedSelectedSession?.id) === String(selectedSessionId) ? sharedSelectedSession : null)
-  const attendanceAvailability = getAttendanceAvailability(selectedSession)
+  const attendanceAvailability = useCoachAttendanceWindow(selectedSession, active && attendancePageOpen)
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
   const filtered = students.filter(student => {
     const matchesStatus = status === 'Tất cả' || student.attendanceStatus === status
@@ -144,7 +140,9 @@ export function AttendanceView({ active = true, query, showNotice, selectedSessi
   }
 
   const handleMarkAttendance = async student => {
-    if (!attendanceAvailability.open || markingId) return
+    if (markingId !== null) return
+    const availability = getCoachAttendanceAvailability(selectedSession)
+    if (!availability.open) { setActionError(availability.message); return }
     setMarkingId(student.registrationId)
     setActionError('')
     try {
@@ -213,7 +211,7 @@ export function AttendanceView({ active = true, query, showNotice, selectedSessi
             <span className="coach-roster-person"><i className="coach-student-avatar blue">{initials(student.name)}</i><span><strong>{student.name}</strong><small>Member #{student.memberId}</small></span></span>
             <span><strong>{student.registrationStatus}</strong><small>Đăng ký #{student.registrationId}</small></span>
             <span><strong className={`coach-attendance ${student.attendanceTone}`}>{student.attendanceStatus}</strong><small>{student.checkInTime}</small></span>
-            <span className="coach-attendance-actions"><select aria-label={`Trạng thái điểm danh của ${student.name}`} value={attendanceSelections[student.id] || 'Present'} disabled={isMarking} onChange={event => setAttendanceSelections(current => ({ ...current, [student.id]: event.target.value }))}>{attendanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button type="button" className="coach-checkin-button" disabled={!canMark && !isMarking} onClick={() => handleMarkAttendance(student)}>{isMarking ? 'Đang lưu...' : student.attendanceTone === 'pending' ? 'Lưu' : 'Cập nhật'}</button></span>
+            <span className="coach-attendance-actions"><select aria-label={`Trạng thái điểm danh của ${student.name}`} value={attendanceSelections[student.id] || 'Present'} disabled={!canMark} onChange={event => setAttendanceSelections(current => ({ ...current, [student.id]: event.target.value }))}>{attendanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button type="button" className="coach-checkin-button" disabled={!canMark} onClick={() => handleMarkAttendance(student)}>{isMarking ? 'Đang lưu...' : student.attendanceTone === 'pending' ? 'Lưu' : 'Cập nhật'}</button></span>
           </article>
         })}</div> : <EmptyState title="Chưa có học viên" text={query || status !== 'Tất cả' ? 'Không có học viên phù hợp với bộ lọc.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </section>

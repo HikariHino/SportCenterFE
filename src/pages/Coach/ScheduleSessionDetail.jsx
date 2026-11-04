@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, CalendarDays, CheckCircle2, Clock3, RefreshCw, UserCheck, Users } from 'lucide-react'
 import { getCoachSessionAttendances, getCoachSessionRoster, markCoachAttendance } from '../../services/coachService'
 import { attendanceOptions, EmptyState, getStudentsError, initials, mapRosterStudent, sessionDateFormatter, timeFormatter } from './CoachViewShared'
-
-const isCancelledSession = session => ['cancelled', 'canceled'].includes(String(session?.rawStatus || session?.status || '').trim().toLowerCase())
+import useCoachAttendanceWindow from '../../hooks/useCoachAttendanceWindow'
+import { getCoachAttendanceAvailability } from '../../utils/coachAttendance'
 
 export default function ScheduleSessionDetail({ session, onBack, showNotice }) {
   const [students, setStudents] = useState([])
@@ -13,7 +13,7 @@ export default function ScheduleSessionDetail({ session, onBack, showNotice }) {
   const [actionError, setActionError] = useState('')
   const [savingId, setSavingId] = useState(null)
   const [requestKey, setRequestKey] = useState(0)
-  const cancelled = isCancelledSession(session)
+  const attendanceAvailability = useCoachAttendanceWindow(session)
 
   useEffect(() => {
     let active = true
@@ -52,7 +52,9 @@ export default function ScheduleSessionDetail({ session, onBack, showNotice }) {
   }, [requestKey, session.id])
 
   const handleUpdate = async student => {
-    if (cancelled || savingId !== null) return
+    if (savingId !== null) return
+    const availability = getCoachAttendanceAvailability(session)
+    if (!availability.open) { setActionError(availability.message); return }
     setSavingId(student.registrationId)
     setActionError('')
     try {
@@ -101,12 +103,12 @@ export default function ScheduleSessionDetail({ session, onBack, showNotice }) {
     <section className="coach-student-kpis coach-attendance-kpis">
       <article><span className="blue"><Users size={21} /></span><div><small>Danh sách học viên</small><strong>{students.length}</strong><p>Đăng ký trong buổi</p></div></article>
       <article><span className="green"><CheckCircle2 size={21} /></span><div><small>Đã điểm danh</small><strong>{presentCount}</strong><p>Đã cập nhật trong ngày</p></div></article>
-      <article><span className="purple"><Clock3 size={21} /></span><div><small>Chưa điểm danh</small><strong>{pendingCount}</strong><p>{cancelled ? 'Buổi học đã bị hủy' : 'Chọn trạng thái rồi cập nhật'}</p></div></article>
+      <article><span className="purple"><Clock3 size={21} /></span><div><small>Chưa điểm danh</small><strong>{pendingCount}</strong><p>{attendanceAvailability.message}</p></div></article>
     </section>
 
     <section className="coach-card coach-attendance-list coach-schedule-attendance-list">
       <div className="coach-view-toolbar"><div><strong>Danh sách điểm danh</strong><span>{loading ? 'Đang tải học viên...' : `${students.length} học viên trong buổi`}</span></div><button type="button" className="coach-schedule-detail-refresh" disabled={loading || savingId !== null} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={15} />Làm mới</button></div>
-      <div className={`coach-checkin-window ${cancelled ? '' : 'open'}`}><UserCheck size={16} /><span><strong>{cancelled ? 'Không thể điểm danh' : 'Điểm danh theo buổi học đã chọn'}</strong><small>{cancelled ? 'Buổi học đã bị hủy.' : `Mọi thay đổi được ghi nhận cho buổi #${session.id} vào ${sessionDateFormatter.format(start)}.`}</small></span></div>
+      <div className={`coach-checkin-window ${attendanceAvailability.open ? 'open' : ''}`}><UserCheck size={16} /><span><strong>{attendanceAvailability.open ? 'Có thể cập nhật điểm danh' : 'Không thể điểm danh'}</strong><small>{attendanceAvailability.message}.</small></span></div>
       {actionError && <div className="coach-attendance-error" role="alert">{actionError}</div>}
       {loading ? <EmptyState title="Đang tải danh sách học viên" text="Hệ thống đang lấy đăng ký và trạng thái điểm danh của buổi học." /> : error ? <div className="coach-inline-error"><EmptyState title="Không thể tải danh sách học viên" text={error} /><button type="button" className="coach-retry-button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : students.length ? <div className="coach-attendance-table">
         <div className="coach-attendance-heading"><span>Học viên</span><span>Đăng ký</span><span>Trạng thái</span><span>Điểm danh</span></div>
@@ -116,7 +118,7 @@ export default function ScheduleSessionDetail({ session, onBack, showNotice }) {
             <span className="coach-roster-person"><i className="coach-student-avatar blue">{initials(student.name)}</i><span><strong>{student.name}</strong><small>Member #{student.memberId}</small></span></span>
             <span><strong>{student.registrationStatus}</strong><small>Đăng ký #{student.registrationId}</small></span>
             <span><strong className={`coach-attendance ${student.attendanceTone}`}>{student.attendanceStatus}</strong><small>{student.checkInTime}</small></span>
-            <span className="coach-attendance-actions"><select aria-label={`Trạng thái điểm danh của ${student.name}`} value={selections[student.id] || 'Present'} disabled={cancelled || savingId !== null} onChange={event => setSelections(current => ({ ...current, [student.id]: event.target.value }))}>{attendanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button type="button" className="coach-checkin-button" disabled={cancelled || savingId !== null} onClick={() => handleUpdate(student)}>{saving ? 'Đang lưu...' : student.attendanceTone === 'pending' ? 'Điểm danh' : 'Cập nhật'}</button></span>
+            <span className="coach-attendance-actions"><select aria-label={`Trạng thái điểm danh của ${student.name}`} value={selections[student.id] || 'Present'} disabled={!attendanceAvailability.open || savingId !== null} onChange={event => setSelections(current => ({ ...current, [student.id]: event.target.value }))}>{attendanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button type="button" className="coach-checkin-button" disabled={!attendanceAvailability.open || savingId !== null} onClick={() => handleUpdate(student)}>{saving ? 'Đang lưu...' : student.attendanceTone === 'pending' ? 'Điểm danh' : 'Cập nhật'}</button></span>
           </article>
         })}
       </div> : <EmptyState title="Chưa có học viên" text="Buổi huấn luyện này chưa có hội viên đăng ký." />}

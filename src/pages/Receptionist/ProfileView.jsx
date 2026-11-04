@@ -111,7 +111,7 @@ export function ReceptionistProfileView({ showNotice }) {
         <article><span><IdCard size={18} /></span><div><small>Ngày tạo</small><strong>{profile.createdAt ? dateFormatter.format(new Date(profile.createdAt)) : 'Chưa xác định'}</strong></div></article>
         <article><span><CheckCircle2 size={18} /></span><div><small>Cập nhật gần nhất</small><strong>{profile.updatedAt ? dateFormatter.format(new Date(profile.updatedAt)) : 'Chưa cập nhật'}</strong></div></article>
       </div>}
-      <ChangeEmailForm currentEmail={profile.email} disabled={saving} />
+      <ChangeEmailForm currentEmail={profile.email} disabled={saving} allowAnyEmailDomain />
     </section>
   </div>
 }

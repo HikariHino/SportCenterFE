@@ -1,5 +1,14 @@
 export const normalizeChangeEmail = value => String(value || '').trim().toLowerCase()
 
+// Coach and Receptionist accept the same domain formats as the registration
+// email input. Other account forms keep their existing validation policy.
+export function getStaffEmailValidationError(value) {
+  if (typeof value !== 'string' || !value.trim()) return 'Email không được để trống.'
+  const email = value.trim()
+  if (email.length > 254 || !/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(email)) return 'Email không hợp lệ.'
+  return ''
+}
+
 export function changeEmailError(value, currentEmail, rejectedEmails = new Map()) {
   const email = normalizeChangeEmail(value)
   if (!email) return 'Vui lòng nhập email mới.'
