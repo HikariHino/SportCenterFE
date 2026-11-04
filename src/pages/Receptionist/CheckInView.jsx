@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, QrCode, ScanLine, ShieldCheck, UserCheck } from 'lucide-react'
-import { checkOutGymMember, getCheckInErrorMessage, getTodayCheckIns, manualCheckIn, scanQrCheckIn } from '../../services/gymCheckInService'
+import { checkOutGymMember, getCheckInErrorMessage, getTodayCheckIns, scanQrCheckIn } from '../../services/gymCheckInService'
+import { manualReceptionistCheckIn } from '../../services/receptionistEntryService'
+import { getReceptionistManualCheckInValidationError, RECEPTIONIST_PHONE_MESSAGE, RECEPTIONIST_PHONE_PATTERN } from '../../utils/receptionistValidation'
 import { EmptyState, formatDateTime, ViewLoader } from './ReceptionistViewShared'
 
 const QrCameraScanner = lazy(() => import('./QrCameraScanner'))
@@ -22,6 +24,7 @@ export function CheckInView({ showNotice }) {
   const [manualForm, setManualForm] = useState({ memberId: '', phoneNumber: '', notes: '' })
   const [manualSaving, setManualSaving] = useState(false)
   const [manualError, setManualError] = useState('')
+  const [manualInvalidField, setManualInvalidField] = useState('')
   const [checkOutSavingId, setCheckOutSavingId] = useState(null)
   const [checkOutError, setCheckOutError] = useState('')
   const [todayCheckIns, setTodayCheckIns] = useState([])
@@ -98,14 +101,19 @@ export function CheckInView({ showNotice }) {
 
   const submitManualCheckIn = async event => {
     event.preventDefault()
+    if (manualSaving) return
     setManualError('')
-    if (!manualForm.memberId && !manualForm.phoneNumber.trim()) {
-      setManualError('Vui lòng nhập mã hội viên hoặc số điện thoại.')
+    setManualInvalidField('')
+    const validationError = getReceptionistManualCheckInValidationError(manualForm)
+    if (validationError) {
+      setManualError(validationError.message)
+      setManualInvalidField(validationError.field)
+      event.currentTarget.elements.namedItem(validationError.field)?.focus()
       return
     }
     setManualSaving(true)
     try {
-      const result = await manualCheckIn(manualForm)
+      const result = await manualReceptionistCheckIn(manualForm)
       setQrResult(result)
       setTodayCheckIns(current => [result, ...current.filter(item => item.id !== result.id)])
       setManualForm({ memberId: '', phoneNumber: '', notes: '' })
@@ -115,6 +123,12 @@ export function CheckInView({ showNotice }) {
     } finally {
       setManualSaving(false)
     }
+  }
+
+  const updateManualField = event => {
+    setManualForm(current => ({ ...current, [event.target.name]: event.target.value }))
+    setManualError('')
+    setManualInvalidField('')
   }
 
   const handleCheckOut = async (checkIn = qrResult) => {
@@ -150,7 +164,14 @@ export function CheckInView({ showNotice }) {
       </section>
       <section className="reception-card reception-gym-manual-card">
         <div className="reception-card-head"><div><span>PHƯƠNG ÁN DỰ PHÒNG</span><h2>Check-in thủ công</h2></div><UserCheck size={20} /></div>
-        <form onSubmit={submitManualCheckIn}><label>Mã hội viên<input type="number" min="1" value={manualForm.memberId} onChange={event => setManualForm(current => ({ ...current, memberId: event.target.value }))} placeholder="Ví dụ: 12" /></label><span>hoặc</span><label>Số điện thoại<input value={manualForm.phoneNumber} onChange={event => setManualForm(current => ({ ...current, phoneNumber: event.target.value }))} placeholder="0912 345 678" /></label><label>Ghi chú<input value={manualForm.notes} onChange={event => setManualForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label>{manualError && <p role="alert">{manualError}</p>}<button type="submit" disabled={manualSaving}><UserCheck size={16} />{manualSaving ? 'Đang check-in...' : 'Xác nhận check-in'}</button></form>
+        <form onSubmit={submitManualCheckIn}>
+          <label>Mã hội viên<input name="memberId" type="number" min="1" max="2147483647" step="1" value={manualForm.memberId} onChange={updateManualField} aria-invalid={manualInvalidField === 'memberId' || undefined} aria-describedby={manualInvalidField === 'memberId' ? 'reception-manual-checkin-error' : undefined} placeholder="Ví dụ: 12" /></label>
+          <span>hoặc</span>
+          <label>Số điện thoại<input name="phoneNumber" type="tel" inputMode="numeric" pattern={RECEPTIONIST_PHONE_PATTERN} title={RECEPTIONIST_PHONE_MESSAGE} minLength="10" maxLength="10" value={manualForm.phoneNumber} onChange={updateManualField} aria-invalid={manualInvalidField === 'phoneNumber' || undefined} aria-describedby={manualInvalidField === 'phoneNumber' ? 'reception-manual-checkin-error' : undefined} placeholder="0912345678" /></label>
+          <label>Ghi chú<input name="notes" value={manualForm.notes} onChange={updateManualField} placeholder="Không bắt buộc" /></label>
+          {manualError && <p id="reception-manual-checkin-error" role="alert">{manualError}</p>}
+          <button type="submit" disabled={manualSaving}><UserCheck size={16} />{manualSaving ? 'Đang check-in...' : 'Xác nhận check-in'}</button>
+        </form>
       </section>
     </div>
     <section className="reception-card reception-gym-today-card">

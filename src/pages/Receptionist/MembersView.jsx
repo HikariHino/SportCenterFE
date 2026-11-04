@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Clock3, CreditCard, ReceiptText, Ban, LogIn, Plus, UserCheck, Users, WalletCards, X } from 'lucide-react'
-import { createMember, getMemberById, getMembers } from '../../services/memberService'
+import { getMemberById, getMembers } from '../../services/memberService'
+import { createReceptionistMember } from '../../services/receptionistEntryService'
+import { getReceptionistMemberValidationError, RECEPTIONIST_PHONE_MESSAGE, RECEPTIONIST_PHONE_PATTERN } from '../../utils/receptionistValidation'
 import { getMembershipPackageById, getMembershipPackages } from '../../services/membershipPackageService'
 import { confirmReceptionistSubscriptionPayment, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
@@ -15,22 +17,29 @@ function CreateMemberDialog({ onClose, onCreated }) {
   const [form, setForm] = useState(emptyMemberForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [invalidField, setInvalidField] = useState('')
 
-  const updateField = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }))
+  const updateField = event => {
+    setForm(current => ({ ...current, [event.target.name]: event.target.value }))
+    setError('')
+    setInvalidField('')
+  }
 
   const submit = async event => {
     event.preventDefault()
+    if (saving) return
+    const validationError = getReceptionistMemberValidationError(form)
+    if (validationError) {
+      setError(validationError.message)
+      setInvalidField(validationError.field)
+      event.currentTarget.elements.namedItem(validationError.field)?.focus()
+      return
+    }
     setSaving(true)
     setError('')
+    setInvalidField('')
     try {
-      const member = await createMember({
-        ...form,
-        phone: form.phone.trim() || null,
-        dateOfBirth: form.dateOfBirth || null,
-        gender: form.gender || null,
-        address: form.address.trim() || null,
-        fitnessGoal: form.fitnessGoal.trim() || null,
-      })
+      const member = await createReceptionistMember(form)
       onCreated(member)
       onClose()
     } catch (requestError) {
@@ -45,16 +54,16 @@ function CreateMemberDialog({ onClose, onCreated }) {
       <header><div><span>ĐĂNG KÝ TẠI QUẦY</span><h2 id="reception-create-member-title">Tạo tài khoản hội viên</h2><p>Thông tin đăng nhập sẽ được bàn giao trực tiếp cho hội viên.</p></div><button type="button" aria-label="Đóng biểu mẫu" onClick={onClose} disabled={saving}><X size={19} /></button></header>
       <form onSubmit={submit}>
         <div className="reception-member-form-grid">
-          <label>Họ và tên<input name="fullName" value={form.fullName} onChange={updateField} maxLength="100" required /></label>
+          <label>Họ và tên<input name="fullName" value={form.fullName} onChange={updateField} maxLength="100" aria-invalid={invalidField === 'fullName' || undefined} aria-describedby={invalidField === 'fullName' ? 'reception-create-member-error' : undefined} required /></label>
           <label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="256" required /></label>
           <label>Mật khẩu ban đầu<input name="password" type="password" value={form.password} onChange={updateField} minLength="6" autoComplete="new-password" required /></label>
-          <label>Số điện thoại<input name="phone" type="tel" value={form.phone} onChange={updateField} /></label>
+          <label>Số điện thoại<input name="phone" type="tel" inputMode="numeric" pattern={RECEPTIONIST_PHONE_PATTERN} title={RECEPTIONIST_PHONE_MESSAGE} minLength="10" maxLength="10" value={form.phone} onChange={updateField} aria-invalid={invalidField === 'phone' || undefined} aria-describedby={invalidField === 'phone' ? 'reception-create-member-error' : undefined} placeholder="0912345678" /></label>
           <label>Ngày sinh<input name="dateOfBirth" type="date" value={form.dateOfBirth} max={new Date().toISOString().slice(0, 10)} onChange={updateField} /></label>
           <label>Giới tính<select name="gender" value={form.gender} onChange={updateField}><option value="">Chưa cung cấp</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></label>
           <label className="wide">Địa chỉ<input name="address" value={form.address} onChange={updateField} maxLength="200" /></label>
           <label className="wide">Mục tiêu tập luyện<input name="fitnessGoal" value={form.fitnessGoal} onChange={updateField} maxLength="100" placeholder="Ví dụ: tăng sức bền, giảm cân..." /></label>
         </div>
-        {error && <p className="reception-form-error" role="alert">{error}</p>}
+        {error && <p id="reception-create-member-error" className="reception-form-error" role="alert">{error}</p>}
         <footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang đăng ký...' : 'Đăng ký hội viên'}</button></footer>
       </form>
     </section>
