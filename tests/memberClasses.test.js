@@ -28,9 +28,13 @@ test('check-in opens exactly 30 minutes before class and closes at the ending in
 test('check-in handles midnight and UTC offsets without opening on the wrong date', () => {
   const item = { ...upcoming, startsAt: '2026-10-19T17:10:00Z', endsAt: '2026-10-19T18:10:00Z' }
   const opensAt = Date.parse('2026-10-19T23:40:00+07:00')
-  assert.equal(registrationActions(item, opensAt).checkIn, true)
+  assert.equal(registrationActions(item, opensAt).checkIn, false)
   assert.equal(registrationActions(item, opensAt - 1).checkIn, false)
-  assert.match(checkInUnavailableReason(item, opensAt - 1), /23:40/)
+  assert.match(checkInUnavailableReason(item, opensAt), /trong ngày/)
+  assert.equal(registrationActions(item, Date.parse('2026-10-20T00:00:00+07:00')).checkIn, true)
+  const overnight = { ...upcoming, startsAt: '2026-10-19T23:00:00+07:00', endsAt: '2026-10-20T01:00:00+07:00' }
+  assert.equal(registrationActions(overnight, Date.parse('2026-10-19T23:30:00+07:00')).checkIn, true)
+  assert.equal(registrationActions(overnight, Date.parse('2026-10-20T00:00:00+07:00')).checkIn, false)
 })
 
 test('unknown or invalid session times never offer check-in', () => {

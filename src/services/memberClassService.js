@@ -1,5 +1,5 @@
 import api from './api'
-import { bookingUnavailableReason, hasActiveMembership, registeredSessionIds, reviewUnavailableReason } from '../utils/memberClasses.js'
+import { bookingUnavailableReason, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../utils/memberClasses.js'
 import { getMySubscriptions } from './memberSubscriptionService'
 
 function readPage(body, page, pageSize, fallback) {
@@ -208,7 +208,15 @@ export async function cancelRegistration(registrationId, reason = 'Hội viên t
  * POST /api/class-registrations/{id}/check-in
  * @param {number} registrationId
  */
-export async function checkInRegistration(registrationId) {
+export async function checkInRegistration(registrationId, expectedSessionId) {
+  if (!Number.isSafeInteger(Number(registrationId)) || Number(registrationId) < 1) throw new Error('Mã đăng ký buổi học không hợp lệ.')
+  const current = (await getAllMyRegistrations()).items.find(item => String(item.id) === String(registrationId))
+  if (!current || (expectedSessionId != null && String(current.sessionId) !== String(expectedSessionId))) {
+    throw new Error('Không tìm thấy đăng ký buổi học đã chọn. Vui lòng làm mới lịch.')
+  }
+  const reason = checkInUnavailableReason(current)
+  if (reason) throw new Error(reason)
+  if (!registrationActions(current).checkIn) throw new Error('Lượt đăng ký không còn hợp lệ hoặc đã có điểm danh.')
   const response = await api.post(`/class-registrations/${registrationId}/check-in`)
   const body = response.data
   if (body?.success === false) {

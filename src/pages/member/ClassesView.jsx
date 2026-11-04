@@ -371,7 +371,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
         if (type === 'checkIn') {
           const reason = checkInUnavailableReason(item, Date.now())
           if (reason) throw new Error(reason)
-          attendanceResult = await checkInRegistration(item.id)
+          attendanceResult = await checkInRegistration(item.id, item.sessionId)
         }
         if (type === 'review') await reviewRegistration(item.id, values)
       }

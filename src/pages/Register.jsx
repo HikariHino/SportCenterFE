@@ -7,6 +7,8 @@ import { sendRegisterOtp, verifyRegisterOtp } from '../services/authService'
 import { getAuthDestination, getAuthErrorMessage } from '../utils/auth'
 import { getRegistrationError } from '../utils/registration'
 import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } from '../utils/otpValidation'
+import { AUTH_REGISTRATION_LIMITS, getAuthRegistrationValidationError } from '../utils/authRegistrationValidation'
+import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../utils/passwordValidation'
 import '../style/Register.css'
 
 const benefits = [
@@ -22,7 +24,7 @@ function Field({ id, label, icon: Icon, error, ...props }) {
 
 function PasswordField({ id, label, ...props }) {
   const [visible, setVisible] = useState(false)
-  return <div className="register-field"><label htmlFor={id}>{label} <span>*</span></label><div className="register-input"><LockKeyhole size={18} /><input id={id} name={id} type={visible ? 'text' : 'password'} autoComplete="new-password" required minLength={8} {...props} /><button type="button" onClick={() => setVisible(!visible)} aria-label={`${visible ? 'Ẩn' : 'Hiện'} ${label.toLowerCase()}`} aria-pressed={visible}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
+  return <div className="register-field"><label htmlFor={id}>{label} <span>*</span></label><div className="register-input"><LockKeyhole size={18} /><input id={id} name={id} type={visible ? 'text' : 'password'} autoComplete="new-password" required minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} {...props} /><button type="button" onClick={() => setVisible(!visible)} aria-label={`${visible ? 'Ẩn' : 'Hiện'} ${label.toLowerCase()}`} aria-pressed={visible}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></div>
 }
 
 export default function Register() {
@@ -122,9 +124,6 @@ export default function Register() {
       setMessage('Vui lòng nhập ngày sinh hợp lệ, không ở tương lai.')
       return
     }
-    submitting.current = true
-    setIsSendingOtp(true)
-    setMessage('')
     const registration = {
       email: data.get('email').trim(),
       password: data.get('password'),
@@ -135,6 +134,15 @@ export default function Register() {
       address: data.get('address').trim(),
       fitnessGoal: data.get('fitnessGoal').trim(),
     }
+    const validationError = getAuthRegistrationValidationError(registration)
+    if (validationError) {
+      form.elements.namedItem(validationError.field === 'fullName' ? 'fullname' : validationError.field)?.focus()
+      setMessage(validationError.message)
+      return
+    }
+    submitting.current = true
+    setIsSendingOtp(true)
+    setMessage('')
     try {
       const result = await sendRegisterOtp(registration)
       if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Không thể gửi mã OTP.'))
@@ -173,14 +181,14 @@ export default function Register() {
           }
         }} aria-busy={isSubmitting || isSendingOtp}>
           <fieldset className="register-fields" disabled={isSubmitting || isSendingOtp}>
-          <Field id="fullname" label="Họ và tên đầy đủ" icon={UserRound} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
-          <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" autoComplete="email" placeholder="name@olympus.vn" error={emailError} /></div>
+          <Field id="fullname" label="Họ và tên đầy đủ" icon={UserRound} maxLength={AUTH_REGISTRATION_LIMITS.fullName} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
+          <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" maxLength={AUTH_REGISTRATION_LIMITS.email} autoComplete="email" placeholder="name@olympus.vn" error={emailError} /></div>
           <div className="register-row">
             <Field id="dateOfBirth" label="Ngày sinh" icon={CalendarCheck} type="date" autoComplete="bday" max={new Date().toISOString().slice(0, 10)} />
             <div className="register-field"><label htmlFor="gender">Giới tính <span>*</span></label><div className="register-input"><UserRound size={18} /><select id="gender" name="gender" autoComplete="sex" required defaultValue=""><option value="" disabled>Chọn giới tính</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></div></div>
           </div>
-          <Field id="address" label="Địa chỉ" icon={MapPin} autoComplete="street-address" placeholder="Địa chỉ của bạn" />
-          <Field id="fitnessGoal" label="Mục tiêu tập luyện" icon={Trophy} placeholder="Ví dụ: Tăng sức bền, giảm cân, tập Tennis" />
+          <Field id="address" label="Địa chỉ" icon={MapPin} maxLength={AUTH_REGISTRATION_LIMITS.address} autoComplete="street-address" placeholder="Địa chỉ của bạn" />
+          <Field id="fitnessGoal" label="Mục tiêu tập luyện" icon={Trophy} maxLength={AUTH_REGISTRATION_LIMITS.fitnessGoal} placeholder="Ví dụ: Tăng sức bền, giảm cân, tập Tennis" />
           <div className="register-row"><PasswordField id="password" label="Mật khẩu khởi tạo" placeholder="Tối thiểu 8 ký tự" value={password} onChange={event => setPassword(event.target.value)} aria-describedby="register-strength" /><PasswordField id="confirm-password" label="Xác nhận mật khẩu" placeholder="Nhập lại mật khẩu" /></div>
           <div className="register-strength" id="register-strength"><div><span>Độ mạnh mật khẩu:</span><strong>{['Chưa nhập', 'Yếu', 'Trung bình', 'Khá', 'Mạnh'][strength]}</strong></div><meter min="0" max="4" value={strength} aria-label="Độ mạnh mật khẩu" /><p>Sử dụng ít nhất 8 ký tự, kết hợp chữ hoa, chữ thường, chữ số và ký tự đặc biệt.</p></div>
           <label className="register-consent"><input type="checkbox" name="terms" required /><span>Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của Trung tâm Thể thao SportPulse Olympus.</span></label>

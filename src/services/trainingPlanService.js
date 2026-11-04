@@ -1,6 +1,7 @@
 import api from './api'
 import { getMyMemberProfile } from './memberService'
 import { EXERCISE_NOTES_MAX_LENGTH, getTextLengthValidationError, TRAINING_PLAN_NAME_MAX_LENGTH } from '../utils/textLengthValidation.js'
+import { getTrainingExercisesValidationError } from '../utils/trainingPlanValidation.js'
 
 const toUtcISOString = value => {
   const date = value instanceof Date ? value : new Date(value)
@@ -34,6 +35,8 @@ export async function getExerciseCatalog() {
 export async function createTrainingPlan({ planName, goal, memberId, startDate, endDate, exercises = [] }) {
   const nameError = getTextLengthValidationError(planName, 'Tên giáo án', TRAINING_PLAN_NAME_MAX_LENGTH)
   if (nameError) throw new Error(nameError)
+  const exerciseError = getTrainingExercisesValidationError(exercises)
+  if (exerciseError) throw new Error(exerciseError)
   for (const exercise of exercises) {
     const notesError = getTextLengthValidationError(exercise.notes, 'Ghi chú bài tập', EXERCISE_NOTES_MAX_LENGTH)
     if (notesError) throw new Error(notesError)
@@ -44,7 +47,8 @@ export async function createTrainingPlan({ planName, goal, memberId, startDate, 
     memberId,
     startDate: toUtcISOString(startDate),
     endDate: toUtcISOString(endDate),
-    exercises,
+    exercises: exercises.map(exercise => ({ ...exercise, exerciseId: Number(exercise.exerciseId), sets: Number(exercise.sets), reps: Number(exercise.reps),
+      durationInMinutes: exercise.durationInMinutes == null || String(exercise.durationInMinutes).trim() === '' ? null : Number(exercise.durationInMinutes) })),
   })
   const body = response.data
 
