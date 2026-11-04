@@ -4,6 +4,7 @@ import { getCoaches, getSports } from '../../services/classCatalogService'
 import { getReceptionistClassById, getReceptionistClasses, getReceptionistClassSessions, getReceptionistClassSessionsByClass, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
 import { completeReceptionistSession, getReceptionistSessionRoster, registerMemberForSession } from '../../services/receptionistClassService'
 import { EmptyState, formatDateTime, formatMemberDate, requestErrorMessage, ViewLoader } from './ReceptionistViewShared'
+import { BACKEND_ID_MAX } from '../../utils/numberValidation'
 
 function CompleteSessionDialog({ sessionId, onClose, onCompleted }) {
   const [saving, setSaving] = useState(false)
@@ -307,8 +308,8 @@ export function SessionsView({ showNotice, selectedSession, onSelectSession }) {
       <div className="reception-card-head"><div><span>ĐĂNG KÝ BUỔI HỌC</span><h2>Thêm hội viên vào buổi học</h2></div><CalendarDays size={20} /></div>
       <form onSubmit={submitRegistration}>
         {activeSession && <div className="reception-selected-session"><span><CheckCircle2 size={18} /></span><p><small>BUỔI ĐANG CHỌN</small><strong>{activeSession.className || `Buổi học #${activeSession.id}`}</strong></p><b>#{activeSession.id}</b></div>}
-        <label>Mã buổi học<input type="number" min="1" value={sessionId} onChange={event => setSessionId(event.target.value)} placeholder="Ví dụ: 12" required /></label>
-        <label>Mã hội viên<input type="number" min="1" value={memberId} onChange={event => setMemberId(event.target.value)} placeholder="Ví dụ: 25" required /></label>
+        <label>Mã buổi học<input type="number" min="1" max={BACKEND_ID_MAX} step="1" value={sessionId} onChange={event => setSessionId(event.target.value)} placeholder="Ví dụ: 12" required /></label>
+        <label>Mã hội viên<input type="number" min="1" max={BACKEND_ID_MAX} step="1" value={memberId} onChange={event => setMemberId(event.target.value)} placeholder="Ví dụ: 25" required /></label>
         {error && <p role="alert">{error}</p>}
         <button type="submit" disabled={saving}><Plus size={15} />{saving ? 'Đang đăng ký...' : 'Đăng ký buổi học'}</button>
       </form>
@@ -318,7 +319,7 @@ export function SessionsView({ showNotice, selectedSession, onSelectSession }) {
     </section></div>
     <section className="reception-card reception-session-roster">
       <div className="reception-card-head"><div><span>DANH SÁCH THEO BUỔI</span><h2>Học viên đã đăng ký</h2></div><div className="reception-roster-head-actions"><strong>{rosterLoaded && !rosterLoading ? `${roster.length} học viên` : 'Chưa tải'}</strong><button type="button" className={completedSessionId === Number(rosterSessionId) ? 'completed' : ''} disabled={!rosterLoaded || rosterLoading || !rosterSessionId || completedSessionId === Number(rosterSessionId)} onClick={() => setShowCompleteDialog(true)}><CheckCircle2 size={14} />{completedSessionId === Number(rosterSessionId) ? 'Đã hoàn thành' : 'Hoàn thành buổi học'}</button></div></div>
-      <form className="reception-roster-lookup" onSubmit={loadRoster}><label htmlFor="reception-roster-session">Mã buổi học</label><div><CalendarDays size={16} /><input id="reception-roster-session" type="number" min="1" value={rosterSessionId} onChange={event => setRosterSessionId(event.target.value)} placeholder="Nhập mã buổi học" required /><button type="submit" disabled={rosterLoading}>{rosterLoading ? 'Đang tải...' : 'Xem danh sách'}</button></div></form>
+      <form className="reception-roster-lookup" onSubmit={loadRoster}><label htmlFor="reception-roster-session">Mã buổi học</label><div><CalendarDays size={16} /><input id="reception-roster-session" type="number" min="1" max={BACKEND_ID_MAX} step="1" value={rosterSessionId} onChange={event => setRosterSessionId(event.target.value)} placeholder="Nhập mã buổi học" required /><button type="submit" disabled={rosterLoading}>{rosterLoading ? 'Đang tải...' : 'Xem danh sách'}</button></div></form>
       {rosterLoading ? <EmptyState icon={Users} title="Đang tải danh sách" text="Dữ liệu học viên đang được đồng bộ từ hệ thống." /> : rosterError ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải danh sách" text={rosterError} /><button type="button" onClick={loadRoster}>Thử lại</button></div> : rosterLoaded ? roster.length ? <div className="reception-roster-table"><div className="reception-roster-heading"><span>Mã đăng ký</span><span>Học viên</span><span>Mã hội viên</span><span>Đăng ký</span><span>Điểm danh</span></div>{roster.map(student => <div className="reception-roster-row" key={student.registrationId}><span>#{student.registrationId}</span><strong>{student.fullName}</strong><span>#{student.memberId}</span><span>{student.registrationStatus}</span><span><b>{student.attendanceStatus || 'Chưa điểm danh'}</b><small>{student.checkInTime ? sessionDateTimeFormatter.format(new Date(student.checkInTime)) : 'Chưa có giờ check-in'}</small></span></div>)}</div> : <EmptyState icon={Users} title="Chưa có học viên" text="Buổi học này chưa có lượt đăng ký." /> : <EmptyState icon={Users} title="Chọn một buổi học" text="Nhập mã buổi học để xem danh sách học viên đã đăng ký." />}
     </section>
     {showCompleteDialog && <CompleteSessionDialog sessionId={Number(rosterSessionId)} onClose={() => setShowCompleteDialog(false)} onCompleted={() => { setCompletedSessionId(Number(rosterSessionId)); showNotice(`Đã hoàn thành buổi học #${rosterSessionId}.`) }} />}

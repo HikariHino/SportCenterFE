@@ -35,7 +35,7 @@ import {
 } from '../../services/membershipPackageService'
 import '../../style/CenterManager/PackageManagement.css'
 import { membershipPackageType, membershipPackageTypeLabel } from '../../utils/memberSubscriptions'
-import { MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
+import { getManagerFormValidationError, MANAGER_FORM_LIMITS, PACKAGE_PRICE_MIN, PACKAGE_PRICE_MAX } from '../../utils/managerFormValidation'
 
 export function PackageTypeField({ id, value, onChange, disabled }) {
   return <div className="pkg-form-group">
@@ -231,6 +231,8 @@ export default function PackageManagement() {
   // Submit Create Package
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
+    const validationError = getManagerFormValidationError('package', packageForm)
+    if (validationError) { setError(validationError); return }
     if (!packageForm.packageName.trim()) {
       setError('Vui lòng nhập tên gói thẻ hội viên.')
       return
@@ -267,6 +269,8 @@ export default function PackageManagement() {
   // Submit Edit Package
   const handleEditSubmit = async (e) => {
     e.preventDefault()
+    const validationError = getManagerFormValidationError('package', packageForm)
+    if (validationError) { setError(validationError); return }
     if (!editingPackage) return
     if (!packageForm.packageName.trim()) {
       setError('Vui lòng nhập tên gói thẻ hội viên.')
@@ -789,8 +793,9 @@ export default function PackageManagement() {
                     </label>
                     <input
                       type="number"
-                      min="1000"
-                      step="50000"
+                      min={PACKAGE_PRICE_MIN}
+                      max={PACKAGE_PRICE_MAX}
+                      step="0.01"
                       className="pkg-form-input"
                       value={packageForm.price}
                       onChange={(e) => setPackageForm({ ...packageForm, price: Number(e.target.value) })}
@@ -928,8 +933,9 @@ export default function PackageManagement() {
                     </label>
                     <input
                       type="number"
-                      min="1000"
-                      step="50000"
+                      min={PACKAGE_PRICE_MIN}
+                      max={PACKAGE_PRICE_MAX}
+                      step="0.01"
                       className="pkg-form-input"
                       value={packageForm.price}
                       onChange={(e) => setPackageForm({ ...packageForm, price: Number(e.target.value) })}

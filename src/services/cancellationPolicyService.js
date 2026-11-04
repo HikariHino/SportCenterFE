@@ -1,5 +1,5 @@
 import api from './api'
-import { getManagerFormTextError } from '../utils/managerFormValidation.js'
+import { getManagerFormValidationError } from '../utils/managerFormValidation.js'
 
 /**
  * Trích xuất thông báo lỗi từ backend
@@ -37,7 +37,7 @@ export async function getCancellationPolicies() {
  * @param {{ name: string, minimumHoursBeforeStart: number, isActive: boolean }} policy
  */
 export async function createCancellationPolicy({ name, minimumHoursBeforeStart, isActive }) {
-  const error = getManagerFormTextError('policy', { name })
+  const error = getManagerFormValidationError('policy', { name, minimumHoursBeforeStart })
   if (error) throw new Error(error)
   const response = await api.post('/cancellation-policies', {
     name: name.trim(),
@@ -59,7 +59,7 @@ export async function createCancellationPolicy({ name, minimumHoursBeforeStart, 
  * @param {{ name: string, minimumHoursBeforeStart: number, isActive: boolean }} policy
  */
 export async function updateCancellationPolicy(id, { name, minimumHoursBeforeStart, isActive }) {
-  const error = getManagerFormTextError('policy', { name })
+  const error = getManagerFormValidationError('policy', { name, minimumHoursBeforeStart })
   if (error) throw new Error(error)
   const response = await api.put(`/cancellation-policies/${id}`, {
     name: name.trim(),

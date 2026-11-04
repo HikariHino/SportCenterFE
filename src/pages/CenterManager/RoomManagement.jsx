@@ -37,7 +37,7 @@ import {
 } from '../../services/roomService'
 import '../../style/CenterManager/RoomManagement.css'
 import RoomTimetableDialog from './RoomTimetableDialog'
-import { MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
+import { getManagerFormValidationError, MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
 
 const ROOM_TYPE_OPTIONS = [
   { value: 'Yoga', label: 'Phòng Yoga / Pilates', icon: Zap, iconClass: 'yoga' },
@@ -243,6 +243,8 @@ export default function RoomManagement() {
   // Submit Create Room
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
+    const validationError = getManagerFormValidationError('room', roomForm)
+    if (validationError) { setError(validationError); return }
     if (!roomForm.name.trim()) {
       setError('Vui lòng nhập tên phòng tập / cơ sở vật chất.')
       return
@@ -269,6 +271,8 @@ export default function RoomManagement() {
   // Submit Edit Room
   const handleEditSubmit = async (e) => {
     e.preventDefault()
+    const validationError = getManagerFormValidationError('room', roomForm)
+    if (validationError) { setError(validationError); return }
     if (!editingRoom) return
     if (!roomForm.name.trim()) {
       setError('Vui lòng nhập tên phòng tập.')

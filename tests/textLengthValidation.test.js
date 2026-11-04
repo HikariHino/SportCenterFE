@@ -28,8 +28,8 @@ after(async () => {
 function mockApi(body = { success: true }) {
   const calls = []
   api.defaults.adapter = async config => {
-    calls.push({ url: config.url, method: config.method, data: JSON.parse(config.data) })
-    return { config, status: 200, headers: {}, data: body }
+    calls.push({ url: config.url, method: config.method, data: config.data && JSON.parse(config.data) })
+    return { config, status: 200, headers: {}, data: config.method === 'get' ? { data: [{ id: 10, status: 'Open' }] } : body }
   }
   return calls
 }
@@ -55,10 +55,10 @@ test('2,001-character, 10,000-character and non-text responses cannot reach the 
 test('valid support responses retain trimmed content and preserve backend failures', async () => {
   let calls = mockApi({ success: true, data: { id: 10, status: 'Resolved' } })
   assert.equal((await support.resolveReceptionistSupportTicket(10, { status: 'Resolved', resolutionNote: ' Đã hướng dẫn hội viên. ' })).id, 10)
-  assert.deepEqual(calls[0].data, { status: 'Resolved', resolutionNote: 'Đã hướng dẫn hội viên.' })
+  assert.deepEqual(calls.at(-1).data, { status: 'Resolved', resolutionNote: 'Đã hướng dẫn hội viên.' })
   calls = mockApi({ success: false, message: 'Ticket already closed' })
   await assert.rejects(support.resolveReceptionistSupportTicket(10, { status: 'Resolved', resolutionNote: 'Phản hồi' }), /Ticket already closed/)
-  assert.equal(calls.length, 1)
+  assert.equal(calls.length, 2)
 })
 
 const plan = { planName: 'Giáo án mới', goal: 'GeneralFitness', memberId: 5, startDate: '2026-11-04', endDate: '2026-11-10',

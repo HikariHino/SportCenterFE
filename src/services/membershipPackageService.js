@@ -1,5 +1,5 @@
 import api from './api'
-import { getManagerFormTextError } from '../utils/managerFormValidation.js'
+import { getManagerFormValidationError } from '../utils/managerFormValidation.js'
 
 function packageTypeFields(packageType) {
   if (packageType == null) return {}
@@ -57,13 +57,13 @@ export async function getMembershipPackages() {
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function createMembershipPackage({ packageName, description, price, durationInDays, packageType }) {
-  const error = getManagerFormTextError('package', { packageName, description })
+  const error = getManagerFormValidationError('package', { packageName, description, price, durationInDays })
   if (error) throw new Error(error)
   const response = await api.post('/membership-packages', {
     packageName,
     description,
-    price,
-    durationInDays,
+    price: Number(price),
+    durationInDays: Number(durationInDays),
     ...packageTypeFields(packageType),
   })
   const body = response.data
@@ -100,13 +100,13 @@ export async function getMembershipPackageById(id) {
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function updateMembershipPackage(id, { packageName, description, price, durationInDays, isActive, packageType }) {
-  const error = getManagerFormTextError('package', { packageName, description })
+  const error = getManagerFormValidationError('package', { packageName, description, price, durationInDays })
   if (error) throw new Error(error)
   const response = await api.put(`/membership-packages/${id}`, {
     packageName,
     description,
-    price,
-    durationInDays,
+    price: Number(price),
+    durationInDays: Number(durationInDays),
     isActive,
     ...packageTypeFields(packageType),
   })
