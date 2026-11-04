@@ -43,11 +43,13 @@ import {
   Zap,
 } from 'lucide-react'
 import {
-  createMember,
   deactivateMember,
   getMemberById,
   getMembers,
 } from '../../services/memberService'
+import { createManagerMember } from '../../services/managerAccountService'
+import { getManagerMemberValidationError, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN, managerBirthDateLimit } from '../../utils/managerAccountValidation'
+import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../../utils/passwordValidation'
 import {
   checkOutGymMember,
   getCheckInErrorMessage,
@@ -144,6 +146,7 @@ export default function FrontDeskOperations() {
 
   // Modals - Members
   const [showCreateMemberModal, setShowCreateMemberModal] = useState(false)
+  const [memberCreateError, setMemberCreateError] = useState(null)
   const [memberForm, setMemberForm] = useState(emptyMemberForm)
   const [memberToDeactivate, setMemberToDeactivate] = useState(null)
   const [selectedMemberDetail, setSelectedMemberDetail] = useState(null)
@@ -297,25 +300,32 @@ export default function FrontDeskOperations() {
   }, [activeTab])
 
   // Create member at counter
+  const changeMemberField = (field, value) => {
+    setMemberForm(current => ({ ...current, [field]: value }))
+    setMemberCreateError(null)
+  }
+
   async function handleCreateMember(e) {
     e.preventDefault()
+    if (submitting) return
+    const validationError = getManagerMemberValidationError(memberForm)
+    if (validationError) {
+      setMemberCreateError(validationError)
+      e.currentTarget.elements.namedItem(validationError.field)?.focus()
+      return
+    }
+    setMemberCreateError(null)
     setSubmitting(true)
     setErrorMessage(null)
 
     try {
-      const payload = {
-        ...memberForm,
-        dateOfBirth: memberForm.dateOfBirth
-          ? new Date(memberForm.dateOfBirth).toISOString()
-          : new Date('2000-01-01').toISOString(),
-      }
-      await createMember(payload)
+      await createManagerMember(memberForm)
       setSuccessMessage(`Đã đăng ký tài khoản hội viên "${memberForm.fullName}" thành công!`)
       setShowCreateMemberModal(false)
       setMemberForm(emptyMemberForm)
       await loadMembersData(false)
     } catch (err) {
-      setErrorMessage(err.message || 'Không thể đăng ký hội viên.')
+      setMemberCreateError({ field: err.field || '', message: err.message || 'Không thể đăng ký hội viên.' })
     } finally {
       setSubmitting(false)
     }
@@ -639,7 +649,7 @@ export default function FrontDeskOperations() {
           <button
             type="button"
             className="fdesk-btn fdesk-btn-primary"
-            onClick={() => setShowCreateMemberModal(true)}
+            onClick={() => { setMemberCreateError(null); setShowCreateMemberModal(true) }}
           >
             <UserPlus size={16} />
             Thêm hội viên
@@ -1644,6 +1654,7 @@ export default function FrontDeskOperations() {
             </div>
             <form onSubmit={handleCreateMember}>
               <div className="fdesk-dialog-body">
+                {memberCreateError && <div id="manager-member-create-error" className="fdesk-alert fdesk-alert-danger" role="alert"><AlertCircle size={16} /><span>{memberCreateError.message}</span></div>}
                 <div className="fdesk-input-group">
                   <label>Họ và tên (*):</label>
                   <input
@@ -1651,8 +1662,12 @@ export default function FrontDeskOperations() {
                     required
                     className="fdesk-input"
                     placeholder="Nguyễn Văn A"
+                    name="fullName"
+                    maxLength={MANAGER_ACCOUNT_LIMITS.fullName}
+                    aria-invalid={memberCreateError?.field === 'fullName' || undefined}
+                    aria-describedby={memberCreateError?.field === 'fullName' ? 'manager-member-create-error' : undefined}
                     value={memberForm.fullName}
-                    onChange={(e) => setMemberForm({ ...memberForm, fullName: e.target.value })}
+                    onChange={(e) => changeMemberField('fullName', e.target.value)}
                   />
                 </div>
 
@@ -1663,8 +1678,12 @@ export default function FrontDeskOperations() {
                     required
                     className="fdesk-input"
                     placeholder="nguyenvana@gmail.com"
+                    name="email"
+                    maxLength={MANAGER_ACCOUNT_LIMITS.email}
+                    aria-invalid={memberCreateError?.field === 'email' || undefined}
+                    aria-describedby={memberCreateError?.field === 'email' ? 'manager-member-create-error' : undefined}
                     value={memberForm.email}
-                    onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })}
+                    onChange={(e) => changeMemberField('email', e.target.value)}
                   />
                 </div>
 
@@ -1674,9 +1693,15 @@ export default function FrontDeskOperations() {
                     type="password"
                     required
                     className="fdesk-input"
-                    placeholder="Tối thiểu 6 ký tự"
+                    placeholder="Từ 8 đến 72 ký tự"
+                    name="password"
+                    minLength={NEW_PASSWORD_MIN_LENGTH}
+                    maxLength={NEW_PASSWORD_MAX_LENGTH}
+                    autoComplete="new-password"
+                    aria-invalid={memberCreateError?.field === 'password' || undefined}
+                    aria-describedby={memberCreateError?.field === 'password' ? 'manager-member-create-error' : undefined}
                     value={memberForm.password}
-                    onChange={(e) => setMemberForm({ ...memberForm, password: e.target.value })}
+                    onChange={(e) => changeMemberField('password', e.target.value)}
                   />
                 </div>
 
@@ -1687,8 +1712,16 @@ export default function FrontDeskOperations() {
                     required
                     className="fdesk-input"
                     placeholder="0987654321"
+                    name="phone"
+                    inputMode="numeric"
+                    pattern={MANAGER_PHONE_PATTERN}
+                    title={MANAGER_PHONE_MESSAGE}
+                    minLength={MANAGER_ACCOUNT_LIMITS.phone}
+                    maxLength={MANAGER_ACCOUNT_LIMITS.phone}
+                    aria-invalid={memberCreateError?.field === 'phone' || undefined}
+                    aria-describedby={memberCreateError?.field === 'phone' ? 'manager-member-create-error' : undefined}
                     value={memberForm.phone}
-                    onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })}
+                    onChange={(e) => changeMemberField('phone', e.target.value)}
                   />
                 </div>
 
@@ -1698,8 +1731,12 @@ export default function FrontDeskOperations() {
                     <input
                       type="date"
                       className="fdesk-input"
+                      name="dateOfBirth"
+                      max={managerBirthDateLimit()}
+                      aria-invalid={memberCreateError?.field === 'dateOfBirth' || undefined}
+                      aria-describedby={memberCreateError?.field === 'dateOfBirth' ? 'manager-member-create-error' : undefined}
                       value={memberForm.dateOfBirth}
-                      onChange={(e) => setMemberForm({ ...memberForm, dateOfBirth: e.target.value })}
+                      onChange={(e) => changeMemberField('dateOfBirth', e.target.value)}
                     />
                   </div>
                   <div className="fdesk-input-group">
@@ -1707,7 +1744,7 @@ export default function FrontDeskOperations() {
                     <select
                       className="fdesk-select"
                       value={memberForm.gender}
-                      onChange={(e) => setMemberForm({ ...memberForm, gender: e.target.value })}
+                      onChange={(e) => changeMemberField('gender', e.target.value)}
                     >
                       <option value="Male">Nam</option>
                       <option value="Female">Nữ</option>
@@ -1722,8 +1759,12 @@ export default function FrontDeskOperations() {
                     type="text"
                     className="fdesk-input"
                     placeholder="Số nhà, đường, quận/huyện..."
+                    name="address"
+                    maxLength={MANAGER_ACCOUNT_LIMITS.address}
+                    aria-invalid={memberCreateError?.field === 'address' || undefined}
+                    aria-describedby={memberCreateError?.field === 'address' ? 'manager-member-create-error' : undefined}
                     value={memberForm.address}
-                    onChange={(e) => setMemberForm({ ...memberForm, address: e.target.value })}
+                    onChange={(e) => changeMemberField('address', e.target.value)}
                   />
                 </div>
 
@@ -1733,8 +1774,12 @@ export default function FrontDeskOperations() {
                     type="text"
                     className="fdesk-input"
                     placeholder="Giảm cân, Tăng cơ, Thể lực, Yoga..."
+                    name="fitnessGoal"
+                    maxLength={MANAGER_ACCOUNT_LIMITS.fitnessGoal}
+                    aria-invalid={memberCreateError?.field === 'fitnessGoal' || undefined}
+                    aria-describedby={memberCreateError?.field === 'fitnessGoal' ? 'manager-member-create-error' : undefined}
                     value={memberForm.fitnessGoal}
-                    onChange={(e) => setMemberForm({ ...memberForm, fitnessGoal: e.target.value })}
+                    onChange={(e) => changeMemberField('fitnessGoal', e.target.value)}
                   />
                 </div>
               </div>

@@ -18,12 +18,14 @@ import {
 } from "lucide-react"
 import { useAuth } from "../../contexts/AuthContext"
 import {
-  createStaffUser,
   deactivateStaffUser,
   getStaffUsers,
   getUserErrorMessage,
   updateStaffRole,
 } from "../../services/userService"
+import { createManagerStaff } from "../../services/managerAccountService"
+import { getManagerStaffValidationError, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN } from "../../utils/managerAccountValidation"
+import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from "../../utils/passwordValidation"
 import "../../style/CenterManager/StaffManagement.css"
 
 const ROLE_OPTIONS = [
@@ -100,6 +102,7 @@ export default function StaffManagement() {
   })
   const [createSubmitting, setCreateSubmitting] = useState(false)
   const [createError, setCreateError] = useState("")
+  const [createInvalidField, setCreateInvalidField] = useState("")
 
   const [updateRoleForm, setUpdateRoleForm] = useState("Coach")
   const [updateRoleSubmitting, setUpdateRoleSubmitting] = useState(false)
@@ -182,26 +185,32 @@ export default function StaffManagement() {
       role: "Coach",
     })
     setCreateError("")
+    setCreateInvalidField("")
     setShowCreateModal(true)
+  }
+
+  const changeCreateField = (field, value) => {
+    setCreateForm(current => ({ ...current, [field]: value }))
+    setCreateError("")
+    setCreateInvalidField("")
   }
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
+    if (createSubmitting) return
     setCreateError("")
-
-    if (!createForm.fullName.trim() || !createForm.email.trim() || !createForm.password.trim()) {
-      setCreateError("Vui lòng điền đầy đủ họ tên, email và mật khẩu.")
-      return
-    }
-
-    if (createForm.password.length < 6) {
-      setCreateError("Mật khẩu tối thiểu phải từ 6 ký tự trở lên.")
+    setCreateInvalidField("")
+    const validationError = getManagerStaffValidationError(createForm)
+    if (validationError) {
+      setCreateError(validationError.message)
+      setCreateInvalidField(validationError.field)
+      e.currentTarget.elements.namedItem(validationError.field)?.focus()
       return
     }
 
     setCreateSubmitting(true)
     try {
-      const newStaff = await createStaffUser(createForm)
+      const newStaff = await createManagerStaff(createForm)
       showToast("Tạo tài khoản nhân viên " + newStaff.fullName + " thành công!")
       setShowCreateModal(false)
       fetchStaff()
@@ -567,7 +576,7 @@ export default function StaffManagement() {
             <form onSubmit={handleCreateSubmit}>
               <div className="staff-modal-body staff-create-body">
                 {createError && (
-                  <div className="staff-form-error">
+                  <div id="staff-create-error" className="staff-form-error" role="alert">
                     <AlertCircle size={16} />
                     <span>{createError}</span>
                   </div>
@@ -577,10 +586,14 @@ export default function StaffManagement() {
                   <label htmlFor="staff-fullname">Họ và tên *</label>
                   <input
                     id="staff-fullname"
+                    name="fullName"
+                    maxLength={MANAGER_ACCOUNT_LIMITS.fullName}
+                    aria-invalid={createInvalidField === "fullName" || undefined}
+                    aria-describedby={createInvalidField === "fullName" ? "staff-create-error" : undefined}
                     type="text"
                     placeholder="Ví dụ: Nguyễn Văn An"
                     value={createForm.fullName}
-                    onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
+                    onChange={(e) => changeCreateField("fullName", e.target.value)}
                     required
                   />
                 </div>
@@ -589,10 +602,14 @@ export default function StaffManagement() {
                   <label htmlFor="staff-email">Email đăng nhập *</label>
                   <input
                     id="staff-email"
+                    name="email"
+                    maxLength={MANAGER_ACCOUNT_LIMITS.email}
+                    aria-invalid={createInvalidField === "email" || undefined}
+                    aria-describedby={createInvalidField === "email" ? "staff-create-error" : undefined}
                     type="email"
                     placeholder="email@sportcenter.com"
                     value={createForm.email}
-                    onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                    onChange={(e) => changeCreateField("email", e.target.value)}
                     required
                   />
                 </div>
@@ -601,11 +618,15 @@ export default function StaffManagement() {
                   <label htmlFor="staff-password">Mật khẩu khởi tạo *</label>
                   <input
                     id="staff-password"
+                    name="password"
+                    aria-invalid={createInvalidField === "password" || undefined}
+                    aria-describedby={createInvalidField === "password" ? "staff-create-error" : undefined}
                     type="password"
-                    placeholder="Tối thiểu 6 ký tự"
+                    placeholder="Từ 8 đến 72 ký tự"
                     value={createForm.password}
-                    onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                    minLength={6}
+                    onChange={(e) => changeCreateField("password", e.target.value)}
+                    minLength={NEW_PASSWORD_MIN_LENGTH}
+                    maxLength={NEW_PASSWORD_MAX_LENGTH}
                     required
                   />
                   <small>Nhân viên có thể đổi lại mật khẩu sau khi đăng nhập.</small>
@@ -615,10 +636,18 @@ export default function StaffManagement() {
                   <label htmlFor="staff-phone">Số điện thoại</label>
                   <input
                     id="staff-phone"
+                    name="phone"
+                    inputMode="numeric"
+                    pattern={MANAGER_PHONE_PATTERN}
+                    title={MANAGER_PHONE_MESSAGE}
+                    minLength={MANAGER_ACCOUNT_LIMITS.phone}
+                    maxLength={MANAGER_ACCOUNT_LIMITS.phone}
+                    aria-invalid={createInvalidField === "phone" || undefined}
+                    aria-describedby={createInvalidField === "phone" ? "staff-create-error" : undefined}
                     type="tel"
-                    placeholder="0912 345 678"
+                    placeholder="0912345678"
                     value={createForm.phone}
-                    onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                    onChange={(e) => changeCreateField("phone", e.target.value)}
                   />
                 </div>
 
@@ -626,8 +655,9 @@ export default function StaffManagement() {
                   <label htmlFor="staff-role">Vai trò *</label>
                   <select
                     id="staff-role"
+                    name="role"
                     value={createForm.role}
-                    onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+                    onChange={(e) => changeCreateField("role", e.target.value)}
                     required
                   >
                     <option value="Coach">Huấn luyện viên (Coach)</option>
