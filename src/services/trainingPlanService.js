@@ -1,5 +1,6 @@
 import api from './api'
 import { getMyMemberProfile } from './memberService'
+import { EXERCISE_NOTES_MAX_LENGTH, getTextLengthValidationError, TRAINING_PLAN_NAME_MAX_LENGTH } from '../utils/textLengthValidation.js'
 
 const toUtcISOString = value => {
   const date = value instanceof Date ? value : new Date(value)
@@ -31,6 +32,12 @@ export async function getExerciseCatalog() {
 }
 
 export async function createTrainingPlan({ planName, goal, memberId, startDate, endDate, exercises = [] }) {
+  const nameError = getTextLengthValidationError(planName, 'Tên giáo án', TRAINING_PLAN_NAME_MAX_LENGTH)
+  if (nameError) throw new Error(nameError)
+  for (const exercise of exercises) {
+    const notesError = getTextLengthValidationError(exercise.notes, 'Ghi chú bài tập', EXERCISE_NOTES_MAX_LENGTH)
+    if (notesError) throw new Error(notesError)
+  }
   const response = await api.post('/TrainingPlans', {
     planName,
     goal,
@@ -72,6 +79,8 @@ export async function getMyTrainingPlans() {
 }
 
 export async function updateTrainingPlanExerciseResult(planExerciseId, notes) {
+  const notesError = getTextLengthValidationError(notes, 'Kết quả / ghi chú thực hiện', EXERCISE_NOTES_MAX_LENGTH)
+  if (notesError) throw new Error(notesError)
   const response = await api.put(`/TrainingPlans/exercises/${planExerciseId}/result`, { notes })
   const body = response.data
 

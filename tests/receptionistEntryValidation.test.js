@@ -63,6 +63,30 @@ test('invalid phone formats never reach the member creation API', async () => {
   assert.equal(calls.length, 0)
 })
 
+test('short, blank, oversized and over-byte-limit passwords never reach counter member creation', async () => {
+  const calls = mockApi({ memberId: 1 })
+  for (const password of [undefined, null, '', '        ', '123456', '1234567', 'a'.repeat(73), '🏸'.repeat(19)]) {
+    await assert.rejects(service.createReceptionistMember({ ...member, password }), error => error.field === 'password')
+  }
+  assert.equal(calls.length, 0)
+})
+
+test('eight-character passwords are accepted and preserved exactly', async () => {
+  const calls = mockApi({ memberId: 1 })
+  for (const password of ['12345678', ' pass12 ']) {
+    await service.createReceptionistMember({ ...member, password })
+    assert.equal(calls.at(-1).data.password, password)
+  }
+})
+
+test('counter member fields enforce their existing input length limits before sending', async () => {
+  const calls = mockApi({ memberId: 1 })
+  for (const [field, max] of [['email', 256], ['address', 200], ['fitnessGoal', 100]]) {
+    await assert.rejects(service.createReceptionistMember({ ...member, [field]: 'a'.repeat(max + 1) }), error => error.field === field)
+  }
+  assert.equal(calls.length, 0)
+})
+
 test('member creation trims the name and phone without changing the password or dropping optional details', async () => {
   const result = { memberId: 1, fullName: 'Nguyễn Thế Anh' }
   const calls = mockApi({ data: result })

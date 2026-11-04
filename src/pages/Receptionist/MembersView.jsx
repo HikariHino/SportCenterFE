@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Clock3, CreditCard,
 import { getMemberById, getMembers } from '../../services/memberService'
 import { createReceptionistMember } from '../../services/receptionistEntryService'
 import { getReceptionistMemberValidationError, RECEPTIONIST_PHONE_MESSAGE, RECEPTIONIST_PHONE_PATTERN } from '../../utils/receptionistValidation'
+import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../../utils/passwordValidation'
 import { getMembershipPackageById, getMembershipPackages } from '../../services/membershipPackageService'
 import { confirmReceptionistSubscriptionPayment, getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
@@ -56,7 +57,7 @@ function CreateMemberDialog({ onClose, onCreated }) {
         <div className="reception-member-form-grid">
           <label>Họ và tên<input name="fullName" value={form.fullName} onChange={updateField} maxLength="100" aria-invalid={invalidField === 'fullName' || undefined} aria-describedby={invalidField === 'fullName' ? 'reception-create-member-error' : undefined} required /></label>
           <label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="256" required /></label>
-          <label>Mật khẩu ban đầu<input name="password" type="password" value={form.password} onChange={updateField} minLength="6" autoComplete="new-password" required /></label>
+          <label>Mật khẩu ban đầu<input name="password" type="password" value={form.password} onChange={updateField} minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} aria-invalid={invalidField === 'password' || undefined} aria-describedby={invalidField === 'password' ? 'reception-create-member-error' : undefined} autoComplete="new-password" placeholder="Từ 8 đến 72 ký tự" required /></label>
           <label>Số điện thoại<input name="phone" type="tel" inputMode="numeric" pattern={RECEPTIONIST_PHONE_PATTERN} title={RECEPTIONIST_PHONE_MESSAGE} minLength="10" maxLength="10" value={form.phone} onChange={updateField} aria-invalid={invalidField === 'phone' || undefined} aria-describedby={invalidField === 'phone' ? 'reception-create-member-error' : undefined} placeholder="0912345678" /></label>
           <label>Ngày sinh<input name="dateOfBirth" type="date" value={form.dateOfBirth} max={new Date().toISOString().slice(0, 10)} onChange={updateField} /></label>
           <label>Giới tính<select name="gender" value={form.gender} onChange={updateField}><option value="">Chưa cung cấp</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></label>

@@ -1,4 +1,6 @@
 import { getVietnamPhoneValidationError } from './profileValidation.js'
+import { getNewPasswordValidationError } from './passwordValidation.js'
+import { getTextLengthValidationError } from './textLengthValidation.js'
 
 export const RECEPTIONIST_PHONE_PATTERN = '0[0-9]{9}'
 export const RECEPTIONIST_PHONE_MESSAGE = 'Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0.'
@@ -8,13 +10,22 @@ function phoneValidationError(value) {
   return getVietnamPhoneValidationError(value)
 }
 
-export function getReceptionistMemberValidationError({ fullName, phone } = {}) {
+export function getReceptionistMemberValidationError({ fullName, phone, password, email, address, fitnessGoal } = {}) {
   if (typeof fullName !== 'string' || !fullName.trim()) {
     return { field: 'fullName', message: 'Vui lòng nhập họ và tên, không chỉ gồm khoảng trắng.' }
   }
   if (fullName.trim().length > 100) return { field: 'fullName', message: 'Họ và tên không được vượt quá 100 ký tự.' }
   const phoneError = phoneValidationError(phone)
-  return phoneError ? { field: 'phone', message: phoneError } : null
+  if (phoneError) return { field: 'phone', message: phoneError }
+  const passwordError = getNewPasswordValidationError(password)
+  if (passwordError) return { field: 'password', message: passwordError }
+  for (const [field, value, label, max] of [
+    ['email', email, 'Email', 256], ['address', address, 'Địa chỉ', 200], ['fitnessGoal', fitnessGoal, 'Mục tiêu tập luyện', 100],
+  ]) {
+    const message = getTextLengthValidationError(value, label, max)
+    if (message) return { field, message }
+  }
+  return null
 }
 
 export function getReceptionistManualCheckInValidationError({ memberId, phoneNumber } = {}) {
