@@ -1,4 +1,5 @@
 import { sessionsOverlap } from './sessionReschedule.js'
+import { timetableDateKey } from './memberTimetable.js'
 
 const normalized = value => String(value || '').toLowerCase().replace(/[\s_-]/g, '')
 const cancelled = value => ['cancelled', 'canceled'].includes(normalized(value))
@@ -63,7 +64,8 @@ export function cancellationDeadline(item) {
 
 export function checkInUnavailableReason(item, now = Date.now()) {
   const start = Date.parse(item.startsAt), end = Date.parse(item.endsAt)
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 'Chưa xác định được thời gian điểm danh. Vui lòng làm mới lịch học.'
+  if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(now) || end <= start) return 'Chưa xác định được thời gian điểm danh. Vui lòng làm mới lịch học.'
+  if (timetableDateKey(start) !== timetableDateKey(now)) return 'Chỉ điểm danh trong ngày diễn ra buổi học (giờ Việt Nam).'
   const opensAt = start - 30 * 60000
   if (now < opensAt) {
     const label = new Date(opensAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' })

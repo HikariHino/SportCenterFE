@@ -6,6 +6,7 @@ import ThemeToggle from '../components/ThemeToggle'
 import { requestResetPassword, verifyResetPassword } from '../services/authService'
 import { getAuthErrorMessage } from '../utils/auth'
 import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } from '../utils/otpValidation'
+import { getNewPasswordValidationError, NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../utils/passwordValidation'
 import '../style/Login.css'
 
 function Brand() {
@@ -49,6 +50,10 @@ export default function ForgotPassword() {
       form.elements.namedItem('confirmPassword')?.focus()
       setMessage('Mật khẩu xác nhận chưa khớp. Vui lòng nhập lại.')
       return
+    }
+    if (otpRequested) {
+      const passwordError = getNewPasswordValidationError(data.get('newPassword'))
+      if (passwordError) { form.elements.namedItem('newPassword')?.focus(); setMessage(passwordError); return }
     }
 
     submitting.current = true
@@ -109,8 +114,8 @@ export default function ForgotPassword() {
           {!otpRequested && <div><label htmlFor="reset-email">Email</label><div className="login-input"><Mail size={19} /><input id="reset-email" name="email" type="email" autoComplete="email" placeholder="name@olympus.vn" required /></div></div>}
           {otpRequested && <>
             <div><label htmlFor="reset-otp">Mã OTP</label><div className="login-input"><MessageCircle size={19} /><input id="reset-otp" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required /></div></div>
-            <div><label htmlFor="reset-password">Mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-password" name="newPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} placeholder="Tối thiểu 8 ký tự" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
-            <div><label htmlFor="reset-confirm-password">Xác nhận mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-confirm-password" name="confirmPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} placeholder="Nhập lại mật khẩu mới" required /></div></div>
+            <div><label htmlFor="reset-password">Mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-password" name="newPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} placeholder="Tối thiểu 8 ký tự" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
+            <div><label htmlFor="reset-confirm-password">Xác nhận mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-confirm-password" name="confirmPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} placeholder="Nhập lại mật khẩu mới" required /></div></div>
           </>}
           <button className="login-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Đang xử lý...' : otpRequested ? 'Đặt lại mật khẩu' : 'Gửi mã OTP'} <ArrowRight size={19} /></button>
           {otpRequested && <div className="reset-actions"><button type="button" className="login-text-button" onClick={handleResend} disabled={isSubmitting}>Gửi lại mã OTP</button><button type="button" className="login-text-button" onClick={() => { setOtpRequested(false); setMessage('') }}>Dùng email khác</button></div>}

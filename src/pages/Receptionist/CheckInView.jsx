@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, QrCode, ScanLine, ShieldCheck, UserCheck } from 'lucide-react'
-import { checkOutGymMember, getCheckInErrorMessage, getTodayCheckIns, scanQrCheckIn } from '../../services/gymCheckInService'
-import { manualReceptionistCheckIn } from '../../services/receptionistEntryService'
+import { checkOutGymMember, getCheckInErrorMessage, getTodayCheckIns } from '../../services/gymCheckInService'
+import { manualReceptionistCheckIn, scanReceptionistQrCheckIn } from '../../services/receptionistEntryService'
+import { CHECK_IN_NOTES_MAX_LENGTH, getTextLengthValidationError } from '../../utils/textLengthValidation'
 import { getReceptionistManualCheckInValidationError, RECEPTIONIST_PHONE_MESSAGE, RECEPTIONIST_PHONE_PATTERN } from '../../utils/receptionistValidation'
 import { EmptyState, formatDateTime, ViewLoader } from './ReceptionistViewShared'
 
@@ -55,6 +56,8 @@ export function CheckInView({ showNotice }) {
 
   const performQrCheckIn = async payload => {
     if (qrSubmitting.current) return
+    const notesError = getTextLengthValidationError(payload.notes, 'Ghi chú check-in', CHECK_IN_NOTES_MAX_LENGTH)
+    if (notesError) { setQrError(notesError); return }
     if (!payload.qrCode.trim()) {
       setQrError('Vui lòng nhập hoặc quét mã QR hội viên.')
       return
@@ -63,7 +66,7 @@ export function CheckInView({ showNotice }) {
     setQrSaving(true)
     setQrError('')
     try {
-      const result = await scanQrCheckIn(payload)
+      const result = await scanReceptionistQrCheckIn(payload)
       setQrResult(result)
       setTodayCheckIns(current => [result, ...current.filter(item => item.id !== result.id)])
       setQrForm(current => ({ ...current, qrCode: '' }))
@@ -111,6 +114,8 @@ export function CheckInView({ showNotice }) {
       event.currentTarget.elements.namedItem(validationError.field)?.focus()
       return
     }
+    const notesError = getTextLengthValidationError(manualForm.notes, 'Ghi chú check-in', CHECK_IN_NOTES_MAX_LENGTH)
+    if (notesError) { setManualError(notesError); setManualInvalidField('notes'); event.currentTarget.elements.namedItem('notes')?.focus(); return }
     setManualSaving(true)
     try {
       const result = await manualReceptionistCheckIn(manualForm)
@@ -156,7 +161,7 @@ export function CheckInView({ showNotice }) {
         <div className="reception-qr-checkin-actions"><button ref={cameraButton} type="button" className="reception-qr-camera-open" disabled={qrSaving || cameraOpen} onClick={() => { setQrError(''); setCameraOpen(true) }}><Camera size={17} />Quét QR bằng camera</button><p>Quét được mã QR sẽ tự động check-in cho hội viên.</p><button type="button" className="reception-qr-manual-toggle" aria-expanded={qrManualOpen} aria-controls="reception-qr-manual-form" disabled={qrSaving || cameraOpen} onClick={() => setQrManualOpen(value => !value)}>{qrManualOpen ? 'Ẩn xác nhận thủ công' : 'Xác nhận thủ công'}</button></div>
         {qrSaving && <p className="reception-qr-checkin-status" role="status" aria-live="polite">Đang xác minh mã QR và check-in...</p>}
         {qrError && <p className="reception-qr-checkin-error" role="alert">{qrError}</p>}
-        {qrManualOpen && <form id="reception-qr-manual-form" onSubmit={submitQrCheckIn}><label>Mã QR<input ref={qrInput} value={qrForm.qrCode} disabled={qrSaving} onChange={event => setQrForm(current => ({ ...current, qrCode: event.target.value }))} placeholder="Dán hoặc quét nội dung QR" required /></label><label>Ghi chú<input value={qrForm.notes} disabled={qrSaving} onChange={event => setQrForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label><button type="submit" disabled={qrSaving || cameraOpen || !qrForm.qrCode.trim()}><ScanLine size={16} />{qrSaving ? 'Đang xác minh...' : 'Xác nhận check-in bằng QR'}</button></form>}
+        {qrManualOpen && <form id="reception-qr-manual-form" onSubmit={submitQrCheckIn}><label>Mã QR<input ref={qrInput} value={qrForm.qrCode} disabled={qrSaving} onChange={event => setQrForm(current => ({ ...current, qrCode: event.target.value }))} placeholder="Dán hoặc quét nội dung QR" required /></label><label>Ghi chú<input maxLength={CHECK_IN_NOTES_MAX_LENGTH} value={qrForm.notes} disabled={qrSaving} onChange={event => setQrForm(current => ({ ...current, notes: event.target.value }))} placeholder="Không bắt buộc" /></label><button type="submit" disabled={qrSaving || cameraOpen || !qrForm.qrCode.trim()}><ScanLine size={16} />{qrSaving ? 'Đang xác minh...' : 'Xác nhận check-in bằng QR'}</button></form>}
       </section>
       <section className="reception-card reception-gym-result">
         <div className="reception-card-head"><div><span>KẾT QUẢ CHECK-IN</span><h2>Thông tin lượt vào phòng gym</h2></div><ShieldCheck size={20} /></div>
@@ -168,7 +173,7 @@ export function CheckInView({ showNotice }) {
           <label>Mã hội viên<input name="memberId" type="number" min="1" max="2147483647" step="1" value={manualForm.memberId} onChange={updateManualField} aria-invalid={manualInvalidField === 'memberId' || undefined} aria-describedby={manualInvalidField === 'memberId' ? 'reception-manual-checkin-error' : undefined} placeholder="Ví dụ: 12" /></label>
           <span>hoặc</span>
           <label>Số điện thoại<input name="phoneNumber" type="tel" inputMode="numeric" pattern={RECEPTIONIST_PHONE_PATTERN} title={RECEPTIONIST_PHONE_MESSAGE} minLength="10" maxLength="10" value={manualForm.phoneNumber} onChange={updateManualField} aria-invalid={manualInvalidField === 'phoneNumber' || undefined} aria-describedby={manualInvalidField === 'phoneNumber' ? 'reception-manual-checkin-error' : undefined} placeholder="0912345678" /></label>
-          <label>Ghi chú<input name="notes" value={manualForm.notes} onChange={updateManualField} placeholder="Không bắt buộc" /></label>
+          <label>Ghi chú<input name="notes" maxLength={CHECK_IN_NOTES_MAX_LENGTH} value={manualForm.notes} onChange={updateManualField} placeholder="Không bắt buộc" /></label>
           {manualError && <p id="reception-manual-checkin-error" role="alert">{manualError}</p>}
           <button type="submit" disabled={manualSaving}><UserCheck size={16} />{manualSaving ? 'Đang check-in...' : 'Xác nhận check-in'}</button>
         </form>

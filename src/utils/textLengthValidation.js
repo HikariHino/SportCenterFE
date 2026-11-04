@@ -2,6 +2,7 @@ export const SUPPORT_RESOLUTION_MAX_LENGTH = 2000
 export const SUPPORT_DESCRIPTION_MAX_LENGTH = 2000
 export const TRAINING_PLAN_NAME_MAX_LENGTH = 150
 export const EXERCISE_NOTES_MAX_LENGTH = 500
+export const CHECK_IN_NOTES_MAX_LENGTH = 500
 
 export function getTextLengthValidationError(value, label, maxLength) {
   if (value == null) return ''

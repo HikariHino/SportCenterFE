@@ -2,6 +2,8 @@ import api from './api'
 import { getLoginData } from '../utils/auth'
 import { getRegistrationResult } from '../utils/registration'
 import { getOtpValidationError, normalizeOtp } from '../utils/otpValidation'
+import { getAuthRegistrationValidationError } from '../utils/authRegistrationValidation'
+import { getNewPasswordValidationError } from '../utils/passwordValidation'
 
 // Login returns validated session data; registration OTP responses are normalized.
 // Other methods return the complete API body.
@@ -49,6 +51,8 @@ export async function loginWithGoogle({ idToken }, { signal } = {}) {
  * @param {string} details.fitnessGoal
  */
 export async function register({ email, password, fullName, phone, dateOfBirth, gender, address, fitnessGoal }) {
+  const error = getAuthRegistrationValidationError({ email, password, fullName, address, fitnessGoal })
+  if (error) throw Object.assign(new Error(error.message), { field: error.field })
   const response = await api.post('/auth/register', {
     email,
     password,
@@ -64,6 +68,8 @@ export async function register({ email, password, fullName, phone, dateOfBirth, 
 
 /** POST /api/Auth/send-register-otp */
 export async function sendRegisterOtp({ email, password, fullName, phone, dateOfBirth, gender, address, fitnessGoal }) {
+  const error = getAuthRegistrationValidationError({ email, password, fullName, address, fitnessGoal })
+  if (error) throw Object.assign(new Error(error.message), { field: error.field })
   const response = await api.post('/Auth/send-register-otp', {
     email,
     password,
@@ -95,6 +101,9 @@ export async function requestResetPassword({ email }) {
 export async function verifyResetPassword({ email, otp, newPassword, confirmPassword }) {
   const otpError = getOtpValidationError(otp)
   if (otpError) throw new Error(otpError)
+  const passwordError = getNewPasswordValidationError(newPassword)
+  if (passwordError) throw new Error(passwordError)
+  if (newPassword !== confirmPassword) throw new Error('Mật khẩu xác nhận chưa khớp. Vui lòng nhập lại.')
   const response = await api.post('/Auth/verify-reset-password', {
     email,
     otp: normalizeOtp(otp),
