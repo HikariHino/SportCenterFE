@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { sendRegisterOtp, verifyRegisterOtp } from '../services/authService'
 import { getAuthDestination, getAuthErrorMessage } from '../utils/auth'
 import { getRegistrationError } from '../utils/registration'
+import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } from '../utils/otpValidation'
 import '../style/Register.css'
 
 const benefits = [
@@ -63,12 +64,13 @@ export default function Register() {
       form.elements.namedItem('send-otp')?.focus()
       return
     }
-    if (!form.reportValidity()) return
-    if (!otp.trim()) {
+    const otpError = getOtpValidationError(otp)
+    if (otpError) {
       form.elements.namedItem('otp')?.focus()
-      setMessage('Vui lòng nhập mã OTP đã được gửi đến email của bạn.')
+      setMessage(otpError)
       return
     }
+    if (!form.reportValidity()) return
     submitting.current = true
     setIsSubmitting(true)
     setMessage('')
@@ -185,7 +187,7 @@ export default function Register() {
           <div className="register-field">
             <label htmlFor="otp">Mã OTP <span>*</span></label>
             <div className="register-otp-row">
-              <div className="register-input"><MessageCircle size={18} /><input id="otp" name="otp" autoComplete="one-time-code" inputMode="numeric" placeholder="Nhập mã OTP" required value={otp} onChange={event => setOtp(event.target.value)} aria-describedby="register-otp-hint" /></div>
+              <div className="register-input"><MessageCircle size={18} /><input id="otp" name="otp" type="text" autoComplete="one-time-code" inputMode="numeric" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required value={otp} onChange={event => setOtp(event.target.value)} aria-describedby="register-otp-hint" /></div>
               <button type="button" name="send-otp" className="register-send-otp" onClick={handleSendOtp} disabled={isSubmitting || isSendingOtp || !!emailError}>{isSendingOtp ? 'Đang gửi...' : pendingRegistration ? 'Gửi lại OTP' : 'Gửi OTP'}</button>
             </div>
             <p className="register-otp-hint" id="register-otp-hint">{pendingRegistration ? `Mã OTP đã gửi đến ${pendingRegistration.email}.` : 'Nhấn Gửi OTP để nhận mã xác minh qua email.'}</p>

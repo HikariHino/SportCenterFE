@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, LockKeyhole, Mail, Messag
 import ThemeToggle from '../components/ThemeToggle'
 import { requestResetPassword, verifyResetPassword } from '../services/authService'
 import { getAuthErrorMessage } from '../utils/auth'
+import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } from '../utils/otpValidation'
 import '../style/Login.css'
 
 function Brand() {
@@ -34,6 +35,15 @@ export default function ForgotPassword() {
     const form = event.currentTarget
     const data = new FormData(form)
     const targetEmail = (data.get('email') || email).trim()
+
+    if (otpRequested) {
+      const otpError = getOtpValidationError(data.get('otp'))
+      if (otpError) {
+        form.elements.namedItem('otp')?.focus()
+        setMessage(otpError)
+        return
+      }
+    }
 
     if (otpRequested && data.get('newPassword') !== data.get('confirmPassword')) {
       form.elements.namedItem('confirmPassword')?.focus()
@@ -98,7 +108,7 @@ export default function ForgotPassword() {
         <form onSubmit={handleSubmit} className="login-form" aria-busy={isSubmitting} onChange={() => setMessage('')}>
           {!otpRequested && <div><label htmlFor="reset-email">Email</label><div className="login-input"><Mail size={19} /><input id="reset-email" name="email" type="email" autoComplete="email" placeholder="name@olympus.vn" required /></div></div>}
           {otpRequested && <>
-            <div><label htmlFor="reset-otp">Mã OTP</label><div className="login-input"><MessageCircle size={19} /><input id="reset-otp" name="otp" inputMode="numeric" autoComplete="one-time-code" placeholder="Nhập mã OTP" required /></div></div>
+            <div><label htmlFor="reset-otp">Mã OTP</label><div className="login-input"><MessageCircle size={19} /><input id="reset-otp" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required /></div></div>
             <div><label htmlFor="reset-password">Mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-password" name="newPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} placeholder="Tối thiểu 8 ký tự" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
             <div><label htmlFor="reset-confirm-password">Xác nhận mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-confirm-password" name="confirmPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} placeholder="Nhập lại mật khẩu mới" required /></div></div>
           </>}

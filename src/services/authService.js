@@ -1,6 +1,7 @@
 import api from './api'
 import { getLoginData } from '../utils/auth'
 import { getRegistrationResult } from '../utils/registration'
+import { getOtpValidationError, normalizeOtp } from '../utils/otpValidation'
 
 // Login returns validated session data; registration OTP responses are normalized.
 // Other methods return the complete API body.
@@ -78,7 +79,9 @@ export async function sendRegisterOtp({ email, password, fullName, phone, dateOf
 
 /** POST /api/Auth/verify-register-otp */
 export async function verifyRegisterOtp({ email, otp }) {
-  const response = await api.post('/Auth/verify-register-otp', { email, otp }, { skipAuth: true })
+  const otpError = getOtpValidationError(otp)
+  if (otpError) throw new Error(otpError)
+  const response = await api.post('/Auth/verify-register-otp', { email, otp: normalizeOtp(otp) }, { skipAuth: true })
   return getRegistrationResult(response.data, 'Xác minh OTP không thành công. Vui lòng kiểm tra mã và thử lại.')
 }
 
@@ -90,9 +93,11 @@ export async function requestResetPassword({ email }) {
 
 /** POST /api/Auth/verify-reset-password */
 export async function verifyResetPassword({ email, otp, newPassword, confirmPassword }) {
+  const otpError = getOtpValidationError(otp)
+  if (otpError) throw new Error(otpError)
   const response = await api.post('/Auth/verify-reset-password', {
     email,
-    otp,
+    otp: normalizeOtp(otp),
     newPassword,
     confirmPassword,
   }, { skipAuth: true })
