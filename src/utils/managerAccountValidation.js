@@ -2,6 +2,7 @@ import { timetableDateKey } from './memberTimetable.js'
 import { getNewPasswordValidationError } from './passwordValidation.js'
 import { getVietnamPhoneValidationError } from './profileValidation.js'
 import { getTextLengthValidationError } from './textLengthValidation.js'
+import { getFullNameCharactersError } from './fullNameValidation.js'
 
 export const MANAGER_ACCOUNT_LIMITS = { fullName: 100, email: 256, phone: 10, address: 200, fitnessGoal: 100 }
 export const MANAGER_PHONE_PATTERN = '0[0-9]{9}'
@@ -11,6 +12,8 @@ export const managerBirthDateLimit = (now = Date.now()) => timetableDateKey(now)
 function accountError({ fullName, email, password, phone }, requirePhone) {
   if (typeof fullName !== 'string' || !fullName.trim()) return { field: 'fullName', message: 'Vui lòng nhập họ và tên, không chỉ gồm khoảng trắng.' }
   if (fullName.length > MANAGER_ACCOUNT_LIMITS.fullName) return { field: 'fullName', message: 'Họ và tên không được vượt quá 100 ký tự.' }
+  const nameError = getFullNameCharactersError(fullName)
+  if (nameError) return { field: 'fullName', message: nameError }
   if (typeof email !== 'string' || !email.trim()) return { field: 'email', message: 'Vui lòng nhập email.' }
   if (email.length > MANAGER_ACCOUNT_LIMITS.email) return { field: 'email', message: 'Email không được vượt quá 256 ký tự.' }
   if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(email.trim())) {

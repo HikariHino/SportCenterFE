@@ -19,6 +19,7 @@ import { getFullNameValidationError, getVietnamPhoneValidationError, PROFILE_FUL
 import { getProfilePhoneConflict, passwordChangeErrors, profileDateLimit, profileFieldErrors, profileValidationErrors } from '../../utils/profileValidation'
 import '../../style/member/ProfileValidation.css'
 import '../../style/member/MemberProfile.css'
+import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 
 function formatCurrency(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} đ`
@@ -275,6 +276,8 @@ export function ProfileView({ user, showNotice }) {
                   <input
                     type="text"
                     required
+                    pattern={FULL_NAME_PATTERN}
+                    title={FULL_NAME_MESSAGE}
                     maxLength={PROFILE_FULL_NAME_MAX_LENGTH}
                     autoComplete="name"
                     {...profileInputProps('fullName')}

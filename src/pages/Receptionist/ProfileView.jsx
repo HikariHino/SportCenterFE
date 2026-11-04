@@ -4,6 +4,7 @@ import { getProfile, getProfileErrorMessage, updateProfile } from '../../service
 import { getFullNameValidationError, getVietnamPhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_LENGTH } from '../../utils/profileValidation'
 import { ViewLoader } from './ReceptionistViewShared'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
+import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' }
@@ -98,7 +99,7 @@ export function ReceptionistProfileView({ showNotice }) {
         {editing ? <button type="button" onClick={stopEditing} disabled={saving}><X size={16} />Hủy</button> : <button type="button" onClick={startEditing}><Edit3 size={15} />Chỉnh sửa</button>}
       </div>
       {editing ? <form className="reception-profile-form" onSubmit={handleSubmit}>
-        <label>Họ và tên<input value={form.fullName} onChange={event => setForm(current => ({ ...current, fullName: event.target.value }))} maxLength={PROFILE_FULL_NAME_MAX_LENGTH} required /></label>
+        <label>Họ và tên<input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} value={form.fullName} onChange={event => setForm(current => ({ ...current, fullName: event.target.value }))} maxLength={PROFILE_FULL_NAME_MAX_LENGTH} required /></label>
         <label>Email hiện tại<input type="email" value={profile.email} readOnly /></label>
         <label>Số điện thoại<input type="tel" inputMode="numeric" pattern="0[0-9]{9}" title="Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0" value={form.phoneNumber} onChange={event => setForm(current => ({ ...current, phoneNumber: event.target.value }))} maxLength={PROFILE_PHONE_LENGTH} placeholder="0912345678" /></label>
         <label>Mật khẩu hiện tại<input type="password" value={form.currentPassword} onChange={event => setForm(current => ({ ...current, currentPassword: event.target.value }))} autoComplete="current-password" placeholder="Chỉ nhập khi đổi mật khẩu" /></label>

@@ -6,9 +6,9 @@ const now = Date.parse('2026-10-24T06:00:00Z')
 const valid = { fullName: 'Phạm Thị Hồng Vy', phoneNumber: '0326541256', gender: 'Female', dateOfBirth: '2004-05-29', address: 'Hà Nội', fitnessGoal: 'Tăng 5 kg', emergencyContact: 'Nguyễn An - 0912 345 678' }
 const errors = (changes = {}, options = {}) => profileValidationErrors({ ...valid, ...changes }, { now, ...options })
 
-test('names preserve Unicode, punctuation and single-character names, while blank and oversized names are blocked', () => {
-  for (const fullName of ['  Nguyễn-Văn An  ', "Anne O’Connor", '李', 'A', 'a'.repeat(200)]) assert.deepEqual(errors({ fullName }), {})
-  for (const fullName of ['', '   ', '\t\n', null, 'a'.repeat(201), 123]) assert.ok(errors({ fullName }).fullName)
+test('names preserve Unicode letters and single-character names while digits and punctuation are blocked', () => {
+  for (const fullName of ['  Nguyễn Văn An  ', 'Anne Connor', '李', 'A', 'a'.repeat(200)]) assert.deepEqual(errors({ fullName }), {})
+  for (const fullName of ['', '   ', '\t\n', null, 'a'.repeat(201), 123, 'Nguyễn Văn An1', 'Nguyễn-Văn An', 'Anne O’Connor']) assert.ok(errors({ fullName }).fullName)
 })
 
 test('profile phone format matches registration and normalizes separators without removing the country code', () => {

@@ -13,6 +13,7 @@ import { cancelReceptionistRegistration, getReceptionistMemberRegistrations } fr
 import { checkInReceptionistMemberRegistration } from '../../services/receptionistCheckInService'
 import { receptionistCheckInReason } from '../../utils/receptionistCheckIn'
 import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, sessionDateTimeFormatter, subscriptionStatusLabel, ViewLoader } from './ReceptionistViewShared'
+import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 
 function CreateMemberDialog({ onClose, onCreated }) {
   const [form, setForm] = useState(emptyMemberForm)
@@ -55,7 +56,7 @@ function CreateMemberDialog({ onClose, onCreated }) {
       <header><div><span>ĐĂNG KÝ TẠI QUẦY</span><h2 id="reception-create-member-title">Tạo tài khoản hội viên</h2><p>Thông tin đăng nhập sẽ được bàn giao trực tiếp cho hội viên.</p></div><button type="button" aria-label="Đóng biểu mẫu" onClick={onClose} disabled={saving}><X size={19} /></button></header>
       <form onSubmit={submit}>
         <div className="reception-member-form-grid">
-          <label>Họ và tên<input name="fullName" value={form.fullName} onChange={updateField} maxLength="100" aria-invalid={invalidField === 'fullName' || undefined} aria-describedby={invalidField === 'fullName' ? 'reception-create-member-error' : undefined} required /></label>
+          <label>Họ và tên<input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} name="fullName" value={form.fullName} onChange={updateField} maxLength="100" aria-invalid={invalidField === 'fullName' || undefined} aria-describedby={invalidField === 'fullName' ? 'reception-create-member-error' : undefined} required /></label>
           <label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="256" required /></label>
           <label>Mật khẩu ban đầu<input name="password" type="password" value={form.password} onChange={updateField} minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} aria-invalid={invalidField === 'password' || undefined} aria-describedby={invalidField === 'password' ? 'reception-create-member-error' : undefined} autoComplete="new-password" placeholder="Từ 8 đến 72 ký tự" required /></label>
           <label>Số điện thoại<input name="phone" type="tel" inputMode="numeric" pattern={RECEPTIONIST_PHONE_PATTERN} title={RECEPTIONIST_PHONE_MESSAGE} minLength="10" maxLength="10" value={form.phone} onChange={updateField} aria-invalid={invalidField === 'phone' || undefined} aria-describedby={invalidField === 'phone' ? 'reception-create-member-error' : undefined} placeholder="0912345678" /></label>
