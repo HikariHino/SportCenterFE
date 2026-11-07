@@ -39,6 +39,11 @@
 .register-content { width: 100%; max-width: 580px; margin: 32px auto; }
 .register-content header h2 { font-size: 30px; letter-spacing: -.8px; margin-bottom: 9px; }
 .register-content header p { color: #626879; line-height: 1.7; font-size: 13px; }
+.register-google { display: grid; gap: 10px; }
+.register-google-hint { margin: 0; color: var(--theme-muted, #626879); font-size: 11px; line-height: 1.7; text-align: center; }
+.register-google-error { margin: 0; padding: 12px; border: 1px solid var(--theme-red, #b42318); border-radius: 8px; color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fff0f0); line-height: 1.7; font-size: 12px; }
+.register-divider { display: flex; align-items: center; gap: 14px; margin-top: 24px; color: var(--theme-muted, #737686); font-size: 11px; text-align: center; }
+.register-divider::before, .register-divider::after { content: ''; flex: 1; height: 1px; background: var(--theme-border, #e1e4ed); }
 .register-tabs { display: flex; gap: 4px; background: #eaedff; border: 1px solid #dfe2ee; border-radius: 12px; padding: 4px; margin: 24px 0; }
 .register-tabs button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 7px; border: 0; background: transparent; border-radius: 8px; color: #626879; font-size: 12px; }
 .register-tabs svg { flex-shrink: 0; }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
-import { getGoogleClientId, getGoogleLoginErrorMessage } from '../src/utils/googleAuth.js'
+import { getGoogleClientId, getGoogleLoginErrorMessage, getGoogleRegistrationErrorMessage } from '../src/utils/googleAuth.js'
 
 let server, api, service, auth
 const savedGlobals = new Map()
@@ -117,4 +117,14 @@ test('Google errors distinguish locked accounts, unverified email, invalid token
 test('missing and placeholder client IDs are unavailable', () => {
   for (const value of [undefined, '', 'your-google-web-client-id.apps.googleusercontent.com', 'not-a-client']) assert.equal(getGoogleClientId(value), '')
   assert.equal(getGoogleClientId(' 1234567890-abc123.apps.googleusercontent.com '), '1234567890-abc123.apps.googleusercontent.com')
+})
+
+test('Google registration errors suggest the email registration flow and preserve account restrictions', () => {
+  const error = (status, message) => ({ response: { status, data: { message } } })
+  assert.equal(getGoogleRegistrationErrorMessage(error(503, 'Google login is not configured.')), 'Đăng ký Google hiện chưa khả dụng. Bạn có thể đăng ký bằng email.')
+  assert.equal(getGoogleRegistrationErrorMessage(error(500, 'private stack trace')), 'Đăng ký Google không thành công. Vui lòng thử lại hoặc đăng ký bằng email.')
+  assert.match(getGoogleRegistrationErrorMessage({ code: 'ECONNABORTED' }), /thử đăng ký Google lại/)
+  for (const failure of [error(401, 'Account is disabled.'), error(401, 'Google email is not verified.'), error(401, 'Invalid token'), { code: 'ERR_NETWORK' }]) {
+    assert.equal(getGoogleRegistrationErrorMessage(failure), getGoogleLoginErrorMessage(failure))
+  }
 })
