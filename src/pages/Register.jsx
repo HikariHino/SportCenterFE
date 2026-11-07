@@ -1,9 +1,11 @@
 import ThemeToggle from '../components/ThemeToggle'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Bell, CalendarCheck, CreditCard, Eye, EyeOff, Gift, LockKeyhole, Mail, MapPin, MessageCircle, Phone, Trophy, UserRound } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { sendRegisterOtp, verifyRegisterOtp } from '../services/authService'
+import { loginWithGoogle, sendRegisterOtp, verifyRegisterOtp } from '../services/authService'
+import { getGoogleRegistrationErrorMessage } from '../utils/googleAuth'
 import { getAuthDestination, getAuthErrorMessage } from '../utils/auth'
 import { getRegistrationError } from '../utils/registration'
 import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } from '../utils/otpValidation'
@@ -33,7 +35,12 @@ export default function Register() {
   const { login } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSendingOtp, setIsSendingOtp] = useState(false)
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false)
+  const [googleError, setGoogleError] = useState('')
   const submitting = useRef(false)
+  const mounted = useRef(true)
+  const googleRequest = useRef(null)
+  const googleErrorRef = useRef(null)
   const formRef = useRef(null)
   const [password, setPassword] = useState('')
   const [otp, setOtp] = useState('')
@@ -41,6 +48,37 @@ export default function Register() {
   const [emailError, setEmailError] = useState('')
   const [pendingRegistration, setPendingRegistration] = useState(null)
   const strength = password ? [password.length >= 8, /[a-z]/.test(password) && /[A-Z]/.test(password), /\d/.test(password), /[^\w\s]/.test(password)].filter(Boolean).length : 0
+  const busy = isSubmitting || isSendingOtp || isGoogleSubmitting
+
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; googleRequest.current?.abort() }
+  }, [])
+
+  useEffect(() => {
+    if (googleError) googleErrorRef.current?.focus({ preventScroll: true })
+  }, [googleError])
+
+  async function handleGoogleCredential(idToken) {
+    if (!mounted.current || submitting.current) return
+    const controller = new AbortController()
+    googleRequest.current = controller
+    submitting.current = true
+    setIsGoogleSubmitting(true)
+    setGoogleError('')
+    try {
+      const session = await loginWithGoogle({ idToken }, { signal: controller.signal })
+      if (!mounted.current || controller.signal.aborted) return
+      const user = login(session, session.token)
+      navigate(getAuthDestination(user.role), { replace: true })
+    } catch (error) {
+      if (mounted.current && !controller.signal.aborted) setGoogleError(getGoogleRegistrationErrorMessage(error))
+    } finally {
+      googleRequest.current = null
+      submitting.current = false
+      if (mounted.current) setIsGoogleSubmitting(false)
+    }
+  }
 
   useEffect(() => {
     if (emailError) formRef.current?.elements.namedItem('email')?.focus()
@@ -172,6 +210,13 @@ export default function Register() {
       <div className="register-topbar"><ThemeToggle /><Link to="/"><ArrowLeft size={16} /> Trở về trang chủ</Link><span><MapPin size={15} /> Cơ sở 1 - Cầu Giấy, Hà Nội <b>06:00 - 22:00</b></span></div>
       <div className="register-content">
         <header><h2 id="register-title">Đăng ký tài khoản Hội viên</h2><p>Tạo tài khoản nhanh chóng chỉ trong 1 phút để bắt đầu đặt sân và nhận trọn vẹn đặc quyền thể thao.</p></header>
+        <section className="register-google" aria-label="Đăng ký bằng Google" aria-busy={isGoogleSubmitting}>
+          <GoogleSignInButton intent="signup" disabled={busy} onCredential={handleGoogleCredential} />
+          <p className="register-google-hint">Tiếp tục bằng Google đồng nghĩa với việc bạn đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của trung tâm.</p>
+          {isGoogleSubmitting && <p className="register-feedback" role="status">Đang xác thực tài khoản Google...</p>}
+          {googleError && <p className="register-google-error" ref={googleErrorRef} tabIndex={-1} role="alert">{googleError}</p>}
+        </section>
+        <div className="register-divider">Hoặc đăng ký bằng email</div>
         <form ref={formRef} className="register-form" noValidate onSubmit={handleSubmit} onChange={(event) => {
           setMessage('')
           if (event.target.name === 'email') setEmailError('')
@@ -180,8 +225,8 @@ export default function Register() {
             setOtp('')
             setMessage('Thông tin đăng ký đã thay đổi. Vui lòng gửi lại mã OTP.')
           }
-        }} aria-busy={isSubmitting || isSendingOtp}>
-          <fieldset className="register-fields" disabled={isSubmitting || isSendingOtp}>
+        }} aria-busy={busy}>
+          <fieldset className="register-fields" disabled={busy}>
           <Field pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} id="fullname" label="Họ và tên đầy đủ" icon={UserRound} maxLength={AUTH_REGISTRATION_LIMITS.fullName} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
           <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" maxLength={AUTH_REGISTRATION_LIMITS.email} autoComplete="email" placeholder="name@olympus.vn" error={emailError} /></div>
           <div className="register-row">
@@ -197,11 +242,11 @@ export default function Register() {
             <label htmlFor="otp">Mã OTP <span>*</span></label>
             <div className="register-otp-row">
               <div className="register-input"><MessageCircle size={18} /><input id="otp" name="otp" type="text" autoComplete="one-time-code" inputMode="numeric" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required value={otp} onChange={event => setOtp(event.target.value)} aria-describedby="register-otp-hint" /></div>
-              <button type="button" name="send-otp" className="register-send-otp" onClick={handleSendOtp} disabled={isSubmitting || isSendingOtp || !!emailError}>{isSendingOtp ? 'Đang gửi...' : pendingRegistration ? 'Gửi lại OTP' : 'Gửi OTP'}</button>
+              <button type="button" name="send-otp" className="register-send-otp" onClick={handleSendOtp} disabled={busy || !!emailError}>{isSendingOtp ? 'Đang gửi...' : pendingRegistration ? 'Gửi lại OTP' : 'Gửi OTP'}</button>
             </div>
             <p className="register-otp-hint" id="register-otp-hint">{pendingRegistration ? `Mã OTP đã gửi đến ${pendingRegistration.email}.` : 'Nhấn Gửi OTP để nhận mã xác minh qua email.'}</p>
           </div>
-          <button type="submit" className="register-submit" disabled={isSubmitting || isSendingOtp || !!emailError}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'} <ArrowRight size={19} /></button>
+          <button type="submit" className="register-submit" disabled={busy || !!emailError}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'} <ArrowRight size={19} /></button>
           </fieldset>
           <p className="register-feedback" role="status" aria-live="polite">{message}</p>
         </form>

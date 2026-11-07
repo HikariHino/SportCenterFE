@@ -73,6 +73,7 @@ test('GIS initializes once across theme changes, ignores removed callbacks and r
   const firstState = buttonOptions.state
   assert.equal(buttonOptions.width, '350')
   assert.equal(buttonOptions.theme, 'outline')
+  assert.equal(buttonOptions.text, 'signin_with')
   assert.equal(buttonOptions.locale, 'vi')
   assert.equal(initialization.ux_mode, 'popup')
   assert.equal(initialization.auto_select, false)
@@ -88,6 +89,30 @@ test('GIS initializes once across theme changes, ignores removed callbacks and r
   initialization.callback({ credential: 'second', state: buttonOptions.state })
   assert.deepEqual(received, ['first', 'second'])
   disposeAgain()
+})
+
+test('registration renders Google signup wording in both themes and discards a previous sign-in popup', async t => {
+  const { service } = await isolated(t)
+  let initialization, options
+  const sdk = {
+    initialize(config) { initialization = config },
+    renderButton(host, config) { options = config },
+  }
+  const host = { clientWidth: 300, replaceChildren() {} }
+  const received = []
+  const disposeLogin = service.mountGoogleSignInButton(sdk, host, 'client-id', () => received.push('login'))
+  const loginState = options.state
+  disposeLogin()
+  for (const theme of ['light', 'dark']) {
+    const dispose = service.mountGoogleSignInButton(sdk, host, 'client-id', token => received.push(token), theme, 'signup_with')
+    assert.equal(options.text, 'signup_with')
+    assert.equal(options.theme, theme === 'dark' ? 'filled_black' : 'outline')
+    assert.equal(options.width, '300')
+    initialization.callback({ credential: 'stale-login', state: loginState })
+    initialization.callback({ credential: `signup-${theme}`, state: options.state })
+    dispose()
+  }
+  assert.deepEqual(received, ['signup-light', 'signup-dark'])
 })
 
 test('a failed button render does not leave a credential callback active', async t => {
