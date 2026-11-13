@@ -17,6 +17,7 @@ import { canCheckoutPayOSPayment, paymentCheckoutMessage } from '../../utils/mem
 import { cancelSubscriptionOrder } from '../../services/subscriptionCancellationService'
 import { currentSubscriptionForPackage, membershipPackageType, membershipPackageTypeLabel, mergeConfirmedSubscriptionCancellations, subscriptionDisplayStatusLabel, subscriptionPackageReason, subscriptionPackageType, subscriptionPaymentState, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
+import CatalogImage from '../../components/CatalogImage'
 import '../../style/member/SubscriptionsView.css'
 import '../../style/member/SubscriptionsLayout.css'
 
@@ -378,6 +379,7 @@ export function SubscriptionsView({ showNotice }) {
         {filteredPackages.length ? <div className="member-sub-package-grid">{filteredPackages.map(pkg => {
           const reason = packageReason(pkg)
           return <article key={pkg.id} className="member-sub-package" data-package-id={pkg.id}>
+            <CatalogImage src={pkg.imageUrl} fallback={<Award size={32} />} className="catalog-image--cover" />
             <div className="member-sub-package-top"><span><CalendarDays size={15} />{pkg.durationInDays} ngày</span><small>{membershipPackageTypeLabel(pkg)}</small>{pkg.isActive === false && <small>Tạm ngừng</small>}</div>
             <h4>{pkg.packageName}</h4><p className="member-sub-package-description">{pkg.description || 'Liên hệ lễ tân để biết thêm thông tin về gói tập.'}</p><strong className="member-sub-package-price">{formatCurrency(pkg.price)}</strong><small className="member-sub-package-note">Giá cho toàn bộ thời hạn gói</small>
             {reason && <p className="member-sub-package-eligibility">{reason}</p>}
@@ -413,6 +415,7 @@ export function SubscriptionsView({ showNotice }) {
                 </div>
               ) : (
                 <>
+                  <CatalogImage src={viewingPackage.imageUrl} fallback={<Award size={32} />} className="catalog-image--detail" />
                   <div
                     style={{
                       display: 'grid',

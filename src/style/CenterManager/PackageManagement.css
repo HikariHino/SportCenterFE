@@ -449,6 +449,24 @@
   width: 100%;
 }
 
+.package-image-button {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  color: var(--theme-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.package-image-button:hover { border-color: var(--theme-accent); }
+.package-image-button .catalog-image { width: 34px; height: 32px; border-radius: 5px; flex: none; }
+.package-table .package-image-button { margin-top: 6px; }
+
 .package-action-btn {
   display: inline-flex;
   align-items: center;

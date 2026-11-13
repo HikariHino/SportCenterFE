@@ -33,6 +33,9 @@ import {
   getPackageErrorMessage,
   updateMembershipPackage,
 } from '../../services/membershipPackageService'
+import { uploadMembershipPackageImage } from '../../services/catalogImageService'
+import CatalogImage from '../../components/CatalogImage'
+import CatalogImageUploadDialog from '../../components/CatalogImageUploadDialog'
 import '../../style/CenterManager/PackageManagement.css'
 import { membershipPackageType, membershipPackageTypeLabel } from '../../utils/memberSubscriptions'
 import { getManagerFormValidationError, MANAGER_FORM_LIMITS, PACKAGE_PRICE_MIN, PACKAGE_PRICE_MAX } from '../../utils/managerFormValidation'
@@ -107,6 +110,7 @@ export default function PackageManagement() {
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingPackage, setEditingPackage] = useState(null)
+  const [imagePackage, setImagePackage] = useState(null)
   const [selectedPackageForDetail, setSelectedPackageForDetail] = useState(null)
   const [togglingPackage, setTogglingPackage] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -597,6 +601,10 @@ export default function PackageManagement() {
                   {pkg.description || 'Chưa có mô tả chi tiết quyền lợi cho gói này.'}
                 </p>
 
+                <button type="button" className="package-image-button" aria-label={`Quản lý ảnh gói ${pkg.packageName}`} onClick={() => setImagePackage(pkg)}>
+                  <CatalogImage src={pkg.imageUrl} fallback={<Package size={18} />} />
+                  <span>{pkg.imageUrl ? 'Thay ảnh gói tập' : 'Thêm ảnh gói tập'}</span>
+                </button>
                 <div className="package-card-footer">
                   <div className="package-actions" role="group" aria-label={`Thao tác gói ${pkg.packageName}`}>
                     <button
@@ -657,6 +665,10 @@ export default function PackageManagement() {
                       <div style={{ fontWeight: 600, color: 'var(--manager-ink)' }}>
                         {pkg.packageName}
                       </div>
+                      <button type="button" className="package-image-button" aria-label={`Quản lý ảnh gói ${pkg.packageName}`} onClick={() => setImagePackage(pkg)}>
+                        <CatalogImage src={pkg.imageUrl} fallback={<Package size={18} />} />
+                        <span>{pkg.imageUrl ? 'Thay ảnh' : 'Thêm ảnh'}</span>
+                      </button>
                     </td>
                     <td>{membershipPackageTypeLabel(pkg)}</td>
                     <td>
@@ -706,6 +718,18 @@ export default function PackageManagement() {
         </div>
       )}
       </section>
+
+      {imagePackage && <CatalogImageUploadDialog
+        name={imagePackage.packageName}
+        imageUrl={imagePackage.imageUrl}
+        upload={file => uploadMembershipPackageImage(imagePackage.id, file)}
+        onClose={() => setImagePackage(null)}
+        onUploaded={imageUrl => {
+          setPackages(items => items.map(item => item.id === imagePackage.id ? { ...item, imageUrl } : item))
+          setSuccess(`Đã cập nhật ảnh gói "${imagePackage.packageName}".`)
+          setImagePackage(null)
+        }}
+      />}
 
       {/* ======================================================== */}
       {/* MODAL: CREATE PACKAGE */}
@@ -1034,6 +1058,7 @@ export default function PackageManagement() {
               </button>
             </div>
             <div className="pkg-modal-body">
+              <CatalogImage src={selectedPackageForDetail.imageUrl} fallback={<Package size={32} />} className="catalog-image--detail" />
               <div className="package-pricing">
                 <strong>{formatCurrency(selectedPackageForDetail.price)}</strong>
                 <span>/ {formatDuration(selectedPackageForDetail.durationInDays)}</span>
