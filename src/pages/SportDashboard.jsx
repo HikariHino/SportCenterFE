@@ -10,7 +10,7 @@ import { membershipPackageType } from '../utils/memberSubscriptions'
 import { getLandingCoaches, getLandingPackages, getLandingSessions, getLandingSports } from '../services/landingService'
 import '../style/SportDashboard.css'
 
-const navigation = [['experience', 'Trải nghiệm'], ['schedule', 'Lịch lớp học'], ['memberships', 'Gói tập'], ['coaches', 'Huấn luyện viên']]
+const navigation = [['experience', 'Trải nghiệm'], ['sports', 'Bộ môn'], ['schedule', 'Lịch lớp học'], ['memberships', 'Gói tập'], ['coaches', 'Huấn luyện viên']]
 const emptyResource = { items: [], loading: true, error: false }
 const money = value => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0)
 const dateLabel = (value, options) => {
@@ -134,6 +134,12 @@ export default function SportDashboard() {
   }
 
   const retryCatalog = () => setCatalogRevision(value => value + 1)
+  const sports = catalog.sports.items
+  const selectSportSchedule = (id) => {
+    setSportId(String(id))
+    setSearch('')
+    setSubmittedSearch('')
+  }
   const classAction = getLandingAction(currentUser, 'classes')
   const packageAction = getLandingAction(currentUser, 'subscriptions')
   const packages = catalog.packages.items.filter(pkg => packageType === 'all' || membershipPackageType(pkg) === packageType)
@@ -176,14 +182,32 @@ export default function SportDashboard() {
       [BellRing, 'Luôn theo kịp lịch tập', 'Xem thông báo thay đổi buổi học và cập nhật lịch bù mới.', 'notifications'],
     ].map(([Icon, title, text, view], index) => <ActionLink key={view} action={getLandingAction(currentUser, view)} className="lp-feature-card"><div><span className="lp-feature-icon"><Icon size={24} /></span><small>0{index + 1}</small></div><h3>{title}</h3><p>{text}</p><span className="lp-feature-link">{currentUser && !member ? 'Mở không gian làm việc' : 'Khám phá ngay'}<ArrowUpRight size={17} /></span></ActionLink>)}</div></div></section>
 
+    <section className="lp-section lp-sports" id="sports" aria-labelledby="landing-sports-title">
+      <div className="lp-container">
+        <div className="lp-section-heading"><h2 id="landing-sports-title">Bộ môn tại trung tâm</h2></div>
+        {catalog.sports.loading || catalog.sports.error || !sports.length
+          ? <ResourceState resource={catalog.sports} empty="Trung tâm chưa công bố bộ môn nào." onRetry={retryCatalog} />
+          : <div className="lp-sport-grid">
+            {sports.map(sport => <article className="lp-sport-card" key={sport.id}>
+              <CatalogImage className="lp-sport-cover" src={sport.imageUrl} fallback={<Trophy size={38} />} />
+              <div className="lp-sport-details">
+                <h3>{sport.name}</h3>
+                {typeof sport.description === 'string' && sport.description.trim() && <p>{sport.description}</p>}
+                <a href="#schedule" className="lp-text-link" aria-label={`Xem lịch ${sport.name}`} onClick={() => selectSportSchedule(sport.id)}>
+                  Xem lịch <ArrowRight size={16} />
+                </a>
+              </div>
+            </article>)}
+          </div>}
+      </div>
+    </section>
+
     <section className="lp-section lp-schedule" id="schedule"><div className="lp-container">
       <SectionHeading eyebrow="DÀNH THỜI GIAN CHO CHÍNH MÌNH" title="Tìm buổi tập tiếp theo.">Lịch các buổi học còn chỗ được cập nhật từ trung tâm. Đăng nhập để kiểm tra điều kiện và đăng ký.</SectionHeading>
       <div className="lp-schedule-toolbar">
         <div className="lp-sport-filters" aria-label="Lọc theo bộ môn">
           <button type="button" className={!sportId ? 'is-active' : ''} aria-pressed={!sportId} onClick={() => setSportId('')}>Tất cả bộ môn</button>
-          {catalog.sports.items.map(sport => <button key={sport.id} type="button" className={`lp-sport-filter${sportId === String(sport.id) ? ' is-active' : ''}`} aria-pressed={sportId === String(sport.id)} onClick={() => setSportId(String(sport.id))}>
-            <CatalogImage src={sport.imageUrl} fallback={<Trophy size={15} />} /><span>{sport.name}</span>
-          </button>)}
+          {sports.map(sport => <button key={sport.id} type="button" className={sportId === String(sport.id) ? 'is-active' : ''} aria-pressed={sportId === String(sport.id)} onClick={() => setSportId(String(sport.id))}>{sport.name}</button>)}
         </div>
         <form className="lp-class-search" onSubmit={event => { event.preventDefault(); setSubmittedSearch(search.trim()); setSessionRevision(value => value + 1) }}><Search size={17} /><input type="search" aria-label="Tìm lớp học" placeholder="Tìm lớp học…" maxLength={200} value={search} onChange={event => setSearch(event.target.value)} /><button type="submit" aria-label="Tìm kiếm lớp học"><ArrowRight size={18} /></button></form>
       </div>

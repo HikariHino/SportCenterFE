@@ -457,6 +457,7 @@
 
 .sport-card-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -479,6 +480,8 @@
   color: var(--manager-blue);
   border-color: var(--manager-control-border, #cbd5e1);
 }
+
+.sport-action-btn.sport-action-label { width: auto; padding-inline: 9px; gap: 5px; font-size: 11px; font-weight: 600; }
 
 .sport-action-btn.danger:hover {
   color: var(--manager-danger, #dc2626);

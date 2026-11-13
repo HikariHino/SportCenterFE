@@ -198,6 +198,7 @@ export default function ClassManagement() {
   const [imageSport, setImageSport] = useState(null)
   const [togglingSport, setTogglingSport] = useState(null)
   const [submittingSport, setSubmittingSport] = useState(false)
+  const [sportUpdateError, setSportUpdateError] = useState('')
 
   // Sport Form
   const [sportForm, setSportForm] = useState({
@@ -368,6 +369,7 @@ export default function ClassManagement() {
 
   const handleOpenEditSport = (sport) => {
     setEditingSport(sport)
+    setSportUpdateError('')
     setSportForm({
       name: sport.name || '',
       description: sport.description || '',
@@ -403,14 +405,14 @@ export default function ClassManagement() {
 
   const handleEditSportSubmit = async (e) => {
     e.preventDefault()
-    if (!editingSport) return
+    if (!editingSport || submittingSport) return
     if (!sportForm.name.trim()) {
-      setError('Vui lòng nhập tên bộ môn thể thao.')
+      setSportUpdateError('Vui lòng nhập tên bộ môn thể thao.')
       return
     }
 
     setSubmittingSport(true)
-    setError('')
+    setSportUpdateError('')
     try {
       const updated = await updateSport(editingSport.id, {
         name: sportForm.name.trim(),
@@ -423,14 +425,17 @@ export default function ClassManagement() {
       setEditingSport(null)
       setSuccess(`Đã cập nhật bộ môn "${updated.name}" thành công!`)
     } catch (err) {
-      setError(getClassErrorMessage(err, 'Không thể cập nhật môn thể thao.'))
+      setSportUpdateError(getClassErrorMessage(err, 'Không thể cập nhật môn thể thao.'))
     } finally {
       setSubmittingSport(false)
     }
   }
 
   const handleToggleSportStatus = async (sport) => {
+    if (submittingSport) return
     const nextStatus = !sport.isActive
+    setSubmittingSport(true)
+    setSportUpdateError('')
     try {
       const updated = await updateSport(sport.id, {
         name: sport.name,
@@ -447,8 +452,9 @@ export default function ClassManagement() {
           : `Đã vô hiệu hóa bộ môn "${sport.name}".`
       )
     } catch (err) {
-      setTogglingSport(null)
-      setError(getClassErrorMessage(err, 'Không thể thay đổi trạng thái bộ môn.'))
+      setSportUpdateError(getClassErrorMessage(err, 'Không thể thay đổi trạng thái bộ môn.'))
+    } finally {
+      setSubmittingSport(false)
     }
   }
 
@@ -1165,22 +1171,22 @@ export default function ClassManagement() {
                         {classes.filter((c) => c.sportId === sport.id).length} lớp học liên kết
                       </span>
                       <div className="sport-card-actions">
-                        <button type="button" className="sport-action-btn" title="Quản lý ảnh bộ môn" aria-label={`Quản lý ảnh bộ môn ${sport.name}`} onClick={() => setImageSport(sport)}>
-                          <ImageIcon size={15} />
+                        <button type="button" className="sport-action-btn sport-action-label" aria-label={`${sport.imageUrl ? 'Thay ảnh' : 'Thêm ảnh'} bộ môn ${sport.name}`} onClick={() => { setSuccess(''); setImageSport(sport) }}>
+                          <ImageIcon size={15} /> {sport.imageUrl ? 'Thay ảnh' : 'Thêm ảnh'}
                         </button>
                         <button
                           type="button"
-                          className="sport-action-btn"
-                          title="Chỉnh sửa môn thể thao"
+                          className="sport-action-btn sport-action-label"
+                          aria-label={`Chỉnh sửa bộ môn ${sport.name}`}
                           onClick={() => handleOpenEditSport(sport)}
                         >
-                          <Edit2 size={15} />
+                          <Edit2 size={15} /> Sửa
                         </button>
                         <button
                           type="button"
                           className={`sport-action-btn ${isActive ? 'danger' : ''}`}
-                          title={isActive ? 'Vô hiệu hóa môn này' : 'Kích hoạt lại'}
-                          onClick={() => setTogglingSport(sport)}
+                          aria-label={`${isActive ? 'Vô hiệu hóa' : 'Kích hoạt lại'} bộ môn ${sport.name}`}
+                          onClick={() => { setSportUpdateError(''); setTogglingSport(sport) }}
                         >
                           <Power size={15} />
                         </button>
@@ -2267,41 +2273,48 @@ export default function ClassManagement() {
       {/* MODAL: EDIT SPORT */}
       {/* ======================================================== */}
       {editingSport && (
-        <div className="class-modal-overlay" onClick={() => setEditingSport(null)}>
-          <div className="class-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="class-modal-overlay" onClick={() => { if (!submittingSport) setEditingSport(null) }}>
+          <div className="class-modal" role="dialog" aria-modal="true" aria-labelledby="edit-sport-title" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
-              <h3>Chỉnh sửa môn thể thao: {editingSport.name}</h3>
+              <h3 id="edit-sport-title">Chỉnh sửa môn thể thao: {editingSport.name}</h3>
               <button
                 type="button"
                 className="class-modal-close"
+                aria-label="Đóng"
+                disabled={submittingSport}
                 onClick={() => setEditingSport(null)}
               >
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleEditSportSubmit}>
+            <form onSubmit={handleEditSportSubmit} aria-busy={submittingSport}>
               <div className="class-modal-body">
+                {sportUpdateError && <div className="class-alert class-alert-error" role="alert"><AlertCircle size={16} /><span>{sportUpdateError}</span></div>}
                 <div className="class-form-group">
-                  <label>
+                  <label htmlFor="edit-sport-name">
                     Tên môn thể thao <span className="required">*</span>
                   </label>
                   <input
+                    id="edit-sport-name"
                     type="text"
                     className="class-form-input"
                     maxLength={MANAGER_FORM_LIMITS.sport.name}
                     value={sportForm.name}
                     onChange={(e) => setSportForm({ ...sportForm, name: e.target.value })}
+                    disabled={submittingSport}
                     required
                   />
                 </div>
 
                 <div className="class-form-group">
-                  <label>Mô tả chi tiết</label>
+                  <label htmlFor="edit-sport-description">Mô tả chi tiết</label>
                   <textarea
+                    id="edit-sport-description"
                     className="class-form-textarea"
                     maxLength={MANAGER_FORM_LIMITS.sport.description}
                     value={sportForm.description}
                     onChange={(e) => setSportForm({ ...sportForm, description: e.target.value })}
+                    disabled={submittingSport}
                   />
                 </div>
 
@@ -2311,6 +2324,7 @@ export default function ClassManagement() {
                       type="checkbox"
                       checked={sportForm.isActive}
                       onChange={(e) => setSportForm({ ...sportForm, isActive: e.target.checked })}
+                      disabled={submittingSport}
                     />
                     <span>Trạng thái kích hoạt (Active)</span>
                   </label>
@@ -2345,15 +2359,17 @@ export default function ClassManagement() {
       {/* MODAL: CONFIRM TOGGLE SPORT STATUS */}
       {/* ======================================================== */}
       {togglingSport && (
-        <div className="class-modal-overlay" onClick={() => setTogglingSport(null)}>
-          <div className="class-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="class-modal-overlay" onClick={() => { if (!submittingSport) setTogglingSport(null) }}>
+          <div className="class-modal" role="dialog" aria-modal="true" aria-labelledby="toggle-sport-title" aria-busy={submittingSport} onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
-              <h3>
+              <h3 id="toggle-sport-title">
                 {togglingSport.isActive !== false ? 'Vô hiệu hóa bộ môn' : 'Kích hoạt lại bộ môn'}
               </h3>
               <button
                 type="button"
                 className="class-modal-close"
+                aria-label="Đóng"
+                disabled={submittingSport}
                 onClick={() => setTogglingSport(null)}
               >
                 <X size={18} />
@@ -2375,12 +2391,14 @@ export default function ClassManagement() {
                   </span>
                 </div>
               )}
+              {sportUpdateError && <div className="class-alert class-alert-error" role="alert"><AlertCircle size={16} /><span>{sportUpdateError}</span></div>}
             </div>
             <div className="class-modal-footer">
               <button
                 type="button"
                 className="class-btn class-btn-secondary"
                 onClick={() => setTogglingSport(null)}
+                disabled={submittingSport}
               >
                 Hủy bỏ
               </button>
@@ -2388,8 +2406,9 @@ export default function ClassManagement() {
                 type="button"
                 className={`class-btn ${togglingSport.isActive !== false ? 'class-btn-danger' : 'class-btn-primary'}`}
                 onClick={() => handleToggleSportStatus(togglingSport)}
+                disabled={submittingSport}
               >
-                {togglingSport.isActive !== false ? 'Vô hiệu hóa ngay' : 'Kích hoạt ngay'}
+                {submittingSport ? 'Đang lưu...' : togglingSport.isActive !== false ? 'Vô hiệu hóa ngay' : 'Kích hoạt ngay'}
               </button>
             </div>
           </div>

@@ -46,6 +46,8 @@ function mockApi(t, { sessions = [session], roster = [student], ticketList = [{ 
       else if (config.url === '/SupportTickets') data = ticketList
       else throw new Error('Unexpected read: ' + config.url)
       afterRead?.(config)
+    } else if (config.url.startsWith('/sports')) {
+      data = { id: 1, ...JSON.parse(config.data), imageUrl: null }
     } else data = { id: 1, memberId: 20, sessionId: 30, status: 'Present' }
     return { config, status: 200, headers: {}, data: writeError && config.method !== 'get'
       ? { success: false, message: 'Server rejected write' } : { success: true, data } }
@@ -171,6 +173,21 @@ for (const [kind, form, actions, limits] of [
     }
   })
 }
+
+test('sport updates use PUT for details and return the image URL and active status from the server', async () => {
+  const imageUrl = 'https://assets.example.test/sports/yoga.jpg'
+  const details = { name: 'Yoga', description: 'Tập luyện', isActive: false }
+  api.defaults.adapter = async config => {
+    assert.equal(config.method, 'put')
+    assert.equal(config.url, '/sports/7')
+    assert.deepEqual(JSON.parse(config.data), details)
+    return { config, status: 200, headers: {}, data: { success: true, data: { id: 7, ...details, imageUrl } } }
+  }
+  assert.deepEqual(await sports.updateSport(7, { ...details, imageUrl }), { id: 7, ...details, imageUrl })
+
+  api.defaults.adapter = async config => ({ config, status: 200, headers: {}, data: { success: true, data: { id: 8, ...details, imageUrl } } })
+  await assert.rejects(sports.updateSport(7, details), /Không xác nhận được thay đổi/)
+})
 
 test('backend failures remain failures after valid Manager checks', async t => {
   mockApi(t, { writeError: true })

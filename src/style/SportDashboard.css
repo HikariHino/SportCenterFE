@@ -123,6 +123,15 @@ html:has(.sport-page) { scroll-behavior: smooth; }
 .sport-page .lp-feature-card h3 { margin: 0 0 10px; font-size: 15px; line-height: 1.55; letter-spacing: -.4px; }
 .sport-page .lp-feature-card p { color: var(--lp-muted); font-size: 11px; line-height: 1.9; margin: 0; }
 .sport-page .lp-feature-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--lp-link); font-size: 10px; font-weight: 700; margin-top: 25px; }
+.sport-page .lp-sports { border-block: 1px solid var(--lp-line); background: linear-gradient(145deg, var(--lp-bg), transparent 85%); }
+.sport-page .lp-sport-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.sport-page .lp-sport-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--lp-paper); border: 1px solid var(--lp-line); border-radius: 13px; }
+.sport-page .lp-sport-cover { width: 100%; aspect-ratio: 16 / 9; flex: none; color: var(--lp-link); background: linear-gradient(135deg, var(--lp-soft), var(--lp-bg)); }
+.sport-page .lp-sport-details { display: flex; flex-direction: column; align-items: flex-start; flex: 1; gap: 8px; padding: 17px 19px 19px; overflow-wrap: anywhere; }
+.sport-page .lp-sport-details h3 { margin: 0; font-size: 17px; }
+.sport-page .lp-sport-details p { margin: 0; color: var(--lp-muted); font-size: 12px; }
+.sport-page .lp-sport-details .lp-text-link { margin-top: auto; padding-block: 7px 2px; }
+
 .sport-page .lp-schedule { background: linear-gradient(115deg, #0b1b30f5, #112b43e8), url('/images/landing/gym-background.jpg') center 35% / cover no-repeat; }
 .sport-page :is(.lp-schedule, .lp-coaches) { position: relative; isolation: isolate; }
 .sport-page :is(.lp-schedule, .lp-coaches)::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--lp-link); opacity: .08; mask: url('/images/landing/track-lines.svg') right center / 1200px auto no-repeat; }
@@ -130,9 +139,7 @@ html:has(.sport-page) { scroll-behavior: smooth; }
 .sport-page .lp-sport-filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .sport-page .lp-sport-filters button { padding: 10px 15px; max-width: 100%; border-radius: 7px; border: 1px solid var(--lp-line); background: var(--lp-paper); color: var(--lp-muted); font-size: 10px; font-weight: 600; overflow-wrap: anywhere; }
 .sport-page .lp-sport-filters button.is-active { background: var(--lp-energy); color: #17243c; border-color: var(--lp-energy); }
-.sport-page .lp-sport-filters .lp-sport-filter { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 4px; text-align: left; }
-.sport-page .lp-sport-filter .catalog-image { width: 30px; height: 30px; border-radius: 5px; flex: none; }
-.sport-page :is(.lp-sport-filter, .lp-package-card) .catalog-image { background: var(--lp-soft); color: var(--lp-link); }
+.sport-page .lp-package-card .catalog-image { background: var(--lp-soft); color: var(--lp-link); }
 .sport-page .lp-class-search { display: flex; align-items: center; gap: 8px; width: 240px; flex-shrink: 0; background: var(--lp-paper); border: 1px solid var(--lp-line); padding: 6px 8px 6px 12px; border-radius: 8px; color: var(--lp-muted); }
 .sport-page .lp-class-search input { width: 100%; min-width: 0; font-size: 10px; color: var(--lp-ink); background: transparent; border: 0; padding: 7px 0; }
 .sport-page .lp-class-search input::placeholder { color: var(--lp-muted); opacity: .85; }
@@ -287,6 +294,7 @@ html:has(.sport-page) { scroll-behavior: smooth; }
   .sport-page .lp-journey-strip small { font-size: 8px; }
   .sport-page .lp-section { padding-block: 62px; }
   .sport-page .lp-session-grid, .sport-page .lp-package-grid { grid-template-columns: repeat(2, 1fr); }
+  .sport-page .lp-sport-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sport-page .lp-coach-grid { grid-template-columns: repeat(2, 1fr); }
   .sport-page .lp-schedule-toolbar { flex-direction: column; align-items: stretch; gap: 15px; }
   .sport-page .lp-class-search { width: 100%; }
@@ -344,6 +352,7 @@ html:has(.sport-page) { scroll-behavior: smooth; }
   .sport-page .lp-section-heading h2, .sport-page .lp-how h2, .sport-page .lp-faq h2 { font-size: 27px; letter-spacing: -1px; }
   .sport-page .lp-section-copy { font-size: 11px; }
   .sport-page .lp-feature-grid, .sport-page .lp-session-grid, .sport-page .lp-package-grid, .sport-page .lp-coach-grid { grid-template-columns: 1fr; }
+  .sport-page .lp-sport-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .sport-page .lp-feature-card { padding: 23px; }
   .sport-page .lp-feature-card > div { margin-bottom: 19px; }
   .sport-page .lp-feature-link { margin-top: 18px; }
