@@ -14,6 +14,7 @@ import {
   Edit2,
   Eye,
   Flame,
+  ImageIcon,
   Layers,
   Plus,
   Power,
@@ -34,6 +35,9 @@ import {
   getSports,
   updateSport,
 } from '../../services/classCatalogService'
+import { uploadSportImage } from '../../services/catalogImageService'
+import CatalogImage from '../../components/CatalogImage'
+import CatalogImageUploadDialog from '../../components/CatalogImageUploadDialog'
 import {
   cancelClassSession,
   completeClassSession,
@@ -191,6 +195,7 @@ export default function ClassManagement() {
   // Modal States for Sports
   const [showCreateSportModal, setShowCreateSportModal] = useState(false)
   const [editingSport, setEditingSport] = useState(null)
+  const [imageSport, setImageSport] = useState(null)
   const [togglingSport, setTogglingSport] = useState(null)
   const [submittingSport, setSubmittingSport] = useState(false)
 
@@ -1140,7 +1145,7 @@ export default function ClassManagement() {
                 return (
                   <article key={sport.id} className="sport-card">
                     <div className="sport-card-top">
-                      <div className="sport-avatar">{getSportIcon(sport.name)}</div>
+                      <CatalogImage className="sport-avatar" src={sport.imageUrl} fallback={getSportIcon(sport.name)} />
                       <div className="sport-main-info">
                         <h3>{sport.name}</h3>
                         <small>Mã bộ môn: #{sport.id}</small>
@@ -1160,6 +1165,9 @@ export default function ClassManagement() {
                         {classes.filter((c) => c.sportId === sport.id).length} lớp học liên kết
                       </span>
                       <div className="sport-card-actions">
+                        <button type="button" className="sport-action-btn" title="Quản lý ảnh bộ môn" aria-label={`Quản lý ảnh bộ môn ${sport.name}`} onClick={() => setImageSport(sport)}>
+                          <ImageIcon size={15} />
+                        </button>
                         <button
                           type="button"
                           className="sport-action-btn"
@@ -1185,6 +1193,18 @@ export default function ClassManagement() {
           )}
         </section>
       )}
+
+      {imageSport && <CatalogImageUploadDialog
+        name={imageSport.name}
+        imageUrl={imageSport.imageUrl}
+        upload={file => uploadSportImage(imageSport.id, file)}
+        onClose={() => setImageSport(null)}
+        onUploaded={imageUrl => {
+          setSports(items => items.map(item => item.id === imageSport.id ? { ...item, imageUrl } : item))
+          setSuccess(`Đã cập nhật ảnh bộ môn "${imageSport.name}".`)
+          setImageSport(null)
+        }}
+      />}
 
       {/* ======================================================== */}
       {/* MODAL: SESSIONS MANAGEMENT (Chi tiết các buổi học) */}

@@ -130,6 +130,9 @@ html:has(.sport-page) { scroll-behavior: smooth; }
 .sport-page .lp-sport-filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .sport-page .lp-sport-filters button { padding: 10px 15px; max-width: 100%; border-radius: 7px; border: 1px solid var(--lp-line); background: var(--lp-paper); color: var(--lp-muted); font-size: 10px; font-weight: 600; overflow-wrap: anywhere; }
 .sport-page .lp-sport-filters button.is-active { background: var(--lp-energy); color: #17243c; border-color: var(--lp-energy); }
+.sport-page .lp-sport-filters .lp-sport-filter { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 4px; text-align: left; }
+.sport-page .lp-sport-filter .catalog-image { width: 30px; height: 30px; border-radius: 5px; flex: none; }
+.sport-page :is(.lp-sport-filter, .lp-package-card) .catalog-image { background: var(--lp-soft); color: var(--lp-link); }
 .sport-page .lp-class-search { display: flex; align-items: center; gap: 8px; width: 240px; flex-shrink: 0; background: var(--lp-paper); border: 1px solid var(--lp-line); padding: 6px 8px 6px 12px; border-radius: 8px; color: var(--lp-muted); }
 .sport-page .lp-class-search input { width: 100%; min-width: 0; font-size: 10px; color: var(--lp-ink); background: transparent; border: 0; padding: 7px 0; }
 .sport-page .lp-class-search input::placeholder { color: var(--lp-muted); opacity: .85; }
