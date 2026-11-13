@@ -2,8 +2,8 @@ import api from './api'
 import { getManagerFormTextError } from '../utils/managerFormValidation.js'
 
 /**
- * GET /api/sports (requires authentication, no parameters).
- * @returns {Promise<Array<{ id: number, name: string, description: string }>>}
+ * GET /api/sports returns the public list of active sports.
+ * @returns {Promise<Array<{ id: number, name: string, description: string|null, imageUrl: string|null }>>}
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function getSports() {
@@ -21,7 +21,7 @@ export async function getSports() {
 /**
  * POST /api/sports (requires authentication).
  * @param {{ name: string, description: string, isActive: boolean }} sport
- * @returns {Promise<{ id: number, name: string, description: string, isActive: boolean }>}
+ * @returns {Promise<{ id: number, name: string, description: string|null, imageUrl: string|null, isActive: boolean }>}
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function createSport({ name, description, isActive }) {
@@ -45,7 +45,7 @@ export async function createSport({ name, description, isActive }) {
  * PUT /api/sports/{id} (requires authentication).
  * @param {number} id Sport ID (int32).
  * @param {{ name: string, description: string, isActive: boolean }} sport
- * @returns {Promise<{ id: number, name: string, description: string, isActive: boolean }>}
+ * @returns {Promise<{ id: number, name: string, description: string|null, imageUrl: string|null, isActive: boolean }>}
  * HTTP errors propagate with the backend body at error.response.data.
  */
 export async function updateSport(id, { name, description, isActive }) {
@@ -58,11 +58,15 @@ export async function updateSport(id, { name, description, isActive }) {
   })
   const body = response.data
 
-  if (body?.success === false) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
     throw new Error(body.message || 'Không thể cập nhật môn thể thao.')
   }
 
-  return body?.data ?? body
+  const sport = body?.data ?? body
+  if (String(sport?.id) !== String(id) || typeof sport.name !== 'string' || !sport.name.trim() || typeof sport.isActive !== 'boolean') {
+    throw new Error('Không xác nhận được thay đổi. Hãy tải lại danh mục bộ môn để kiểm tra.')
+  }
+  return sport
 }
 
 /**

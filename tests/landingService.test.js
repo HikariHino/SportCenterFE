@@ -30,7 +30,8 @@ const response = (config, data) => ({ data: { success: true, data }, status: 200
 
 test('landing reads only public catalogs without sending the current user token or private API calls', async () => {
   const calls = []
-  const data = { '/membership-packages': [pkg, { ...pkg, id: 8, isActive: false }], '/sports': [{ id: 1, name: 'Yoga' }], '/coaches': [{ id: 2, fullName: 'Nguyễn An' }] }
+  const sport = { id: 1, name: 'Yoga', description: 'Tập thăng bằng và độ linh hoạt', imageUrl: 'https://assets.example.test/sports/yoga.jpg' }
+  const data = { '/membership-packages': [pkg, { ...pkg, id: 8, isActive: false }], '/sports': [sport, { id: 2, name: 'Bộ môn đã tắt', isActive: false }], '/coaches': [{ id: 2, fullName: 'Nguyễn An' }] }
   api.defaults.adapter = async config => {
     calls.push(config.url)
     assert.equal(config.method, 'get')
@@ -40,7 +41,7 @@ test('landing reads only public catalogs without sending the current user token 
     return response(config, data[config.url])
   }
   assert.deepEqual(await service.getLandingPackages(), [pkg])
-  assert.equal((await service.getLandingSports())[0].name, 'Yoga')
+  assert.deepEqual(await service.getLandingSports(), [sport])
   assert.equal((await service.getLandingCoaches())[0].fullName, 'Nguyễn An')
   assert.deepEqual(calls, ['/membership-packages', '/sports', '/coaches'])
 })
