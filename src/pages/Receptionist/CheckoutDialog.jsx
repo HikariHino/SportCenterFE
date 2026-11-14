@@ -7,7 +7,7 @@ import { formatDateTime } from './ReceptionistViewShared'
 
 const currency = amount => `${Number(amount).toLocaleString('vi-VN')} đ`
 
-export default function CheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subscriptionId: initialSubscriptionId, counterOnly = false }) {
+export default function CheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subscriptionId: initialSubscriptionId, counterOnly = false, initialPaymentMethod = 'Cash' }) {
   const titleId = useId()
   const [members, setMembers] = useState([])
   const [query, setQuery] = useState('')
@@ -15,7 +15,7 @@ export default function CheckoutDialog({ onClose, onCreated, memberId: fixedMemb
   const [subscriptions, setSubscriptions] = useState([])
   const [subscriptionId, setSubscriptionId] = useState(initialSubscriptionId ? String(initialSubscriptionId) : '')
   const [detail, setDetail] = useState(null)
-  const [paymentMethod, setPaymentMethod] = useState(counterOnly ? 'Cash' : 'PayOS')
+  const [paymentMethod, setPaymentMethod] = useState(counterOnly ? (['Cash', 'BankTransfer', 'CreditCard'].includes(initialPaymentMethod) ? initialPaymentMethod : 'Cash') : 'PayOS')
   const [received, setReceived] = useState(false)
   const [loading, setLoading] = useState(true)
   const [ordersLoading, setOrdersLoading] = useState(false)

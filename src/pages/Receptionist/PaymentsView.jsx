@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { ArrowRight, Clock3, Download, ReceiptText, Ban, Plus, RefreshCw, ScanLine, WalletCards, X } from 'lucide-react'
 import { getPaymentById, getPayments } from '../../services/paymentService'
-import { getReceptionistPaymentError, receptionistCheckoutUrl, syncReceptionistPayment } from '../../services/receptionistPaymentService'
+import { getReceptionistPendingOrders, getReceptionistPaymentError, receptionistCheckoutUrl, syncReceptionistPayment } from '../../services/receptionistPaymentService'
 import CheckoutDialog from './CheckoutDialog'
+import PendingCounterOrders from './PendingCounterOrders'
 import { cancelOpenPayment } from '../../services/subscriptionCancellationService'
 import { canCancelPayOSPayment, canSyncPayOSPayment, paymentCheckoutMessage, paymentStatus, paymentSummary, paymentStatusLabel as gatewayStatusLabel } from '../../utils/memberPayments'
-import { filterReceptionistPayments, receptionistPaymentMethods, receptionistPaymentMethodLabel, receptionistPaymentStatuses } from '../../utils/receptionistPayments'
+import { filterReceptionistPayments, getReceptionistPendingCounterOrders, receptionistPaymentMethods, receptionistPaymentMethodLabel, receptionistPaymentStatuses } from '../../utils/receptionistPayments'
 import { exportInvoicePdf, getReportErrorMessage, triggerBlobDownload } from '../../services/reportService'
 import { EmptyState, formatDateTime } from './ReceptionistViewShared'
 
@@ -19,6 +20,10 @@ export function PaymentsView({ query, showNotice }) {
   const [requestKey, setRequestKey] = useState(0)
   const [selectedPaymentId, setSelectedPaymentId] = useState(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [pendingOrders, setPendingOrders] = useState([])
+  const [pendingLoading, setPendingLoading] = useState(true)
+  const [pendingError, setPendingError] = useState('')
+  const [counterOrder, setCounterOrder] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -40,23 +45,54 @@ export function PaymentsView({ query, showNotice }) {
     return () => { active = false }
   }, [requestKey])
 
+  useEffect(() => {
+    let active = true
+    setPendingLoading(true)
+    setPendingError('')
+    const controller = new AbortController()
+    getReceptionistPendingOrders({ signal: controller.signal }).then(result => {
+      if (!active) return
+      setPendingOrders(result.orders)
+      if (result.failedMembers.length) setPendingError('Chưa tải được đơn của ' + result.failedMembers.length + ' hội viên. Hãy thử tải lại để có danh sách đầy đủ.')
+    }).catch(requestError => {
+      if (active) setPendingError(getReceptionistPaymentError(requestError, 'Không thể tải đơn chờ thanh toán tại quầy.'))
+    }).finally(() => { if (active) setPendingLoading(false) })
+    return () => { active = false; controller.abort() }
+  }, [requestKey])
+
+  useEffect(() => {
+    const refresh = () => { if (!loading && !pendingLoading && document.visibilityState === 'visible') setRequestKey(key => key + 1) }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    const timer = window.setInterval(refresh, 30000)
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); window.clearInterval(timer) }
+  }, [loading, pendingLoading])
+
+  const counterOrders = useMemo(() => getReceptionistPendingCounterOrders(pendingOrders, paymentItems), [pendingOrders, paymentItems])
+  const visibleCounterOrders = useMemo(() => getReceptionistPendingCounterOrders(pendingOrders, paymentItems, { query, status, method }), [pendingOrders, paymentItems, query, status, method])
+  const counterFiltersVisible = ['all', 'pending'].includes(status) && method !== 'payos'
+  const refresh = () => setRequestKey(key => key + 1)
+  const onCreated = payment => { refresh(); setSelectedPaymentId(payment.id); showNotice(paymentCheckoutMessage(payment)) }
+
   const payments = useMemo(() => filterReceptionistPayments(paymentItems, { query, status, method }), [query, paymentItems, status, method])
   const summary = paymentSummary(paymentItems)
 
   return <>
-    <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{summary.paid.toLocaleString('vi-VN')} đ</strong><p>{summary.completed} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{summary.pending}</strong><p>{summary.review} giao dịch cần đối soát</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{summary.total}</strong><p>PayOS và thanh toán tại quầy</p></div></article></section>
+    <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{summary.paid.toLocaleString('vi-VN')} đ</strong><p>{summary.completed} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{summary.pending + counterOrders.filter(order => !order.blockedReason).length}</strong><p>{summary.review} giao dịch cần đối soát</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{summary.total}</strong><p>PayOS và thanh toán tại quầy</p></div></article></section>
     <section className="reception-card reception-table-card reception-payments-card">
-      <div className="reception-table-tools"><div><strong>Lịch sử thanh toán</strong><small>{payments.length} kết quả {loading && '· Đang cập nhật...'}</small></div><div><button type="button" disabled={loading} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={14} />Làm mới</button><button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Tạo thanh toán</button></div></div>
+      <div className="reception-table-tools"><div><strong>Lịch sử thanh toán</strong><small>{payments.length} giao dịch · {visibleCounterOrders.length} đơn chờ {loading && '· Đang cập nhật...'}</small></div><div><button type="button" disabled={loading || pendingLoading} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={14} />Làm mới</button><button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Tạo thanh toán</button></div></div>
       <div className="reception-payment-filters"><label>Trạng thái<select value={status} onChange={event => setStatus(event.target.value)}>{receptionistPaymentStatuses.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label><label>Phương thức<select value={method} onChange={event => setMethod(event.target.value)}>{receptionistPaymentMethods.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label></div>
       {error && <div className="reception-inline-error" role="alert"><p>{error} Dữ liệu bên dưới có thể chưa cập nhật.</p><button type="button" disabled={loading} onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div>}
+      {counterFiltersVisible && <PendingCounterOrders orders={visibleCounterOrders} loading={pendingLoading} error={pendingError} disabled={loading || !!error || !!pendingError} onRefresh={refresh} onCollect={setCounterOrder} />}
       <div className="reception-table-scroll" role="region" aria-label="Giao dịch thanh toán, có thể cuộn" tabIndex={0} aria-busy={loading}>
         <div className="reception-table-heading"><span>Mã giao dịch</span><span>Hội viên</span><span>Đăng ký gói</span><span>Số tiền / phương thức</span><span>Trạng thái</span></div>
         {payments.length ? <div>{payments.map(payment => <button type="button" className="reception-table-row" key={payment.id} onClick={() => setSelectedPaymentId(payment.id)} aria-label={`Xem thanh toán ${payment.id}`}><span>#{payment.id}</span><span>{payment.memberName || `#${payment.memberId}`}</span><span>{payment.packageName || (payment.subscriptionId ? `#${payment.subscriptionId}` : 'Không có')}</span><span>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ<small className="reception-payment-method">{receptionistPaymentMethodLabel(payment.paymentMethod)}</small></span><span className={`reception-payment-status ${paymentStatus(payment)}`}>{gatewayStatusLabel(payment)}</span></button>)}</div>
           : <EmptyState icon={ReceiptText} title={loading ? 'Đang tải thanh toán' : 'Chưa có giao dịch'} text={loading ? 'Đang cập nhật dữ liệu thanh toán.' : 'Không có giao dịch phù hợp. Hãy kiểm tra bộ lọc hoặc tạo thanh toán cho đơn đang chờ.'} />}
       </div>
     </section>
+    {counterOrder && <CheckoutDialog counterOnly memberId={counterOrder.memberId} subscriptionId={counterOrder.id} initialPaymentMethod={method === 'banktransfer' ? 'BankTransfer' : method === 'creditcard' ? 'CreditCard' : 'Cash'} onClose={() => setCounterOrder(null)} onCreated={onCreated} />}
     {selectedPaymentId !== null && <PaymentDetailDialog paymentId={selectedPaymentId} onClose={() => setSelectedPaymentId(null)} onUpdated={() => setRequestKey(key => key + 1)} showNotice={showNotice} />}
-    {showCreateDialog && <CheckoutDialog onClose={() => setShowCreateDialog(false)} onCreated={payment => { setRequestKey(key => key + 1); setSelectedPaymentId(payment.id); showNotice(paymentCheckoutMessage(payment)) }} />}
+    {showCreateDialog && <CheckoutDialog onClose={() => setShowCreateDialog(false)} onCreated={onCreated} />}
   </>
 }
 

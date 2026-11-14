@@ -2,6 +2,7 @@ import { confirmReceptionistSubscriptionPayment, getReceptionistSubscriptionById
 import { createPayment, getPaymentById, isTemporaryPaymentError, syncPayment } from './paymentService'
 import { getToken } from '../utils/auth'
 import { paymentStatus } from '../utils/memberPayments'
+import api from './api'
 
 const validId = value => /^[1-9]\d*$/.test(String(value)) && Number(value) <= 2147483647
 const methods = ['PayOS', 'Cash', 'BankTransfer', 'CreditCard']
@@ -93,4 +94,39 @@ export async function syncReceptionistPayment(payment) {
     const current = validatePaymentResult(await getPaymentById(payment.id), payment)
     return { payment: current, warning: paymentStatus(current) === 'completed' ? '' : 'Chưa đồng bộ được với PayOS. Đang hiển thị trạng thái đã lưu; hãy thử lại, không thu tiền thêm.' }
   }
+}
+
+
+/** BE exposes subscriptions per member; bound fan-out instead of creating payment placeholders. */
+export async function getReceptionistPendingOrders({ signal } = {}) {
+  const response = await api.get('/members', { signal, timeout: 15000 })
+  const body = response.data
+  if (body?.success === false || Number(body?.statusCode) >= 400) throw new Error(body.message || 'Không thể tải hội viên để tìm đơn chờ.')
+  const members = body?.data ?? body
+  if (!Array.isArray(members) || members.some(member => !validId(member?.memberId))) throw new Error('Danh sách hội viên không hợp lệ. Vui lòng tải lại đơn chờ.')
+  const uniqueMembers = [...new Map(members.map(member => [String(member.memberId), member])).values()]
+  const orders = []
+  const failedMembers = []
+  let next = 0
+  async function worker() {
+    while (next < uniqueMembers.length) {
+      if (signal?.aborted) throw new Error('Đã dừng tải đơn chờ.')
+      const member = uniqueMembers[next++]
+      try {
+        const response = await api.get('/member-subscriptions/members/' + member.memberId, { signal, timeout: 15000 })
+        const body = response.data
+        if (body?.success === false || Number(body?.statusCode) >= 400) throw new Error(body.message || 'Không thể tải đơn của hội viên.')
+        const subscriptions = body?.data ?? body
+        if (!Array.isArray(subscriptions)) throw new Error('Dữ liệu đơn chờ không hợp lệ.')
+        if (subscriptions.some(order => !validId(order?.id) || String(order.memberId) !== String(member.memberId))) throw new Error('Đơn đăng ký không khớp hội viên.')
+        orders.push(...subscriptions.filter(order => String(order.status).toLowerCase() === 'pending')
+          .map(order => ({ ...order, memberName: member.fullName, memberPhone: member.phone, memberEmail: member.email })))
+      } catch (error) {
+        if ([401, 403].includes(error?.response?.status)) throw error
+        failedMembers.push(member.memberId)
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, uniqueMembers.length) }, worker))
+  return { orders: [...new Map(orders.map(order => [String(order.id), order])).values()], failedMembers }
 }
