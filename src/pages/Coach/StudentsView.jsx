@@ -217,13 +217,12 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
     const recommendation = applyExercisesPerSession(result.answer, exercisesPerSession)
     setAiRecommendation(recommendation)
     const mappedResult = mapWorkoutRecommendationToPlanExercises(recommendation, exerciseCatalog)
-    if (mappedResult.exercises.length) setExercises(mappedResult.exercises)
+    setExercises(mappedResult.exercises)
+    const matchedCount = mappedResult.exercises.filter(exercise => exercise.exerciseId).length
     const missingMessage = mappedResult.unmatchedNames.length
-      ? ` ${mappedResult.unmatchedNames.length} bài chưa có trong kho nên chưa được thêm: ${mappedResult.unmatchedNames.join(', ')}.`
+      ? ` Các tên chưa xác định duy nhất: ${mappedResult.unmatchedNames.join(', ')}. Hãy chọn bài trong kho hoặc xóa từng dòng cần kiểm tra trước khi lưu.`
       : ''
-    setAiDemoMessage(mappedResult.exercises.length
-      ? `Đã dùng bộ môn ${registeredSportName}, mục tiêu, trình độ, ${aiOptions.daysPerWeek} buổi/tuần, ${exercisesPerSession} bài/buổi và thời gian ${form.startDate} – ${form.endDate}; ${mappedResult.exercises.length} bài tập đã được thêm vào giáo án.${missingMessage}`
-      : `AI đã tạo gợi ý nhưng chưa có tên bài nào khớp kho bài tập.${missingMessage}`)
+    setAiDemoMessage(`Đã tạo bản nháp theo bộ môn ${registeredSportName}, mục tiêu, trình độ, ${aiOptions.daysPerWeek} buổi/tuần, ${exercisesPerSession} bài/buổi và thời gian ${form.startDate} – ${form.endDate}; ${matchedCount}/${mappedResult.exercises.length} bài đã ghép duy nhất với kho.${missingMessage}`)
   }
 
   const handleSubmit = async event => {
@@ -239,6 +238,10 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
     }
     if (form.endDate < form.startDate) {
       setError('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.')
+      return
+    }
+    if (exercises.some(exercise => !exercise.exerciseId)) {
+      setError('Vui lòng chọn bài tập trong kho hoặc xóa các dòng chưa xác định trước khi lưu giáo án.')
       return
     }
     const exerciseError = getTrainingExercisesValidationError(exercises)
@@ -306,7 +309,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
         <div className="coach-plan-exercises">
           <div className="coach-plan-exercises-head"><div><strong>Bài tập</strong><span>Không bắt buộc · chọn bài tập theo tên từ kho hiện có</span></div><button type="button" disabled={catalogLoading || !exerciseCatalog.length} onClick={() => setExercises(current => [...current, newPlanExercise()])}><Plus size={15} />Thêm bài tập</button></div>
           {catalogLoading ? <div className="coach-exercise-catalog-state">Đang tải kho bài tập...</div> : catalogError ? <div className="coach-exercise-catalog-state error"><span>{catalogError}</span><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : !exerciseCatalog.length ? <div className="coach-exercise-catalog-state">Kho bài tập chưa có dữ liệu.</div> : null}
-          {exercises.length ? exercises.map((exercise, index) => <article key={index}><div className="coach-plan-exercise-title"><strong>Bài tập {index + 1}</strong><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div><div><label className="exercise-picker"><span>Tên bài tập</span><select value={exercise.exerciseId} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} required><option value="">Chọn bài tập</option>{exerciseCatalog.map(option => <option value={option.id} key={option.id}>{option.exerciseName}{option.muscleGroup ? ` · ${option.muscleGroup}` : ''}</option>)}</select></label><label><span>Số hiệp</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} required /></label><label><span>Số lần</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} required /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={EXERCISE_NOTES_MAX_LENGTH} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article>) : !catalogLoading && !catalogError && exerciseCatalog.length ? <p className="coach-plan-exercises-empty">Nhấn “Thêm bài tập” để chọn bài tập theo tên từ kho.</p> : null}
+          {exercises.length ? exercises.map((exercise, index) => <article key={index}><div className="coach-plan-exercise-title"><strong>Bài tập {index + 1}</strong><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div>{exercise.aiExerciseName && <p className="coach-plan-ai-message" role={!exercise.exerciseId ? 'alert' : undefined}>AI đề xuất: <strong>{exercise.aiExerciseName}</strong>{!exercise.exerciseId && (exercise.matchIssue === 'ambiguous' ? ' · Có nhiều bài phù hợp. Hãy chọn đúng bài trong kho hoặc xóa dòng này.' : ' · Không tìm thấy bài phù hợp. Hãy chọn bài trong kho hoặc xóa dòng này.')}</p>}<div><label className="exercise-picker"><span>Tên bài tập</span><select value={exercise.exerciseId} aria-label={`Bài tập ${index + 1}: chọn bài trong kho`} aria-invalid={!exercise.exerciseId && !!exercise.matchIssue} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} required><option value="">Chọn bài tập</option>{exerciseCatalog.map(option => <option value={option.id} key={option.id}>{option.exerciseName}{option.muscleGroup ? ` · ${option.muscleGroup}` : ''} · #{option.id}</option>)}</select></label><label><span>Số hiệp</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} required /></label><label><span>Số lần</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} required /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={EXERCISE_NOTES_MAX_LENGTH} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article>) : !catalogLoading && !catalogError && exerciseCatalog.length ? <p className="coach-plan-exercises-empty">Nhấn “Thêm bài tập” để chọn bài tập theo tên từ kho.</p> : null}
         </div>
         {error && <div className="coach-plan-form-error" role="alert">{error}</div>}
         </div>

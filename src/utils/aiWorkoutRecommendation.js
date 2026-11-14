@@ -131,38 +131,37 @@ export function applyExercisesPerSession(recommendation, exercisesPerSession) {
 }
 
 const normalizedExerciseName = value => String(value || '')
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/đ/g, 'd')
-  .replace(/Đ/g, 'D')
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, ' ')
+  .normalize('NFC')
+  .toLocaleLowerCase('vi')
+  .replace(/[^\p{L}\p{N}]+/gu, ' ')
   .trim()
 
-const baseExerciseName = value => normalizedExerciseName(String(value || '').replace(/\([^)]*\)/g, ' '))
+// Parenthesized translations can appear before or after the primary name.
+// Keep each complete name so qualifiers such as Barbell/Dumbbell stay distinct.
+const exerciseNameParts = value => [...new Set([
+  String(value || '').replace(/\([^)]*\)/g, ' '),
+  ...Array.from(String(value || '').matchAll(/\(([^)]*)\)/g), match => match[1]),
+].map(normalizedExerciseName).filter(Boolean))].sort()
 
 const findCatalogExercise = (exerciseName, catalog) => {
-  const requestedName = normalizedExerciseName(exerciseName)
-  const requestedBase = baseExerciseName(exerciseName)
-  if (!requestedName) return null
-
-  return catalog.find(item => {
-    const catalogName = normalizedExerciseName(item?.exerciseName)
-    const catalogBase = baseExerciseName(item?.exerciseName)
-    return requestedName === catalogName
-      || requestedName === catalogBase
-      || requestedBase === catalogName
-      || requestedBase === catalogBase
-  }) || null
+  const requestedParts = exerciseNameParts(exerciseName)
+  const candidates = requestedParts.length ? catalog.filter(item => {
+    const parts = exerciseNameParts(item?.exerciseName)
+    return parts.length && (JSON.stringify(requestedParts) === JSON.stringify(parts)
+      || (requestedParts.length === 1 && parts.includes(requestedParts[0]))
+      || (parts.length === 1 && requestedParts.includes(parts[0])))
+  }) : []
+  return { exercise: candidates.length === 1 ? candidates[0] : null, ambiguous: candidates.length > 1 }
 }
 
 /**
  * Convert the AI response into rows accepted by POST /api/TrainingPlans.
- * Only exercises that exist in the catalog are included so an AI name can
- * never become an invalid exercise foreign key.
+ * Unresolved names remain editable rows without an ID. The Coach must choose
+ * a catalog entry or remove the row before the plan can pass validation.
  */
 export function mapWorkoutRecommendationToPlanExercises(recommendation, exerciseCatalog) {
-  const catalog = Array.isArray(exerciseCatalog) ? exerciseCatalog : []
+  const catalog = (Array.isArray(exerciseCatalog) ? exerciseCatalog : [])
+    .filter(item => Number.isSafeInteger(Number(item?.id)) && Number(item.id) > 0)
   const sessions = Array.isArray(recommendation?.sessions) ? recommendation.sessions : []
   const exercises = []
   const unmatchedNames = []
@@ -183,11 +182,10 @@ export function mapWorkoutRecommendationToPlanExercises(recommendation, exercise
     const sessionExercises = Array.isArray(session?.exercises) ? session.exercises : []
 
     sessionExercises.forEach(exercise => {
-      const catalogExercise = findCatalogExercise(exercise?.exerciseName, catalog)
+      const { exercise: catalogExercise, ambiguous } = findCatalogExercise(exercise?.exerciseName, catalog)
       if (!catalogExercise) {
         const missingName = String(exercise?.exerciseName || '').trim()
         if (missingName && !unmatchedNames.includes(missingName)) unmatchedNames.push(missingName)
-        return
       }
 
       const notes = [
@@ -197,7 +195,8 @@ export function mapWorkoutRecommendationToPlanExercises(recommendation, exercise
       ].filter(Boolean).join(' · ')
 
       exercises.push({
-        exerciseId: String(catalogExercise.id),
+        exerciseId: catalogExercise ? String(catalogExercise.id) : '',
+        ...(!catalogExercise && { aiExerciseName: String(exercise?.exerciseName || '').trim(), matchIssue: ambiguous ? 'ambiguous' : 'missing' }),
         sets: String(positiveIntegerOrNull(exercise?.sets) || 1),
         reps: String(positiveIntegerOrNull(exercise?.reps) || 1),
         durationInMinutes: '',
