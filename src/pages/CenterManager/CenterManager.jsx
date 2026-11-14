@@ -522,15 +522,14 @@ export default function CenterManager() {
                   <div className="manager-chart-bars">
                     {chartData.map(item => {
                       const rev = Number(item.revenue) || 0
+                      const valueLabel = (rev / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })
                       const heightPercent = maxRevenueValue > 0
                         ? Math.min(100, Math.round((rev / maxRevenueValue) * 88) + (rev > 0 ? 12 : 2))
                         : 2
                       const isCurrent = item.month === currentMonthNumber
                       return (
                         <div className="manager-chart-column" key={item.month}>
-                          <span className="manager-bar-value">
-                            {rev > 0 ? (rev / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) : '0'}
-                          </span>
+                          {rev > 0 && valueLabel !== '0' && <span className="manager-bar-value">{valueLabel}</span>}
                           <div
                             className={`manager-bar ${isCurrent ? 'latest' : ''}`}
                             style={{ height: `${heightPercent}%` }}
