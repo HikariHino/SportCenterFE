@@ -120,14 +120,68 @@ test('generic AI session titles are not repeated in exercise notes', () => {
   assert.doesNotMatch(result.exercises[0].notes, /Buổi 1: Buổi 1/)
 })
 
-test('AI exercises outside the catalog are reported and never assigned a fake ID', () => {
+test('AI exercises outside the catalog retain every editable row and never receive a fake ID', () => {
   const recommendation = { sessions: [{ day: 1, exercises: [
     { exerciseName: 'Burpee', sets: 3, reps: 10 },
     { exerciseName: 'Burpee', sets: 4, reps: 8 },
   ] }] }
 
   assert.deepEqual(mapWorkoutRecommendationToPlanExercises(recommendation, [{ id: 1, exerciseName: 'Squat' }]), {
-    exercises: [],
+    exercises: [
+      { exerciseId: '', aiExerciseName: 'Burpee', matchIssue: 'missing', sets: '3', reps: '10', durationInMinutes: '', notes: 'Buổi 1' },
+      { exerciseId: '', aiExerciseName: 'Burpee', matchIssue: 'missing', sets: '4', reps: '8', durationInMinutes: '', notes: 'Buổi 1' },
+    ],
     unmatchedNames: ['Burpee'],
   })
+})
+
+const recommendationFor = exerciseName => ({ sessions: [{ day: 2, title: 'Chân', exercises: [{ exerciseName, sets: 4, reps: 8, restSeconds: 90, note: 'Giữ lưng thẳng' }] }] })
+
+test('reversed Vietnamese/English names match the unique catalog entry in either direction', () => {
+  for (const [name, catalogName] of [
+    ['Gánh tạ đùi (Squat)', 'Squat (Gánh tạ đùi)'],
+    ['Squat (Gánh tạ đùi)', 'Gánh tạ đùi (Squat)'],
+    ['  GÁNH TẠ ĐÙI (squat) ', 'Squat (Gánh tạ đùi)'],
+    ['Gánh tạ đùi', 'Squat (Gánh tạ đùi)'],
+    ['Squat', 'Squat (Gánh tạ đùi)'],
+  ]) {
+    const result = mapWorkoutRecommendationToPlanExercises(recommendationFor(name), [{ id: 11, exerciseName: catalogName }])
+    assert.equal(result.exercises[0].exerciseId, '11')
+    assert.deepEqual(result.unmatchedNames, [])
+    assert.equal(result.exercises[0].notes, 'Buổi 2: Chân · Nghỉ 90 giây · Giữ lưng thẳng')
+  }
+})
+
+test('duplicate names, translations and normalized collisions require a manual selection regardless of catalog order', () => {
+  for (const catalog of [
+    [{ id: 11, exerciseName: 'Squat' }, { id: 12, exerciseName: 'Squat' }],
+    [{ id: 11, exerciseName: 'Squat (Gánh tạ đùi)' }, { id: 12, exerciseName: 'Gánh tạ đùi (Squat)' }],
+    [{ id: 11, exerciseName: 'Squat (Gánh tạ đùi)' }, { id: 12, exerciseName: 'Squat (Tạ đơn)' }],
+    [{ id: 11, exerciseName: 'Squat' }, { id: 12, exerciseName: 'SQUAT' }],
+  ]) {
+    for (const items of [catalog, [...catalog].reverse()]) {
+      const row = mapWorkoutRecommendationToPlanExercises(recommendationFor('Squat'), items).exercises[0]
+      assert.equal(row.exerciseId, '')
+      assert.equal(row.matchIssue, 'ambiguous')
+      assert.equal(row.aiExerciseName, 'Squat')
+      assert.equal(row.sets, '4')
+      assert.equal(row.reps, '8')
+    }
+  }
+})
+
+test('different qualifiers and partial words are never matched by a common base or substring', () => {
+  for (const name of ['Squat (Tạ đơn)', 'Squat jump', 'Squ', 'Bài không có']) {
+    const row = mapWorkoutRecommendationToPlanExercises(recommendationFor(name), [{ id: 11, exerciseName: 'Squat (Tạ đòn)' }]).exercises[0]
+    assert.equal(row.exerciseId, '')
+    assert.equal(row.matchIssue, 'missing')
+  }
+})
+
+test('unresolved exercises cannot pass plan validation until selected or removed', async () => {
+  const { getTrainingExercisesValidationError } = await import('../src/utils/trainingPlanValidation.js')
+  const result = mapWorkoutRecommendationToPlanExercises(recommendationFor('Squat'), [{ id: 0, exerciseName: 'Squat' }])
+  assert.match(getTrainingExercisesValidationError(result.exercises), /Mã bài tập/)
+  assert.equal(getTrainingExercisesValidationError(result.exercises.map(row => ({ ...row, exerciseId: '11' }))), '')
+  assert.equal(getTrainingExercisesValidationError([]), '')
 })
