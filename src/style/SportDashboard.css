@@ -133,8 +133,8 @@ html:has(.sport-page) { scroll-behavior: smooth; }
 .sport-page .lp-sport-details .lp-text-link { margin-top: auto; padding-block: 7px 2px; }
 
 .sport-page .lp-schedule { background: linear-gradient(115deg, #0b1b30f5, #112b43e8), url('/images/landing/gym-background.jpg') center 35% / cover no-repeat; }
-.sport-page :is(.lp-schedule, .lp-coaches) { position: relative; isolation: isolate; }
-.sport-page :is(.lp-schedule, .lp-coaches)::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--lp-link); opacity: .08; mask: url('/images/landing/track-lines.svg') right center / 1200px auto no-repeat; }
+.sport-page :is(.lp-schedule, .lp-open-classes) { position: relative; isolation: isolate; }
+.sport-page :is(.lp-schedule, .lp-open-classes)::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--lp-link); opacity: .08; mask: url('/images/landing/track-lines.svg') right center / 1200px auto no-repeat; }
 .sport-page .lp-schedule-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
 .sport-page .lp-sport-filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .sport-page .lp-sport-filters button { padding: 10px 15px; max-width: 100%; border-radius: 7px; border: 1px solid var(--lp-line); background: var(--lp-paper); color: var(--lp-muted); font-size: 10px; font-weight: 600; overflow-wrap: anywhere; }
@@ -172,8 +172,8 @@ html:has(.sport-page) { scroll-behavior: smooth; }
 .sport-page .lp-package-filters button { border: 0; background: transparent; padding: 9px 17px; border-radius: 6px; color: var(--lp-muted); font-size: 10px; font-weight: 600; }
 .sport-page .lp-package-filters button.is-active { background: var(--lp-energy); color: #17243c; box-shadow: 0 2px 5px #03102033; }
 .sport-page .lp-package-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 21px; }
-.sport-page :is(.lp-feature-grid, .lp-session-grid, .lp-package-grid, .lp-coach-grid) > * { min-width: 0; }
-.sport-page :is(.lp-session-card h3, .lp-package-card h3, .lp-coach-info h3, .lp-package-description, .lp-package-price) { overflow-wrap: anywhere; }
+.sport-page :is(.lp-feature-grid, .lp-session-grid, .lp-package-grid, .lp-open-class-grid) > * { min-width: 0; }
+.sport-page :is(.lp-session-card h3, .lp-package-card h3, .lp-open-class-card h3, .lp-package-description, .lp-package-price) { overflow-wrap: anywhere; }
 .sport-page .lp-package-card { padding: 26px; border: 1px solid var(--lp-line); border-radius: 13px; display: flex; flex-direction: column; background: var(--lp-paper); }
 .sport-page .lp-package-card.is-pt { border-color: var(--lp-link); background: linear-gradient(165deg, var(--lp-soft), var(--lp-paper) 65%); }
 .sport-page .lp-package-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 9px; font-weight: 700; color: var(--lp-muted); margin-bottom: 23px; }
@@ -192,25 +192,11 @@ html:has(.sport-page) { scroll-behavior: smooth; }
 .sport-page .lp-upgrade-note > div { flex: 1; }
 .sport-page .lp-upgrade-note strong { display: block; font-size: 12px; }
 .sport-page .lp-upgrade-note p { color: var(--lp-muted); font-size: 10px; margin-top: 4px; }
-.sport-page .lp-coaches { background: linear-gradient(115deg, #10243bf5, #091a2de8), url('/images/landing/gym-background.jpg') center 65% / cover no-repeat; }
-.sport-page .lp-coach-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
-.sport-page .lp-coach-card { background: var(--lp-paper); border: 1px solid var(--lp-line); border-radius: 13px; overflow: hidden; transition: transform .2s, box-shadow .2s; }
-.sport-page .lp-coach-card:hover { transform: translateY(-4px); box-shadow: 0 14px 28px #17243c12; }
-.sport-page .lp-coach-photo { position: relative; aspect-ratio: 16 / 10; overflow: hidden; isolation: isolate; background: #233d68; }
-.sport-page .lp-coach-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #e8f0ff; font-size: 64px; font-weight: 800; }
-.sport-page .lp-coach-photo > img { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .45s; }
-.sport-page .lp-coach-photo > img[hidden] { display: none; }
-.sport-page .lp-coach-card:hover .lp-coach-photo > img { transform: scale(1.035); }
-.sport-page .lp-coach-photo::after { position: absolute; z-index: 2; content: ''; inset: 0; pointer-events: none; background: linear-gradient(180deg, #101d3330, transparent 45%, #101d3399); }
-.sport-page .lp-coach-photo-tag { position: absolute; z-index: 3; top: 16px; left: 17px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 5px; color: #fff; background: #101d3399; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; }
-.sport-page .lp-coach-photo-tag > svg { color: var(--lp-energy); }
-.sport-page .lp-coach-photo > small { position: absolute; z-index: 3; left: 17px; bottom: 10px; color: #fff; font-size: 8px; text-shadow: 0 1px 4px #000; }
-.sport-page .lp-coach-info { position: relative; padding: 24px 22px 23px; }
-.sport-page .lp-coach-info > .lp-coach-avatar { position: absolute; right: 18px; top: -21px; display: grid; place-items: center; width: 42px; height: 42px; margin: 0; border: 3px solid var(--lp-paper); border-radius: 12px; background: var(--lp-energy); color: #17243c; font-size: 12px; font-weight: 800; z-index: 4; }
-.sport-page .lp-coach-info > p { font-size: 9px; color: var(--lp-link); font-weight: 600; margin-bottom: 6px; }
-.sport-page .lp-coach-info h3 { margin: 0; font-size: 18px; letter-spacing: -.5px; }
-.sport-page .lp-coach-info > span { display: block; margin-top: 7px; font-size: 10px; color: var(--lp-muted); }
-.sport-page .lp-coach-info > small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font-size: 10px; line-height: 1.85; color: var(--lp-muted); margin-top: 13px; }
+.sport-page .lp-open-classes { background: linear-gradient(115deg, #10243bf5, #091a2de8), url('/images/landing/gym-background.jpg') center 65% / cover no-repeat; }
+.sport-page .lp-open-class-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.sport-page .lp-open-class-card { background: var(--lp-paper); border: 1px solid var(--lp-line); border-radius: 13px; overflow: hidden; }
+.sport-page .lp-open-class-cover { width: 100%; aspect-ratio: 16 / 10; color: var(--lp-link); background: var(--lp-soft); }
+.sport-page .lp-open-class-card h3 { margin: 0; padding: 16px 22px; font-size: 18px; letter-spacing: -.5px; }
 .sport-page .lp-how-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 110px; align-items: center; }
 .sport-page .lp-how-grid > div > p:not(.lp-eyebrow), .sport-page .lp-faq-grid > div > p:not(.lp-eyebrow) { margin: 16px 0 24px; color: var(--lp-muted); font-size: 12px; line-height: 1.9; max-width: 370px; }
 .sport-page .lp-steps { list-style: none; display: grid; gap: 25px; padding: 0; margin: 0; }
@@ -295,7 +281,7 @@ html:has(.sport-page) { scroll-behavior: smooth; }
   .sport-page .lp-section { padding-block: 62px; }
   .sport-page .lp-session-grid, .sport-page .lp-package-grid { grid-template-columns: repeat(2, 1fr); }
   .sport-page .lp-sport-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sport-page .lp-coach-grid { grid-template-columns: repeat(2, 1fr); }
+  .sport-page .lp-open-class-grid { grid-template-columns: repeat(2, 1fr); }
   .sport-page .lp-schedule-toolbar { flex-direction: column; align-items: stretch; gap: 15px; }
   .sport-page .lp-class-search { width: 100%; }
   .sport-page .lp-upgrade-note { flex-wrap: wrap; }
@@ -309,7 +295,7 @@ html:has(.sport-page) { scroll-behavior: smooth; }
   .sport-page .lp-footer-callout { align-items: start; flex-direction: column; gap: 23px; }
 }
 @media (max-width: 560px) {
-  .sport-page :is(.lp-schedule, .lp-coaches)::before { mask-size: 800px auto; opacity: .055; }
+  .sport-page :is(.lp-schedule, .lp-open-classes)::before { mask-size: 800px auto; opacity: .055; }
   .sport-page .lp-announcement { justify-content: center; min-height: 30px; }
   .sport-page .lp-announcement > a { display: none; }
   .sport-page .lp-header-row { min-height: 70px; gap: 12px; }
@@ -351,7 +337,7 @@ html:has(.sport-page) { scroll-behavior: smooth; }
   .sport-page .lp-section-heading { margin-bottom: 25px; flex-direction: column; align-items: start; gap: 17px; }
   .sport-page .lp-section-heading h2, .sport-page .lp-how h2, .sport-page .lp-faq h2 { font-size: 27px; letter-spacing: -1px; }
   .sport-page .lp-section-copy { font-size: 11px; }
-  .sport-page .lp-feature-grid, .sport-page .lp-session-grid, .sport-page .lp-package-grid, .sport-page .lp-coach-grid { grid-template-columns: 1fr; }
+  .sport-page .lp-feature-grid, .sport-page .lp-session-grid, .sport-page .lp-package-grid, .sport-page .lp-open-class-grid { grid-template-columns: 1fr; }
   .sport-page .lp-sport-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .sport-page .lp-feature-card { padding: 23px; }
   .sport-page .lp-feature-card > div { margin-bottom: 19px; }

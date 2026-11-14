@@ -31,7 +31,12 @@ const response = (config, data) => ({ data: { success: true, data }, status: 200
 test('landing reads only public catalogs without sending the current user token or private API calls', async () => {
   const calls = []
   const sport = { id: 1, name: 'Yoga', description: 'Tập thăng bằng và độ linh hoạt', imageUrl: 'https://assets.example.test/sports/yoga.jpg' }
-  const data = { '/membership-packages': [pkg, { ...pkg, id: 8, isActive: false }], '/sports': [sport, { id: 2, name: 'Bộ môn đã tắt', isActive: false }], '/coaches': [{ id: 2, fullName: 'Nguyễn An' }] }
+  const openClass = { id: 11, className: 'Yoga buổi sáng', isActive: true, imageUrl: 'https://assets.example.test/classes/yoga.jpg' }
+  const data = {
+    '/membership-packages': [pkg, { ...pkg, id: 8, isActive: false }],
+    '/sports': [sport, { id: 2, name: 'Bộ môn đã tắt', isActive: false }],
+    '/classes': { items: [openClass, { id: 12, className: 'Lớp đã đóng', isActive: false }], total: 2, page: 1, pageSize: 100 },
+  }
   api.defaults.adapter = async config => {
     calls.push(config.url)
     assert.equal(config.method, 'get')
@@ -42,8 +47,24 @@ test('landing reads only public catalogs without sending the current user token 
   }
   assert.deepEqual(await service.getLandingPackages(), [pkg])
   assert.deepEqual(await service.getLandingSports(), [sport])
-  assert.equal((await service.getLandingCoaches())[0].fullName, 'Nguyễn An')
-  assert.deepEqual(calls, ['/membership-packages', '/sports', '/coaches'])
+  assert.deepEqual(await service.getLandingClasses(), [openClass])
+  assert.deepEqual(calls, ['/membership-packages', '/sports', '/classes'])
+})
+
+test('open classes include later pages and classes that have no image', async () => {
+  const firstPage = Array.from({ length: 100 }, (_, index) => ({ id: index + 1, className: `Lớp ${index + 1}`, isActive: true }))
+  const lastClass = { id: 101, className: 'Karate NVH', isActive: true, imageUrl: null }
+  const pages = []
+  const controller = new AbortController()
+  api.defaults.adapter = async config => {
+    const { page, pageSize } = config.params
+    pages.push(page)
+    assert.equal(config.signal, controller.signal)
+    assert.equal(pageSize, 100)
+    return response(config, { items: page === 1 ? firstPage : [lastClass], total: 101, page, pageSize })
+  }
+  assert.deepEqual(await service.getLandingClasses(controller.signal), [...firstPage, lastClass])
+  assert.deepEqual(pages, [1, 2])
 })
 
 test('schedule filters use the actual public ClassSearch contract and preserve BE seat counts', async () => {

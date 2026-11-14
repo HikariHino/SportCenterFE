@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, ArrowLeft, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock3, LoaderCircle, MapPin, RefreshCw, Search, User, Users } from 'lucide-react'
+import CatalogImage from '../../components/CatalogImage'
 import useResource from '../../hooks/useClassResource'
 import { getMemberClasses, getMemberClassSessions } from '../../services/memberClassService'
+import { isCatalogImageUrl } from '../../utils/catalogImages'
 import { bookingUnavailableReason, cancellationDeadline, classStatusLabel, getRoomForClass, selectableMemberSessions } from '../../utils/memberClasses'
 import { formatClassDateTime } from './MemberSessionDetails'
 import { timetableDateKey, timetableTime } from '../../utils/memberTimetable'
@@ -112,6 +114,7 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
     </form>
     {classes.loading || classes.error || !classes.data?.items.length ? <State resource={classes} emptyText="Không tìm thấy lớp học phù hợp. Hãy thử thay đổi bộ lọc." /> : <>
       <div className="member-classes-grid">{classes.data.items.map(item => <button type="button" className="member-course-card" key={item.id} data-member-class-id={item.id} onClick={() => { setCourse(item); setSessionPage(1); setSelectedIds([]) }}>
+        {isCatalogImageUrl(item.imageUrl) && <CatalogImage src={item.imageUrl} className="catalog-image--cover member-course-image" />}
         <span className="member-course-card-top"><span className="member-classes-badge">{item.sportName || 'Lớp học'}</span><small>#{item.id}</small></span><strong>{item.className}</strong>
         <span><User size={16} />{item.coachName || 'Chưa phân công HLV'}</span><span><MapPin size={16} />{getRoomForClass(item, rooms)?.name || 'Chưa cập nhật phòng'}</span>
         <span><CalendarDays size={16} />{courseDateLabel(item.startDate)} – {courseDateLabel(item.endDate)}</span>
