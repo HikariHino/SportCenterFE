@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
+import usePageMotion from '../../hooks/usePageMotion'
 import { getUserDisplayName, getUserInitials } from '../../utils/auth'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification, sessionNotificationId } from '../../utils/sessionNotifications'
@@ -106,6 +107,7 @@ export default function Member() {
   const location = useLocation()
   const paymentReturnView = ['payments', 'subscriptions'].includes(location.state?.activeNav) ? location.state.activeNav : undefined
   const [activeNav, setActiveNav] = usePortalNavigation(memberViewIds, 'profile', paymentReturnView)
+  const contentMotion = usePageMotion(activeNav)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [noticeTone, setNoticeTone] = useState('success')
@@ -443,7 +445,7 @@ export default function Member() {
           </div>
         </header>
 
-        <main className="member-main-content">
+        <main className="member-main-content" ref={contentMotion}>
           {notice && (
             <div className="member-toast" data-tone={noticeTone} role="status">
               {noticeTone === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
+import usePageMotion from '../../hooks/usePageMotion'
 import StaffManagement from './StaffManagement'
 import ClassManagement from './ClassManagement'
 import RoomManagement from './RoomManagement'
@@ -98,6 +99,7 @@ export default function CenterManager() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [section, setSection] = usePortalNavigation(managerViewIds, 'overview')
+  const contentMotion = usePageMotion(section)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Live Dashboard States
@@ -384,7 +386,7 @@ export default function CenterManager() {
           </div>
         </header>
 
-        <main className={`manager-main${section === 'overview' ? ' manager-overview' : ''}`} id="manager-content">
+        <main className={`manager-main${section === 'overview' ? ' manager-overview' : ''}`} id="manager-content" ref={contentMotion}>
           {!['rooms', 'packages', 'cancellation', 'reports'].includes(section) && <>
           <section className="manager-welcome">
             <div>

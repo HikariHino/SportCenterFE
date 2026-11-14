@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, ArrowUpRight, BellRing, CalendarDays, Check, ChevronDown, Clock3, Dumbbell, Layers, LoaderCircle, LogOut, Menu, RefreshCw, ScanLine, Search, ShieldCheck, Target, Trophy, Users, X } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
 import CatalogImage from '../components/CatalogImage'
+import usePageMotion from '../hooks/usePageMotion'
 import { useAuth } from '../contexts/AuthContext'
 import { getToken, getUserDisplayName, getUserInitials } from '../utils/auth'
 import { getLandingAction, getLandingPortal } from '../utils/landingNavigation'
@@ -35,6 +36,7 @@ function ResourceState({ resource, empty, onRetry }) {
 }
 
 export default function SportDashboard() {
+  const pageMotion = usePageMotion('landing', '.lp-hero-copy, .lp-hero-visual, .lp-section > .lp-container, .lp-journey-strip > .lp-container')
   const { user, logout } = useAuth()
   const currentUser = user && getToken() ? user : null
   const member = currentUser?.role === 'member'
@@ -117,7 +119,7 @@ export default function SportDashboard() {
   const packages = catalog.packages.items.filter(pkg => packageType === 'all' || membershipPackageType(pkg) === packageType)
   const nextSession = sessions.items[0]
 
-  return <main className="sport-page" id="top">
+  return <main className="sport-page" id="top" ref={pageMotion}>
     <a className="lp-skip" href="#landing-content">Bỏ qua điều hướng</a>
     <div className="lp-announcement"><span><span className="lp-live-dot" />OLYMPUS · KHÔNG GIAN TẬP LUYỆN CỦA BẠN</span><a href="#how-it-works">Bắt đầu hành trình <ArrowUpRight size={13} /></a></div>
     <header className="lp-header" ref={headerRef}>
