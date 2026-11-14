@@ -35,7 +35,7 @@ import {
   getSports,
   updateSport,
 } from '../../services/classCatalogService'
-import { uploadSportImage } from '../../services/catalogImageService'
+import { uploadClassImage, uploadSportImage } from '../../services/catalogImageService'
 import CatalogImage from '../../components/CatalogImage'
 import CatalogImageUploadDialog from '../../components/CatalogImageUploadDialog'
 import {
@@ -56,6 +56,7 @@ import { assignClassToRoom } from '../../services/roomTimetableService'
 import { SESSION_COMPLETION_EVENT } from '../../services/sessionCompletionService'
 import { getClassSessionDateRange } from '../../utils/classSessionDates'
 import { classDateInput } from '../../utils/classForm'
+import { isCatalogImageUrl } from '../../utils/catalogImages'
 import { shiftTimetableDate, timetableDateKey } from '../../utils/memberTimetable'
 import ClassCourseFields from './ClassCourseFields'
 import ClassSessionGroups from './ClassSessionGroups'
@@ -210,6 +211,7 @@ export default function ClassManagement() {
   // Modal States for Classes
   const [showCreateClassModal, setShowCreateClassModal] = useState(false)
   const [editingClass, setEditingClass] = useState(null)
+  const [imageClass, setImageClass] = useState(null)
   const [deactivatingClass, setDeactivatingClass] = useState(null)
   const [submittingClass, setSubmittingClass] = useState(false)
 
@@ -1020,11 +1022,25 @@ export default function ClassManagement() {
                 <tbody>
                   {filteredClasses.map((cls) => {
                     const isActive = cls.isActive !== false
+                    const imageAction = isCatalogImageUrl(cls.imageUrl) ? 'Thay ảnh' : 'Thêm ảnh'
                     return (
                       <tr key={cls.id}>
                         <td>
-                          <div className="class-item-name">{cls.className}</div>
-                          <div className="class-item-meta">Mã lớp #{cls.id}</div>
+                          <div className="class-item-identity">
+                            <CatalogImage className="sport-avatar" src={cls.imageUrl} />
+                            <div>
+                              <div className="class-item-name">{cls.className}</div>
+                              <div className="class-item-meta">Mã lớp #{cls.id}</div>
+                              <button
+                                type="button"
+                                className="class-item-image-button"
+                                aria-label={`${imageAction} lớp ${cls.className} #${cls.id}`}
+                                onClick={() => { setSuccess(''); setImageClass(cls) }}
+                              >
+                                {imageAction}
+                              </button>
+                            </div>
+                          </div>
                         </td>
                         <td>
                           <span className="class-tag sport">{cls.sportName}</span>
@@ -1199,6 +1215,18 @@ export default function ClassManagement() {
           )}
         </section>
       )}
+
+      {imageClass && <CatalogImageUploadDialog
+        name={imageClass.className}
+        imageUrl={imageClass.imageUrl}
+        upload={file => uploadClassImage(imageClass.id, file)}
+        onClose={() => setImageClass(null)}
+        onUploaded={imageUrl => {
+          setClasses(items => items.map(item => item.id === imageClass.id ? { ...item, imageUrl } : item))
+          setSuccess(`Đã cập nhật ảnh lớp học "${imageClass.className}".`)
+          setImageClass(null)
+        }}
+      />}
 
       {imageSport && <CatalogImageUploadDialog
         name={imageSport.name}

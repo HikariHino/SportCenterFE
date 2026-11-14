@@ -17,7 +17,29 @@ async function readList(path, signal, valid) {
 
 export const getLandingPackages = signal => readList('/membership-packages', signal, item => hasName(item, 'packageName') && Number.isFinite(item.price) && item.price > 0 && Number.isInteger(item.durationInDays) && item.durationInDays > 0)
 export const getLandingSports = signal => readList('/sports', signal, item => hasName(item, 'name'))
-export const getLandingCoaches = signal => readList('/coaches', signal, item => hasName(item, 'fullName'))
+
+export async function getLandingClasses(signal) {
+  const pageSize = 100
+  const readPage = async page => {
+    const response = await api.get('/classes', { skipAuth: true, params: { page, pageSize }, signal, timeout: 12000 })
+    const data = payload(response.data)
+    if (!Array.isArray(data?.items) || !Number.isInteger(data.total) || data.total < data.items.length
+      || data.items.some(item => !hasName(item, 'className'))) {
+      throw new Error('Dữ liệu lớp học chưa hợp lệ. Vui lòng thử lại.')
+    }
+    return data
+  }
+
+  const firstPage = await readPage(1)
+  const classes = new Map()
+  for (let page = 1; page <= Math.max(1, Math.ceil(firstPage.total / pageSize)); page++) {
+    const { items } = page === 1 ? firstPage : await readPage(page)
+    for (const item of items) {
+      if (item.isActive !== false) classes.set(item.id, item)
+    }
+  }
+  return [...classes.values()]
+}
 
 export async function getLandingSessions({ sportId, search, signal } = {}) {
   const params = { page: 1, pageSize: 6, from: new Date().toISOString(), onlyAvailable: true }

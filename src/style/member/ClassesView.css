@@ -82,6 +82,7 @@
 .member-course-card > strong { color: var(--theme-text); font-size: 18px; overflow-wrap: anywhere; }
 .member-course-card > span { display: flex; align-items: center; gap: 8px; color: var(--theme-muted); text-align: left; }
 .member-course-card > span.member-classes-badge { color: var(--theme-accent); }
+.member-course-card > .member-course-image { display: grid; margin-bottom: 0; color: var(--theme-accent); }
 .member-course-card > .member-course-card-top { width: 100%; justify-content: space-between; }
 .member-course-card-top > small { color: var(--theme-muted); font-size: 10px; }
 .member-course-card svg { flex-shrink: 0; }

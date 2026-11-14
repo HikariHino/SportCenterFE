@@ -24,7 +24,7 @@ after(async () => {
   delete globalThis.sessionStorage
 })
 
-test('both manager endpoints receive the original file in the multipart file field', async () => {
+test('manager image endpoints receive the original file in the multipart file field', async () => {
   const requests = []
   api.defaults.adapter = async config => {
     requests.push(config.url)
@@ -38,7 +38,8 @@ test('both manager endpoints receive the original file in the multipart file fie
   }
   assert.equal(await service.uploadMembershipPackageImage(7, image), imageUrl)
   assert.equal(await service.uploadSportImage('7', image), imageUrl)
-  assert.deepEqual(requests, ['/membership-packages/7/image', '/sports/7/image'])
+  assert.equal(await service.uploadClassImage(7, image), imageUrl)
+  assert.deepEqual(requests, ['/membership-packages/7/image', '/sports/7/image', '/classes/7/image'])
 })
 
 test('files with invalid size, type or contents are rejected before uploading', async () => {
@@ -46,7 +47,7 @@ test('files with invalid size, type or contents are rejected before uploading', 
   await assert.rejects(service.uploadSportImage(7, new File([pngBytes], 'picture.gif')), /Chỉ chấp nhận/)
   await assert.rejects(service.uploadSportImage(7, new File([], 'empty.png')), /dung lượng/)
   await assert.rejects(service.uploadSportImage(7, new File([new Uint8Array(2097153)], 'large.jpg')), /dung lượng/)
-  await assert.rejects(service.uploadSportImage(7, new File(['plain text'], 'fake.png', { type: 'image/png' })), /Nội dung tệp/)
+  await assert.rejects(service.uploadClassImage(7, new File(['plain text'], 'fake.png', { type: 'image/png' })), /Nội dung tệp/)
 })
 
 test('an upload cannot replace the current image using a failed or mismatched response', async () => {
@@ -57,5 +58,18 @@ test('an upload cannot replace the current image using a failed or mismatched re
   ]) {
     api.defaults.adapter = async config => ({ data: body, status: 200, headers: {}, config })
     await assert.rejects(service.uploadMembershipPackageImage(7, image), expectedError)
+    await assert.rejects(service.uploadClassImage(7, image), expectedError)
   }
+})
+
+test('a missing class image endpoint shows a clear message and preserves backend class errors', async () => {
+  const backendError = data => Object.assign(new Error('Request failed with status code 404'), {
+    response: { status: 404, data },
+  })
+  api.defaults.adapter = async () => { throw backendError('') }
+  await assert.rejects(service.uploadClassImage(7, image), /Máy chủ chưa hỗ trợ tải ảnh lớp học/)
+
+  const missingClass = backendError({ message: 'Không tìm thấy lớp học.' })
+  api.defaults.adapter = async () => { throw missingClass }
+  await assert.rejects(service.uploadClassImage(7, image), error => error === missingClass)
 })

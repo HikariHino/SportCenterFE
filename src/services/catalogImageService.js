@@ -25,3 +25,14 @@ async function uploadImage(resource, id, file) {
 
 export const uploadMembershipPackageImage = (id, file) => uploadImage('membership-packages', id, file)
 export const uploadSportImage = (id, file) => uploadImage('sports', id, file)
+
+export async function uploadClassImage(id, file) {
+  try {
+    return await uploadImage('classes', id, file)
+  } catch (error) {
+    if (error.response?.status === 404 && !error.response.data?.message) {
+      throw new Error('Máy chủ chưa hỗ trợ tải ảnh lớp học. Vui lòng thử lại sau khi máy chủ được cập nhật.')
+    }
+    throw error
+  }
+}
