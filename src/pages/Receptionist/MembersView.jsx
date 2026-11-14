@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import CatalogImage from '../../components/CatalogImage'
 import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Clock3, CreditCard, ReceiptText, Ban, LogIn, Plus, UserCheck, Users, WalletCards, X } from 'lucide-react'
 import { getMemberById, getMembers } from '../../services/memberService'
 import { createReceptionistMember } from '../../services/receptionistEntryService'
@@ -129,6 +130,7 @@ function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
   const [packageDetail, setPackageDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
+  const [detailRequestKey, setDetailRequestKey] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -164,8 +166,10 @@ function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
     const loadPackageDetail = async () => {
       setDetailLoading(true)
       setDetailError('')
+      setPackageDetail(null)
       try {
         const result = await getMembershipPackageById(Number(packageId))
+        if (String(result?.id) !== packageId || result?.isActive === false) throw new Error('Gói đã chọn không còn khả dụng. Vui lòng chọn lại.')
         if (active) setPackageDetail(result)
       } catch (requestError) {
         if (active) {
@@ -178,7 +182,7 @@ function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
     }
     loadPackageDetail()
     return () => { active = false }
-  }, [packageId])
+  }, [packageId, detailRequestKey])
 
   const submit = async event => {
     event.preventDefault()
@@ -187,22 +191,22 @@ function CreateSubscriptionDialog({ memberId, onClose, onCreated }) {
       setError('Vui lòng chọn một gói hội viên hợp lệ.')
       return
     }
-    if (saving || !selectedPackage) return
+    if (saving || detailLoading || !selectedPackage) return
     setError('')
     setSaving(true)
     setPurchasePackage(selectedPackage)
   }
 
-  const selectedPackage = packageDetail || packages.find(item => String(item.id) === packageId)
+  const selectedPackage = String(packageDetail?.id) === packageId && packageDetail?.isActive !== false ? packageDetail : null
 
   return <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
     {purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} memberId={memberId} onClose={() => { setPurchasePackage(null); setSaving(false) }} onCreated={subscription => { onCreated(subscription); onClose() }} />}
     <section className="reception-dialog reception-subscription-create-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-create-subscription-title">
       <header><div><span>ĐĂNG KÝ TẠI QUẦY</span><h2 id="reception-create-subscription-title">Đăng ký gói cho hội viên #{memberId}</h2><p>Đăng ký mới sẽ chờ xác nhận thanh toán trước khi kích hoạt.</p></div><button type="button" aria-label="Đóng biểu mẫu đăng ký gói" onClick={onClose} disabled={saving}><X size={19} /></button></header>
       <form onSubmit={submit}>
-        {loading ? <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Đang tải danh sách gói</strong></div> : packages.length ? <><label className="reception-subscription-package-field">Gói hội viên<select value={packageId} onChange={event => setPackageId(event.target.value)} disabled={saving}>{packages.map(item => <option value={item.id} key={item.id}>{item.packageName}</option>)}</select></label>{detailLoading ? <div className="reception-subscription-detail-loading">Đang tải chi tiết gói...</div> : detailError ? <p className="reception-form-error" role="alert">{detailError}</p> : selectedPackage && <div className="reception-subscription-package-preview"><span><small>Giá gói</small><strong>{Number(selectedPackage.price || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{selectedPackage.durationInDays} ngày</strong></span><p>{selectedPackage.description || 'Gói hội viên đang hoạt động.'}</p></div>}</> : !error && <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Chưa có gói đang hoạt động</strong></div>}
+        {loading ? <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Đang tải danh sách gói</strong></div> : packages.length ? <><label className="reception-subscription-package-field">Gói hội viên<select value={packageId} onChange={event => setPackageId(event.target.value)} disabled={saving}>{packages.map(item => <option value={item.id} key={item.id}>{item.packageName}</option>)}</select></label>{detailLoading ? <div className="reception-subscription-detail-loading">Đang tải chi tiết gói...</div> : detailError ? <div className="reception-filter-error" role="alert"><span>{detailError}</span><button type="button" onClick={() => setDetailRequestKey(key => key + 1)}>Thử lại</button></div> : selectedPackage && <div className="reception-subscription-package-preview"><div className="reception-package-image-preview"><CatalogImage src={selectedPackage.imageUrl} fallback={<CreditCard size={26} />} /><strong>{selectedPackage.packageName}</strong></div><span><small>Giá gói</small><strong>{Number(selectedPackage.price || 0).toLocaleString('vi-VN')} đ</strong></span><span><small>Thời hạn</small><strong>{selectedPackage.durationInDays} ngày</strong></span><p>{selectedPackage.description || 'Gói hội viên đang hoạt động.'}</p></div>}</> : !error && <div className="reception-subscription-loading"><CreditCard size={25} /><strong>Chưa có gói đang hoạt động</strong></div>}
         {error && <p className="reception-form-error" role="alert">{error}</p>}
-        <footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={loading || detailLoading || saving || !packageDetail}>{saving ? 'Đang đăng ký...' : 'Tạo đăng ký gói'}</button></footer>
+        <footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={loading || detailLoading || saving || !selectedPackage}>{saving ? 'Đang đăng ký...' : 'Tạo đăng ký gói'}</button></footer>
       </form>
     </section>
   </div>
