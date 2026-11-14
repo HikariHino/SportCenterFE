@@ -1009,3 +1009,19 @@
 .reception-payment-qr p, .reception-payment-qr small { color: var(--rc-muted); font-size: 12px; line-height: 1.7; }
 .reception-payment-detail-actions { flex-wrap: wrap; }
 .reception-payment-detail-actions > :is(a, button) { flex: 1 1 160px; padding: 8px 10px; }
+
+
+.reception-pending-orders-card { margin-top: 18px; }
+.reception-pending-orders-note { margin: 0; padding: 12px 18px; color: var(--rc-muted); border-bottom: 1px solid var(--rc-line); font-size: 12px; line-height: 1.7; }
+.reception-pending-orders-scroll { height: auto; max-height: 420px; }
+.reception-pending-order-row { cursor: default; }
+.reception-pending-order-row > span { min-width: 0; overflow-wrap: anywhere; }
+.reception-pending-order-row small { display: block; margin-top: 5px; color: var(--rc-muted); font-size: 11px; line-height: 1.6; }
+.reception-pending-order-row button { display: inline-flex; align-items: center; gap: 6px; }
+.reception-pending-order-row .reception-pending-order-blocked { color: var(--theme-red, #a62d3a); }
+
+.reception-payments-card .reception-pending-orders-card { margin: 12px; }
+
+.reception-pending-orders-scroll .reception-pending-order-row > span { white-space: normal; }
+.reception-pending-order-row .reception-primary-button { min-height: 36px; padding: 8px 12px; border: 1px solid var(--rc-accent); border-radius: 8px; color: var(--theme-bg, #fff); background: var(--rc-accent); font: inherit; font-weight: 700; cursor: pointer; }
+.reception-pending-order-row .reception-primary-button:disabled { opacity: .6; cursor: wait; }
