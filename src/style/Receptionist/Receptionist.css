@@ -986,3 +986,6 @@
 [data-theme='dark'] .reception-gym-today-table article>button:not(:disabled) { color:var(--theme-bg); }
 [data-theme='dark'] .reception-gym-today-table article>button:disabled { border-color:var(--theme-border); color:var(--theme-muted); background:var(--theme-raised); }
 [data-theme='dark'] .reception-gym-today-card .reception-card-head>button { border-color:var(--theme-border); color:var(--theme-accent); background:var(--theme-raised); }
+.reception-package-image-preview { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; min-width: 0; }
+.reception-package-image-preview .catalog-image { flex: 0 0 88px; width: 88px; height: 66px; border-radius: 10px; }
+.reception-package-image-preview > strong { overflow-wrap: anywhere; }
