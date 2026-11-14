@@ -7,12 +7,21 @@ export function qrCameraErrorMessage(error) {
   return 'Không thể mở trình quét QR. Vui lòng thử lại hoặc nhập mã QR thủ công.'
 }
 
+// BarcodeDetector's scanImage path prefixes ordinary misses with "Scanner error:".
+// They are expected while a camera is pointed at a scene without a QR code.
+export function isQrCameraMiss(error, noCodeMessage = 'No QR code found') {
+  const message = String(error?.message || error || '').replace(/^(?:Scanner error:\s*)+/i, '').trim()
+  return message.toLowerCase() === String(noCodeMessage).toLowerCase()
+}
+
 // A camera session belongs only to the open Receptionist scanner. Nothing is
 // requested before start(), and late permission grants are stopped after close.
-export function createReceptionistQrCamera({ video, onResult, onError, onReady }, {
+export function createReceptionistQrCamera({ video, onResult, onError, onReady, facingMode = 'environment' }, {
   mediaDevices = navigator.mediaDevices,
   secureContext = window.isSecureContext,
   loadScanner = () => import('qr-scanner').then(module => module.default),
+  loadFallbackEngine = () => import('qr-scanner/qr-scanner-worker.min.js').then(module => module.createWorker()),
+  createCanvas = () => document.createElement('canvas'),
   requestFrame = callback => window.requestAnimationFrame(callback),
   cancelFrame = id => window.cancelAnimationFrame(id),
 } = {}) {
@@ -22,6 +31,17 @@ export function createReceptionistQrCamera({ video, onResult, onError, onReady }
   let engine
   let frame
   let lastScan = -Infinity
+  let nativeMisses = 0
+  let canvas
+
+  const useEngine = nextEngine => {
+    if (stopped) { nextEngine?.terminate?.(); return false }
+    engine?.terminate?.()
+    engine = nextEngine
+    // Configure the bundled qr-scanner worker for both normal and inverted QR.
+    engine?.postMessage?.({ id: -1, type: 'inversionMode', data: 'both' })
+    return true
+  }
 
   const stop = () => {
     stopped = true
@@ -45,7 +65,9 @@ export function createReceptionistQrCamera({ video, onResult, onError, onReady }
       return
     }
     try {
-      const cameraStream = await mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' } } })
+      const cameraStream = await mediaDevices.getUserMedia({ audio: false, video: {
+        facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 },
+      } })
       if (stopped) {
         cameraStream.getTracks().forEach(track => track.stop())
         return
@@ -56,22 +78,21 @@ export function createReceptionistQrCamera({ video, onResult, onError, onReady }
       if (stopped) return
       const scanner = await loadScanner()
       if (stopped) return
-      const qrEngine = await scanner.createQrEngine()
-      if (stopped) {
-        qrEngine?.terminate?.()
-        return
-      }
-      engine = qrEngine
+      let qrEngine
+      try { qrEngine = await scanner.createQrEngine() }
+      catch { if (!stopped) qrEngine = await loadFallbackEngine() }
+      if (!useEngine(qrEngine)) return
+      canvas = createCanvas()
       onReady()
 
       const scan = async timestamp => {
         if (stopped) return
-        if (video.readyState >= 2 && timestamp - lastScan >= 100) {
+        if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0 && timestamp - lastScan >= 100) {
           lastScan = timestamp
           try {
-            const result = await scanner.scanImage(video, { qrEngine: engine, returnDetailedScanResult: true })
+            const result = await scanner.scanImage(video, { qrEngine: engine, canvas, returnDetailedScanResult: true })
             if (stopped) return
-            const value = result?.data?.trim()
+            const value = (typeof result === 'string' ? result : result?.data)?.trim()
             if (value) {
               stop()
               onResult(value)
@@ -79,7 +100,19 @@ export function createReceptionistQrCamera({ video, onResult, onError, onReady }
             }
           } catch (error) {
             if (stopped) return
-            if (error !== scanner.NO_QR_CODE_FOUND) {
+            const miss = isQrCameraMiss(error, scanner.NO_QR_CODE_FOUND)
+            const transientFrame = ['InvalidStateError', 'IndexSizeError'].includes(error?.name)
+            if (!transientFrame && typeof engine?.detect === 'function' && (!miss || ++nativeMisses >= 15)) {
+              // Some browsers advertise BarcodeDetector but fail to decode.
+              // Switch once to the bundled decoder without reopening the camera.
+              try { if (!useEngine(await loadFallbackEngine())) return }
+              catch {
+                if (stopped) return
+                stop()
+                onError('Không thể khởi động bộ đọc QR dự phòng. Vui lòng thử lại hoặc nhập mã thủ công.')
+                return
+              }
+            } else if (!miss && !transientFrame) {
               stop()
               onError('Không thể đọc hình ảnh từ camera. Vui lòng thử lại hoặc nhập mã QR thủ công.')
               return
