@@ -1,13 +1,16 @@
+import { useCoachCache, useCoachResource } from '../../contexts/CoachWorkspaceContext'
+import { coachRosterKey, loadCoachStudentCatalog } from '../../services/coachWorkspaceReads'
+import RefreshStatus from './RefreshStatus'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, CircleAlert, Clock3, PencilLine, Plus, Sparkles, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
-import { checkInCoachRegistration, getCoachClassDetails, getCoachClasses, getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
+import { checkInCoachRegistration, getCoachSessionRoster } from '../../services/coachService'
 import { createTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { getWorkoutRecommendation, getWorkoutRecommendationError } from '../../services/aiService'
 import { aiTrainingPlanDemoSteps } from '../../utils/aiTrainingPlanDemo'
 import { applyExercisesPerSession, buildWorkoutGoalContext, mapWorkoutRecommendationToPlanExercises } from '../../utils/aiWorkoutRecommendation'
 import { getCoachPlanDemoStudent } from '../../utils/coachDemoAccess'
 import { EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent, timeFormatter, ViewLoader } from './CoachViewShared'
-import useCoachViewRefresh, { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
+import { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
 import useCoachAttendanceWindow from '../../hooks/useCoachAttendanceWindow'
 import { getCoachAttendanceAvailability } from '../../utils/coachAttendance'
 import { EXERCISE_NOTES_MAX_LENGTH, getTextLengthValidationError, TRAINING_PLAN_NAME_MAX_LENGTH } from '../../utils/textLengthValidation'
@@ -439,63 +442,25 @@ function TrainingPlanListDialog({ student, onClose }) {
 
 export function StudentsView({ active = true, query, showNotice, selectedSessionId, onSelectSession }) {
   const [status, setStatus] = useState('Tất cả')
-  const [sessions, setSessions] = useState([])
-  const [classCatalog, setClassCatalog] = useState([])
   const [selectedClassId, setSelectedClassId] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
-  const [students, setStudents] = useState([])
   const [selectedId, setSelectedId] = useState(null)
-  const [sessionsLoading, setSessionsLoading] = useState(true)
-  const [rosterLoading, setRosterLoading] = useState(false)
-  const [error, setError] = useState('')
   const [planStudent, setPlanStudent] = useState(() => getCoachPlanDemoStudent(window.location.search, import.meta.env.DEV))
   const [plansStudent, setPlansStudent] = useState(null)
   const [checkingInRegistrationId, setCheckingInRegistrationId] = useState(null)
   const [checkInError, setCheckInError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
 
-  const loaded = useRef(false)
-  const loadedRoster = useRef(null)
-  const refreshKey = useCoachViewRefresh(active, 'students')
-
-  useEffect(() => {
-    let active = true
-    const loadSessions = async () => {
-      setSessionsLoading(!loaded.current)
-      setError('')
-      try {
-        const [sessionResult, classResult] = await Promise.allSettled([
-          getMyCoachSessions({ pageSize: 100 }),
-          getCoachClasses({ page: 1, pageSize: 100 }),
-        ])
-        if (sessionResult.status === 'rejected') throw sessionResult.reason
-        const result = sessionResult.value
-        if (!active) return
-        loaded.current = true
-        setSessions(result.items)
-        const listedClasses = classResult.status === 'fulfilled' ? classResult.value.items : []
-        const listedClassIds = new Set(listedClasses.map(item => String(item.id)))
-        const missingClassIds = [...new Set(result.items
-          .map(session => String(session.classId || ''))
-          .filter(classId => classId && !listedClassIds.has(classId)))]
-        const missingClassResults = await Promise.allSettled(missingClassIds.map(getCoachClassDetails))
-        if (!active) return
-        setClassCatalog([
-          ...listedClasses,
-          ...missingClassResults.filter(item => item.status === 'fulfilled').map(item => item.value),
-        ])
-      } catch (requestError) {
-        if (active) {
-          setSessions([])
-          setError(getStudentsError(requestError))
-        }
-      } finally {
-        if (active) setSessionsLoading(false)
-      }
-    }
-    loadSessions()
-    return () => { active = false }
-  }, [requestKey, refreshKey])
+  const cache = useCoachCache()
+  const catalogQuery = useCoachResource('student-catalog', () => loadCoachStudentCatalog(cache), { initialData: { sessions: [], classCatalog: [] }, refreshKey: requestKey })
+  const { sessions, classCatalog } = catalogQuery.data
+  const sessionsLoading = catalogQuery.loading
+  const rosterEnabled = !!selectedSessionId && sessions.some(session => String(session.id) === String(selectedSessionId))
+  const rosterQuery = useCoachResource(coachRosterKey(selectedSessionId), () => getCoachSessionRoster(selectedSessionId), { initialData: [], enabled: rosterEnabled && checkingInRegistrationId === null, refreshKey: requestKey })
+  const students = useMemo(() => rosterEnabled ? rosterQuery.data.map(mapRosterStudent) : [], [rosterEnabled, rosterQuery.data])
+  const rosterLoading = rosterQuery.loading
+  const error = catalogQuery.error || rosterQuery.error ? getStudentsError(catalogQuery.error || rosterQuery.error) : ''
+  const refreshing = catalogQuery.refreshing || rosterQuery.refreshing
 
   useEffect(() => {
     const restoredSession = sessions.find(session => String(session.id) === String(selectedSessionId))
@@ -536,43 +501,8 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
     : []
 
   useEffect(() => {
-    let active = true
-    if (!selectedSessionId || !sessions.some(session => String(session.id) === String(selectedSessionId))) {
-      loadedRoster.current = null
-      setStudents([])
-      setSelectedId(null)
-      setRosterLoading(false)
-      return () => { active = false }
-    }
-
-    const loadRoster = async () => {
-      const sameSession = loadedRoster.current === selectedSessionId
-      setRosterLoading(!sameSession)
-      setError('')
-      if (!sameSession) {
-        setStudents([])
-        setSelectedId(null)
-      }
-      try {
-        const result = await getCoachSessionRoster(selectedSessionId)
-        if (!active) return
-        loadedRoster.current = selectedSessionId
-        const mapped = result.map(mapRosterStudent)
-        setStudents(mapped)
-        setSelectedId(current => mapped.some(student => student.id === current) ? current : mapped[0]?.id ?? null)
-      } catch (requestError) {
-        if (active) {
-          setStudents([])
-          setSelectedId(null)
-          setError(getStudentsError(requestError))
-        }
-      } finally {
-        if (active) setRosterLoading(false)
-      }
-    }
-    loadRoster()
-    return () => { active = false }
-  }, [requestKey, selectedSessionId, sessions, refreshKey])
+    setSelectedId(current => students.some(student => student.id === current) ? current : students[0]?.id ?? null)
+  }, [students])
 
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
   const filtered = students.filter(student => {
@@ -601,15 +531,8 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
     setCheckInError('')
     try {
       const attendance = await checkInCoachRegistration(student.registrationId, { sessionId: selectedSession.id })
-      const updatedStudent = mapRosterStudent({
-        registrationId: student.registrationId,
-        memberId: student.memberId,
-        fullName: student.name,
-        registrationStatus: student.registrationStatus,
-        attendanceStatus: attendance.status,
-        checkInTime: attendance.checkInTime,
-      })
-      setStudents(current => current.map(item => item.id === student.id ? updatedStudent : item))
+      rosterQuery.setData(current => current.map(item => Number(item.registrationId) === Number(student.registrationId)
+        ? { ...item, attendanceStatus: attendance.status, checkInTime: attendance.checkInTime } : item))
       notifyCoachDataChanged('students')
       showNotice?.(`Đã check-in ${student.name}.`)
     } catch (requestError) {
@@ -623,6 +546,7 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
   if (!sessions.length && !planStudent) return <section className="coach-card coach-roster-state"><EmptyState title={error ? 'Không thể tải buổi huấn luyện' : 'Chưa có buổi huấn luyện'} text={error || 'Huấn luyện viên chưa được phân công buổi học nào, nên chưa có danh sách học viên để hiển thị.'} />{error && <button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button>}</section>
 
   return <div className="coach-section-view">
+    <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />
     <section className="coach-card coach-session-picker coach-student-session-picker">
       <div className="coach-session-picker-main"><span><CalendarDays size={21} /></span><div><small>CHỌN THEO THỨ TỰ</small><strong>{selectedSession?.className || 'Tìm học viên theo lịch lớp'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : 'Chọn lớp, ngày tập và khung giờ trước khi xem danh sách học viên.'}</p></div></div>
       <div className="coach-student-selection-steps">
@@ -643,7 +567,7 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
     <div className="coach-student-layout">
       <section className="coach-card coach-roster">
         <div className="coach-view-toolbar"><div><strong>Danh sách học viên theo buổi</strong><span>{rosterLoading ? 'Đang tải roster...' : `${filtered.length} kết quả`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã điểm danh', 'Chưa điểm danh', 'Vắng mặt'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
-        {rosterLoading ? <EmptyState title="Đang tải học viên" text="Danh sách đăng ký của buổi học đang được đồng bộ." /> : error ? <div className="coach-inline-error"><EmptyState title="Không thể tải học viên" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-roster-table"><div className="coach-roster-heading"><span>Học viên</span><span>Đăng ký</span><span>Điểm danh</span><span>Giờ check-in</span></div>{filtered.map(student => <button type="button" className={selected?.id === student.id ? 'selected' : ''} key={student.id} onClick={() => setSelectedId(student.id)}>
+        {rosterLoading ? <EmptyState title="Đang tải học viên" text="Danh sách đăng ký của buổi học đang được đồng bộ." /> : error && !rosterQuery.hasData ? <div className="coach-inline-error"><EmptyState title="Không thể tải học viên" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-roster-table"><div className="coach-roster-heading"><span>Học viên</span><span>Đăng ký</span><span>Điểm danh</span><span>Giờ check-in</span></div>{filtered.map(student => <button type="button" className={selected?.id === student.id ? 'selected' : ''} key={student.id} onClick={() => setSelectedId(student.id)}>
           <span className="coach-roster-person"><i className="coach-student-avatar blue">{initials(student.name)}</i><span><strong>{student.name}</strong><small>Member #{student.memberId}</small></span></span>
           <span><strong>{student.registrationStatus}</strong><small>Đăng ký #{student.registrationId}</small></span>
           <span><strong className={`coach-attendance ${student.attendanceTone}`}>{student.attendanceStatus}</strong><small>{student.attendanceTone === 'pending' ? 'Chưa có dữ liệu điểm danh' : 'Đã cập nhật trên hệ thống'}</small></span>

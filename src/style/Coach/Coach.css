@@ -607,3 +607,9 @@
   .coach-schedule-detail-heading>b { width:max-content; }
   .coach-schedule-detail-meta { grid-template-columns:1fr; }
 }
+.coach-view-content[hidden] { display: none !important; }
+.coach-refresh-status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--coach-line); border-radius: 9px; color: var(--coach-muted); background: var(--theme-surface, #fff); font-size: 12px; line-height: 1.6; }
+.coach-refresh-status > span { flex: 1; }
+.coach-refresh-status.is-error { color: var(--theme-red, #a62d3a); }
+.coach-refresh-status > button { padding: 5px 9px; border: 1px solid currentColor; border-radius: 6px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.coach-account-profile-layout > .coach-refresh-status { grid-column: 1 / -1; }

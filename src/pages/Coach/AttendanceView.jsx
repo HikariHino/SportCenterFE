@@ -1,10 +1,13 @@
+import { useCoachResource } from '../../contexts/CoachWorkspaceContext'
+import { coachAttendancesKey, coachRosterKey, coachSessionsKey, coachWeekRange } from '../../services/coachWorkspaceReads'
+import RefreshStatus from './RefreshStatus'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, Clock3, UserCheck, Users } from 'lucide-react'
 import WeeklyTimetable from '../../components/WeeklyTimetable'
 import { getCoachSessionAttendances, getCoachSessionRoster, getMyCoachSessions, markCoachAttendance } from '../../services/coachService'
-import { shiftTimetableDate, timetableWeekStart } from '../../utils/memberTimetable'
+import { timetableWeekStart } from '../../utils/memberTimetable'
 import { attendanceOptions, EmptyState, formatSessionOption, getStudentsError, initials, mapRosterStudent } from './CoachViewShared'
-import useCoachViewRefresh, { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
+import { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
 import useCoachAttendanceWindow from '../../hooks/useCoachAttendanceWindow'
 import { getCoachAttendanceAvailability } from '../../utils/coachAttendance'
 
@@ -23,99 +26,43 @@ const getSessionStatusLabel = (session, now = Date.now()) => {
 
 export function AttendanceView({ active = true, query, showNotice, selectedSession: sharedSelectedSession, selectedSessionId, onSelectSession }) {
   const [weekStart, setWeekStart] = useState(() => timetableWeekStart(sharedSelectedSession?.startsAt || Date.now()))
-  const [sessions, setSessions] = useState([])
-  const [students, setStudents] = useState([])
   const [status, setStatus] = useState('Tất cả')
-  const [scheduleLoading, setScheduleLoading] = useState(true)
-  const [rosterLoading, setRosterLoading] = useState(false)
-  const [scheduleError, setScheduleError] = useState('')
-  const [rosterError, setRosterError] = useState('')
   const [actionError, setActionError] = useState('')
   const [markingId, setMarkingId] = useState(null)
   const [attendanceSelections, setAttendanceSelections] = useState({})
   const [scheduleRequestKey, setScheduleRequestKey] = useState(0)
   const [rosterRequestKey, setRosterRequestKey] = useState(0)
   const [attendancePageOpen, setAttendancePageOpen] = useState(false)
-  const loadedWeek = useRef(null)
-  const loadedRoster = useRef(null)
-  const refreshKey = useCoachViewRefresh(active, 'attendance')
 
   useEffect(() => {
     if (sharedSelectedSession?.startsAt) setWeekStart(timetableWeekStart(sharedSelectedSession.startsAt))
   }, [sharedSelectedSession?.id, sharedSelectedSession?.startsAt])
 
+  const range = coachWeekRange(weekStart)
+  const scheduleQuery = useCoachResource(coachSessionsKey(range), () => getMyCoachSessions(range), { initialData: { items: [] }, refreshKey: scheduleRequestKey })
+  const sessions = useMemo(() => scheduleQuery.data.items.filter(session => !isCancelledSession(session)), [scheduleQuery.data])
+  const scheduleLoading = scheduleQuery.loading
+  const scheduleError = scheduleQuery.error ? getStudentsError(scheduleQuery.error) : ''
+  const rosterEnabled = attendancePageOpen && !!selectedSessionId && markingId === null
+  const rosterQuery = useCoachResource(coachRosterKey(selectedSessionId), () => getCoachSessionRoster(selectedSessionId), { initialData: [], enabled: rosterEnabled, refreshKey: rosterRequestKey })
+  const attendancesQuery = useCoachResource(coachAttendancesKey(selectedSessionId), () => getCoachSessionAttendances(selectedSessionId), { initialData: [], enabled: rosterEnabled, refreshKey: rosterRequestKey })
+  const students = useMemo(() => {
+    if (!attendancePageOpen || !selectedSessionId) return []
+    const attendanceByMember = new Map(attendancesQuery.data.map(item => [Number(item.memberId), item]))
+    return rosterQuery.data.map(student => {
+      const attendance = attendanceByMember.get(Number(student.memberId))
+      return mapRosterStudent({ ...student, attendanceStatus: attendance?.status ?? student.attendanceStatus, checkInTime: attendance?.checkInTime ?? student.checkInTime })
+    })
+  }, [attendancePageOpen, selectedSessionId, attendancesQuery.data, rosterQuery.data])
+  const rosterLoading = rosterQuery.loading || attendancesQuery.loading
+  const rosterError = rosterQuery.error || attendancesQuery.error ? getStudentsError(rosterQuery.error || attendancesQuery.error) : ''
+  const refreshing = scheduleQuery.refreshing || rosterQuery.refreshing || attendancesQuery.refreshing
+  const selectionSession = useRef(null)
   useEffect(() => {
-    let active = true
-    const from = new Date(`${weekStart}T00:00:00+07:00`)
-    const to = new Date(`${shiftTimetableDate(weekStart, 7)}T00:00:00+07:00`)
-
-    const loadSessions = async () => {
-      setScheduleLoading(loadedWeek.current !== weekStart)
-      setScheduleError('')
-      try {
-        const result = await getMyCoachSessions({ from: from.toISOString(), to: to.toISOString(), pageSize: 100 })
-        if (active) {
-          loadedWeek.current = weekStart
-          setSessions(result.items.filter(session => !isCancelledSession(session)))
-        }
-      } catch (requestError) {
-        if (active) {
-          setSessions([])
-          setScheduleError(getStudentsError(requestError))
-        }
-      } finally {
-        if (active) setScheduleLoading(false)
-      }
-    }
-
-    loadSessions()
-    return () => { active = false }
-  }, [scheduleRequestKey, weekStart, refreshKey])
-
-  useEffect(() => {
-    let active = true
-    if (!attendancePageOpen || !selectedSessionId) {
-      loadedRoster.current = null
-      setStudents([])
-      setRosterError('')
-      setRosterLoading(false)
-      return () => { active = false }
-    }
-
-    const loadAttendances = async () => {
-      setRosterLoading(loadedRoster.current !== selectedSessionId)
-      setRosterError('')
-      setActionError('')
-      try {
-        const [roster, attendances] = await Promise.all([
-          getCoachSessionRoster(selectedSessionId),
-          getCoachSessionAttendances(selectedSessionId),
-        ])
-        if (!active) return
-        loadedRoster.current = selectedSessionId
-        const attendanceByMember = new Map(attendances.map(item => [Number(item.memberId), item]))
-        const mappedStudents = roster.map(student => {
-          const attendance = attendanceByMember.get(Number(student.memberId))
-          return mapRosterStudent({
-            ...student,
-            attendanceStatus: attendance?.status ?? student.attendanceStatus,
-            checkInTime: attendance?.checkInTime ?? student.checkInTime,
-          })
-        })
-        setStudents(mappedStudents)
-        setAttendanceSelections(Object.fromEntries(mappedStudents.map(student => [student.id, student.attendanceValue])))
-      } catch (requestError) {
-        if (active) {
-          setStudents([])
-          setRosterError(getStudentsError(requestError))
-        }
-      } finally {
-        if (active) setRosterLoading(false)
-      }
-    }
-    loadAttendances()
-    return () => { active = false }
-  }, [attendancePageOpen, rosterRequestKey, selectedSessionId, refreshKey])
+    const sameSession = selectionSession.current === selectedSessionId
+    setAttendanceSelections(current => Object.fromEntries(students.map(student => [student.id, sameSession ? current[student.id] || student.attendanceValue : student.attendanceValue])))
+    selectionSession.current = selectedSessionId
+  }, [selectedSessionId, students])
 
   const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
     || (String(sharedSelectedSession?.id) === String(selectedSessionId) ? sharedSelectedSession : null)
@@ -151,15 +98,10 @@ export function AttendanceView({ active = true, query, showNotice, selectedSessi
         sessionId: Number(selectedSessionId),
         status: attendanceSelections[student.id] || 'Present',
       })
-      const updated = mapRosterStudent({
-        registrationId: student.registrationId,
-        memberId: student.memberId,
-        fullName: student.name,
-        registrationStatus: student.registrationStatus,
-        attendanceStatus: attendance.status,
-        checkInTime: attendance.checkInTime,
-      })
-      setStudents(current => current.map(item => item.id === student.id ? updated : item))
+      rosterQuery.setData(current => current.map(item => Number(item.registrationId) === Number(student.registrationId)
+        ? { ...item, attendanceStatus: attendance.status, checkInTime: attendance.checkInTime } : item))
+      attendancesQuery.setData(current => [...current.filter(item => Number(item.memberId) !== Number(student.memberId)), { ...attendance, memberId: student.memberId }])
+      const updated = mapRosterStudent({ ...student, fullName: student.name, attendanceStatus: attendance.status, checkInTime: attendance.checkInTime })
       setAttendanceSelections(current => ({ ...current, [student.id]: updated.attendanceValue }))
       notifyCoachDataChanged('attendance')
       showNotice(`Đã cập nhật ${student.name}: ${updated.attendanceStatus}.`)
@@ -171,6 +113,7 @@ export function AttendanceView({ active = true, query, showNotice, selectedSessi
   }
 
   if (!attendancePageOpen || !selectedSessionId) return <div className="coach-section-view">
+    <RefreshStatus refreshing={refreshing} />
     <div className="coach-attendance-timetable">
       {scheduleError && <div className="coach-attendance-schedule-error" role="alert"><span>{scheduleError}</span><button className="coach-retry-button" type="button" onClick={() => setScheduleRequestKey(key => key + 1)}>Thử lại</button></div>}
       <WeeklyTimetable
@@ -188,6 +131,7 @@ export function AttendanceView({ active = true, query, showNotice, selectedSessi
   </div>
 
   return <div className="coach-section-view coach-attendance-page">
+      <RefreshStatus refreshing={refreshing} error={rosterError} onRetry={() => setRosterRequestKey(key => key + 1)} />
       <button type="button" className="coach-schedule-detail-back" onClick={() => setAttendancePageOpen(false)}><ChevronLeft size={16} />Quay lại thời khóa biểu</button>
       <section className="coach-card coach-session-picker coach-attendance-selected-session">
         <div className="coach-session-picker-main"><span><UserCheck size={21} /></span><div><small>BUỔI ĐANG ĐIỂM DANH</small><strong>{selectedSession?.className || 'Buổi huấn luyện'}</strong><p>{selectedSession ? formatSessionOption(selectedSession) : `Buổi học #${selectedSessionId}`}</p></div></div>
@@ -204,7 +148,7 @@ export function AttendanceView({ active = true, query, showNotice, selectedSessi
         <div className="coach-view-toolbar"><div><strong>Điểm danh học viên</strong><span>{rosterLoading ? 'Đang đồng bộ...' : `${filtered.length} học viên`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã điểm danh', 'Chưa điểm danh', 'Vắng mặt', 'Có phép'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
         <div className={`coach-checkin-window ${attendanceAvailability.open ? 'open' : ''}`}><Clock3 size={16} /><span><strong>{attendanceAvailability.open ? 'Có thể cập nhật điểm danh' : 'Không thể điểm danh'}</strong><small>{attendanceAvailability.message}. Trạng thái được lưu trực tiếp trên hệ thống.</small></span></div>
         {actionError && <div className="coach-attendance-error" role="alert">{actionError}</div>}
-        {rosterLoading ? <EmptyState title="Đang tải danh sách điểm danh" text="Dữ liệu đang được đồng bộ từ hệ thống." /> : rosterError ? <div className="coach-inline-error"><EmptyState title="Không thể tải điểm danh" text={rosterError} /><button className="coach-retry-button" type="button" onClick={() => setRosterRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-attendance-table"><div className="coach-attendance-heading"><span>Học viên</span><span>Đăng ký</span><span>Trạng thái</span><span>Thao tác</span></div>{filtered.map(student => {
+        {rosterLoading ? <EmptyState title="Đang tải danh sách điểm danh" text="Dữ liệu đang được đồng bộ từ hệ thống." /> : rosterError && !rosterQuery.hasData ? <div className="coach-inline-error"><EmptyState title="Không thể tải điểm danh" text={rosterError} /><button className="coach-retry-button" type="button" onClick={() => setRosterRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-attendance-table"><div className="coach-attendance-heading"><span>Học viên</span><span>Đăng ký</span><span>Trạng thái</span><span>Thao tác</span></div>{filtered.map(student => {
           const isMarking = markingId === student.registrationId
           const canMark = attendanceAvailability.open && !markingId
           return <article className="coach-attendance-row" key={student.id}>
