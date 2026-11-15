@@ -1029,3 +1029,9 @@
 .reception-qr-camera-guide i { display: block; height: 2px; margin-top: 50%; background: #64e6c4; box-shadow: 0 0 14px #64e6c4; }
 @media (prefers-reduced-motion: no-preference) { .reception-qr-camera-guide i { animation: reception-camera-sweep 2.2s ease-in-out infinite alternate; } }
 @keyframes reception-camera-sweep { from { transform: translateY(-50px); } to { transform: translateY(50px); } }
+.reception-view[hidden] { display: none !important; }
+.reception-refresh-status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--rc-line); border-radius: 9px; color: var(--rc-muted); background: var(--theme-surface, #fff); font-size: 12px; line-height: 1.6; }
+.reception-refresh-status.is-error { color: var(--theme-red, #a62d3a); border-color: var(--theme-red, #dba0a8); }
+.reception-refresh-status > span { flex: 1; }
+.reception-refresh-status > button { padding: 5px 9px; border: 1px solid currentColor; border-radius: 6px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.reception-profile-layout > .reception-refresh-status { grid-column: 1 / -1; }

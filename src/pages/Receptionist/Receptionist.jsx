@@ -7,18 +7,30 @@ import {
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
+import usePageMotion from '../../hooks/usePageMotion'
+import { ReceptionistViewActivity, ReceptionistWorkspaceProvider, useReceptionistCache } from '../../contexts/ReceptionistWorkspaceContext'
+import { prefetchReceptionistResources } from '../../utils/receptionistResourceCache'
+import { receptionistReadTasks } from '../../services/receptionistWorkspaceReads'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { formatDateTime, requestErrorMessage, ViewLoader } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
+import '../../style/Receptionist/ReceptionistMotion.css'
 
-const CheckInView = lazy(() => import('./CheckInView').then(module => ({ default: module.CheckInView })))
-const MembersView = lazy(() => import('./MembersView').then(module => ({ default: module.MembersView })))
-const Overview = lazy(() => import('./OverviewView').then(module => ({ default: module.Overview })))
-const PaymentsView = lazy(() => import('./PaymentsView').then(module => ({ default: module.PaymentsView })))
-const ReceptionistProfileView = lazy(() => import('./ProfileView').then(module => ({ default: module.ReceptionistProfileView })))
-const RoomsView = lazy(() => import('./RoomsView').then(module => ({ default: module.RoomsView })))
-const SessionsView = lazy(() => import('./ScheduleView').then(module => ({ default: module.ReceptionistScheduleView })))
-const SupportTicketsView = lazy(() => import('./SupportTicketsView').then(module => ({ default: module.SupportTicketsView })))
+const viewLoaders = {
+  'Tổng quan': () => import('./OverviewView'), 'Buổi học': () => import('./ScheduleView'),
+  'Phòng tập': () => import('./RoomsView'), 'Check-in': () => import('./CheckInView'),
+  'Hội viên': () => import('./MembersView'), 'Thanh toán': () => import('./PaymentsView'),
+  'Hỗ trợ': () => import('./SupportTicketsView'), 'Hồ sơ': () => import('./ProfileView'),
+}
+const CheckInView = lazy(() => viewLoaders['Check-in']().then(module => ({ default: module.CheckInView })))
+const MembersView = lazy(() => viewLoaders['Hội viên']().then(module => ({ default: module.MembersView })))
+const Overview = lazy(() => viewLoaders['Tổng quan']().then(module => ({ default: module.Overview })))
+const PaymentsView = lazy(() => viewLoaders['Thanh toán']().then(module => ({ default: module.PaymentsView })))
+const ReceptionistProfileView = lazy(() => viewLoaders['Hồ sơ']().then(module => ({ default: module.ReceptionistProfileView })))
+const RoomsView = lazy(() => viewLoaders['Phòng tập']().then(module => ({ default: module.RoomsView })))
+const SessionsView = lazy(() => viewLoaders['Buổi học']().then(module => ({ default: module.ReceptionistScheduleView })))
+const SupportTicketsView = lazy(() => viewLoaders['Hỗ trợ']().then(module => ({ default: module.SupportTicketsView })))
+const preloadView = view => viewLoaders[view]?.().catch(() => {})
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
@@ -54,10 +66,33 @@ const pageMeta = {
 }
 
 export default function Receptionist() {
+  const { user } = useAuth()
+  const sessionKey = user?.userId || user?.id || user?.email || 'receptionist'
+  return <ReceptionistWorkspaceProvider key={sessionKey} sessionKey={sessionKey}><ReceptionistWorkspace /></ReceptionistWorkspaceProvider>
+}
+
+function ReceptionistWorkspace() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [activeNav, setActiveNav] = usePortalNavigation(receptionistViews, 'Tổng quan')
-  const [query, setQuery] = useState('')
+  const contentMotion = usePageMotion(activeNav)
+  const cache = useReceptionistCache()
+  const [visitedViews, setVisitedViews] = useState([activeNav])
+  useEffect(() => { setVisitedViews(current => current.includes(activeNav) ? current : [...current, activeNav]) }, [activeNav])
+  useEffect(() => {
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      prefetchReceptionistResources(cache, receptionistReadTasks, { isCancelled: () => cancelled })
+      const preloadRemainingViews = async () => {
+        for (const view of receptionistViews) { if (cancelled) return; await preloadView(view) }
+      }
+      preloadRemainingViews()
+    }, 1200)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [cache])
+  const [queries, setQueries] = useState({})
+  const query = queries[activeNav] || ''
+  const setQuery = value => setQueries(current => ({ ...current, [activeNav]: value }))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [selectedReceptionSession, setSelectedReceptionSession] = useState(storedSelectedSession)
@@ -139,6 +174,7 @@ export default function Receptionist() {
   }
 
   const showNotice = text => {
+    cache.invalidate(['members', 'payments', 'checkins', 'pending-orders', 'support:*', 'classes:*', 'sessions:*'])
     setNotice(text)
     window.setTimeout(() => setNotice(''), 2600)
   }
@@ -150,9 +186,8 @@ export default function Receptionist() {
   const selectNavigation = (label, session) => {
     if (session?.id) selectReceptionSession(session)
     setActiveNav(label)
-    setQuery('')
     setSidebarOpen(false)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   }
 
   const handleLogout = async () => {
@@ -161,14 +196,14 @@ export default function Receptionist() {
     navigate('/login', { replace: true })
   }
 
-  const renderView = () => {
-    if (activeNav === 'Buổi học') return <SessionsView showNotice={showNotice} selectedSession={selectedReceptionSession} onSelectSession={selectReceptionSession} />
-    if (activeNav === 'Phòng tập') return <RoomsView onOpenSessions={session => selectNavigation('Buổi học', session)} onSelectSession={selectReceptionSession} />
-    if (activeNav === 'Check-in') return <CheckInView showNotice={showNotice} />
-    if (activeNav === 'Hội viên') return <MembersView query={query} showNotice={showNotice} />
-    if (activeNav === 'Thanh toán') return <PaymentsView query={query} showNotice={showNotice} />
-    if (activeNav === 'Hỗ trợ') return <SupportTicketsView query={query} showNotice={showNotice} />
-    if (activeNav === 'Hồ sơ') return <ReceptionistProfileView showNotice={showNotice} />
+  const renderView = view => {
+    if (view === 'Buổi học') return <SessionsView showNotice={showNotice} selectedSession={selectedReceptionSession} onSelectSession={selectReceptionSession} />
+    if (view === 'Phòng tập') return <RoomsView onOpenSessions={session => selectNavigation('Buổi học', session)} onSelectSession={selectReceptionSession} />
+    if (view === 'Check-in') return <CheckInView showNotice={showNotice} />
+    if (view === 'Hội viên') return <MembersView query={queries[view] || ''} showNotice={showNotice} />
+    if (view === 'Thanh toán') return <PaymentsView query={queries[view] || ''} showNotice={showNotice} />
+    if (view === 'Hỗ trợ') return <SupportTicketsView query={queries[view] || ''} showNotice={showNotice} />
+    if (view === 'Hồ sơ') return <ReceptionistProfileView showNotice={showNotice} />
     return <Overview onNavigate={selectNavigation} />
   }
 
@@ -189,16 +224,18 @@ export default function Receptionist() {
     <aside className={`reception-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
       <Link to="/" className="reception-brand" aria-label="Về trang chủ SportPulse"><span><Trophy size={24} /></span><div><strong>SportPulse<span>.</span></strong><small>RECEPTION PORTAL</small></div></Link>
       <div className="reception-portal-tag"><ShieldCheck size={14} />Cổng thông tin nhân viên lễ tân</div>
-      <nav className="reception-nav" aria-label="Điều hướng lễ tân"><div className="reception-nav-group"><p className="reception-nav-title">VẬN HÀNH QUẦY LỄ TÂN</p>{navigation.map(([Icon, label]) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onClick={() => selectNavigation(label)}><Icon size={18} /><span>{label}</span>{activeNav === label && <ChevronRight size={14} />}</button>)}</div></nav>
+      <nav className="reception-nav" aria-label="Điều hướng lễ tân"><div className="reception-nav-group"><p className="reception-nav-title">VẬN HÀNH QUẦY LỄ TÂN</p>{navigation.map(([Icon, label]) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onPointerEnter={() => preloadView(label)} onFocus={() => preloadView(label)} onClick={() => selectNavigation(label)}><Icon size={18} /><span>{label}</span>{activeNav === label && <ChevronRight size={14} />}</button>)}</div></nav>
       <div className="reception-sidebar-bottom"><div className="reception-user"><span className="reception-avatar">{initials}</span><div><strong>{staffName}</strong><small>Nhân viên lễ tân</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div></div>
     </aside>
 
     <section className="reception-workspace">
       <header className="reception-topbar"><div className="reception-topbar-left"><button className="reception-menu-btn" type="button" aria-label={sidebarOpen ? 'Đóng menu' : 'Mở menu'} onClick={() => setSidebarOpen(value => !value)}>{sidebarOpen ? <X size={21} /> : <Menu size={21} />}</button><div className="reception-breadcrumb"><span>Lễ tân</span><ChevronRight size={13} /><strong>{activeNav}</strong></div></div><div className="reception-topbar-actions"><ThemeToggle /><div className="reception-notification-wrap" ref={notificationRef}><button className="reception-notification-button" type="button" aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ''}`} aria-expanded={notificationOpen} onClick={toggleNotifications}><Bell size={20} />{unreadCount > 0 && <i>{unreadCount > 99 ? '99+' : unreadCount}</i>}</button>{notificationOpen && <section className="reception-notification-panel" aria-label="Thông báo Receptionist"><header><div><span>THÔNG BÁO</span><strong>{unreadCount ? `${unreadCount} chưa đọc` : 'Đã xem tất cả'}</strong></div><button type="button" aria-label="Đóng thông báo" onClick={() => setNotificationOpen(false)}><X size={17} /></button></header>{notificationActionError && <div className="reception-notification-action-error" role="alert">{notificationActionError}</div>}{notificationsLoading ? <div className="reception-notification-state">Đang tải thông báo...</div> : notificationsError ? <div className="reception-notification-state error"><strong>Không thể tải thông báo</strong><span>{notificationsError}</span><button type="button" onClick={() => loadNotifications(notificationPage.page)}>Thử lại</button></div> : notificationPage.items.length ? <><div className="reception-notification-list">{notificationPage.items.map(item => <article className={item.isRead ? '' : 'unread'} key={item.id}><span><Bell size={15} /></span><div><strong>{item.title}</strong><p>{item.content}</p><small>{formatDateTime(item.sentAt)}</small>{!item.isRead && <button type="button" className="reception-notification-read" disabled={Boolean(markingNotificationId)} onClick={() => handleMarkNotificationRead(item)}><CheckCircle2 size={13} />{markingNotificationId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'}</button>}</div>{!item.isRead && <i />}</article>)}</div>{notificationPageCount > 1 && <footer><button type="button" disabled={notificationPage.page <= 1} onClick={() => loadNotifications(notificationPage.page - 1)}><ChevronLeft size={14} />Trước</button><span>{notificationPage.page}/{notificationPageCount}</span><button type="button" disabled={notificationPage.page >= notificationPageCount} onClick={() => loadNotifications(notificationPage.page + 1)}>Sau<ChevronRight size={14} /></button></footer>}</> : <div className="reception-notification-state"><Bell size={24} /><strong>Chưa có thông báo</strong><span>Thông báo dành cho Receptionist sẽ xuất hiện tại đây.</span></div>}</section>}</div><button className="reception-topbar-profile" type="button" aria-label="Mở hồ sơ Receptionist" aria-pressed={activeNav === 'Hồ sơ'} onClick={() => { setNotificationOpen(false); selectNavigation('Hồ sơ') }}><span className="reception-avatar">{initials}</span><span><strong>{staffName}</strong><small>Nhân viên lễ tân</small></span></button></div></header>
-      <div className="reception-main">
+      <div className="reception-main" ref={contentMotion}>
         <section className="reception-page-heading"><div><p><ActiveNavIcon size={16} />{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div>{searchableTabs.includes(activeNav) && <label className="reception-content-search"><Search size={16} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={searchPlaceholder} aria-label={searchPlaceholder} /></label>}</section>
         {notice && <div className="reception-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
-        <div className="reception-view" key={activeNav}><Suspense fallback={<ViewLoader />}>{renderView()}</Suspense></div>
+        {receptionistViews.filter(view => view === activeNav || visitedViews.includes(view)).map(view => <div className="reception-view" key={view} hidden={view !== activeNav} aria-hidden={view !== activeNav || undefined}>
+          <ReceptionistViewActivity active={view === activeNav}><Suspense fallback={<ViewLoader />}>{renderView(view)}</Suspense></ReceptionistViewActivity>
+        </div>)}
       </div>
     </section>
   </main>

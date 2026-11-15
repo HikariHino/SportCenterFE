@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
+import RefreshStatus from './RefreshStatus'
+import { useState } from 'react'
 import { ArrowRight, CircleDollarSign, CreditCard, DoorOpen, MapPin, RefreshCw, UserCheck, Users } from 'lucide-react'
 import { getTodayCheckIns } from '../../services/gymCheckInService'
 import { getMembers } from '../../services/memberService'
@@ -7,27 +9,18 @@ import { getRooms } from '../../services/roomService'
 import { EmptyState, formatDateTime, ViewLoader } from './ReceptionistViewShared'
 
 export function Overview({ onNavigate }) {
-  const [data, setData] = useState({ checkIns: [], members: [], payments: [], rooms: [] })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
-
-  useEffect(() => {
-    let active = true
-    const loadOverview = async () => {
-      setLoading(true)
-      setError('')
-      const results = await Promise.allSettled([getTodayCheckIns(), getMembers(), getPayments(), getRooms(true)])
-      if (!active) return
-      const [checkIns, members, payments, rooms] = results.map(result => result.status === 'fulfilled' ? result.value : [])
-      setData({ checkIns, members, payments, rooms })
-      const failedCount = results.filter(result => result.status === 'rejected').length
-      if (failedCount) setError(`${failedCount}/4 nguồn dữ liệu tổng quan chưa thể đồng bộ.`)
-      setLoading(false)
-    }
-    loadOverview()
-    return () => { active = false }
-  }, [requestKey])
+  const options = { initialData: [], refreshKey: requestKey }
+  const checkInsQuery = useReceptionistResource('checkins', getTodayCheckIns, options)
+  const membersQuery = useReceptionistResource('members', getMembers, options)
+  const paymentsQuery = useReceptionistResource('payments', getPayments, options)
+  const roomsQuery = useReceptionistResource('rooms', getRooms, options)
+  const resources = [checkInsQuery, membersQuery, paymentsQuery, roomsQuery]
+  const loading = resources.some(resource => resource.loading)
+  const refreshing = resources.some(resource => resource.refreshing)
+  const failedCount = resources.filter(resource => resource.error).length
+  const error = failedCount ? failedCount + '/4 nguồn dữ liệu tổng quan chưa thể đồng bộ.' : ''
+  const data = { checkIns: checkInsQuery.data, members: membersQuery.data, payments: paymentsQuery.data, rooms: roomsQuery.data.filter(room => room.isActive !== false) }
 
   const completedPayments = data.payments.filter(payment => payment.status === 'Completed')
   const pendingPayments = data.payments.filter(payment => ['Pending', 'RequiresReview'].includes(payment.status))
@@ -49,6 +42,7 @@ export function Overview({ onNavigate }) {
   if (loading) return <ViewLoader />
 
   return <>
+    <RefreshStatus refreshing={refreshing} />
     {error && <div className="reception-overview-warning" role="alert"><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={13} />Thử lại</button></div>}
     <section className="reception-overview-focus" aria-label="Công việc ưu tiên tại quầy">
       <div className="reception-overview-focus-main">

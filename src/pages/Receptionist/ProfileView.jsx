@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
+import RefreshStatus from './RefreshStatus'
+import { useState } from 'react'
 import { CheckCircle2, Edit3, IdCard, LoaderCircle, Mail, Phone, RefreshCw, Save, UserRound, X } from 'lucide-react'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
 import { getFullNameValidationError, getVietnamPhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_LENGTH } from '../../utils/profileValidation'
@@ -10,32 +12,15 @@ const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: 
 const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' }
 
 export function ReceptionistProfileView({ showNotice }) {
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState('')
   const [form, setForm] = useState(emptyForm)
 
-  useEffect(() => {
-    let active = true
-    const loadProfile = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const result = await getProfile()
-        if (active) setProfile(result)
-      } catch (requestError) {
-        if (active) setError(getProfileErrorMessage(requestError, 'Không thể tải hồ sơ Receptionist.'))
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    loadProfile()
-    return () => { active = false }
-  }, [requestKey])
+  const profileQuery = useReceptionistResource('profile', getProfile, { initialData: null, refreshKey: requestKey })
+  const { data: profile, loading, refreshing, setData: setProfile } = profileQuery
+  const error = profileQuery.error ? getProfileErrorMessage(profileQuery.error, 'Không thể tải hồ sơ Receptionist.') : ''
 
   const startEditing = () => {
     setForm({ fullName: profile.fullName || '', email: profile.email || '', phoneNumber: profile.phoneNumber || '', currentPassword: '', password: '' })
@@ -84,11 +69,12 @@ export function ReceptionistProfileView({ showNotice }) {
   }
 
   if (loading) return <ViewLoader />
-  if (error) return <section className="reception-card reception-profile-state error"><UserRound size={28} /><strong>Không thể tải hồ sơ</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={14} />Thử lại</button></section>
+  if (error && !profile) return <section className="reception-card reception-profile-state error"><UserRound size={28} /><strong>Không thể tải hồ sơ</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={14} />Thử lại</button></section>
 
   const initials = profile?.fullName?.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toLocaleUpperCase('vi-VN') || 'LT'
 
   return <div className="reception-profile-layout">
+    <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />
     <section className="reception-card reception-profile-summary">
       <div className="reception-profile-cover"><span>{initials}</span></div>
       <div><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><dl><div><dt>Mã tài khoản</dt><dd>#{profile.userId}</dd></div><div><dt>Vai trò</dt><dd>{profile.roleName || 'Receptionist'}</dd></div></dl></div>

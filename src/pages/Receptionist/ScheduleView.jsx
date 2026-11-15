@@ -1,3 +1,5 @@
+import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
+import RefreshStatus from './RefreshStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Plus, Star, Trophy, Users, X } from 'lucide-react'
 import { getCoaches, getSports } from '../../services/classCatalogService'
@@ -186,16 +188,6 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
   const [selectedCoachId, setSelectedCoachId] = useState('')
   const [selectedClassId, setSelectedClassId] = useState('')
   const [statusFilter, setStatusFilter] = useState('Tất cả')
-  const [sports, setSports] = useState([])
-  const [coaches, setCoaches] = useState([])
-  const [baseLoading, setBaseLoading] = useState(true)
-  const [baseError, setBaseError] = useState('')
-  const [classes, setClasses] = useState([])
-  const [classesLoading, setClassesLoading] = useState(false)
-  const [classesError, setClassesError] = useState('')
-  const [sessions, setSessions] = useState([])
-  const [sessionsLoading, setSessionsLoading] = useState(false)
-  const [sessionsError, setSessionsError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [activeSession, setActiveSession] = useState(selectedSession || null)
   const [roster, setRoster] = useState([])
@@ -206,48 +198,28 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
   const [completeSession, setCompleteSession] = useState(null)
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset])
 
-  useEffect(() => {
-    let active = true
-    Promise.all([getSports(), getCoaches()])
-      .then(([sportsResult, coachesResult]) => { if (active) { setSports(sportsResult); setCoaches(coachesResult) } })
-      .catch(requestError => { if (active) setBaseError(requestErrorMessage(requestError, 'Không thể tải bộ lọc lịch học.')) })
-      .finally(() => { if (active) setBaseLoading(false) })
-    return () => { active = false }
-  }, [requestKey])
-
-  useEffect(() => {
-    if (!selectedSportId || !selectedCoachId) {
-      setClasses([])
-      setSelectedClassId('')
-      return undefined
-    }
-    let active = true
-    setClassesLoading(true)
-    setClassesError('')
-    getReceptionistClasses({ sportId: Number(selectedSportId), coachId: Number(selectedCoachId), page: 1, pageSize: 100 })
-      .then(result => { if (active) setClasses(result.items) })
-      .catch(requestError => { if (active) { setClasses([]); setClassesError(requestErrorMessage(requestError, 'Không thể tải lớp học.')) } })
-      .finally(() => { if (active) setClassesLoading(false) })
-    return () => { active = false }
-  }, [selectedCoachId, selectedSportId, requestKey])
-
-  useEffect(() => {
-    if (!selectedSportId || !selectedCoachId) {
-      setSessions([])
-      return undefined
-    }
-    let active = true
-    const firstDay = new Date(`${weekDays[0].key}T00:00:00`)
+  const sportsQuery = useReceptionistResource('sports', getSports, { initialData: [], refreshKey: requestKey })
+  const coachesQuery = useReceptionistResource('coaches', getCoaches, { initialData: [], refreshKey: requestKey })
+  const sports = sportsQuery.data, coaches = coachesQuery.data
+  const baseLoading = sportsQuery.loading || coachesQuery.loading
+  const baseError = sportsQuery.error || coachesQuery.error ? requestErrorMessage(sportsQuery.error || coachesQuery.error, 'Không thể tải bộ lọc lịch học.') : ''
+  const filterReady = !!selectedSportId && !!selectedCoachId
+  const classesQuery = useReceptionistResource('classes:' + selectedSportId + ':' + selectedCoachId,
+    () => getReceptionistClasses({ sportId: Number(selectedSportId), coachId: Number(selectedCoachId), page: 1, pageSize: 100 }).then(result => result.items),
+    { initialData: [], enabled: filterReady, refreshKey: requestKey })
+  const sessionsQuery = useReceptionistResource('sessions:' + selectedSportId + ':' + selectedCoachId + ':' + weekDays[0].key, () => {
+    const firstDay = new Date(weekDays[0].key + 'T00:00:00')
     const nextWeek = new Date(firstDay)
     nextWeek.setDate(firstDay.getDate() + 7)
-    setSessionsLoading(true)
-    setSessionsError('')
-    getReceptionistClassSessions({ sportId: Number(selectedSportId), coachId: Number(selectedCoachId), from: firstDay.toISOString(), to: nextWeek.toISOString(), page: 1, pageSize: 100 })
-      .then(result => { if (active) setSessions(result.items.map(mapSession)) })
-      .catch(requestError => { if (active) { setSessions([]); setSessionsError(requestErrorMessage(requestError, 'Không thể tải lịch của huấn luyện viên.')) } })
-      .finally(() => { if (active) setSessionsLoading(false) })
-    return () => { active = false }
-  }, [selectedCoachId, selectedSportId, weekDays, requestKey])
+    return getReceptionistClassSessions({ sportId: Number(selectedSportId), coachId: Number(selectedCoachId), from: firstDay.toISOString(), to: nextWeek.toISOString(), page: 1, pageSize: 100 })
+      .then(result => result.items.map(mapSession))
+  }, { initialData: [], enabled: filterReady, refreshKey: requestKey })
+  const classes = classesQuery.data, sessions = sessionsQuery.data
+  const setSessions = sessionsQuery.setData
+  const classesLoading = classesQuery.loading, sessionsLoading = sessionsQuery.loading
+  const classesError = classesQuery.error ? requestErrorMessage(classesQuery.error, 'Không thể tải lớp học.') : ''
+  const sessionsError = sessionsQuery.error ? requestErrorMessage(sessionsQuery.error, 'Không thể tải lịch của huấn luyện viên.') : ''
+  const refreshing = [sportsQuery, coachesQuery, classesQuery, sessionsQuery].some(resource => resource.refreshing)
 
   useEffect(() => {
     if (!selectedSession?.startsAt) return
@@ -299,6 +271,7 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
   if (baseLoading) return <ViewLoader />
 
   return <div className="reception-schedule-page">
+    <RefreshStatus refreshing={refreshing} />
     <section className="reception-card reception-schedule-flow">
       <div className="reception-schedule-flow-title"><span><CalendarDays size={19} /></span><div><small>CHỌN THEO THỨ TỰ</small><strong>Môn thể thao → Huấn luyện viên → Lớp</strong></div></div>
       <label><span>1. Môn thể thao</span><select value={selectedSportId} onChange={event => { setSelectedSportId(event.target.value); setSelectedCoachId(''); setSelectedClassId(''); setActiveSession(null) }}><option value="">Chọn môn thể thao</option>{sports.map(sport => <option key={sport.id} value={sport.id}>{sport.name}</option>)}</select></label>
