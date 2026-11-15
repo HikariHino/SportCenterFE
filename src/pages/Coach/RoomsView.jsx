@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCoachResource } from '../../contexts/CoachWorkspaceContext'
+import RefreshStatus from './RefreshStatus'
+import { useEffect, useState } from 'react'
 import { CheckCircle2, ChevronRight, Clock3, DoorOpen, MapPin, X } from 'lucide-react'
 import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
 import { ViewLoader } from './CoachViewShared'
-import useCoachViewRefresh from '../../hooks/useCoachViewRefresh'
 
 function CoachRoomDetailDialog({ roomId, onClose }) {
   const [room, setRoom] = useState(null)
@@ -62,45 +63,19 @@ function CoachRoomDetailDialog({ roomId, onClose }) {
 }
 
 export function CoachRoomsView({ active = true }) {
-  const [rooms, setRooms] = useState([])
   const [filter, setFilter] = useState('active')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [selectedRoomId, setSelectedRoomId] = useState(null)
-  const loadedFilter = useRef(null)
-  const refreshKey = useCoachViewRefresh(active, 'rooms')
-
-  useEffect(() => {
-    let active = true
-    const loadRooms = async () => {
-      setLoading(loadedFilter.current !== filter)
-      setError('')
-      try {
-        const isActive = filter === 'all' ? null : filter === 'active'
-        const result = await getRooms(isActive)
-        if (active) {
-          loadedFilter.current = filter
-          setRooms(result)
-        }
-      } catch (requestError) {
-        if (active) {
-          setRooms([])
-          setError(getRoomErrorMessage(requestError, 'Không thể tải danh sách phòng tập.'))
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    loadRooms()
-    return () => { active = false }
-  }, [filter, requestKey, refreshKey])
+  const roomsQuery = useCoachResource('rooms:' + filter, () => getRooms(filter === 'all' ? null : filter === 'active'), { initialData: [], refreshKey: requestKey })
+  const { data: rooms, loading, refreshing, hasData } = roomsQuery
+  const error = roomsQuery.error ? getRoomErrorMessage(roomsQuery.error, 'Không thể tải danh sách phòng tập.') : ''
 
   if (loading) return <ViewLoader />
 
   return <section className="coach-card coach-rooms-catalog">
+    {hasData && <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />}
     <div className="coach-card-head"><div><span>DANH SÁCH PHÒNG</span><h2>Danh sách phòng tập</h2></div><div className="coach-room-filters">{[['all', 'Tất cả'], ['active', 'Đang mở'], ['inactive', 'Tạm ngừng']].map(([value, label]) => <button type="button" key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{label}</button>)}</div></div>
-    {loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải phòng tập</strong><p>Dữ liệu phòng đang được đồng bộ từ hệ thống.</p></div> : error ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải phòng tập</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : rooms.length ? <div className="coach-room-list">{rooms.map(room => <article key={room.id}><header><span><DoorOpen size={19} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></header><div><span><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></span><span><small>Sức chứa</small><strong>{room.capacity} người</strong></span><span className="wide"><small>Vị trí</small><strong><MapPin size={13} />{room.location || 'Chưa cập nhật'}</strong></span></div><button type="button" className="coach-room-detail-trigger" onClick={() => setSelectedRoomId(room.id)}>Xem chi tiết <ChevronRight size={13} /></button></article>)}</div> : <div className="coach-room-state"><DoorOpen size={28} /><strong>Chưa có phòng phù hợp</strong><p>Chưa có dữ liệu phòng theo bộ lọc đã chọn.</p></div>}
+    {loading ? <div className="coach-room-state"><DoorOpen size={28} /><strong>Đang tải phòng tập</strong><p>Dữ liệu phòng đang được đồng bộ từ hệ thống.</p></div> : error && !hasData ? <div className="coach-room-state error"><DoorOpen size={28} /><strong>Không thể tải phòng tập</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : rooms.length ? <div className="coach-room-list">{rooms.map(room => <article key={room.id}><header><span><DoorOpen size={19} /></span><div><small>Phòng #{room.id}</small><h3>{room.name}</h3></div><b className={room.isActive ? 'active' : 'inactive'}>{room.isActive ? 'Đang mở' : 'Tạm ngừng'}</b></header><div><span><small>Loại phòng</small><strong>{room.roomType || 'General'}</strong></span><span><small>Sức chứa</small><strong>{room.capacity} người</strong></span><span className="wide"><small>Vị trí</small><strong><MapPin size={13} />{room.location || 'Chưa cập nhật'}</strong></span></div><button type="button" className="coach-room-detail-trigger" onClick={() => setSelectedRoomId(room.id)}>Xem chi tiết <ChevronRight size={13} /></button></article>)}</div> : <div className="coach-room-state"><DoorOpen size={28} /><strong>Chưa có phòng phù hợp</strong><p>Chưa có dữ liệu phòng theo bộ lọc đã chọn.</p></div>}
     {selectedRoomId !== null && <CoachRoomDetailDialog roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />}
   </section>
 }

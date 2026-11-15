@@ -8,15 +8,23 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
 import usePageMotion from '../../hooks/usePageMotion'
+import { CoachWorkspaceProvider, CoachViewActivity, useCoachCache } from '../../contexts/CoachWorkspaceContext'
+import { prefetchWorkspaceResources } from '../../utils/workspaceResourceCache'
+import { coachReadTasks } from '../../services/coachWorkspaceReads'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { ViewLoader } from './CoachViewShared'
 import '../../style/Coach/Coach.css'
 
-const AttendanceView = lazy(() => import('./AttendanceView').then(module => ({ default: module.AttendanceView })))
-const CoachProfileView = lazy(() => import('./ProfileView').then(module => ({ default: module.CoachProfileView })))
-const CoachRoomsView = lazy(() => import('./RoomsView').then(module => ({ default: module.CoachRoomsView })))
-const OverviewView = lazy(() => import('./OverviewView').then(module => ({ default: module.OverviewView })))
-const StudentsView = lazy(() => import('./StudentsView').then(module => ({ default: module.StudentsView })))
+const viewLoaders = {
+  'Tổng quan': () => import('./OverviewView'), 'Lịch huấn luyện': () => import('./AttendanceView'),
+  'Phòng tập': () => import('./RoomsView'), 'Học viên': () => import('./StudentsView'), 'Hồ sơ': () => import('./ProfileView'),
+}
+const AttendanceView = lazy(() => viewLoaders['Lịch huấn luyện']().then(module => ({ default: module.AttendanceView })))
+const CoachProfileView = lazy(() => viewLoaders['Hồ sơ']().then(module => ({ default: module.CoachProfileView })))
+const CoachRoomsView = lazy(() => viewLoaders['Phòng tập']().then(module => ({ default: module.CoachRoomsView })))
+const OverviewView = lazy(() => viewLoaders['Tổng quan']().then(module => ({ default: module.OverviewView })))
+const StudentsView = lazy(() => viewLoaders['Học viên']().then(module => ({ default: module.StudentsView })))
+const preloadView = view => viewLoaders[view]?.().catch(() => {})
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
@@ -54,13 +62,33 @@ const readSelectedSession = () => {
 }
 
 export default function Coach() {
+  const { user } = useAuth()
+  const sessionKey = user?.userId || user?.id || user?.email || 'coach-demo'
+  return <CoachWorkspaceProvider key={sessionKey} sessionKey={sessionKey}><CoachWorkspace /></CoachWorkspaceProvider>
+}
+
+function CoachWorkspace() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [activeNav, setActiveNav] = usePortalNavigation(coachViews, 'Tổng quan')
   const contentMotion = usePageMotion(activeNav)
+  const cache = useCoachCache()
+  const [visitedViews, setVisitedViews] = useState([activeNav])
+  useEffect(() => { setVisitedViews(current => current.includes(activeNav) ? current : [...current, activeNav]) }, [activeNav])
+  useEffect(() => {
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      prefetchWorkspaceResources(cache, coachReadTasks(cache), { isCancelled: () => cancelled })
+      const preloadRemaining = async () => { for (const view of coachViews) { if (cancelled) return; await preloadView(view) } }
+      preloadRemaining()
+    }, 1200)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [cache])
   const [selectedCoachSession, setSelectedCoachSession] = useState(readSelectedSession)
   const [notice, setNotice] = useState('')
-  const [query, setQuery] = useState('')
+  const [queries, setQueries] = useState({})
+  const query = queries[activeNav] || ''
+  const setQuery = value => setQueries(current => ({ ...current, [activeNav]: value }))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notificationPage, setNotificationPage] = useState({ items: [], total: 0, page: 1, pageSize: 6 })
@@ -163,9 +191,8 @@ export default function Coach() {
   const selectNavigation = (label, session) => {
     if (session) selectCoachSession(session)
     setActiveNav(label)
-    setQuery('')
     setSidebarOpen(false)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   }
 
   const handleLogout = async () => {
@@ -176,9 +203,9 @@ export default function Coach() {
 
   const renderView = view => {
     const active = activeNav === view
-    if (view === 'Lịch huấn luyện') return <AttendanceView active={active} query={query} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
+    if (view === 'Lịch huấn luyện') return <AttendanceView active={active} query={queries[view] || ''} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
     if (view === 'Phòng tập') return <CoachRoomsView active={active} />
-    if (view === 'Học viên') return <StudentsView active={active} query={query} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
+    if (view === 'Học viên') return <StudentsView active={active} query={queries[view] || ''} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
     if (view === 'Hồ sơ') return <CoachProfileView active={active} showNotice={showNotice} />
     return <OverviewView active={active} onNavigate={selectNavigation} showNotice={showNotice} />
   }
@@ -197,7 +224,7 @@ export default function Coach() {
       <nav className="coach-nav" aria-label="Điều hướng Coach">
         <div className="coach-nav-group">
           <p className="coach-nav-title">QUẢN LÝ HUẤN LUYỆN</p>
-          {navigation.map(([Icon, label]) => <button key={label} type="button" className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onClick={() => selectNavigation(label)}>
+          {navigation.map(([Icon, label]) => <button key={label} type="button" className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onPointerEnter={() => preloadView(label)} onFocus={() => preloadView(label)} onClick={() => selectNavigation(label)}>
             <Icon size={18} /><span>{label}</span>{activeNav === label && <ChevronRight size={14} />}
           </button>)}
         </div>
@@ -216,7 +243,7 @@ export default function Coach() {
         <section className="coach-page-heading"><div><p><ActiveNavIcon size={16} />{meta.eyebrow}</p><h1>{meta.title}</h1><span>{meta.description}</span></div>{['Học viên', 'Lịch huấn luyện'].includes(activeNav) && <label className="coach-content-search"><Search size={16} /><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm học viên..." aria-label="Tìm học viên" /></label>}</section>
 
         {notice && <div className="coach-toast" role="status"><CheckCircle2 size={18} />{notice}</div>}
-        {coachViews.map(view => <div className="coach-view-content" key={view} hidden={view !== activeNav}><Suspense fallback={<ViewLoader />}>{renderView(view)}</Suspense></div>)}
+        {coachViews.filter(view => view === activeNav || visitedViews.includes(view)).map(view => <div className="coach-view-content" key={view} hidden={view !== activeNav}><CoachViewActivity active={view === activeNav}><Suspense fallback={<ViewLoader />}>{renderView(view)}</Suspense></CoachViewActivity></div>)}
       </div>
     </section>
   </main>

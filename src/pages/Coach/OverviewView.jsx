@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCoachCache, useCoachResource } from '../../contexts/CoachWorkspaceContext'
+import { coachOverviewRange, coachRosterKey, coachSessionsKey } from '../../services/coachWorkspaceReads'
+import RefreshStatus from './RefreshStatus'
+import { useMemo, useState } from 'react'
 import {
   CalendarCheck2,
   CalendarDays,
@@ -14,7 +17,6 @@ import {
 } from 'lucide-react'
 import { getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
 import { initials, timeFormatter, ViewLoader } from './CoachViewShared'
-import useCoachViewRefresh from '../../hooks/useCoachViewRefresh'
 
 const metricSlots = [
   { icon: CalendarDays, label: 'Buổi dạy hôm nay', tone: 'blue', target: 'Lịch huấn luyện' },
@@ -84,91 +86,62 @@ const sessionPresentation = session => {
 }
 
 export function OverviewView({ active = true, onNavigate }) {
-  const [metrics, setMetrics] = useState([])
-  const [sessions, setSessions] = useState([])
-  const [weekSessions, setWeekSessions] = useState([])
-  const [students, setStudents] = useState([])
-  const [attendance, setAttendance] = useState({ present: 0, absent: 0, excused: 0, pending: 0 })
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
-  const loaded = useRef(false)
-  const refreshKey = useCoachViewRefresh(active, 'overview')
+  const cache = useCoachCache()
+  const range = coachOverviewRange()
+  const overviewQuery = useCoachResource('overview:' + range.from, async () => {
+    const from = new Date(range.from)
+    const result = await cache.load(coachSessionsKey(range), () => getMyCoachSessions(range))
+    const upcomingWeek = result.items.map(sessionPresentation).sort((left, right) => new Date(left.startsAt) - new Date(right.startsAt))
+    const activeWeek = upcomingWeek.filter(session => session.tone !== 'cancelled')
+    const today = activeWeek.filter(session => sameDay(new Date(session.startsAt), from))
+    const rosterResults = await Promise.allSettled(today.map(session => cache.load(coachRosterKey(session.id), () => getCoachSessionRoster(session.id))))
+    const studentMap = new Map()
+    const attendanceSummary = { present: 0, absent: 0, excused: 0, pending: 0 }
 
-  useEffect(() => {
-    let active = true
-    const loadOverview = async () => {
-      setLoading(!loaded.current)
-      setError('')
-      const from = new Date()
-      from.setHours(0, 0, 0, 0)
-      const to = new Date(from)
-      to.setDate(to.getDate() + 8)
-      try {
-        const result = await getMyCoachSessions({ from: from.toISOString(), to: to.toISOString(), pageSize: 100 })
-        const upcomingWeek = result.items.map(sessionPresentation).sort((left, right) => new Date(left.startsAt) - new Date(right.startsAt))
-        const activeWeek = upcomingWeek.filter(session => session.tone !== 'cancelled')
-        const today = activeWeek.filter(session => sameDay(new Date(session.startsAt), from))
-        const rosterResults = await Promise.allSettled(today.map(session => getCoachSessionRoster(session.id)))
-        const studentMap = new Map()
-        const attendanceSummary = { present: 0, absent: 0, excused: 0, pending: 0 }
+    rosterResults.forEach((rosterResult, index) => {
+      if (rosterResult.status !== 'fulfilled') return
+      rosterResult.value.forEach(student => {
+        const key = student.memberId
+        const attendanceStatus = String(student.attendanceStatus || '').toLowerCase()
+        if (attendanceStatus === 'present' || attendanceStatus === 'late') attendanceSummary.present += 1
+        else if (attendanceStatus === 'absent') attendanceSummary.absent += 1
+        else if (attendanceStatus === 'excused') attendanceSummary.excused += 1
+        else attendanceSummary.pending += 1
 
-        rosterResults.forEach((rosterResult, index) => {
-          if (rosterResult.status !== 'fulfilled') return
-          rosterResult.value.forEach(student => {
-            const key = student.memberId
-            const attendanceStatus = String(student.attendanceStatus || '').toLowerCase()
-            if (attendanceStatus === 'present' || attendanceStatus === 'late') attendanceSummary.present += 1
-            else if (attendanceStatus === 'absent') attendanceSummary.absent += 1
-            else if (attendanceStatus === 'excused') attendanceSummary.excused += 1
-            else attendanceSummary.pending += 1
-
-            const current = studentMap.get(key) || {
-              id: key,
-              name: student.fullName || `Hội viên #${key}`,
-              initials: initials(student.fullName),
-              program: today[index]?.className || 'Buổi huấn luyện hôm nay',
-              completedSessions: 0,
-              totalSessions: 0,
-              color: 'blue',
-            }
-            current.totalSessions += 1
-            if (['present', 'late'].includes(attendanceStatus)) current.completedSessions += 1
-            studentMap.set(key, current)
-          })
-        })
-
-        const studentItems = [...studentMap.values()].map(student => ({
-          ...student,
-          progress: percentage(student.completedSessions, student.totalSessions),
-        }))
-        const totalMinutes = today.reduce((total, session) => total + Math.max(0, new Date(session.endsAt) - new Date(session.startsAt)) / 60_000, 0)
-        const completedCount = today.filter(session => String(session.status).toLowerCase() === 'completed').length
-
-        if (active) {
-          loaded.current = true
-          setSessions(today)
-          setWeekSessions(activeWeek)
-          setStudents(studentItems)
-          setAttendance(attendanceSummary)
-          setMetrics([
-            { value: today.length, note: today.length ? 'Theo lịch được phân công' : 'Hôm nay chưa có lịch' },
-            { value: studentItems.length, note: 'Không tính trùng hội viên' },
-            { value: `${(totalMinutes / 60).toFixed(totalMinutes % 60 ? 1 : 0)}h`, note: 'Tổng thời lượng hôm nay' },
-            { value: today.length ? `${percentage(completedCount, today.length)}%` : '0%', note: `${completedCount}/${today.length} buổi` },
-          ])
+        const current = studentMap.get(key) || {
+          id: key,
+          name: student.fullName || `Hội viên #${key}`,
+          initials: initials(student.fullName),
+          program: today[index]?.className || 'Buổi huấn luyện hôm nay',
+          completedSessions: 0,
+          totalSessions: 0,
+          color: 'blue',
         }
-      } catch (requestError) {
-        if (active) {
-          setError(requestError.response?.data?.message || requestError.message || 'Không thể tải tổng quan Coach.')
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    loadOverview()
-    return () => { active = false }
-  }, [requestKey, refreshKey])
+        current.totalSessions += 1
+        if (['present', 'late'].includes(attendanceStatus)) current.completedSessions += 1
+        studentMap.set(key, current)
+      })
+    })
+
+    const studentItems = [...studentMap.values()].map(student => ({
+      ...student,
+      progress: percentage(student.completedSessions, student.totalSessions),
+    }))
+    const totalMinutes = today.reduce((total, session) => total + Math.max(0, new Date(session.endsAt) - new Date(session.startsAt)) / 60_000, 0)
+    const completedCount = today.filter(session => String(session.status).toLowerCase() === 'completed').length
+
+
+    return { sessions: today, weekSessions: activeWeek, students: studentItems, attendance: attendanceSummary, metrics: [
+      { value: today.length, note: today.length ? 'Theo lịch được phân công' : 'Hôm nay chưa có lịch' },
+      { value: studentItems.length, note: 'Không tính trùng hội viên' },
+      { value: (totalMinutes / 60).toFixed(totalMinutes % 60 ? 1 : 0) + 'h', note: 'Tổng thời lượng hôm nay' },
+      { value: today.length ? percentage(completedCount, today.length) + '%' : '0%', note: completedCount + '/' + today.length + ' buổi' },
+    ] }
+  }, { initialData: { metrics: [], sessions: [], weekSessions: [], students: [], attendance: { present: 0, absent: 0, excused: 0, pending: 0 } }, refreshKey: requestKey })
+  const { metrics, sessions, weekSessions, students, attendance } = overviewQuery.data
+  const { loading, refreshing } = overviewQuery
+  const error = overviewQuery.error?.response?.data?.message || overviewQuery.error?.message || ''
 
   const nextSession = useMemo(() => {
     const now = new Date()
@@ -190,6 +163,7 @@ export function OverviewView({ active = true, onNavigate }) {
   if (loading) return <ViewLoader />
 
   return <>
+    <RefreshStatus refreshing={refreshing} />
     {error && <div className="coach-attendance-error" role="alert">{error}<button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={13} />Thử lại</button></div>}
 
     <section className="coach-focus-panel" aria-label="Công việc ưu tiên">
