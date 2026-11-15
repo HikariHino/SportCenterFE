@@ -1,3 +1,5 @@
+import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
+import RefreshStatus from './RefreshStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { AlertCircle, Ban, CalendarClock, CalendarDays, CheckCircle2, DoorOpen, Layers3, MapPin, Power, RefreshCw, Search, UsersRound, X } from 'lucide-react'
 import { checkRoomAvailability, getRoomById, getRoomErrorMessage, getRooms } from '../../services/roomService'
@@ -176,33 +178,15 @@ function RoomSchedule({ room, rooms, onClose, onOpenSessions, onSelectSession })
 }
 
 export function RoomsView({ query = '', onOpenSessions, onSelectSession }) {
-  const [rooms, setRooms] = useState([])
   const [status, setStatus] = useState('all')
   const [roomType, setRoomType] = useState('all')
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const roomsQuery = useReceptionistResource('rooms', getRooms, { initialData: [], refreshKey: requestKey })
+  const { data: rooms, loading, refreshing } = roomsQuery
+  const error = roomsQuery.error ? getRoomErrorMessage(roomsQuery.error, 'Không thể tải danh sách phòng.') : ''
   const [selectedRoomId, setSelectedRoomId] = useState(null)
   const [scheduleRoom, setScheduleRoom] = useState(null)
-
-  useEffect(() => {
-    let active = true
-    const loadRooms = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const result = await getRooms()
-        if (active) setRooms(result)
-      } catch (requestError) {
-        if (active) setError(getRoomErrorMessage(requestError, 'Không thể tải danh sách phòng.'))
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    loadRooms()
-    return () => { active = false }
-  }, [requestKey])
 
   const filteredRooms = useMemo(() => {
     const keyword = `${query} ${search}`.trim().toLocaleLowerCase('vi-VN')
@@ -221,6 +205,7 @@ export function RoomsView({ query = '', onOpenSessions, onSelectSession }) {
   if (scheduleRoom) return <RoomSchedule room={scheduleRoom} rooms={rooms} onClose={() => setScheduleRoom(null)} onOpenSessions={onOpenSessions} onSelectSession={onSelectSession} />
 
   return <div className="reception-facility-rooms">
+    {roomsQuery.hasData && <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />}
     <section className="reception-facility-metrics" aria-label="Thống kê phòng tập">
       <article><span className="blue"><DoorOpen size={20} /></span><div><small>Tổng số phòng</small><strong>{rooms.length}</strong></div></article>
       <article><span className="green"><CheckCircle2 size={20} /></span><div><small>Sẵn sàng</small><strong>{activeCount}</strong></div></article>

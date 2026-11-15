@@ -1,3 +1,5 @@
+import { useReceptionistResource, useReceptionistViewActive } from '../../contexts/ReceptionistWorkspaceContext'
+import RefreshStatus from './RefreshStatus'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { ArrowRight, Clock3, Download, ReceiptText, Ban, Plus, RefreshCw, ScanLine, WalletCards, X } from 'lucide-react'
@@ -14,59 +16,23 @@ import { EmptyState, formatDateTime } from './ReceptionistViewShared'
 export function PaymentsView({ query, showNotice }) {
   const [status, setStatus] = useState('all')
   const [method, setMethod] = useState('all')
-  const [paymentItems, setPaymentItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [selectedPaymentId, setSelectedPaymentId] = useState(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [pendingOrders, setPendingOrders] = useState([])
-  const [pendingLoading, setPendingLoading] = useState(true)
-  const [pendingError, setPendingError] = useState('')
   const [counterOrder, setCounterOrder] = useState(null)
 
+  const paymentsQuery = useReceptionistResource('payments', getPayments, { initialData: [], refreshKey: requestKey })
+  const { data: paymentItems, loading, refreshing } = paymentsQuery
+  const error = paymentsQuery.error ? getReceptionistPaymentError(paymentsQuery.error, 'Không thể tải danh sách thanh toán.') : ''
+  const ordersQuery = useReceptionistResource('pending-orders', getReceptionistPendingOrders, { initialData: { orders: [], failedMembers: [] }, refreshKey: requestKey })
+  const pendingOrders = ordersQuery.data.orders
+  const pendingLoading = ordersQuery.loading || ordersQuery.refreshing
+  const pendingError = ordersQuery.error ? getReceptionistPaymentError(ordersQuery.error, 'Không thể tải đơn chờ thanh toán tại quầy.')
+    : ordersQuery.data.failedMembers.length ? 'Chưa tải được đơn của ' + ordersQuery.data.failedMembers.length + ' hội viên. Hãy thử tải lại để có danh sách đầy đủ.' : ''
+  const viewActive = useReceptionistViewActive()
   useEffect(() => {
-    let active = true
-    const loadPayments = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const result = await getPayments()
-        if (active) setPaymentItems(result)
-      } catch (requestError) {
-        if (active) {
-          setError(getReceptionistPaymentError(requestError, 'Không thể tải danh sách thanh toán.'))
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    loadPayments()
-    return () => { active = false }
-  }, [requestKey])
-
-  useEffect(() => {
-    let active = true
-    setPendingLoading(true)
-    setPendingError('')
-    const controller = new AbortController()
-    getReceptionistPendingOrders({ signal: controller.signal }).then(result => {
-      if (!active) return
-      setPendingOrders(result.orders)
-      if (result.failedMembers.length) setPendingError('Chưa tải được đơn của ' + result.failedMembers.length + ' hội viên. Hãy thử tải lại để có danh sách đầy đủ.')
-    }).catch(requestError => {
-      if (active) setPendingError(getReceptionistPaymentError(requestError, 'Không thể tải đơn chờ thanh toán tại quầy.'))
-    }).finally(() => { if (active) setPendingLoading(false) })
-    return () => { active = false; controller.abort() }
-  }, [requestKey])
-
-  useEffect(() => {
-    const refresh = () => { if (!loading && !pendingLoading && document.visibilityState === 'visible') setRequestKey(key => key + 1) }
-    window.addEventListener('focus', refresh)
-    document.addEventListener('visibilitychange', refresh)
-    const timer = window.setInterval(refresh, 30000)
-    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); window.clearInterval(timer) }
-  }, [loading, pendingLoading])
+    if (!viewActive) { setCounterOrder(null); setShowCreateDialog(false); setSelectedPaymentId(null) }
+  }, [viewActive])
 
   const counterOrders = useMemo(() => getReceptionistPendingCounterOrders(pendingOrders, paymentItems), [pendingOrders, paymentItems])
   const visibleCounterOrders = useMemo(() => getReceptionistPendingCounterOrders(pendingOrders, paymentItems, { query, status, method }), [pendingOrders, paymentItems, query, status, method])
@@ -78,6 +44,7 @@ export function PaymentsView({ query, showNotice }) {
   const summary = paymentSummary(paymentItems)
 
   return <>
+    <RefreshStatus refreshing={refreshing || ordersQuery.refreshing} />
     <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{summary.paid.toLocaleString('vi-VN')} đ</strong><p>{summary.completed} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{summary.pending + counterOrders.filter(order => !order.blockedReason).length}</strong><p>{summary.review} giao dịch cần đối soát</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{summary.total}</strong><p>PayOS và thanh toán tại quầy</p></div></article></section>
     <section className="reception-card reception-table-card reception-payments-card">
       <div className="reception-table-tools"><div><strong>Lịch sử thanh toán</strong><small>{payments.length} giao dịch · {visibleCounterOrders.length} đơn chờ {loading && '· Đang cập nhật...'}</small></div><div><button type="button" disabled={loading || pendingLoading} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={14} />Làm mới</button><button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Tạo thanh toán</button></div></div>

@@ -1,3 +1,5 @@
+import { useReceptionistResource, useReceptionistViewActive } from '../../contexts/ReceptionistWorkspaceContext'
+import RefreshStatus from './RefreshStatus'
 import { useEffect, useMemo, useState } from 'react'
 import CatalogImage from '../../components/CatalogImage'
 import CheckoutDialog from './CheckoutDialog'
@@ -420,32 +422,19 @@ export function MembersView({ query, showNotice }) {
   const [registrationsMemberId, setRegistrationsMemberId] = useState(null)
   const [subscriptionMemberId, setSubscriptionMemberId] = useState(null)
   const [subscriptionsMemberId, setSubscriptionsMemberId] = useState(null)
-  const [members, setMembers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const membersQuery = useReceptionistResource('members', getMembers, { initialData: [], refreshKey: requestKey })
+  const { data: members, loading, refreshing, hasData } = membersQuery
+  const viewActive = useReceptionistViewActive()
+  useEffect(() => {
+    if (!viewActive) {
+      setShowCreateDialog(false); setSelectedMemberId(null); setRegistrationsMemberId(null)
+      setSubscriptionMemberId(null); setSubscriptionsMemberId(null)
+    }
+  }, [viewActive])
+  const error = membersQuery.error ? requestErrorMessage(membersQuery.error, 'Không thể tải danh sách hội viên.') : ''
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
 
-  useEffect(() => {
-    let active = true
-    const loadMembers = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        const result = await getMembers()
-        if (active) setMembers(result)
-      } catch (requestError) {
-        if (active) {
-          setMembers([])
-          setError(requestErrorMessage(requestError, 'Không thể tải danh sách hội viên.'))
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    loadMembers()
-    return () => { active = false }
-  }, [requestKey])
 
   const filteredMembers = useMemo(() => members.filter(member => {
     const matchesStatus = status === 'Tất cả'
@@ -470,11 +459,12 @@ export function MembersView({ query, showNotice }) {
   if (loading) return <ViewLoader />
 
   return <>
+    {hasData && <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />}
     <section className="reception-member-metrics"><article><span><Users size={20} /></span><div><small>Tổng hội viên</small><strong>{loading ? '--' : members.length}</strong><p>Dữ liệu tài khoản</p></div></article><article><span><BadgeCheck size={20} /></span><div><small>Đang hoạt động</small><strong>{loading ? '--' : activeCount}</strong><p>Có thể sử dụng dịch vụ</p></div></article><article><span><Clock3 size={20} /></span><div><small>Ngừng hoạt động</small><strong>{loading ? '--' : members.length - activeCount}</strong><p>Tài khoản đã khóa</p></div></article></section>
     <section className="reception-card reception-table-card reception-members-card">
       <div className="reception-table-tools"><div><strong>Danh sách hội viên</strong><small>{filteredMembers.length} kết quả</small></div><div>{['Tất cả', 'Đang hoạt động', 'Ngừng hoạt động'].map(item => <button type="button" className={status === item ? 'active' : ''} onClick={() => setStatus(item)} key={item}>{item}</button>)}<button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Đăng ký hội viên</button></div></div>
       <div className="reception-table-scroll" role="region" aria-label="Danh sách hội viên, có thể cuộn" tabIndex={0}><div className="reception-table-heading"><span>Mã hội viên</span><span>Họ và tên</span><span>Email</span><span>Số điện thoại</span><span>Trạng thái</span></div>
-      {loading ? <EmptyState icon={Users} title="Đang tải hội viên" text="Dữ liệu hội viên đang được đồng bộ từ hệ thống." /> : error ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải hội viên" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filteredMembers.length ? <div>{filteredMembers.map(member => <button type="button" className="reception-table-row" key={member.memberId} onClick={() => setSelectedMemberId(member.memberId)} aria-label={`Xem chi tiết ${member.fullName}`}><span>#{member.memberId}</span><span>{member.fullName}</span><span>{member.email}</span><span>{member.phone || 'Chưa cập nhật'}</span><span className={member.isActive ? 'reception-member-active' : 'reception-member-inactive'}>{member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}</span></button>)}</div> : <EmptyState icon={Users} title="Không có hội viên phù hợp" text={query || status !== 'Tất cả' ? 'Thử thay đổi từ khóa hoặc bộ lọc trạng thái.' : 'Hệ thống chưa có tài khoản hội viên.'} />}</div>
+      {loading ? <EmptyState icon={Users} title="Đang tải hội viên" text="Dữ liệu hội viên đang được đồng bộ từ hệ thống." /> : error && !hasData ? <div className="reception-inline-error"><EmptyState icon={Users} title="Không thể tải hội viên" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filteredMembers.length ? <div>{filteredMembers.map(member => <button type="button" className="reception-table-row" key={member.memberId} onClick={() => setSelectedMemberId(member.memberId)} aria-label={`Xem chi tiết ${member.fullName}`}><span>#{member.memberId}</span><span>{member.fullName}</span><span>{member.email}</span><span>{member.phone || 'Chưa cập nhật'}</span><span className={member.isActive ? 'reception-member-active' : 'reception-member-inactive'}>{member.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}</span></button>)}</div> : <EmptyState icon={Users} title="Không có hội viên phù hợp" text={query || status !== 'Tất cả' ? 'Thử thay đổi từ khóa hoặc bộ lọc trạng thái.' : 'Hệ thống chưa có tài khoản hội viên.'} />}</div>
     </section>
     {showCreateDialog && <CreateMemberDialog onClose={() => setShowCreateDialog(false)} onCreated={handleCreated} />}
     {selectedMemberId !== null && <MemberDetailDialog memberId={selectedMemberId} onClose={() => setSelectedMemberId(null)} onViewRegistrations={() => { setRegistrationsMemberId(selectedMemberId); setSelectedMemberId(null) }} onViewSubscriptions={() => { setSubscriptionsMemberId(selectedMemberId); setSelectedMemberId(null) }} onRegisterSubscription={() => { setSubscriptionMemberId(selectedMemberId); setSelectedMemberId(null) }} />}

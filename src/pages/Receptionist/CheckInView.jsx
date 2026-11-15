@@ -1,3 +1,5 @@
+import { useReceptionistResource, useReceptionistViewActive } from '../../contexts/ReceptionistWorkspaceContext'
+import RefreshStatus from './RefreshStatus'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, QrCode, ScanLine, ShieldCheck, UserCheck } from 'lucide-react'
 import { checkOutGymMember, getCheckInErrorMessage, getTodayCheckIns } from '../../services/gymCheckInService'
@@ -28,31 +30,13 @@ export function CheckInView({ showNotice }) {
   const [manualInvalidField, setManualInvalidField] = useState('')
   const [checkOutSavingId, setCheckOutSavingId] = useState(null)
   const [checkOutError, setCheckOutError] = useState('')
-  const [todayCheckIns, setTodayCheckIns] = useState([])
-  const [todayLoading, setTodayLoading] = useState(true)
-  const [todayError, setTodayError] = useState('')
   const [todayRequestKey, setTodayRequestKey] = useState(0)
+  const todayQuery = useReceptionistResource('checkins', getTodayCheckIns, { initialData: [], refreshKey: todayRequestKey })
+  const { data: todayCheckIns, loading: todayLoading, refreshing, setData: setTodayCheckIns, hasData } = todayQuery
+  const todayError = todayQuery.error ? getCheckInErrorMessage(todayQuery.error, 'Không thể tải danh sách check-in hôm nay.') : ''
+  const viewActive = useReceptionistViewActive()
+  useEffect(() => { if (!viewActive) setCameraOpen(false) }, [viewActive])
 
-  useEffect(() => {
-    let active = true
-    const loadTodayCheckIns = async () => {
-      setTodayLoading(true)
-      setTodayError('')
-      try {
-        const result = await getTodayCheckIns()
-        if (active) setTodayCheckIns(result)
-      } catch (requestError) {
-        if (active) {
-          setTodayCheckIns([])
-          setTodayError(getCheckInErrorMessage(requestError, 'Không thể tải danh sách check-in hôm nay.'))
-        }
-      } finally {
-        if (active) setTodayLoading(false)
-      }
-    }
-    loadTodayCheckIns()
-    return () => { active = false }
-  }, [todayRequestKey])
 
   const performQrCheckIn = async payload => {
     if (qrSubmitting.current) return
@@ -155,6 +139,7 @@ export function CheckInView({ showNotice }) {
   if (todayLoading) return <ViewLoader />
 
   return <div className="reception-attendance-page">
+    {hasData && <RefreshStatus refreshing={refreshing} error={todayError} onRetry={() => setTodayRequestKey(key => key + 1)} />}
     <div className="reception-gym-checkin-layout">
       <section className="reception-card reception-gym-checkin-card">
         <div className="reception-card-head"><div><span>XÁC THỰC HỘI VIÊN</span><h2>Quét mã QR hội viên</h2></div><QrCode size={20} /></div>
@@ -181,7 +166,7 @@ export function CheckInView({ showNotice }) {
     </div>
     <section className="reception-card reception-gym-today-card">
       <div className="reception-card-head"><div><span>HOẠT ĐỘNG HÔM NAY</span><h2>Hội viên đang sử dụng phòng gym</h2></div><button type="button" onClick={() => setTodayRequestKey(key => key + 1)} disabled={todayLoading}>{todayLoading ? 'Đang tải...' : 'Làm mới'}</button></div>
-      {todayLoading ? <EmptyState icon={UserCheck} title="Đang tải check-in hôm nay" text="Dữ liệu check-in đang được đồng bộ từ hệ thống." /> : todayError ? <div className="reception-inline-error"><EmptyState icon={UserCheck} title="Không thể tải check-in hôm nay" text={todayError} /><button type="button" onClick={() => setTodayRequestKey(key => key + 1)}>Thử lại</button></div> : todayCheckIns.length ? <div className="reception-gym-today-table reception-table-scroll reception-table-scroll--checkins" role="region" aria-label="Danh sách check-in hôm nay, có thể cuộn" tabIndex={0}><div className="reception-gym-today-heading"><span>Hội viên</span><span>Gói tập</span><span>Giờ vào</span><span>Giờ ra</span><span>Thao tác</span></div>{todayCheckIns.map(item => <article key={item.id}><span><strong>{item.memberName}</strong><small>{item.memberCode} · {item.phoneNumber || 'Chưa có SĐT'}</small></span><span>{item.packageName || 'Chưa có gói'}</span><span>{formatDateTime(item.checkInTime)}</span><span>{item.checkOutTime ? formatDateTime(item.checkOutTime) : 'Đang ở phòng gym'}</span><button type="button" disabled={Boolean(item.checkOutTime) || checkOutSavingId !== null} onClick={() => handleCheckOut(item)}>{checkOutSavingId === item.id ? 'Đang xử lý...' : item.checkOutTime ? 'Đã ra về' : 'Check-out'}</button></article>)}</div> : <EmptyState icon={UserCheck} title="Chưa có lượt check-in" text="Hôm nay chưa có hội viên nào vào phòng gym." />}
+      {todayLoading ? <EmptyState icon={UserCheck} title="Đang tải check-in hôm nay" text="Dữ liệu check-in đang được đồng bộ từ hệ thống." /> : todayError && !hasData ? <div className="reception-inline-error"><EmptyState icon={UserCheck} title="Không thể tải check-in hôm nay" text={todayError} /><button type="button" onClick={() => setTodayRequestKey(key => key + 1)}>Thử lại</button></div> : todayCheckIns.length ? <div className="reception-gym-today-table reception-table-scroll reception-table-scroll--checkins" role="region" aria-label="Danh sách check-in hôm nay, có thể cuộn" tabIndex={0}><div className="reception-gym-today-heading"><span>Hội viên</span><span>Gói tập</span><span>Giờ vào</span><span>Giờ ra</span><span>Thao tác</span></div>{todayCheckIns.map(item => <article key={item.id}><span><strong>{item.memberName}</strong><small>{item.memberCode} · {item.phoneNumber || 'Chưa có SĐT'}</small></span><span>{item.packageName || 'Chưa có gói'}</span><span>{formatDateTime(item.checkInTime)}</span><span>{item.checkOutTime ? formatDateTime(item.checkOutTime) : 'Đang ở phòng gym'}</span><button type="button" disabled={Boolean(item.checkOutTime) || checkOutSavingId !== null} onClick={() => handleCheckOut(item)}>{checkOutSavingId === item.id ? 'Đang xử lý...' : item.checkOutTime ? 'Đã ra về' : 'Check-out'}</button></article>)}</div> : <EmptyState icon={UserCheck} title="Chưa có lượt check-in" text="Hôm nay chưa có hội viên nào vào phòng gym." />}
     </section>
     {cameraOpen && <Suspense fallback={<div className="reception-qr-camera-loading" role="status">Đang tải trình quét QR...<button type="button" onClick={closeCamera}>Hủy</button></div>}><QrCameraScanner onScan={handleScannedQr} onClose={closeCamera} onManualEntry={openManualQr} /></Suspense>}
   </div>

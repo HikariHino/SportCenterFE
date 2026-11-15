@@ -1,0 +1,185 @@
+/* Receptionist motion stays within this portal, including nested dialogs. */
+.reception-dashboard {
+  --rc-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --rc-motion-fast: 160ms;
+  --rc-motion-normal: 260ms;
+}
+
+/* Moving a view/dialog ancestor would reposition fixed camera and nested dialogs. */
+.reception-dashboard .reception-view { animation: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .reception-dashboard button,
+  .reception-dashboard a {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: var(--rc-motion-fast);
+    transition-timing-function: var(--rc-motion-ease);
+  }
+
+  .reception-dashboard :is(input, select, textarea),
+  .reception-dashboard :is(.reception-content-search, .reception-facility-search) {
+    transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  }
+
+  .reception-dashboard :is(input, select, textarea):focus-visible {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--rc-accent) 14%, transparent);
+  }
+
+  .reception-dashboard .reception-nav button { position: relative; }
+  .reception-dashboard .reception-nav button.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 24%;
+    bottom: 24%;
+    width: 3px;
+    border-radius: 6px;
+    background: currentColor;
+    transform-origin: center;
+    animation: rc-motion-nav-marker 280ms var(--rc-motion-ease);
+  }
+  .reception-dashboard .reception-nav button.active > svg:last-child {
+    animation: rc-motion-arrow 280ms var(--rc-motion-ease);
+  }
+  .reception-dashboard .reception-nav button > svg:first-child,
+  .reception-dashboard .reception-shortcut-grid button > svg:last-child,
+  .reception-dashboard .reception-overview-more > svg,
+  .reception-dashboard .reception-card-head button > svg {
+    transition: transform var(--rc-motion-normal) var(--rc-motion-ease);
+  }
+
+  /* Fade surfaces as asynchronous content arrives; never hide a base state. */
+  .reception-dashboard .reception-view :is(
+    .reception-card, .reception-overview-focus, .reception-overview-stats,
+    .reception-room-session-detail, .reception-room-cancelled
+  ) {
+    animation: rc-motion-surface-in 380ms var(--rc-motion-ease) backwards;
+    transition: border-color 220ms ease, box-shadow 220ms ease;
+  }
+  .reception-dashboard .reception-overview-grid > .reception-card:nth-child(2) { animation-delay: 65ms; }
+  .reception-dashboard .reception-gym-checkin-layout > .reception-card:nth-child(2) { animation-delay: 55ms; }
+  .reception-dashboard .reception-profile-layout > .reception-card:nth-child(2) { animation-delay: 65ms; }
+
+  .reception-dashboard :is(
+    .reception-overview-stats > button,
+    .reception-metrics > article,
+    .reception-member-metrics > article,
+    .reception-payment-metrics > article,
+    .reception-facility-metrics > article
+  ) { animation: rc-motion-item-in 400ms var(--rc-motion-ease) backwards; }
+
+  .reception-dashboard :is(
+    .reception-overview-stats, .reception-metrics, .reception-member-metrics,
+    .reception-payment-metrics, .reception-facility-metrics
+  ) > :nth-child(2) { animation-delay: 40ms; }
+  .reception-dashboard :is(
+    .reception-overview-stats, .reception-metrics, .reception-member-metrics,
+    .reception-payment-metrics, .reception-facility-metrics
+  ) > :nth-child(3) { animation-delay: 80ms; }
+  .reception-dashboard :is(
+    .reception-overview-stats, .reception-metrics, .reception-member-metrics,
+    .reception-payment-metrics, .reception-facility-metrics
+  ) > :nth-child(n+4) { animation-delay: 120ms; }
+
+  /* Opacity only: rows keep table alignment and sticky headers stay stable. */
+  .reception-dashboard :is(
+    .reception-table-row,
+    .reception-support-list > article,
+    .reception-subscription-list > article,
+    .reception-facility-room-grid > article,
+    .reception-schedule-session-list > article,
+    .reception-notification-list > article
+  ):nth-child(-n+10) { animation: rc-motion-surface-in 300ms var(--rc-motion-ease) backwards; }
+  .reception-dashboard :is(
+    .reception-table-row, .reception-support-list > article, .reception-subscription-list > article,
+    .reception-facility-room-grid > article, .reception-schedule-session-list > article,
+    .reception-notification-list > article
+  ):nth-child(2) { animation-delay: 25ms; }
+  .reception-dashboard :is(
+    .reception-table-row, .reception-support-list > article, .reception-subscription-list > article,
+    .reception-facility-room-grid > article, .reception-schedule-session-list > article,
+    .reception-notification-list > article
+  ):nth-child(3) { animation-delay: 50ms; }
+  .reception-dashboard :is(
+    .reception-table-row, .reception-support-list > article, .reception-subscription-list > article,
+    .reception-facility-room-grid > article, .reception-schedule-session-list > article,
+    .reception-notification-list > article
+  ):nth-child(n+4):nth-child(-n+10) { animation-delay: 75ms; }
+
+  .reception-dashboard .reception-dialog-backdrop { animation: rc-motion-backdrop-in 180ms ease-out; }
+  .reception-dashboard .reception-dialog { animation: rc-motion-surface-in 260ms var(--rc-motion-ease); }
+  .reception-dashboard .reception-dialog > header > div { animation: rc-motion-item-in 300ms var(--rc-motion-ease); }
+  .reception-dashboard .reception-notification-panel {
+    transform-origin: top right;
+    animation: rc-motion-popover-in 240ms var(--rc-motion-ease);
+  }
+  .reception-dashboard .reception-toast { animation: rc-motion-toast-in 360ms var(--rc-motion-ease); }
+  .reception-dashboard .reception-gym-result-body > span > svg { animation: rc-motion-success 420ms var(--rc-motion-ease); }
+  .reception-dashboard :is(
+    .reception-form-error, .reception-inline-error, .reception-filter-error,
+    .reception-qr-checkin-status, .reception-empty, #reception-qr-manual-form
+  ) { animation: rc-motion-surface-in 240ms ease-out; }
+
+  .reception-dashboard :is(.reception-payment-status, .reception-member-active, .reception-member-inactive) {
+    transition: color 220ms ease, background-color 220ms ease, border-color 220ms ease;
+  }
+
+  .reception-dashboard .reception-view-loader {
+    background-size: 150% 150%;
+    animation: rc-motion-loader-glow 2.8s ease-in-out infinite alternate;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .reception-dashboard .reception-nav button:not(:disabled):hover { transform: translateX(3px); }
+    .reception-dashboard .reception-nav button:not(:disabled):hover > svg:first-child { transform: scale(1.1); }
+    .reception-dashboard :is(
+      .reception-primary-button, .reception-qr-camera-open,
+      .reception-payment-detail-actions > button, .reception-payment-detail-actions > a,
+      .reception-dialog footer button, .reception-overview-focus-main > button
+    ):not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 14px #10264b1a; }
+    .reception-dashboard :is(.reception-overview-stats > button, .reception-shortcut-grid > button):not(:disabled):hover {
+      transform: translateY(-2px);
+    }
+    .reception-dashboard :is(
+      .reception-shortcut-grid button:hover > svg:last-child,
+      .reception-overview-more:hover > svg,
+      .reception-card-head button:hover > svg
+    ) { transform: translateX(3px); }
+    .reception-dashboard :is(.reception-card, .reception-facility-room-grid > article):hover {
+      box-shadow: 0 8px 24px #10264b12;
+    }
+    .reception-dashboard .reception-notification-button:hover > svg { animation: rc-motion-bell 450ms ease-in-out; }
+  }
+
+  .reception-dashboard :is(
+    .reception-primary-button, .reception-dialog footer button,
+    .reception-overview-stats > button, .reception-qr-camera-open
+  ):not(:disabled):active { transform: translateY(0) scale(.98); }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 1024px) {
+  .reception-dashboard .reception-sidebar.is-open { animation: rc-motion-sidebar-in 300ms var(--rc-motion-ease); }
+}
+
+/* Override older portal effects too when the device requests less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .reception-dashboard *, .reception-dashboard *::before, .reception-dashboard *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .reception-dashboard :is(button, a):hover,
+  .reception-dashboard :is(button, a):active { transform: none !important; }
+}
+
+@keyframes rc-motion-surface-in { from { opacity: .35; } to { opacity: 1; } }
+@keyframes rc-motion-item-in { from { opacity: .35; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes rc-motion-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rc-motion-popover-in { from { opacity: 0; transform: translateY(-7px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes rc-motion-toast-in { from { opacity: 0; transform: translateY(-12px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes rc-motion-sidebar-in { from { opacity: .4; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+@keyframes rc-motion-nav-marker { from { opacity: 0; transform: scaleY(.25); } to { opacity: 1; transform: scaleY(1); } }
+@keyframes rc-motion-arrow { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: none; } }
+@keyframes rc-motion-success { from { opacity: 0; transform: scale(.65) rotate(-12deg); } to { opacity: 1; transform: none; } }
+@keyframes rc-motion-bell { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(12deg); } 65% { transform: rotate(-10deg); } }
+@keyframes rc-motion-loader-glow { from { background-position: 40% 30%; } to { background-position: 60% 65%; } }
