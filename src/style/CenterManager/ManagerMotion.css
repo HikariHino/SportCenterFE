@@ -1,0 +1,164 @@
+/* Match the other portals while keeping all Manager effects scoped here. */
+.manager-dashboard {
+  --manager-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --manager-motion-fast: 160ms;
+  --manager-motion-normal: 260ms;
+}
+
+/* Buttons in both groups use the navigation as their shared offset parent. */
+.manager-dashboard .manager-sliding-nav { position: relative; isolation: isolate; }
+.manager-dashboard .manager-sliding-nav .manager-nav-group > p,
+.manager-dashboard .manager-sliding-nav .manager-nav-group > button { position: relative; z-index: 1; }
+/* The decorative span now precedes the first group. Preserve its hidden divider. */
+.manager-dashboard .manager-sliding-nav > .manager-nav-group:first-of-type::before { display: none; }
+.manager-dashboard .manager-nav-pill { position: absolute; z-index: 0; top: 0; left: 0; display: block; pointer-events: none; opacity: 0; border-radius: 9px; background: #2865e8; box-shadow: 0 5px 14px #06163430; }
+.manager-dashboard .manager-nav-pill::before { content: ''; position: absolute; left: 0; top: 24%; bottom: 24%; width: 3px; border-radius: 6px; background: #fff; }
+.manager-dashboard .manager-sliding-nav[data-pill-ready='true'] > .manager-nav-pill { opacity: 1; }
+.manager-dashboard .manager-sliding-nav[data-pill-ready='true'] .manager-nav-group > button.active,
+.manager-dashboard .manager-sliding-nav[data-pill-ready='true'] .manager-nav-group > button.active:hover { background: transparent; box-shadow: none; transform: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .manager-dashboard .manager-sliding-nav[data-pill-animated='true'] > .manager-nav-pill {
+    transition: transform 340ms var(--manager-motion-ease), width 260ms ease, height 260ms ease;
+  }
+  .manager-dashboard button,
+  .manager-dashboard a {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: var(--manager-motion-fast);
+    transition-timing-function: var(--manager-motion-ease);
+  }
+  .manager-dashboard :is(input, select, textarea, .manager-search) {
+    transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  }
+  .manager-dashboard :is(input, select, textarea):focus-visible {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-accent, var(--manager-blue)) 14%, transparent);
+  }
+  .manager-dashboard .manager-nav button.active > svg:last-child { animation: manager-motion-arrow-in 280ms var(--manager-motion-ease); }
+  .manager-dashboard :is(
+    .manager-nav button > svg:first-child, .manager-home > svg,
+    .manager-card-heading button > svg, .manager-button > svg
+  ) { transition: transform var(--manager-motion-normal) var(--manager-motion-ease); }
+
+  /* Opacity only on containers: nested dialogs and sticky controls stay in place. */
+  .manager-dashboard .manager-main :is(
+    .manager-card, .fdesk-card, .report-chart-card, .report-table-card,
+    .room-directory, .pkg-catalog, .policy-catalog, .sessions-header-card
+  ) {
+    animation: manager-motion-surface-in 380ms var(--manager-motion-ease) backwards;
+    transition: border-color 220ms ease, box-shadow 220ms ease;
+  }
+  .manager-dashboard .manager-analytics > .manager-card:nth-child(2) { animation-delay: 65ms; }
+
+  .manager-dashboard :is(
+    .manager-metric, .staff-metric-card, .class-metric-card, .room-metric-card,
+    .pkg-metric-card, .policy-metric-card, .report-metric-card, .fdesk-metric-card
+  ) { animation: manager-motion-item-in 400ms var(--manager-motion-ease) backwards; }
+  .manager-dashboard :is(
+    .manager-metrics, .staff-metrics, .class-metrics, .room-metrics,
+    .pkg-metrics, .policy-metrics, .report-metrics-grid, .fdesk-metrics-grid
+  ) > :nth-child(2) { animation-delay: 40ms; }
+  .manager-dashboard :is(
+    .manager-metrics, .staff-metrics, .class-metrics, .room-metrics,
+    .pkg-metrics, .policy-metrics, .report-metrics-grid, .fdesk-metrics-grid
+  ) > :nth-child(3) { animation-delay: 80ms; }
+  .manager-dashboard :is(
+    .manager-metrics, .staff-metrics, .class-metrics, .room-metrics,
+    .pkg-metrics, .policy-metrics, .report-metrics-grid, .fdesk-metrics-grid
+  ) > :nth-child(n+4) { animation-delay: 120ms; }
+
+  /* Fade entries without moving table rows or changing their dimensions. */
+  .manager-dashboard :is(
+    tbody > tr, .manager-staff-grid > article, .manager-court-grid > button,
+    .sports-grid > .sport-card, .rooms-grid > .room-card,
+    .packages-grid > .package-card, .policies-grid > .policy-card, .session-card-item
+  ):nth-child(-n+10) { animation: manager-motion-surface-in 300ms var(--manager-motion-ease) backwards; }
+  .manager-dashboard :is(
+    tbody > tr, .manager-staff-grid > article, .manager-court-grid > button,
+    .sports-grid > .sport-card, .rooms-grid > .room-card,
+    .packages-grid > .package-card, .policies-grid > .policy-card, .session-card-item
+  ):nth-child(2) { animation-delay: 25ms; }
+  .manager-dashboard :is(
+    tbody > tr, .manager-staff-grid > article, .manager-court-grid > button,
+    .sports-grid > .sport-card, .rooms-grid > .room-card,
+    .packages-grid > .package-card, .policies-grid > .policy-card, .session-card-item
+  ):nth-child(3) { animation-delay: 50ms; }
+  .manager-dashboard :is(
+    tbody > tr, .manager-staff-grid > article, .manager-court-grid > button,
+    .sports-grid > .sport-card, .rooms-grid > .room-card,
+    .packages-grid > .package-card, .policies-grid > .policy-card, .session-card-item
+  ):nth-child(n+4):nth-child(-n+10) { animation-delay: 75ms; }
+
+  .manager-dashboard :is(
+    .staff-modal-backdrop, .class-modal-overlay, .room-modal-overlay,
+    .pkg-modal-overlay, .policy-modal-overlay, .fdesk-dialog-overlay
+  ) { animation: manager-motion-backdrop-in 180ms ease-out; }
+  .manager-dashboard :is(
+    .staff-modal, .class-modal, .room-modal, .pkg-modal, .policy-modal, .fdesk-dialog
+  ) { animation: manager-motion-surface-in 260ms var(--manager-motion-ease); }
+  .manager-dashboard dialog[open] { animation: manager-motion-surface-in 260ms var(--manager-motion-ease); }
+  .manager-dashboard dialog::backdrop { animation: manager-motion-backdrop-in 180ms ease-out; }
+  .manager-dashboard :is(
+    .staff-modal-header, .class-modal-header, .room-modal-header,
+    .pkg-modal-header, .policy-modal-header, .fdesk-dialog-header
+  ) > :is(h2, h3) { animation: manager-motion-item-in 300ms var(--manager-motion-ease); }
+
+  .manager-dashboard .staff-toast { animation: manager-motion-toast-in 360ms var(--manager-motion-ease); }
+  .manager-dashboard :is(.class-alert-success, .room-alert-success, .pkg-alert-success, .policy-alert-success, .fdesk-alert-success, .report-alert-success) > svg {
+    animation: manager-motion-success 420ms var(--manager-motion-ease);
+  }
+  .manager-dashboard :is(
+    .manager-empty, .staff-form-error, .class-alert, .class-empty, .class-form-error,
+    .room-alert, .room-empty, .room-capacity-alert, .pkg-alert, .pkg-empty,
+    .policy-alert, .policy-empty, .fdesk-alert, .fdesk-subscription-notice,
+    .fdesk-subscription-history-error, .report-alert, .report-empty-box,
+    .manager-session-sync-error
+  ) { animation: manager-motion-surface-in 240ms ease-out; }
+  .manager-dashboard :is(.manager-badge, .fdesk-badge, .report-badge) {
+    transition: color 220ms ease, background-color 220ms ease, border-color 220ms ease;
+  }
+  .manager-dashboard :is(.class-loading, .room-loading, .pkg-loading, .policy-loading, .report-loading-box) {
+    background-image: radial-gradient(circle, var(--theme-raised, #edf4ff), transparent 70%);
+    background-size: 150% 150%;
+    animation: manager-motion-loader-glow 2.8s ease-in-out infinite alternate;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .manager-dashboard .manager-nav button:not(:disabled):hover { transform: translateX(3px); }
+    .manager-dashboard .manager-nav button:not(:disabled):hover > svg:first-child { transform: scale(1.1); }
+    .manager-dashboard :is(
+      .manager-button, .staff-btn, .class-btn, .room-btn, .pkg-btn,
+      .policy-btn, .fdesk-btn, .report-btn, .report-invoice-btn
+    ):not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 14px #10264b1a; }
+    .manager-dashboard :is(.manager-home:hover > svg, .manager-card-heading button:hover > svg) { transform: translateX(3px); }
+    .manager-dashboard :is(.manager-card, .sport-card, .room-card, .package-card, .policy-card):hover { box-shadow: 0 8px 24px #10264b12; }
+  }
+  .manager-dashboard :is(
+    .manager-button, .staff-btn, .class-btn, .room-btn, .pkg-btn,
+    .policy-btn, .fdesk-btn, .report-btn, .report-invoice-btn
+  ):not(:disabled):active { transform: translateY(0) scale(.98); }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 760px) {
+  .manager-dashboard .manager-sidebar.is-open { animation: manager-motion-sidebar-in 300ms var(--manager-motion-ease); }
+}
+
+/* Override older per-view animations too when reduced motion is requested. */
+@media (prefers-reduced-motion: reduce) {
+  .manager-dashboard *, .manager-dashboard *::before, .manager-dashboard *::after,
+  .manager-dashboard dialog::backdrop {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .manager-dashboard :is(button, a):hover,
+  .manager-dashboard :is(button, a):active { transform: none !important; }
+}
+
+@keyframes manager-motion-surface-in { from { opacity: .35; } to { opacity: 1; } }
+@keyframes manager-motion-item-in { from { opacity: .35; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes manager-motion-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes manager-motion-toast-in { from { opacity: 0; transform: translateY(-12px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes manager-motion-sidebar-in { from { opacity: .4; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+@keyframes manager-motion-arrow-in { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: none; } }
+@keyframes manager-motion-success { from { opacity: 0; transform: scale(.65) rotate(-12deg); } to { opacity: 1; transform: none; } }
+@keyframes manager-motion-loader-glow { from { background-position: 40% 30%; } to { background-position: 60% 65%; } }
