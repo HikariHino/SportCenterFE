@@ -1,3 +1,5 @@
+import { CoachList } from './CoachPagination'
+import { listPage } from '../../utils/listPagination'
 import { useCoachCache, useCoachResource } from '../../contexts/CoachWorkspaceContext'
 import { coachRosterKey, loadCoachStudentCatalog } from '../../services/coachWorkspaceReads'
 import RefreshStatus from './RefreshStatus'
@@ -74,13 +76,13 @@ function WorkoutRecommendationResult({ recommendation, startDate, endDate, onClo
       <span><small>Thời gian áp dụng</small><strong>{startDate} – {endDate}</strong></span>
     </div>
     <div className="coach-plan-ai-sessions">
-      {recommendation.sessions.map((session, sessionIndex) => <article key={`${session.day}-${sessionIndex}`}>
+      {<CoachList items={recommendation.sessions} label="Buổi trong gợi ý AI">{(session, ordinal) => { const sessionIndex = ordinal - 1; return <article key={`${session.day}-${sessionIndex}`}>
         <header><div><span>BUỔI {session.day}</span><strong>{session.title}</strong></div>{session.durationMinutes && <time><Clock3 size={14} />{session.durationMinutes} phút</time>}</header>
-        {session.exercises.length ? <ul>{session.exercises.map((exercise, exerciseIndex) => <li key={`${exercise.exerciseName}-${exerciseIndex}`}>
+        {session.exercises.length ? <ul>{session.exercises.map((exercise, exerciseIndex) => <li key={`${exercise.exerciseName}-${exerciseIndex}`} className="coach-numbered-item" data-stt={exerciseIndex + 1}>
           <div><strong>{exercise.exerciseName}</strong><span>{[exercise.sets && `${exercise.sets} hiệp`, exercise.reps && `${exercise.reps} lần`, exercise.restSeconds && `nghỉ ${exercise.restSeconds} giây`].filter(Boolean).join(' · ') || 'Theo hướng dẫn của Coach'}</span></div>
           {exercise.note && <p>{exercise.note}</p>}
         </li>)}</ul> : <p className="coach-plan-ai-empty">AI chưa đề xuất bài tập cho buổi này.</p>}
-      </article>)}
+      </article> }}</CoachList>}
     </div>
     {recommendation.warnings.length > 0 && <div className="coach-plan-ai-warnings"><strong><CircleAlert size={15} />Lưu ý an toàn</strong><ul>{recommendation.warnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul></div>}
   </section>
@@ -99,6 +101,9 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
     endDate: toDateInput(defaultEndDate),
   })
   const [exercises, setExercises] = useState([])
+  const [exercisePage, setExercisePage] = useState(1)
+  const exerciseRange = listPage(exercises.length, exercisePage)
+  const visibleExercises = exercises.slice(exerciseRange.offset, exerciseRange.to)
   const [exerciseCatalog, setExerciseCatalog] = useState([])
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [catalogError, setCatalogError] = useState('')
@@ -221,6 +226,7 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
     setAiRecommendation(recommendation)
     const mappedResult = mapWorkoutRecommendationToPlanExercises(recommendation, exerciseCatalog)
     setExercises(mappedResult.exercises)
+    setExercisePage(1)
     const matchedCount = mappedResult.exercises.filter(exercise => exercise.exerciseId).length
     const missingMessage = mappedResult.unmatchedNames.length
       ? ` Các tên chưa xác định duy nhất: ${mappedResult.unmatchedNames.join(', ')}. Hãy chọn bài trong kho hoặc xóa từng dòng cần kiểm tra trước khi lưu.`
@@ -244,11 +250,14 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
       return
     }
     if (exercises.some(exercise => !exercise.exerciseId)) {
+      setExercisePage(Math.floor(exercises.findIndex(exercise => !exercise.exerciseId) / 10) + 1)
       setError('Vui lòng chọn bài tập trong kho hoặc xóa các dòng chưa xác định trước khi lưu giáo án.')
       return
     }
     const exerciseError = getTrainingExercisesValidationError(exercises)
     if (exerciseError) {
+      const invalidIndex = exercises.findIndex(exercise => getTrainingExercisesValidationError([exercise]))
+      if (invalidIndex >= 0) setExercisePage(Math.floor(invalidIndex / 10) + 1)
       setError(exerciseError)
       return
     }
@@ -310,9 +319,9 @@ function TrainingPlanDialog({ student, onClose, onCreated }) {
         {aiDemoMessage && <p className="coach-plan-ai-message" role="status" aria-live="polite">{aiDemoMessage}</p>}
         {aiRecommendation && <WorkoutRecommendationResult recommendation={aiRecommendation} startDate={form.startDate} endDate={form.endDate} onClose={() => setAiRecommendation(null)} />}
         <div className="coach-plan-exercises">
-          <div className="coach-plan-exercises-head"><div><strong>Bài tập</strong><span>Không bắt buộc · chọn bài tập theo tên từ kho hiện có</span></div><button type="button" disabled={catalogLoading || !exerciseCatalog.length} onClick={() => setExercises(current => [...current, newPlanExercise()])}><Plus size={15} />Thêm bài tập</button></div>
+          <div className="coach-plan-exercises-head"><div><strong>Bài tập</strong><span>Không bắt buộc · chọn bài tập theo tên từ kho hiện có</span></div><button type="button" disabled={catalogLoading || !exerciseCatalog.length} onClick={() => { setExercises(current => [...current, newPlanExercise()]); setExercisePage(Math.floor(exercises.length / 10) + 1) }}><Plus size={15} />Thêm bài tập</button></div>
           {catalogLoading ? <div className="coach-exercise-catalog-state">Đang tải kho bài tập...</div> : catalogError ? <div className="coach-exercise-catalog-state error"><span>{catalogError}</span><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : !exerciseCatalog.length ? <div className="coach-exercise-catalog-state">Kho bài tập chưa có dữ liệu.</div> : null}
-          {exercises.length ? exercises.map((exercise, index) => <article key={index}><div className="coach-plan-exercise-title"><strong>Bài tập {index + 1}</strong><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div>{exercise.aiExerciseName && <p className="coach-plan-ai-message" role={!exercise.exerciseId ? 'alert' : undefined}>AI đề xuất: <strong>{exercise.aiExerciseName}</strong>{!exercise.exerciseId && (exercise.matchIssue === 'ambiguous' ? ' · Có nhiều bài phù hợp. Hãy chọn đúng bài trong kho hoặc xóa dòng này.' : ' · Không tìm thấy bài phù hợp. Hãy chọn bài trong kho hoặc xóa dòng này.')}</p>}<div><label className="exercise-picker"><span>Tên bài tập</span><select value={exercise.exerciseId} aria-label={`Bài tập ${index + 1}: chọn bài trong kho`} aria-invalid={!exercise.exerciseId && !!exercise.matchIssue} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} required><option value="">Chọn bài tập</option>{exerciseCatalog.map(option => <option value={option.id} key={option.id}>{option.exerciseName}{option.muscleGroup ? ` · ${option.muscleGroup}` : ''} · #{option.id}</option>)}</select></label><label><span>Số hiệp</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} required /></label><label><span>Số lần</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} required /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={EXERCISE_NOTES_MAX_LENGTH} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article>) : !catalogLoading && !catalogError && exerciseCatalog.length ? <p className="coach-plan-exercises-empty">Nhấn “Thêm bài tập” để chọn bài tập theo tên từ kho.</p> : null}
+          {exercises.length ? <CoachList items={visibleExercises} label="Bài tập đang soạn" page={exercisePage} total={exercises.length} onPageChange={setExercisePage}>{(exercise, ordinal) => { const index = ordinal - 1; return <article key={index}><div className="coach-plan-exercise-title"><strong>Bài tập {index + 1}</strong><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div>{exercise.aiExerciseName && <p className="coach-plan-ai-message" role={!exercise.exerciseId ? 'alert' : undefined}>AI đề xuất: <strong>{exercise.aiExerciseName}</strong>{!exercise.exerciseId && (exercise.matchIssue === 'ambiguous' ? ' · Có nhiều bài phù hợp. Hãy chọn đúng bài trong kho hoặc xóa dòng này.' : ' · Không tìm thấy bài phù hợp. Hãy chọn bài trong kho hoặc xóa dòng này.')}</p>}<div><label className="exercise-picker"><span>Tên bài tập</span><select value={exercise.exerciseId} aria-label={`Bài tập ${index + 1}: chọn bài trong kho`} aria-invalid={!exercise.exerciseId && !!exercise.matchIssue} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} required><option value="">Chọn bài tập</option>{exerciseCatalog.map(option => <option value={option.id} key={option.id}>{option.exerciseName}{option.muscleGroup ? ` · ${option.muscleGroup}` : ''} · #{option.id}</option>)}</select></label><label><span>Số hiệp</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} required /></label><label><span>Số lần</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} required /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={EXERCISE_NOTES_MAX_LENGTH} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article> }}</CoachList> : !catalogLoading && !catalogError && exerciseCatalog.length ? <p className="coach-plan-exercises-empty">Nhấn “Thêm bài tập” để chọn bài tập theo tên từ kho.</p> : null}
         </div>
         {error && <div className="coach-plan-form-error" role="alert">{error}</div>}
         </div>
@@ -423,17 +432,17 @@ function TrainingPlanListDialog({ student, onClose }) {
       <header><div><span>GIÁO ÁN HỌC VIÊN</span><h2 id="coach-plan-list-title">{student.name}</h2><p>Member #{student.memberId} · {plans.length} giáo án</p></div><button type="button" aria-label="Đóng danh sách giáo án" onClick={onClose}><X size={19} /></button></header>
       <div className="coach-plan-list-body">
         {loading ? <div className="coach-plan-list-state"><BookOpen size={26} /><strong>Đang tải giáo án</strong><span>Dữ liệu giáo án đang được đồng bộ từ hệ thống.</span></div> : error ? <div className="coach-plan-list-state error"><BookOpen size={26} /><strong>Không thể tải giáo án</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : plans.length ? <div className="coach-member-plan-list">
-          {plans.map(plan => <article className="coach-member-plan" key={plan.id}>
+          {<CoachList items={plans} label="Giáo án học viên" resetKey={student.memberId}>{plan => <article className="coach-member-plan" key={plan.id}>
             <header><div><span>{trainingGoalLabel(plan.goal)}</span><h3>{plan.planName}</h3></div><b className={String(plan.status || '').toLowerCase()}>{plan.status || 'Chưa xác định'}</b></header>
             <div className="coach-member-plan-meta"><span><CalendarDays size={14} /><span><small>Bắt đầu</small><strong>{planDateFormatter.format(new Date(plan.startDate))}</strong></span></span><span><CalendarDays size={14} /><span><small>Kết thúc</small><strong>{planDateFormatter.format(new Date(plan.endDate))}</strong></span></span></div>
             {Array.isArray(plan.exercises) && plan.exercises.length ? <div className="coach-member-plan-exercises">
-              {plan.exercises.map(exercise => <div key={exercise.id}>
+              {<CoachList items={plan.exercises} label="Bài tập của giáo án" resetKey={plan.id}>{exercise => <div key={exercise.id}>
                 <div className="coach-member-exercise-head"><span><strong>{exercise.exerciseName}</strong><small>{exercise.sets} hiệp × {exercise.reps} lần{exercise.durationInMinutes ? ` · ${exercise.durationInMinutes} phút` : ''}</small></span><button type="button" onClick={() => editExerciseResult(exercise)} disabled={savingExerciseId !== null}><PencilLine size={13} />{exercise.notes ? 'Sửa kết quả' : 'Cập nhật kết quả'}</button></div>
                 {editingExerciseId === exercise.id ? <form className="coach-exercise-result-form" onSubmit={event => saveExerciseResult(event, exercise.id)}><label htmlFor={`coach-exercise-result-${exercise.id}`}>Kết quả / ghi chú thực hiện</label><textarea id={`coach-exercise-result-${exercise.id}`} rows="3" maxLength={EXERCISE_NOTES_MAX_LENGTH} value={resultDraft} onChange={event => setResultDraft(event.target.value)} placeholder="Ví dụ: Hoàn thành đủ 3 hiệp, kỹ thuật ổn định..." disabled={savingExerciseId === exercise.id} autoFocus />{exerciseError && <p role="alert">{exerciseError}</p>}<footer><button type="button" onClick={cancelExerciseResult} disabled={savingExerciseId === exercise.id}>Hủy</button><button type="submit" disabled={savingExerciseId === exercise.id}>{savingExerciseId === exercise.id ? 'Đang lưu...' : 'Lưu kết quả'}</button></footer></form> : <p className={exercise.notes ? '' : 'coach-exercise-result-empty'}>{exercise.notes || 'Chưa cập nhật kết quả thực hiện.'}</p>}
                 {updatedExerciseId === exercise.id && editingExerciseId !== exercise.id && <span className="coach-exercise-result-saved"><CheckCircle2 size={12} />Đã lưu kết quả</span>}
-              </div>)}
+              </div>}</CoachList>}
             </div> : <p className="coach-member-plan-empty">Giáo án chưa có bài tập.</p>}
-          </article>)}
+          </article>}</CoachList>}
         </div> : <div className="coach-plan-list-state"><BookOpen size={26} /><strong>Chưa có giáo án</strong><span>Học viên này chưa được tạo giáo án tập luyện.</span></div>}
       </div>
     </section>
@@ -567,12 +576,12 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
     <div className="coach-student-layout">
       <section className="coach-card coach-roster">
         <div className="coach-view-toolbar"><div><strong>Danh sách học viên theo buổi</strong><span>{rosterLoading ? 'Đang tải roster...' : `${filtered.length} kết quả`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã điểm danh', 'Chưa điểm danh', 'Vắng mặt'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
-        {rosterLoading ? <EmptyState title="Đang tải học viên" text="Danh sách đăng ký của buổi học đang được đồng bộ." /> : error && !rosterQuery.hasData ? <div className="coach-inline-error"><EmptyState title="Không thể tải học viên" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="coach-roster-table"><div className="coach-roster-heading"><span>Học viên</span><span>Đăng ký</span><span>Điểm danh</span><span>Giờ check-in</span></div>{filtered.map(student => <button type="button" className={selected?.id === student.id ? 'selected' : ''} key={student.id} onClick={() => setSelectedId(student.id)}>
+        {rosterLoading ? <EmptyState title="Đang tải học viên" text="Danh sách đăng ký của buổi học đang được đồng bộ." /> : error && !rosterQuery.hasData ? <div className="coach-inline-error"><EmptyState title="Không thể tải học viên" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <CoachList items={filtered} label="Học viên theo buổi" resetKey={JSON.stringify([query, status, selectedSessionId])} table renderLayout={(rows, pagination) => <div className="coach-paged-table"><div className="coach-table-scroll" role="region" aria-label="Danh sách học viên, có thể cuộn" tabIndex={0}><div className="coach-roster-table"><div className="coach-roster-heading coach-numbered-heading"><span>STT</span><span>Học viên</span><span>Đăng ký</span><span>Điểm danh</span><span>Giờ check-in</span></div>{rows}</div></div>{pagination}</div>}>{student => <button type="button" className={selected?.id === student.id ? 'selected' : ''} key={student.id} onClick={() => setSelectedId(student.id)}>
           <span className="coach-roster-person"><i className="coach-student-avatar blue">{initials(student.name)}</i><span><strong>{student.name}</strong><small>Member #{student.memberId}</small></span></span>
           <span><strong>{student.registrationStatus}</strong><small>Đăng ký #{student.registrationId}</small></span>
           <span><strong className={`coach-attendance ${student.attendanceTone}`}>{student.attendanceStatus}</strong><small>{student.attendanceTone === 'pending' ? 'Chưa có dữ liệu điểm danh' : 'Đã cập nhật trên hệ thống'}</small></span>
           <span><strong>{student.checkInTime}</strong><small>Thời gian ghi nhận</small></span>
-        </button>)}</div> : <EmptyState title="Chưa có học viên" text={query || status !== 'Tất cả' ? 'Không có học viên phù hợp với bộ lọc hiện tại.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
+        </button>}</CoachList> : <EmptyState title="Chưa có học viên" text={query || status !== 'Tất cả' ? 'Không có học viên phù hợp với bộ lọc hiện tại.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </section>
 
       <aside className="coach-card coach-student-profile">

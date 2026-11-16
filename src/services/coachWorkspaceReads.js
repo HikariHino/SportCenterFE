@@ -2,6 +2,17 @@ import { getCoachClassDetails, getCoachClasses, getMyCoachSessions } from './coa
 import { getRooms } from './roomService'
 import { getProfile } from './profileService'
 import { shiftTimetableDate, timetableWeekStart } from '../utils/memberTimetable'
+import { getAllListPages } from '../utils/listPagination'
+
+export async function getAllCoachSessions(query = {}) {
+  const items = await getAllListPages((page, pageSize) => getMyCoachSessions({ ...query, page, pageSize }))
+  return { items, total: items.length, page: 1, pageSize: 100 }
+}
+
+const getAllCoachClasses = async () => {
+  const items = await getAllListPages((page, pageSize) => getCoachClasses({ page, pageSize }))
+  return { items, total: items.length }
+}
 
 export const coachSessionsKey = ({ from, to, page = 1, pageSize = 100 } = {}) =>
   'sessions:' + JSON.stringify([from || null, to || null, Number(page), Number(pageSize)])
@@ -23,8 +34,8 @@ export function coachWeekRange(weekStart = timetableWeekStart(Date.now())) {
 // Safe reads only. No attendance writes, AI generation or plan creation.
 export async function loadCoachStudentCatalog(cache) {
   const [sessionResult, classResult] = await Promise.allSettled([
-    cache.load(coachSessionsKey(), () => getMyCoachSessions({ pageSize: 100 })),
-    cache.load('classes', () => getCoachClasses({ page: 1, pageSize: 100 })),
+    cache.load(coachSessionsKey(), () => getAllCoachSessions()),
+    cache.load('classes', getAllCoachClasses),
   ])
   if (sessionResult.status === 'rejected') throw sessionResult.reason
   const sessions = sessionResult.value.items
@@ -38,9 +49,9 @@ export async function loadCoachStudentCatalog(cache) {
 export function coachReadTasks(cache) {
   const week = coachWeekRange()
   return [
-    [coachSessionsKey(week), () => getMyCoachSessions(week)],
-    [coachSessionsKey(), () => getMyCoachSessions({ pageSize: 100 })],
-    ['classes', () => getCoachClasses({ page: 1, pageSize: 100 })],
+    [coachSessionsKey(week), () => getAllCoachSessions(week)],
+    [coachSessionsKey(), () => getAllCoachSessions()],
+    ['classes', getAllCoachClasses],
     ['rooms:active', () => getRooms(true)], ['profile', getProfile],
     ['student-catalog', () => loadCoachStudentCatalog(cache)],
   ]

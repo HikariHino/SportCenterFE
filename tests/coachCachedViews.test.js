@@ -43,7 +43,7 @@ function renderView(name, setup, props = {}) {
     cache.setData('rooms:active', [{ id: 2, name: 'Phòng Gym A', capacity: 20, isActive: true }])
     cache.setData('profile', { userId: 4, fullName: 'Coach A', email: 'coach@example.com' })
     cache.setData('overview:' + reads.coachOverviewRange().from, { metrics: [], sessions: [], weekSessions: [], students: [], attendance: { present: 0, absent: 0, excused: 0, pending: 0 } })
-    setup?.(cache)
+    setup?.(cache, session)
     return h(views[name], { active: true, query: '', showNotice() {}, onNavigate() {}, selectedSessionId: '30', ...props })
   }
   return renderToStaticMarkup(h(MemoryRouter, null, h(AuthProvider, null, h(workspace.CoachWorkspaceProvider, { sessionKey: 'coach-a' }, h(Seeded)))))
@@ -74,4 +74,29 @@ test('a different Coach workspace starts without the previous account data', () 
   const html = renderToStaticMarkup(h(workspace.CoachWorkspaceProvider, { sessionKey: 'coach-b' }, h(Empty)))
   assert.doesNotMatch(html, /coach@example.com/)
   assert.match(html, /Đang tải/)
+})
+
+test('Coach roster and room lists show ten numbered rows while keeping totals and pagination visible', () => {
+  const members = Array.from({ length: 23 }, (_, index) => ({ registrationId: index + 100, memberId: index + 1, fullName: 'Học viên ' + (index + 1), registrationStatus: 'Registered' }))
+  const studentsHtml = renderView('StudentsView', cache => cache.setData('roster:30', members))
+  assert.equal((studentsHtml.match(/data-stt=/g) || []).length, 10)
+  assert.match(studentsHtml, /1–10 \/ 23/)
+  assert.match(studentsHtml, /data-stt="10"/)
+  assert.doesNotMatch(studentsHtml, /data-stt="11"/)
+  assert.match(studentsHtml, /coach-paged-table/)
+  // Pager is a sibling of the scroll area, so rows cannot scroll it away.
+  assert.match(studentsHtml, /<\/button><\/div><\/div><nav class="coach-pagination"/)
+  const roomsHtml = renderView('CoachRoomsView', cache => cache.setData('rooms:active', Array.from({ length: 23 }, (_, index) => ({ id: index + 1, name: 'Phòng ' + index, isActive: true }))))
+  assert.equal((roomsHtml.match(/data-stt=/g) || []).length, 10)
+  assert.match(roomsHtml, /1–10 \/ 23/)
+})
+
+test('Overview paginates the complete daily schedule instead of clipping it to three sessions', () => {
+  const html = renderView('OverviewView', (cache, session) => cache.setData('overview:' + reads.coachOverviewRange().from, {
+    sessions: Array.from({ length: 23 }, (_, index) => ({ ...session, id: index + 1, tone: 'next', time: '15:00', duration: '60 phút', enrollment: 1 })),
+    weekSessions: [], students: [], metrics: [], attendance: { present: 0, absent: 0, excused: 0, pending: 0 },
+  }))
+  assert.equal((html.match(/data-stt=/g) || []).length, 10)
+  assert.match(html, /1–10 \/ 23/)
+  assert.match(html, /Phân trang Lịch huấn luyện hôm nay/)
 })

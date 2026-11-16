@@ -96,3 +96,22 @@ test('cached scheduled sessions cannot bypass a fresh attendance check after BE 
   assert.deepEqual(calls, [['get', '/class-sessions/mine']])
   assert.equal(cache.snapshot(reads.coachSessionsKey()).data.items[0].status, 'Scheduled')
 })
+
+test('Coach catalogs include sessions/classes past the first server page for local ten-row pagination', async () => {
+  const sessions = Array.from({ length: 125 }, (_, index) => ({ ...session, id: index + 1, classId: index + 1 }))
+  const classes = sessions.map(item => ({ id: item.classId, className: 'Lớp ' + item.classId, sportName: 'Tennis' }))
+  const requests = []
+  api.defaults.adapter = async config => {
+    requests.push([config.url, config.params.page])
+    const rows = config.url === '/class-sessions/mine' ? sessions : classes
+    const { page, pageSize } = config.params
+    return response(config, { items: rows.slice((page - 1) * pageSize, page * pageSize), total: rows.length, page, pageSize })
+  }
+  const cache = createWorkspaceResourceCache()
+  const result = await reads.loadCoachStudentCatalog(cache)
+  assert.equal(result.sessions.length, 125)
+  assert.equal(result.classCatalog.length, 125)
+  assert.ok(requests.some(([url, page]) => url === '/class-sessions/mine' && page === 2))
+  assert.ok(requests.some(([url, page]) => url === '/classes' && page === 2))
+  assert.equal(result.sessions.at(-1).id, 125)
+})
