@@ -613,3 +613,5 @@
 .coach-refresh-status.is-error { color: var(--theme-red, #a62d3a); }
 .coach-refresh-status > button { padding: 5px 9px; border: 1px solid currentColor; border-radius: 6px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
 .coach-account-profile-layout > .coach-refresh-status { grid-column: 1 / -1; }
+.coach-overview-workspace > .coach-schedule { display: flex; flex-direction: column; min-width: 0; }
+.coach-overview-workspace > .coach-schedule > .coach-week-more { margin-top: auto; flex-shrink: 0; justify-content: center; }

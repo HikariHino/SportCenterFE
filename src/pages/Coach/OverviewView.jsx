@@ -1,4 +1,3 @@
-import { CoachList } from './CoachPagination'
 import { useCoachCache, useCoachResource } from '../../contexts/CoachWorkspaceContext'
 import { getAllCoachSessions, coachOverviewRange, coachRosterKey, coachSessionsKey } from '../../services/coachWorkspaceReads'
 import RefreshStatus from './RefreshStatus'
@@ -192,7 +191,7 @@ export function OverviewView({ active = true, onNavigate }) {
     <div className="coach-overview-workspace">
       <section className="coach-card coach-schedule">
         <div className="coach-card-head"><div><span>ƯU TIÊN HÔM NAY</span><h2>Lịch huấn luyện hôm nay</h2></div><button type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem toàn bộ lịch <ChevronRight size={16} /></button></div>
-        {sessions.length ? <div className="coach-session-list">{<CoachList items={sessions} label="Lịch huấn luyện hôm nay">{session => <SessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện', session)} />}</CoachList>}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
+        {sessions.length ? <div className="coach-session-list">{sessions.map((session, index) => <SessionRow key={session.id} session={session} className="coach-numbered-item" data-stt={index + 1} onOpen={() => onNavigate('Lịch huấn luyện', session)} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
         {sessions.length > 0 && <button className="coach-week-more" type="button" onClick={() => onNavigate('Lịch huấn luyện', sessions[0])}>Mở lịch {sessions.length} buổi hôm nay <ChevronRight size={15} /></button>}
       </section>
       <section className="coach-card coach-day-progress-card">
