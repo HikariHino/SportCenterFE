@@ -1,13 +1,14 @@
+import { MemberList } from './MemberPagination'
 import { useCallback, useState } from 'react'
 import { useMemberResource } from '../../contexts/MemberWorkspaceContext'
-import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
+import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronDown, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
 import QRCode from 'qrcode'
 import { getMyQrCode, getMyGymCheckInHistory, getCheckInErrorMessage } from '../../services/gymCheckInService'
 import { GymCheckInStatus, GymDateRangeFields } from '../../components/GymHistoryControls'
 import { formatGymDate, GYM_TIME_ZONE, gymCheckInStatus, gymDateRangeReason, gymDurationLabel, gymDurationMinutes, gymTimestamp } from '../../utils/gymCheckInHistory'
 import '../../style/member/GymCheckInView.css'
 
-const PAGE_SIZE = 10
+import { LIST_PAGE_SIZE as PAGE_SIZE } from '../../utils/listPagination'
 
 function formatDate(value, dateOnly = false) {
   return formatGymDate(value, dateOnly)
@@ -184,8 +185,7 @@ export function GymCheckInView() {
               : filtered.length === 0 ? <div className="gym-checkin-state" role="status"><History size={30} /><strong>Không có lượt tập phù hợp</strong><p>Thử đổi khoảng ngày hoặc trạng thái để xem các lượt tập của bạn.</p>{filter !== 'All' && <button type="button" className="gym-button" onClick={() => { setFilter('All'); setPage(1) }}>Xem tất cả trạng thái</button>}</div>
                 : <>
                   <div className="gym-history-labels" aria-hidden="true"><span>Ngày tập</span><span>Giờ vào / Giờ ra</span><span>Thời lượng</span><span>Trạng thái</span></div>
-                  <ol className="gym-history-list" aria-label="Các lượt ra/vào phòng gym">
-                    {visibleRecords.map(item => <li className="gym-history-record" key={item.id}>
+                  <MemberList items={visibleRecords} total={filtered.length} page={currentPage} onPageChange={setPage} label="Lịch sử tập luyện" as="ol" className="gym-history-list">{item => <li className="gym-history-record" key={item.id}>
                       <div className="gym-record-main">
                         <div className="gym-record-date"><strong>{formatDate(item.checkInTime, true)}</strong><span>Lượt tập #{item.id}</span></div>
                         <div className="gym-record-times"><VisitTime label="Giờ vào" value={item.checkInTime} /><VisitTime label="Giờ ra" value={item.checkOutTime} outgoing /></div>
@@ -194,12 +194,8 @@ export function GymCheckInView() {
                       </div>
                       <div className="gym-record-meta"><span>Gói tập: <strong>{item.packageName || '—'}</strong></span><span>Nhân viên: <strong>{item.checkedByStaffName || '—'}</strong></span></div>
                       {item.notes && <p className="gym-record-notes"><span>Ghi chú:</span> {item.notes}</p>}
-                    </li>)}
-                  </ol>
-                  <nav className="gym-checkin-pagination" aria-label="Phân trang lịch sử tập luyện">
-                    <span>Hiển thị {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} / {filtered.length} lượt tập</span>
-                    {totalPages > 1 && <div><span>Trang {currentPage}/{totalPages}</span><button type="button" className="gym-icon-button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} aria-label="Trang trước"><ChevronLeft size={18} /></button><button type="button" className="gym-icon-button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)} aria-label="Trang sau"><ChevronRight size={18} /></button></div>}
-                  </nav>
+                    </li>}</MemberList>
+
                 </>}
         </div>
       </section>

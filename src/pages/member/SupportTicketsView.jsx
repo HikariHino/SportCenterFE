@@ -1,11 +1,12 @@
+import { MemberList } from './MemberPagination'
 import { useEffect, useRef, useState } from 'react'
 import { useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Headset, LoaderCircle, MessageSquare, Plus, RefreshCw, Send, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Headset, LoaderCircle, MessageSquare, Plus, RefreshCw, Send, X } from 'lucide-react'
 import { createSupportTicket, getMySupportTickets, getTicketErrorMessage } from '../../services/supportTicketService'
 import '../../style/member/SupportTicketsView.css'
 import { getTextLengthValidationError, SUPPORT_DESCRIPTION_MAX_LENGTH } from '../../utils/textLengthValidation'
 
-const PAGE_SIZE = 8
+import { LIST_PAGE_SIZE as PAGE_SIZE } from '../../utils/listPagination'
 const statuses = { open: 'Chờ tiếp nhận', inprogress: 'Đang xử lý', resolved: 'Đã giải quyết', closed: 'Đã đóng' }
 const priorities = { Low: 'Thấp', Normal: 'Bình thường', High: 'Cao', Urgent: 'Khẩn cấp' }
 const statusKey = value => String(value || '').toLowerCase()
@@ -97,11 +98,11 @@ function CreateTicketDialog({ onClose, onCreated }) {
   </dialog>
 }
 
-function TicketCard({ ticket }) {
+function TicketCard({ ticket, className = '', ...rowProps }) {
   const status = statusKey(ticket.status)
   const priority = Object.entries(priorities).find(([key]) => key.toLowerCase() === statusKey(ticket.priority))?.[1] || ticket.priority || 'Chưa cập nhật'
   const tone = Object.hasOwn(statuses, status) ? status : 'unknown'
-  return <article className="member-support-card" aria-labelledby={`member-support-ticket-${ticket.id}`}>
+  return <article {...rowProps} className={`member-support-card ${className}`} aria-labelledby={`member-support-ticket-${ticket.id}`}>
     <header><span className="member-support-muted">Phiếu #{ticket.id}</span><span className={`member-support-status ${tone}`}>{statuses[status] || ticket.status || 'Chưa cập nhật trạng thái'}</span></header>
     <div className="member-support-ticket-layout">
     <div className="member-support-ticket-content">
@@ -167,8 +168,8 @@ export function SupportTicketsView() {
           : !filtered.length ? <div className="member-support-state" role="status"><MessageSquare size={34} /><h3>{tickets.length ? 'Không tìm thấy phiếu phù hợp' : 'Bạn chưa có phiếu hỗ trợ'}</h3><p>{tickets.length ? 'Thử thay đổi từ khóa hoặc trạng thái để xem các phiếu khác.' : 'Gửi yêu cầu mới khi bạn cần trợ giúp hoặc muốn phản ánh sự cố.'}</p></div>
             : <>
               <div className="member-support-list-heading"><p className="member-support-count">{filtered.length} phiếu hỗ trợ</p><span>Mới nhất trước</span></div>
-              <div className="member-support-list">{visible.map(ticket => <TicketCard key={ticket.id} ticket={ticket} />)}</div>
-              {totalPages > 1 && <nav className="member-support-pagination" aria-label="Phân trang phiếu hỗ trợ"><span>Trang {currentPage}/{totalPages}</span><div><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={15} /> Trang trước</button><button type="button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}>Trang sau <ChevronRight size={15} /></button></div></nav>}
+              <MemberList items={visible} total={filtered.length} page={currentPage} onPageChange={setPage} label="Phiếu hỗ trợ" className="member-support-list" resetKey={JSON.stringify([search, status])}>{ticket => <TicketCard key={ticket.id} ticket={ticket} />}</MemberList>
+
             </>}
     </section>
     {viewActive && creating && <CreateTicketDialog onClose={() => setCreating(false)} onCreated={created} />}

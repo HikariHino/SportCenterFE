@@ -1,14 +1,14 @@
 import { useEffect, useId, useRef } from 'react'
-import { ChevronLeft, ChevronRight, LoaderCircle, RefreshCw, Trash2, X } from 'lucide-react'
+import { LoaderCircle, RefreshCw, Trash2, X } from 'lucide-react'
 import '../../style/member/MemberAiHistory.css'
+import { MemberPagination } from './MemberPagination'
 
-export function AiHistoryControls({ history, disabled, label }) {
-  const pages = Math.max(1, Math.ceil((history.data?.total || 0) / history.pageSize))
+export function AiHistoryControls({ history, disabled, label, pagination = true }) {
   return <div className="member-ai-history-controls" aria-label={label}>
-    <span>{history.data?.total ?? '—'} bản ghi · Trang {history.page}/{pages}</span>
+    <span>{history.data?.total ?? '—'} bản ghi</span>
     <div><button type="button" disabled={disabled || history.loading} onClick={history.reload} aria-label={`Làm mới ${label}`}><RefreshCw size={14} /></button>
-      <button type="button" disabled={disabled || history.loading || history.page <= 1} onClick={() => history.setPage(history.page - 1)}><ChevronLeft size={14} />Mới hơn</button>
-      <button type="button" disabled={disabled || history.loading || history.page >= pages} onClick={() => history.setPage(history.page + 1)}>Cũ hơn<ChevronRight size={14} /></button></div>
+      </div>
+    {pagination && <MemberPagination total={history.data?.total || 0} page={history.page} onChange={history.setPage} disabled={disabled || history.loading} label={label} />}
   </div>
 }
 

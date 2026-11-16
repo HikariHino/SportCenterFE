@@ -1,11 +1,12 @@
+import { MemberList } from './MemberPagination'
 import { useEffect, useRef, useState } from 'react'
 import { useMemberResource } from '../../contexts/MemberWorkspaceContext'
-import { AlertCircle, Bell, CalendarDays, CheckCheck, ChevronLeft, ChevronRight, LoaderCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle, Bell, CalendarDays, CheckCheck, LoaderCircle, RefreshCw } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification } from '../../utils/sessionNotifications'
 import '../../style/member/NotificationsView.css'
 
-const PAGE_SIZE = 10
+import { LIST_PAGE_SIZE as PAGE_SIZE } from '../../utils/listPagination'
 
 function formatDate(value) {
   if (!value) return 'Chưa cập nhật thời gian'
@@ -111,7 +112,7 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
         : error ? <div className="member-notifications-state member-notifications-error" role="alert"><AlertCircle size={28} /><h3>Không thể tải thông báo</h3><p>{error}</p><button type="button" onClick={reload}>Thử lại</button></div>
           : !result.items.length ? <div className="member-notifications-state" role="status"><Bell size={36} /><h3>{unreadOnly ? 'Bạn đã đọc hết thông báo' : 'Chưa có thông báo'}</h3><p>{unreadOnly ? 'Chọn “Tất cả thông báo” để xem lại các thông báo đã đọc.' : 'Các thông báo gửi đến tài khoản của bạn sẽ xuất hiện tại đây.'}</p></div>
             : <>
-              <div className="member-notifications-list">{result.items.map(item => <article className={`member-notifications-card ${item.isRead ? '' : 'unread'}`} key={item.id} aria-labelledby={`member-notification-${item.id}`}>
+              <MemberList items={result.items} total={result.total} page={page} onPageChange={setPage} disabled={loading || actionBusy} label="Thông báo hệ thống" className="member-notifications-list">{item => <article className={`member-notifications-card ${item.isRead ? '' : 'unread'}`} key={item.id} aria-labelledby={`member-notification-${item.id}`}>
                 <span className="member-notifications-icon">{isSessionUpdateNotification(item) ? <CalendarDays size={16} /> : <Bell size={16} />}</span>
                 <div className="member-notifications-content">
                   <h3 id={`member-notification-${item.id}`}>{item.title || 'Thông báo từ trung tâm'}</h3>
@@ -123,8 +124,8 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
                   {isSessionUpdateNotification(item) && onViewSchedule && <button type="button" aria-label="Xem lịch đã đặt" title="Xem lịch đã đặt" onClick={() => onViewSchedule(item)}><CalendarDays size={14} /><span>Xem lịch đã đặt</span></button>}
                   {!item.isRead && !isSessionUpdateNotification(item) && <button type="button" aria-label={markingId === item.id ? 'Đang cập nhật...' : 'Đánh dấu đã đọc'} title="Đánh dấu đã đọc" disabled={actionBusy} onClick={() => markRead(item)}>{markingId === item.id ? <><LoaderCircle className="member-spin" size={15} /><span>Đang cập nhật...</span></> : <><CheckCheck size={15} /><span>Đánh dấu đã đọc</span></>}</button>}
                 </div>
-              </article>)}</div>
-              {totalPages > 1 && <nav className="member-notifications-pagination" aria-label="Phân trang thông báo"><span>Trang {page}/{totalPages}</span><div><button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)}><ChevronLeft size={15} /> Trang trước</button><button type="button" disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>Trang sau <ChevronRight size={15} /></button></div></nav>}
+              </article>}</MemberList>
+
             </>}
     </section>
   </div>

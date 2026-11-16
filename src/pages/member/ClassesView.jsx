@@ -1,6 +1,7 @@
+import { MemberList } from './MemberPagination'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
-import { AlertCircle, CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, List, LoaderCircle, RefreshCw, Search, ShieldAlert, Star, X } from 'lucide-react'
+import { AlertCircle, CalendarDays, Check, CreditCard, List, LoaderCircle, RefreshCw, Search, ShieldAlert, Star, X } from 'lucide-react'
 import { getSports, getCoaches } from '../../services/classCatalogService'
 import { getAllAvailableSessions, getAllMemberClasses, getAllMyRegistrations, bookClassSessions, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
 import { getMySubscriptions } from '../../services/memberSubscriptionService'
@@ -15,22 +16,12 @@ import SessionDetails, { formatClassDateTime as formatDate } from './MemberSessi
 import MemberClassBrowser from './MemberClassBrowser'
 import AttendanceStatus from '../../components/AttendanceStatus'
 
-const PAGE_SIZE = 12
+import { LIST_PAGE_SIZE as PAGE_SIZE } from '../../utils/listPagination'
 
 function ResourceState({ resource, emptyText }) {
   if (resource.loading) return <div className="member-classes-state" role="status"><LoaderCircle className="member-spin" size={26} /><p>Đang tải dữ liệu...</p></div>
   if (resource.error) return <div className="member-classes-state member-classes-error" role="alert"><AlertCircle size={26} /><p>{resource.error}</p><button type="button" onClick={resource.reload}>Thử lại</button></div>
   return <div className="member-classes-state"><CalendarDays size={30} /><p>{emptyText}</p></div>
-}
-
-function Pagination({ resource, page, onChange }) {
-  if (!resource.data || resource.loading || resource.error) return null
-  const { total, pageSize } = resource.data
-  const pages = Math.max(1, Math.ceil(total / pageSize))
-  return <nav className="member-classes-pagination" aria-label="Phân trang buổi học">
-    <span>{total} kết quả · Trang {page}/{pages}</span>
-    <div><button type="button" disabled={page <= 1} onClick={() => onChange(page - 1)}><ChevronLeft size={15} /> Trước</button><button type="button" disabled={page >= pages} onClick={() => onChange(page + 1)}>Sau <ChevronRight size={15} /></button></div>
-  </nav>
 }
 
 function RegistrationDetailsDialog({ item, busy, now, onClose, onAction }) {
@@ -88,9 +79,9 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
       <h3>{action.item.className || `Buổi học #${action.item.sessionId || action.item.id}`}</h3>
       {action.type === 'bookClass' ? <>
         <p>Xác nhận đăng ký {bulkResult?.remaining.length || action.item.sessions.length} buổi bạn đã chọn bên dưới. Mỗi buổi được kiểm tra lại trước khi đăng ký.</p>
-        <ul className="member-class-booking-preview">{action.item.sessions.filter(item => !bulkResult?.remaining.length || bulkResult.remaining.includes(String(item.id))).map(item => <li key={item.id}><strong>Buổi #{item.id}</strong><span>{formatDate(item.startsAt)} – {formatDate(item.endsAt)}</span></li>)}</ul>
+        <MemberList items={action.item.sessions.filter(item => !bulkResult?.remaining.length || bulkResult.remaining.includes(String(item.id)))} label="Buổi học chờ xác nhận" as="ul" className="member-class-booking-preview" compact>{item => <li key={item.id}><strong>Buổi #{item.id}</strong><span>{formatDate(item.startsAt)} – {formatDate(item.endsAt)}</span></li>}</MemberList>
         {bulkResult && <p className="member-classes-notice" role="status">Đã đăng ký {bulkResult.registered.length} buổi; {bulkResult.existing.length} buổi đã có sẵn; bỏ qua {bulkResult.skipped.length} buổi.</p>}
-        {bulkResult?.skipped.length > 0 && <ul>{bulkResult.skipped.map(item => <li key={item.id}>Buổi #{item.id}: {item.reason}</li>)}</ul>}
+        {bulkResult?.skipped.length > 0 && <MemberList items={bulkResult.skipped} label="Buổi học bị bỏ qua" as="ul" compact>{item => <li key={item.id}>Buổi #{item.id}: {item.reason}</li>}</MemberList>}
         {bulkProgress && <p role="status">Đang xử lý {bulkProgress.completed}/{bulkProgress.total} buổi...</p>}
       </> : <SessionDetails item={action.item} />}
       {isBooking && <>
@@ -406,7 +397,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
       <button type="button" disabled={current.loading || busy} onClick={refreshBookingData}><RefreshCw size={16} /> Làm mới</button>
     </header>
     {notice && <p className="member-classes-notice" role="status"><Check size={18} />{notice}</p>}
-    {!action && bulkResult?.skipped.length > 0 && <details className="member-class-booking-skipped"><summary>Các buổi được bỏ qua ({bulkResult.skipped.length})</summary><ul>{bulkResult.skipped.map(item => <li key={item.id}>Buổi #{item.id}: {item.reason}</li>)}</ul></details>}
+    {!action && bulkResult?.skipped.length > 0 && <details className="member-class-booking-skipped"><summary>Các buổi được bỏ qua ({bulkResult.skipped.length})</summary><MemberList items={bulkResult.skipped} label="Buổi học bị bỏ qua" as="ul" compact>{item => <li key={item.id}>Buổi #{item.id}: {item.reason}</li>}</MemberList></details>}
     <div className="member-classes-navigation">
       <div className="member-classes-tabs" role="group" aria-label="Chọn danh sách buổi học">
         <button type="button" aria-pressed={tab === 'mine'} onClick={() => setTab('mine')}><CalendarDays size={17} /> Thời khóa biểu</button>
@@ -446,8 +437,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
     {tab === 'mine' && <section className="member-my-registrations" aria-label="Các lượt đăng ký" aria-busy={mine.loading}>
       {mineLayout === 'list' && <header className="member-schedule-list-heading"><h3>Lịch đã đặt</h3><p>Xem thông tin, điểm danh và quản lý từng buổi học bạn đã đăng ký.</p></header>}
       {mine.backgroundError && <p className="member-classes-checkin-notice" role="status">Chưa thể đồng bộ điểm danh mới: {mine.backgroundError} Dữ liệu đang hiển thị là lần tải gần nhất.</p>}
-      {mineLayout === 'timetable' && !mine.loading && !mine.error ? <MemberWeeklySchedule items={activeRegistrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} onBrowse={() => setTab('browse')} /> : mine.loading || mine.error || !activeRegistrations.length ? <ResourceState resource={mine} emptyText={'Bạn chưa có buổi học nào trong lịch đã đặt.'} /> : <div className="member-classes-grid">
-        {listedRegistrations.map(registration => {
+      {mineLayout === 'timetable' && !mine.loading && !mine.error ? <MemberWeeklySchedule items={activeRegistrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} onBrowse={() => setTab('browse')} /> : mine.loading || mine.error || !activeRegistrations.length ? <ResourceState resource={mine} emptyText={'Bạn chưa có buổi học nào trong lịch đã đặt.'} /> : <MemberList items={listedRegistrations} total={activeRegistrations.length} page={minePage} onPageChange={setMinePage} label="Lịch đã đặt" className="member-classes-grid">{registration => {
           const allowed = registrationActions(registration, now)
           return <article className="member-classes-card" key={registration.id}>
             <div className="member-classes-card-top"><span className="member-classes-badge">{classStatusLabel(registration.status)}</span><small>Đăng ký #{registration.id}</small></div>
@@ -464,9 +454,8 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
             {allowed.checkInReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.checkInReason}</p>}
             {allowed.reviewReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.reviewReason}</p>}
           </article>
-        })}
-      </div>}
-      {mineLayout === 'list' && <Pagination resource={{ ...mine, data: mine.data && { total: activeRegistrations.length, pageSize: PAGE_SIZE } }} page={minePage} onChange={setMinePage} />}
+        }}</MemberList>}
+
       {!mine.loading && !mine.error && <CancelledMemberRegistrations items={cancelledRegistrations} onSelect={setSelectedRegistrationId} />}
     </section>}
 

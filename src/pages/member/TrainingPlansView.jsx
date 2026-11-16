@@ -1,3 +1,4 @@
+import { MemberList } from './MemberPagination'
 import { useMemberCache, useMemberResource } from '../../contexts/MemberWorkspaceContext'
 import { AlertCircle, ArrowRight, BookOpen, CalendarDays, ChevronDown, Dumbbell, LoaderCircle, RefreshCw, Target, User } from 'lucide-react'
 import { getMemberTrainingPlans, getTrainingPlanErrorMessage } from '../../services/trainingPlanService'
@@ -27,18 +28,13 @@ function statusLabel(status) {
 function ExerciseTable({ exercises }) {
   if (!exercises.length) return <div className="training-plans-exercises-empty"><Dumbbell size={24} /><p>Giáo án chưa có bài tập. Huấn luyện viên sẽ bổ sung chi tiết cho bạn.</p></div>
   return <div className="training-plans-table-scroll" role="region" aria-label="Chi tiết bài tập trong giáo án" tabIndex={0}>
-    <table>
-      <caption className="training-plans-sr-only">Bài tập, số hiệp, số lần lặp, thời lượng và ghi chú của huấn luyện viên</caption>
-      <colgroup><col className="training-plans-col-exercise" /><col className="training-plans-col-number" /><col className="training-plans-col-number" /><col className="training-plans-col-duration" /><col className="training-plans-col-notes" /></colgroup>
-      <thead><tr><th scope="col">Bài tập</th><th scope="col">Số hiệp</th><th scope="col">Số lần</th><th scope="col">Thời lượng</th><th scope="col">Ghi chú / Kết quả</th></tr></thead>
-      <tbody>{exercises.map((exercise, index) => <tr key={exercise.id ?? index}>
-        <th scope="row"><div className="training-plans-exercise-name"><span>{index + 1}</span><div><strong>{exercise.exerciseName || 'Chưa cập nhật tên bài tập'}</strong>{exercise.instructions && <p>{exercise.instructions}</p>}</div></div></th>
+    <MemberList items={exercises} label="Bài tập trong giáo án" table compact heading={<tr><th scope="col">STT</th><th scope="col">Bài tập</th><th scope="col">Số hiệp</th><th scope="col">Số lần</th><th scope="col">Thời lượng</th><th scope="col">Ghi chú / Kết quả</th></tr>}>{(exercise, index) => <tr key={exercise.id ?? index}>
+        <th scope="row"><div className="training-plans-exercise-name"><div><strong>{exercise.exerciseName || 'Chưa cập nhật tên bài tập'}</strong>{exercise.instructions && <p>{exercise.instructions}</p>}</div></div></th>
         <td>{exercise.sets == null ? '—' : `${exercise.sets} hiệp`}</td>
         <td>{exercise.reps == null ? '—' : `${exercise.reps} lần`}</td>
         <td>{exercise.durationInMinutes == null ? '—' : `${exercise.durationInMinutes} phút`}</td>
         <td className="training-plans-notes">{exercise.notes || <span className="training-plans-muted">Chưa có ghi chú</span>}</td>
-      </tr>)}</tbody>
-    </table>
+      </tr>}</MemberList>
   </div>
 }
 
@@ -64,7 +60,7 @@ export function TrainingPlansView({ user }) {
           : plans.length === 0 ? <div className="training-plans-state" role="status"><BookOpen size={38} /><h3>Chưa có giáo án tập luyện cá nhân</h3><p>Giáo án sẽ xuất hiện tại đây khi huấn luyện viên thiết kế kế hoạch tập luyện cho bạn.</p></div>
             : <>
               <div className="training-plans-list-heading"><p className="training-plans-count">{plans.length} giáo án</p><span>Ngày bắt đầu mới nhất trước</span></div>
-              <div className="training-plans-list">{plans.map(plan => {
+              <MemberList items={plans} label="Giáo án tập luyện" className="training-plans-list">{plan => {
                 const exercises = Array.isArray(plan.exercises) ? plan.exercises : []
                 return <article className="training-plans-card" key={plan.id} aria-labelledby={`training-plan-${plan.id}`}>
                   <header className="training-plans-card-header">
@@ -81,7 +77,7 @@ export function TrainingPlansView({ user }) {
                     <ExerciseTable exercises={exercises} />
                   </details>
                 </article>
-              })}</div>
+              }}</MemberList>
             </>}
     </section>
   </div>

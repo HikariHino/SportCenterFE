@@ -28,7 +28,7 @@ export default function MemberAiChat({ active, onNavigate }) {
   const [clearError, setClearError] = useState('')
   const clearLock = useRef(false)
   const mounted = useRef(false)
-  const history = useMemberAiHistory(getMemberAiChatHistory, active, 20)
+  const history = useMemberAiHistory(getMemberAiChatHistory, active)
   const chat = useMemberAiConversations(account, loginId, history.data?.items)
   const conversation = chat.workspace.conversations.find(item => item.id === chat.workspace.activeId)
   const turns = conversation?.messages || []
