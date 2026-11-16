@@ -1,5 +1,6 @@
+import { MemberList } from './MemberPagination'
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, ArrowLeft, BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clock3, LoaderCircle, MapPin, RefreshCw, Search, User, Users } from 'lucide-react'
+import { AlertCircle, ArrowLeft, BookOpen, CalendarDays, ChevronRight, Clock3, LoaderCircle, MapPin, RefreshCw, Search, User, Users } from 'lucide-react'
 import CatalogImage from '../../components/CatalogImage'
 import useResource from '../../hooks/useClassResource'
 import { getMemberClasses, getMemberClassSessions } from '../../services/memberClassService'
@@ -8,7 +9,7 @@ import { bookingUnavailableReason, cancellationDeadline, classStatusLabel, getRo
 import { formatClassDateTime } from './MemberSessionDetails'
 import { timetableDateKey, timetableTime } from '../../utils/memberTimetable'
 
-const PAGE_SIZE = 12
+import { LIST_PAGE_SIZE as PAGE_SIZE } from '../../utils/listPagination'
 const emptyFilters = { search: '', sportId: '', coachId: '' }
 const loadSessions = ({ classId }) => classId ? getMemberClassSessions(classId) : Promise.resolve({ items: [], total: 0 })
 const courseDateLabel = value => value ? timetableDateKey(value).split('-').reverse().join('/') || 'Chưa cập nhật' : 'Chưa cập nhật'
@@ -19,12 +20,6 @@ function State({ resource, emptyText }) {
     <p>{resource.loading ? 'Đang tải dữ liệu...' : resource.error || emptyText}</p>
     {resource.error && <button type="button" onClick={resource.reload}>Thử lại</button>}
   </div>
-}
-
-function Pager({ total, page, onChange, label }) {
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  if (pages < 2) return null
-  return <nav className="member-classes-pagination" aria-label={`Phân trang ${label}`}><span>{total} kết quả · Trang {page}/{pages}</span><div><button type="button" disabled={page <= 1} onClick={() => onChange(page - 1)}><ChevronLeft size={15} />Trước</button><button type="button" disabled={page >= pages} onClick={() => onChange(page + 1)}>Sau<ChevronRight size={15} /></button></div></nav>
 }
 
 function SelectAllCheckbox({ checked, mixed, disabled, onChange }) {
@@ -80,7 +75,7 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
     {sessions.loading || sessions.error || !allSessions.length ? <State resource={sessions} emptyText="Lớp chưa có buổi học. Vui lòng quay lại sau." /> : <>
       <div className="member-session-list">
         <div className="member-session-list-heading" aria-hidden="true"><span>Buổi học</span><span>Phòng & Huấn luyện viên</span><span>Sĩ số</span><span>Trạng thái</span></div>
-        <ul>{allSessions.slice((sessionPage - 1) * PAGE_SIZE, sessionPage * PAGE_SIZE).map(session => {
+        <MemberList items={allSessions.slice((sessionPage - 1) * PAGE_SIZE, sessionPage * PAGE_SIZE)} total={allSessions.length} page={sessionPage} onPageChange={setSessionPage} label="Buổi học của lớp" as="ul" className="member-session-rows">{session => {
         const unavailable = bookingUnavailableReason(session, registered.has(String(session.id)), now, planned)
         const selected = !unavailable && selectedSet.has(String(session.id))
         const deadline = cancellationDeadline(session)
@@ -94,7 +89,7 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
           </label>
           {(deadline || session.cancellationReason) && <p className="member-session-row-note">{session.cancellationReason ? `Lý do hủy: ${session.cancellationReason}` : `Hạn hủy đăng ký: ${formatClassDateTime(deadline)}`}</p>}
         </li>
-      })}</ul></div><Pager total={allSessions.length} page={sessionPage} onChange={setSessionPage} label="buổi học của lớp" />
+      }}</MemberList></div>
       <div className="member-session-selection-footer">
         <div role="status" aria-live="polite"><strong>Đã chọn {selectedSessions.length} buổi</strong><span>Chỉ đăng ký những buổi bạn đã tích chọn.</span></div>
         <div><button type="button" disabled={blocked || !selectedSessions.length} onClick={() => setSelectedIds([])}>Bỏ chọn</button><button type="button" className="primary" disabled={blocked || !selectedSessions.length} onClick={() => onBookClass({ ...course, sessions: selectedSessions })}><CalendarDays size={16} />Đăng ký {selectedSessions.length ? `${selectedSessions.length} buổi đã chọn` : 'buổi đã chọn'}</button></div>
@@ -113,13 +108,13 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
       {coaches.error && <p className="member-classes-error" role="alert">{coaches.error} <button type="button" onClick={coaches.reload}>Thử lại HLV</button></p>}
     </form>
     {classes.loading || classes.error || !classes.data?.items.length ? <State resource={classes} emptyText="Không tìm thấy lớp học phù hợp. Hãy thử thay đổi bộ lọc." /> : <>
-      <div className="member-classes-grid">{classes.data.items.map(item => <button type="button" className="member-course-card" key={item.id} data-member-class-id={item.id} onClick={() => { setCourse(item); setSessionPage(1); setSelectedIds([]) }}>
+      <MemberList items={classes.data.items} total={classes.data.total} page={page} onPageChange={setPage} label="Lớp học" className="member-classes-grid">{item => <button type="button" className="member-course-card" key={item.id} data-member-class-id={item.id} onClick={() => { setCourse(item); setSessionPage(1); setSelectedIds([]) }}>
         {isCatalogImageUrl(item.imageUrl) && <CatalogImage src={item.imageUrl} className="catalog-image--cover member-course-image" />}
         <span className="member-course-card-top"><span className="member-classes-badge">{item.sportName || 'Lớp học'}</span><small>#{item.id}</small></span><strong>{item.className}</strong>
         <span><User size={16} />{item.coachName || 'Chưa phân công HLV'}</span><span><MapPin size={16} />{getRoomForClass(item, rooms)?.name || 'Chưa cập nhật phòng'}</span>
         <span><CalendarDays size={16} />{courseDateLabel(item.startDate)} – {courseDateLabel(item.endDate)}</span>
         <span className="member-course-view-sessions"><BookOpen size={16} />Xem các buổi học<ChevronRight size={16} /></span>
-      </button>)}</div><Pager total={classes.data.total} page={page} onChange={setPage} label="lớp học" />
+      </button>}</MemberList>
     </>}
   </section>
 }

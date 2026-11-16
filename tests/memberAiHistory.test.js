@@ -42,10 +42,10 @@ test('structured plans preserve exercise values, saved goals and warnings in a r
 })
 
 test('history pagination identifies older pages and destructive actions require a separate confirmation', () => {
-  const history = { data: { total: 31 }, page: 2, pageSize: 20, loading: false, reload() {}, setPage() {} }
+  const history = { data: { total: 31 }, page: 4, pageSize: 10, loading: false, reload() {}, setPage() {} }
   const html = renderToStaticMarkup(createElement(Controls, { history, label: 'lịch sử chat', disabled: false }))
-  assert.match(html, /Trang 2\/2/)
-  assert.match(html, /disabled="">Cũ hơn/)
+  assert.match(html, /31–31 \/ 31 · 10 dòng\/trang/)
+  assert.match(html, /disabled="" aria-label="Trang sau: lịch sử chat"/)
   const dialog = renderToStaticMarkup(createElement(Confirmation, { title: 'Xóa lịch sử?', busy: false, error: '', onClose() {}, onConfirm() {} }, 'Không thể hoàn tác.'))
   assert.match(dialog, /Không thể hoàn tác/)
   assert.match(dialog, /type="submit" class="danger"/)

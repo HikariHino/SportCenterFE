@@ -1,3 +1,4 @@
+import { MemberList } from './MemberPagination'
 import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, ArrowUpRight, CalendarDays, CheckCircle2, Dumbbell, LoaderCircle, RotateCcw, Sparkles, Square, Target, Trash2 } from 'lucide-react'
 import { AI_WORKOUT_GOAL_MAX_LENGTH, AI_WORKOUT_LEVELS, deleteMemberAiWorkoutHistory, getMemberAiWorkoutHistory, getMemberAiWorkoutHistoryDetail, getMemberAiErrorMessage, getMemberWorkoutErrors, getMemberWorkoutRecommendation } from '../../services/memberAiService'
@@ -202,14 +203,14 @@ export default function MemberAiWorkout({ active, onNavigate }) {
       </div>
       <section className="member-ai-history-panel" aria-labelledby="member-workout-history-title" aria-busy={history.loading}>
         <header><div><h3 id="member-workout-history-title">Lịch sử gợi ý bài tập</h3><p>Các bản đã lưu trong tài khoản, mới nhất trước.</p></div></header>
-        <AiHistoryControls history={history} disabled={sending || reading !== null || deleting} label="lịch sử gợi ý bài tập" />
+        <AiHistoryControls history={history} disabled={sending || reading !== null || deleting} label="lịch sử gợi ý bài tập" pagination={false} />
         {history.loading && <p className="member-ai-history-status" role="status"><LoaderCircle size={15} className="member-spin" />Đang tải lịch sử gợi ý...</p>}
         {(history.error || historyError) && <p className="member-ai-history-error" role="alert">{history.error || historyError}</p>}
         {!history.loading && !history.error && history.data?.total === 0 && <p className="member-ai-history-status">Bạn chưa có bản gợi ý bài tập nào được lưu.</p>}
-        <ul className="member-ai-history-list">{history.data?.items.map(item => <li key={item.id}>
+        <MemberList items={history.data?.items || []} total={history.data?.total || 0} page={history.page} onPageChange={history.setPage} disabled={sending || reading !== null || deleting} label="Lịch sử gợi ý bài tập" as="ul" className="member-ai-history-list">{item => <li key={item.id}>
           <div><strong>{item.goal || 'Gợi ý bài tập'}</strong><p>{AI_WORKOUT_LEVELS.find(level => level.value === item.level)?.label} · {item.daysPerWeek} ngày / tuần</p><time>{memberAiHistoryDate(item.createdAt)}</time></div>
           <div className="member-ai-history-actions"><button type="button" disabled={sending || reading !== null || deleting || history.loading} onClick={() => viewHistory(item)}>{String(reading) === String(item.id) ? 'Đang tải...' : 'Xem lại'}</button><button type="button" className="danger" disabled={sending || reading !== null || deleting || history.loading} onClick={() => { setDeleteError(''); setDeleteTarget(item) }} aria-label={`Xóa bản gợi ý #${item.id}`}><Trash2 size={14} />Xóa</button></div>
-        </li>)}</ul>
+        </li>}</MemberList>
       </section>
       {active && deleteTarget && <AiDeleteConfirmation title="Xóa bản gợi ý bài tập?" busy={deleting} error={deleteError} onClose={() => setDeleteTarget(null)} onConfirm={deleteHistory}><p>Bản gợi ý “{deleteTarget.goal}” tạo lúc {memberAiHistoryDate(deleteTarget.createdAt)} sẽ bị xóa khỏi lịch sử. Giáo án chính thức của bạn vẫn được giữ nguyên.</p></AiDeleteConfirmation>}
     </div>

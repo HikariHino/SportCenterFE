@@ -5,10 +5,16 @@ import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 
-let window, server, root, createRoot, Member, AuthProvider, ThemeProvider, MemoryRouter, api
+let window, server, root, createRoot, Member, ConversationSidebar, AuthProvider, ThemeProvider, MemoryRouter, api
 const descriptors = new Map(), requests = [], intervals = new Map(), errors = []
 let nextInterval = 0, offline = false, serverName = 'Nguyễn Văn An'
 let paymentStatus = 'Pending', subscriptionStatus = 'Pending'
+let largeLists = false
+const rows = factory => Array.from({ length: 23 }, (_, index) => factory(index))
+const packageRows = () => rows(index => ({ id: index + 1, packageName: `Danh mục ${index + 1}`, packageType: index ? 'PT' : 'Standard', price: 1000, durationInDays: 30, isActive: true }))
+const paymentRows = () => rows(index => ({ id: index + 3, subscriptionId: index + 7, amount: 1000, status: 'Completed', paymentMethod: 'PayOS', createdAt: '2026-11-16T08:00:00Z' }))
+const subscriptionRows = () => rows(index => ({ id: index + 7, packageId: index + 1, packageName: `Danh mục ${index + 1}`, packageType: index ? 'PT' : 'Standard', agreedPrice: 1000, durationInDays: 30, status: 'Active', startDate: '2026-11-15T00:00:00Z', endDate: '2027-11-15T00:00:00Z' }))
+const sessionRows = () => rows(index => ({ id: index + 1, classId: 1, className: 'Lớp phân trang', status: 'Scheduled', capacity: 30, currentEnrollment: 0, startsAt: `2027-01-${String(index + 1).padStart(2, '0')}T08:00:00Z`, endsAt: `2027-01-${String(index + 1).padStart(2, '0')}T09:00:00Z` }))
 
 before(async () => {
   window = new Window({ url: 'http://localhost:3000/member' })
@@ -28,6 +34,7 @@ before(async () => {
     ssr: { noExternal: ['react-router-dom', 'react-router'], resolve: { conditions: ['module-sync', 'module', 'import'] } },
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   Member = (await server.ssrLoadModule('/src/pages/member/Member.jsx')).default
+  ConversationSidebar = (await server.ssrLoadModule('/src/pages/member/MemberAiConversationSidebar.jsx')).default
   AuthProvider = (await server.ssrLoadModule('/src/contexts/AuthContext.jsx')).AuthProvider
   ThemeProvider = (await server.ssrLoadModule('/src/contexts/ThemeContext.jsx')).ThemeProvider
   MemoryRouter = (await server.ssrLoadModule('react-router-dom')).MemoryRouter
@@ -46,6 +53,24 @@ before(async () => {
     if (config.url === '/SupportTickets/my-tickets') data = [{ id: 1, title: 'Phiếu đã tải sẵn', description: 'Cần tư vấn', status: 'Open', createdAt: '2026-11-16T08:00:00Z' }]
     if (config.url === '/notifications') data = [{ id: 1, title: 'Thông báo đã tải sẵn', content: 'Thông tin tài khoản', isRead: false, sentAt: '2026-11-16T08:00:00Z' }]
     if (config.url.includes('/history') && config.url.startsWith('/ai/')) data = { items: [], total: 0, page: config.params.page, pageSize: config.params.pageSize }
+    if (largeLists) {
+      if (config.url === '/membership-packages') data = packageRows()
+      if (config.url === '/member-subscriptions/me') data = subscriptionRows()
+      if (/^\/member-subscriptions\/\d+$/.test(config.url)) data = { ...subscriptionRows().find(item => String(item.id) === config.url.split('/').at(-1)), payments: paymentRows() }
+      if (config.url === '/payments') data = paymentRows()
+      if (config.url === '/notifications') data = rows(index => ({ id: index + 1, title: `Thông báo ${index + 1}`, content: 'Nội dung thông báo', isRead: false, sentAt: '2026-11-16T08:00:00Z' }))
+      if (config.url === '/SupportTickets/my-tickets') data = rows(index => ({ id: index + 1, title: `Phiếu ${index + 1}`, description: 'Cần tư vấn', status: 'Open', createdAt: '2026-11-16T08:00:00Z' }))
+      if (config.url === '/GymCheckIns/my-history') data = rows(index => ({ id: index + 1, checkInTime: `2026-10-${String(index + 1).padStart(2, '0')}T08:00:00Z`, checkOutTime: `2026-10-${String(index + 1).padStart(2, '0')}T09:00:00Z` }))
+      if (config.url === '/TrainingPlans/members/9') data = rows(index => ({ id: index + 1, planName: `Giáo án ${index + 1}`, status: 'Active', exercises: rows(exercise => ({ id: exercise + 1, exerciseName: `Bài tập ${exercise + 1}`, sets: 3, reps: 12 })) }))
+      if (config.url === '/classes') data = rows(index => ({ id: index + 1, className: `Lớp ${index + 1}`, sportName: 'Tennis' }))
+      if (config.url === '/class-sessions' || /^\/classes\/\d+\/sessions$/.test(config.url)) data = sessionRows()
+      if (config.url === '/class-registrations/mine') data = sessionRows().map((item, index) => ({ ...item, id: index + 101, sessionId: index + 1001, status: 'Registered', startsAt: item.startsAt.replace('2027-01', '2027-02'), endsAt: item.endsAt.replace('2027-01', '2027-02') }))
+      if (config.url.startsWith('/ai/') && config.url.endsWith('/history')) {
+        const history = rows(index => ({ id: index + 1, question: `Câu hỏi ${index + 1}`, answer: 'Câu trả lời', goal: `Mục tiêu ${index + 1}`, level: 'Beginner', daysPerWeek: 3, createdAt: '2026-11-16T08:00:00Z' }))
+        const { page, pageSize } = config.params
+        data = { items: history.slice((page - 1) * pageSize, page * pageSize), total: history.length, page, pageSize }
+      }
+    }
     return { data: { success: true, data }, status: 200, statusText: 'OK', headers: {}, config }
   }
   createRoot = (await import('react-dom/client')).createRoot
@@ -152,5 +177,81 @@ test('changing accounts creates a fresh workspace instead of reusing the previou
   assert.equal(count('/payments'), before + 1)
   assert.equal(document.querySelector('.member-sub-current'), null)
   assert.match(document.querySelector('.member-sidebar-account').textContent, /Lê Văn Hai/)
+  assert.deepEqual(errors, [])
+})
+
+const pager = label => [...document.querySelectorAll('.member-pagination')].find(node => node.getAttribute('aria-label') === `Phân trang ${label}`)
+function listRows(label) {
+  const body = pager(label).parentElement.querySelector(':scope > .member-list-scroll')
+  const list = body.querySelector(':scope > [aria-label]')
+  return [...(list.tagName === 'TABLE' ? list.querySelector('tbody').children : list.children)].filter(row => row.hasAttribute('data-stt'))
+}
+const nextPage = label => act(async () => pager(label).querySelector(`[aria-label="Trang sau: ${label}"]`).click())
+async function checkThreePages(label) {
+  assert.equal(listRows(label).length, 10, label)
+  assert.equal(listRows(label)[0].dataset.stt, '1', label)
+  await nextPage(label)
+  assert.equal(listRows(label).length, 10, label)
+  assert.equal(listRows(label)[0].dataset.stt, '11', label)
+  await nextPage(label)
+  assert.equal(listRows(label).length, 3, label)
+  assert.equal(listRows(label)[0].dataset.stt, '21', label)
+}
+
+test('all Member business lists and nested payment/exercise tables expose all 23 records in pages of ten', async () => {
+  largeLists = true
+  await tick(10000); await tick(30000)
+  await clickTab('Gói tập & Thẻ hội viên')
+  await checkThreePages('Thẻ đang sử dụng')
+  await checkThreePages('Đơn đăng ký gói tập')
+  await act(async () => document.querySelector('.member-sub-current .member-button').click())
+  await checkThreePages('Thanh toán đính kèm')
+  await act(async () => document.querySelector('.member-modal-close').click())
+  await act(async () => [...document.querySelectorAll('.member-sub-tabs button')].find(button => button.textContent.includes('Khám phá')).click())
+  await checkThreePages('Danh mục gói tập')
+  await clickTab('Thanh toán trực tuyến'); await checkThreePages('Lịch sử thanh toán')
+  await clickTab('Ra/vào phòng gym'); await checkThreePages('Lịch sử tập luyện')
+  await clickTab('Hỗ trợ khách hàng'); await checkThreePages('Phiếu hỗ trợ')
+  await clickTab('Thông báo hệ thống'); await checkThreePages('Thông báo hệ thống')
+  await clickTab('Lộ trình tập luyện'); await checkThreePages('Bài tập trong giáo án'); await checkThreePages('Giáo án tập luyện')
+  await clickTab('Gợi ý bài tập AI'); await checkThreePages('Lịch sử gợi ý bài tập')
+  assert.deepEqual(errors, [])
+})
+
+test('class pages use ten records and keep selected sessions when moving between pages', async () => {
+  await clickTab('Lớp học & Đặt lịch')
+  await act(async () => [...document.querySelectorAll('.member-classes-layout-toggle button')].find(button => button.textContent.includes('Danh sách')).click())
+  await checkThreePages('Lịch đã đặt')
+  await act(async () => [...document.querySelectorAll('.member-classes-tabs button')].find(button => button.textContent.includes('Tìm lớp học')).click())
+  await checkThreePages('Lớp học')
+  assert.ok(requests.some(request => request.url === '/classes' && request.params.pageSize === 10))
+  await act(async () => { const select = pager('Lớp học').querySelector('select'); select.value = '1'; select.dispatchEvent(new window.Event('change', { bubbles: true })) })
+  await act(async () => document.querySelector('.member-course-card').click())
+  assert.equal(listRows('Buổi học của lớp').length, 10)
+  const first = document.querySelector('.member-session-choice input')
+  assert.equal(first.disabled, false)
+  await act(async () => first.click())
+  await nextPage('Buổi học của lớp')
+  await act(async () => document.querySelector('.member-session-choice input').click())
+  await act(async () => pager('Buổi học của lớp').querySelector('[aria-label="Trang trước: Buổi học của lớp"]').click())
+  assert.equal(document.querySelector('.member-session-choice input').checked, true)
+  await nextPage('Buổi học của lớp')
+  assert.equal(document.querySelector('.member-session-choice input').checked, true)
+  await nextPage('Buổi học của lớp'); assert.equal(listRows('Buổi học của lớp').length, 3)
+  assert.deepEqual(errors, [])
+})
+
+test('AI conversation pages show ten conversations and keep older imported history reachable', async () => {
+  await clickTab('Trợ lý AI')
+  assert.equal(listRows('Cuộc trò chuyện AI').length, 2)
+  await act(async () => document.querySelector('.member-ai-load-history').click())
+  await act(async () => document.querySelector('.member-ai-load-history').click())
+  assert.equal(document.querySelector('.member-ai-load-history'), null)
+  await act(async () => document.querySelector('.member-ai-conversation-list button[title="Lịch sử từ máy chủ"]').click())
+  assert.equal(document.querySelectorAll('.member-ai-turn').length, 23)
+  assert.ok(requests.filter(request => request.url === '/ai/chat/history').every(request => request.params.pageSize === 10))
+  const conversations = rows(index => ({ id: `conversation-${index}`, title: `Cuộc trò chuyện ${index}`, updatedAt: '2026-11-16T08:00:00Z', messages: [{ id: index, question: 'Câu hỏi', answer: 'Trả lời', status: 'success' }] }))
+  await act(async () => root.render(h(ConversationSidebar, { workspace: { conversations, activeId: conversations[0].id }, history: { page: 1, pageSize: 10, data: { page: 1, total: 23 }, latest() {}, reload() {}, setPage() {} }, onSelect() {}, onNew() {} })))
+  await checkThreePages('Cuộc trò chuyện AI')
   assert.deepEqual(errors, [])
 })
