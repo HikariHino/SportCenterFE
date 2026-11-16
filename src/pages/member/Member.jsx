@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
 import usePageMotion from '../../hooks/usePageMotion'
+import useSlidingPill from '../../hooks/useSlidingPill'
 import { getUserDisplayName, getUserInitials } from '../../utils/auth'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification, sessionNotificationId } from '../../utils/sessionNotifications'
@@ -23,6 +24,7 @@ import {
   NotificationsView,
 } from './MemberViews'
 import '../../style/member/Member.css'
+import '../../style/member/MemberMotion.css'
 import MemberScheduleReviewGate from './MemberScheduleReviewGate'
 import MemberAiChat from './MemberAiChat'
 import MemberAiWorkout from './MemberAiWorkout'
@@ -109,6 +111,7 @@ export default function Member() {
   const [activeNav, setActiveNav] = usePortalNavigation(memberViewIds, 'profile', paymentReturnView)
   const contentMotion = usePageMotion(activeNav)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const sidebarPill = useSlidingPill(activeNav, sidebarOpen)
   const [notice, setNotice] = useState('')
   const [noticeTone, setNoticeTone] = useState('success')
 
@@ -259,7 +262,7 @@ export default function Member() {
   const selectNav = (id) => {
     setActiveNav(id)
     setSidebarOpen(false)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }
 
   const viewUpdatedSchedule = item => {
@@ -316,7 +319,8 @@ export default function Member() {
           <ShieldCheck size={14} /> Cổng thông tin hội viên
         </div>
 
-        <nav className="member-sidebar-nav" aria-label="Điều hướng hội viên">
+        <nav className="member-sidebar-nav member-sliding-nav" ref={sidebarPill.container} aria-label="Điều hướng hội viên">
+          <span className="member-nav-pill" ref={sidebarPill.pill} aria-hidden="true" />
           {memberNavSections.map(group => (
             <div key={group.title} className="member-sidebar-group">
               <p className="member-sidebar-group-title">{group.title}</p>
@@ -327,6 +331,7 @@ export default function Member() {
                   className={`member-sidebar-item ${activeNav === id ? 'active' : ''}`}
                   onClick={() => selectNav(id)}
                   aria-current={activeNav === id ? 'page' : undefined}
+                  aria-pressed={activeNav === id}
                 >
                   <Icon size={18} />
                   <span>{label}</span>

@@ -1,0 +1,169 @@
+/* Member uses the same motion timings as Receptionist and Coach. */
+.member-dashboard {
+  --member-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --member-motion-fast: 160ms;
+  --member-motion-normal: 260ms;
+}
+
+/* One background moves across both navigation groups. Keep groups unpositioned
+   so nested buttons measure their offsets from the navigation container. */
+.member-dashboard .member-sliding-nav { position: relative; isolation: isolate; }
+.member-dashboard .member-sliding-nav .member-sidebar-group-title,
+.member-dashboard .member-sliding-nav .member-sidebar-item { position: relative; z-index: 1; }
+.member-dashboard .member-nav-pill { position: absolute; z-index: 0; top: 0; left: 0; display: block; pointer-events: none; opacity: 0; border-radius: 8px; background: linear-gradient(100deg, #1d4ed8, #004ac6); box-shadow: 0 6px 16px #004ac659; }
+.member-dashboard .member-nav-pill::before { content: ''; position: absolute; left: 0; top: 24%; bottom: 24%; width: 3px; border-radius: 6px; background: #fff; }
+.member-dashboard .member-sliding-nav[data-pill-ready='true'] > .member-nav-pill { opacity: 1; }
+.member-dashboard .member-sliding-nav[data-pill-ready='true'] .member-sidebar-item.active,
+.member-dashboard .member-sliding-nav[data-pill-ready='true'] .member-sidebar-item.active:hover { background: transparent; box-shadow: none; transform: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .member-dashboard .member-sliding-nav[data-pill-animated='true'] > .member-nav-pill {
+    transition: transform 340ms var(--member-motion-ease), width 260ms ease, height 260ms ease;
+  }
+
+  .member-dashboard button,
+  .member-dashboard a {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: var(--member-motion-fast);
+    transition-timing-function: var(--member-motion-ease);
+  }
+  .member-dashboard :is(input, select, textarea) {
+    transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  }
+  .member-dashboard :is(input, select, textarea):focus-visible {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-accent, var(--member-blue)) 14%, transparent);
+  }
+  .member-dashboard .member-sidebar-item.active > svg:last-child { animation: member-motion-arrow-in 280ms var(--member-motion-ease); }
+  .member-dashboard :is(
+    .member-sidebar-item > svg:first-child, .member-button > svg,
+    .mpay-button > svg, .member-course-back > svg
+  ) { transition: transform var(--member-motion-normal) var(--member-motion-ease); }
+
+  /* No ancestor transforms: payment dialogs and sticky controls keep their positions. */
+  .member-dashboard .member-main-content :is(
+    .member-card, .member-profile-identity-card, .member-sub-panel, .member-sub-welcome,
+    .gym-panel, .member-ai-chat, .member-ai-side,
+    .member-ai-history-panel, .member-workout-config, .member-workout-result
+  ) {
+    animation: member-motion-surface-in 380ms var(--member-motion-ease) backwards;
+    transition: border-color 220ms ease, box-shadow 220ms ease;
+  }
+  .member-dashboard .member-profile-security-grid > :nth-child(2),
+  .member-dashboard .gym-checkin-side > :nth-child(2) { animation-delay: 65ms; }
+
+  .member-dashboard :is(
+    .member-sub-stats > div, .gym-stats > div, .mpay-stats > button,
+    .mpay-overview > section
+  ) { animation: member-motion-item-in 400ms var(--member-motion-ease) backwards; }
+  .member-dashboard :is(.member-sub-stats, .gym-stats, .mpay-stats, .mpay-overview) > :nth-child(2) { animation-delay: 40ms; }
+  .member-dashboard :is(.member-sub-stats, .gym-stats, .mpay-stats, .mpay-overview) > :nth-child(3) { animation-delay: 80ms; }
+  .member-dashboard :is(.member-sub-stats, .gym-stats, .mpay-stats, .mpay-overview) > :nth-child(n+4) { animation-delay: 120ms; }
+
+  /* Cap staggering to ten entries and fade rows without moving table columns. */
+  .member-dashboard :is(
+    .member-sub-list > li, .member-sub-package-grid > article, .member-sub-active-grid > article,
+    .member-classes-grid > button, .member-session-list-row,
+    .training-plans-list > article, .mpay-record,
+    .gym-history-list > li, .member-support-list > article,
+    .member-notifications-list > article, .member-notifications-preview > article,
+    .member-ai-history-list > li
+  ):nth-child(-n+10) { animation: member-motion-surface-in 300ms var(--member-motion-ease) backwards; }
+  .member-dashboard :is(
+    .member-sub-list > li, .member-sub-package-grid > article, .member-sub-active-grid > article,
+    .member-classes-grid > button, .member-session-list-row,
+    .training-plans-list > article, .mpay-record,
+    .gym-history-list > li, .member-support-list > article,
+    .member-notifications-list > article, .member-notifications-preview > article,
+    .member-ai-history-list > li
+  ):nth-child(2) { animation-delay: 25ms; }
+  .member-dashboard :is(
+    .member-sub-list > li, .member-sub-package-grid > article, .member-sub-active-grid > article,
+    .member-classes-grid > button, .member-session-list-row,
+    .training-plans-list > article, .mpay-record,
+    .gym-history-list > li, .member-support-list > article,
+    .member-notifications-list > article, .member-notifications-preview > article,
+    .member-ai-history-list > li
+  ):nth-child(3) { animation-delay: 50ms; }
+  .member-dashboard :is(
+    .member-sub-list > li, .member-sub-package-grid > article, .member-sub-active-grid > article,
+    .member-classes-grid > button, .member-session-list-row,
+    .training-plans-list > article, .mpay-record,
+    .gym-history-list > li, .member-support-list > article,
+    .member-notifications-list > article, .member-notifications-preview > article,
+    .member-ai-history-list > li
+  ):nth-child(n+4):nth-child(-n+10) { animation-delay: 75ms; }
+
+  .member-dashboard .member-modal-overlay { animation: member-motion-backdrop-in 180ms ease-out; }
+  .member-dashboard .member-modal { animation: member-motion-surface-in 260ms var(--member-motion-ease); }
+  .member-dashboard :is(.member-classes-dialog, .member-support-dialog, .mpay-dialog, .member-ai-delete-dialog)[open],
+  .member-schedule-review[open] { animation: member-motion-surface-in 260ms cubic-bezier(.22, 1, .36, 1); }
+  .member-dashboard :is(.member-classes-dialog, .member-support-dialog, .mpay-dialog, .member-ai-delete-dialog)::backdrop,
+  .member-schedule-review::backdrop { animation: member-motion-backdrop-in 180ms ease-out; }
+  .member-dashboard .member-notifications-popup {
+    transform-origin: top right;
+    animation: member-motion-popover-in 240ms var(--member-motion-ease);
+  }
+  .member-dashboard .member-toast { animation: member-motion-toast-in 360ms var(--member-motion-ease); }
+  .member-dashboard .member-toast[data-tone='success'] > svg { animation: member-motion-success 420ms var(--member-motion-ease); }
+  .member-dashboard :is(
+    .member-api-state, .member-api-message, .member-sub-empty, .member-sub-message,
+    .member-classes-error, .member-agenda-empty, .training-plans-state,
+    .gym-checkin-state, .member-support-state, .member-support-error,
+    .mpay-empty, .member-notifications-state, .member-notifications-error,
+    .member-notifications-notice, .member-profile-field-error,
+    .member-ai-error, .member-ai-pending, .member-ai-turn:last-child,
+    .member-workout-message, .member-workout-empty
+  ) { animation: member-motion-surface-in 240ms ease-out; }
+  .member-dashboard :is(.member-status, .mpay-record-status, .member-classes-badge) {
+    transition: color 220ms ease, background-color 220ms ease, border-color 220ms ease;
+  }
+  .member-dashboard .member-api-state:has(.member-spin) {
+    background-image: radial-gradient(circle, var(--theme-raised, #edf4ff), transparent 70%);
+    background-size: 150% 150%;
+    animation: member-motion-loader-glow 2.8s ease-in-out infinite alternate;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .member-dashboard .member-sidebar-item:not(:disabled):hover { transform: translateX(3px); }
+    .member-dashboard .member-sidebar-item:not(:disabled):hover > svg:first-child { transform: scale(1.1); }
+    .member-dashboard :is(
+      .member-button, .member-btn-checkout, .mpay-button, .gym-button, .training-plans-button,
+      .member-modal-footer > button, .member-profile-form-footer > button
+    ):not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 14px #10264b1a; }
+    .member-dashboard .mpay-stats > button:not(:disabled):hover { transform: translateY(-2px); }
+    .member-dashboard :is(.member-button:hover > svg, .mpay-button:hover > svg, .member-course-back:hover > svg) { transform: translateX(3px); }
+    .member-dashboard :is(.member-card, .member-course-card, .member-sub-package, .gym-panel, .training-plans-card):hover { box-shadow: 0 8px 24px #10264b12; }
+    .member-dashboard .member-notification:hover > svg { animation: member-motion-bell 450ms ease-in-out; }
+  }
+  .member-dashboard :is(
+    .member-button, .member-btn-checkout, .mpay-button, .gym-button, .training-plans-button,
+    .member-modal-footer > button, .member-profile-form-footer > button, .mpay-stats > button
+  ):not(:disabled):active { transform: translateY(0) scale(.98); }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 1024px) {
+  .member-dashboard .member-sidebar.is-open { animation: member-motion-sidebar-in 300ms var(--member-motion-ease); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .member-dashboard *, .member-dashboard *::before, .member-dashboard *::after,
+  .member-dashboard dialog::backdrop, .member-schedule-review, .member-schedule-review *,
+  .member-schedule-review::backdrop {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .member-dashboard :is(button, a):hover,
+  .member-dashboard :is(button, a):active { transform: none !important; }
+}
+
+@keyframes member-motion-surface-in { from { opacity: .35; } to { opacity: 1; } }
+@keyframes member-motion-item-in { from { opacity: .35; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes member-motion-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes member-motion-popover-in { from { opacity: 0; transform: translateY(-7px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes member-motion-toast-in { from { opacity: 0; transform: translateY(-12px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes member-motion-sidebar-in { from { opacity: .4; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+@keyframes member-motion-arrow-in { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: none; } }
+@keyframes member-motion-success { from { opacity: 0; transform: scale(.65) rotate(-12deg); } to { opacity: 1; transform: none; } }
+@keyframes member-motion-bell { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(12deg); } 65% { transform: rotate(-10deg); } }
+@keyframes member-motion-loader-glow { from { background-position: 40% 30%; } to { background-position: 60% 65%; } }
