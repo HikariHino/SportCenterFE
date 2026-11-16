@@ -1,3 +1,4 @@
+import { ReceptionistList } from './ReceptionistPagination'
 import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
 import { useState } from 'react'
@@ -57,13 +58,13 @@ export function Overview({ onNavigate }) {
     <div className="reception-overview-grid">
       <section className="reception-card reception-queue">
         <div className="reception-card-head"><div><span>CHECK-IN HÔM NAY</span><h2>Khách đang sử dụng phòng gym</h2></div><button type="button" onClick={() => onNavigate('Check-in')}>Mở check-in <ArrowRight size={15} /></button></div>
-        {loading ? <EmptyState icon={UserCheck} title="Đang tải check-in" text="Dữ liệu check-in đang được đồng bộ từ hệ thống." /> : activeCheckIns.length ? <div className="reception-overview-checkins">{activeCheckIns.slice(0, 3).map(item => <article key={item.id}><span>{String(item.memberName || 'HV').split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase()}</span><div><strong>{item.memberName}</strong><small>{item.memberCode} · {item.packageName || 'Chưa có gói'}</small></div><time>{formatDateTime(item.checkInTime)}</time></article>)}</div> : <EmptyState icon={UserCheck} title="Chưa có khách trong phòng gym" text="Hôm nay chưa có lượt check-in đang hoạt động." />}
-        {activeCheckIns.length > 3 && <button className="reception-overview-more" type="button" onClick={() => onNavigate('Check-in')}>Xem thêm {activeCheckIns.length - 3} lượt check-in <ArrowRight size={15} /></button>}
+        {loading ? <EmptyState icon={UserCheck} title="Đang tải check-in" text="Dữ liệu check-in đang được đồng bộ từ hệ thống." /> : activeCheckIns.length ? <div className="reception-overview-checkins">{<ReceptionistList items={activeCheckIns} label="Khách đang ở phòng gym">{(item, ordinal) => <article key={item.id}><span>{String(item.memberName || 'HV').split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase()}</span><div><strong>{item.memberName}</strong><small>{item.memberCode} · {item.packageName || 'Chưa có gói'}</small></div><time>{formatDateTime(item.checkInTime)}</time></article>}</ReceptionistList>}</div> : <EmptyState icon={UserCheck} title="Chưa có khách trong phòng gym" text="Hôm nay chưa có lượt check-in đang hoạt động." />}
+        {activeCheckIns.length > 0 && <button className="reception-overview-more" type="button" onClick={() => onNavigate('Check-in')}>Mở danh sách {activeCheckIns.length} lượt check-in <ArrowRight size={15} /></button>}
       </section>
       <section className="reception-card reception-court-panel">
         <div className="reception-card-head"><div><span>PHÒNG HOẠT ĐỘNG</span><h2>Cơ sở đang sẵn sàng</h2></div><button type="button" onClick={() => onNavigate('Phòng tập')}>Xem phòng <ArrowRight size={15} /></button></div>
-        {loading ? <EmptyState icon={DoorOpen} title="Đang tải phòng" text="Dữ liệu phòng đang được đồng bộ từ hệ thống." /> : data.rooms.length ? <div className="reception-overview-rooms">{data.rooms.slice(0, 3).map(room => <article key={room.id}><span><DoorOpen size={16} /></span><div><strong>{room.name}</strong><small>{room.roomType} · {room.capacity} người</small></div></article>)}</div> : <EmptyState icon={MapPin} title="Chưa có phòng hoạt động" text="Hiện chưa có phòng nào ở trạng thái hoạt động." />}
-        {data.rooms.length > 3 && <button className="reception-overview-more" type="button" onClick={() => onNavigate('Phòng tập')}>Xem thêm {data.rooms.length - 3} phòng <ArrowRight size={15} /></button>}
+        {loading ? <EmptyState icon={DoorOpen} title="Đang tải phòng" text="Dữ liệu phòng đang được đồng bộ từ hệ thống." /> : data.rooms.length ? <div className="reception-overview-rooms">{<ReceptionistList items={data.rooms} label="Phòng đang hoạt động">{(room, ordinal) => <article key={room.id}><span><DoorOpen size={16} /></span><div><strong>{room.name}</strong><small>{room.roomType} · {room.capacity} người</small></div></article>}</ReceptionistList>}</div> : <EmptyState icon={MapPin} title="Chưa có phòng hoạt động" text="Hiện chưa có phòng nào ở trạng thái hoạt động." />}
+        {data.rooms.length > 0 && <button className="reception-overview-more" type="button" onClick={() => onNavigate('Phòng tập')}>Mở danh sách {data.rooms.length} phòng <ArrowRight size={15} /></button>}
       </section>
     </div>
   </>

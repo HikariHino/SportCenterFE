@@ -1,3 +1,4 @@
+import { ReceptionistList } from './ReceptionistPagination'
 import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
 import { useEffect, useMemo, useState } from 'react'
@@ -162,12 +163,12 @@ function RoomSchedule({ room, rooms, onClose, onOpenSessions, onSelectSession })
       <WeeklyTimetable items={scheduledItems} weekStart={weekStart} onWeekChange={value => { setWeekStart(value); setSelectedId(null) }} onSelect={selectSession} totalCount={scheduledItems.length} title="Thời khóa biểu của phòng" description="Chỉ hiển thị các buổi đang sử dụng lịch phòng · Chọn buổi học để xem chi tiết" />
       <section className="reception-room-cancelled" aria-labelledby="reception-room-cancelled-title">
         <header><div><span><Ban size={15} />LỊCH ĐÃ HỦY</span><h3 id="reception-room-cancelled-title">Buổi học đã hủy</h3><p>Các buổi đã hủy không còn chiếm thời gian sử dụng phòng.</p></div><strong>{cancelledItems.length} buổi</strong></header>
-        {cancelledItems.length ? <div className="reception-room-cancelled-list">{cancelledItems.map(item => <button type="button" key={item.id} onClick={() => selectSession(item.id)}>
+        {cancelledItems.length ? <div className="reception-room-cancelled-list">{<ReceptionistList items={cancelledItems} label="Buổi đã hủy" resetKey={room.id}>{(item, ordinal) => <button type="button" key={item.id} onClick={() => selectSession(item.id)}>
           <span><small>BUỔI #{item.id}</small><b>{item.className || `Buổi học #${item.id}`}</b></span>
           <span><small>THỜI GIAN</small><b>{sessionDateTime(item.startsAt)}</b></span>
           <span><small>HUẤN LUYỆN VIÊN</small><b>{item.coachName || 'Chưa phân công'}</b></span>
           <span><small>LÝ DO HỦY</small><b>{item.cancellationReason || 'Chưa cập nhật lý do'}</b></span>
-        </button>)}</div> : <div className="reception-room-cancelled-empty"><CheckCircle2 size={20} /><span>Phòng chưa có buổi học nào bị hủy.</span></div>}
+        </button>}</ReceptionistList>}</div> : <div className="reception-room-cancelled-empty"><CheckCircle2 size={20} /><span>Phòng chưa có buổi học nào bị hủy.</span></div>}
       </section>
       {selected && <article className="reception-room-session-detail">
         <header><div><small>BUỔI HỌC #{selected.id}</small><h3>{selected.className}</h3></div><button type="button" aria-label="Đóng chi tiết buổi học" onClick={() => setSelectedId(null)}><X size={17} /></button></header>
@@ -220,11 +221,11 @@ export function RoomsView({ query = '', onOpenSessions, onSelectSession }) {
         <div><label><Layers3 size={15} /><select value={roomType} onChange={event => setRoomType(event.target.value)} aria-label="Lọc loại phòng"><option value="all">Tất cả loại phòng</option>{roomTypes.map(type => <option value={type} key={type}>{type}</option>)}</select></label><label><CheckCircle2 size={15} /><select value={status} onChange={event => setStatus(event.target.value)} aria-label="Lọc trạng thái phòng"><option value="all">Tất cả trạng thái</option><option value="active">Đang hoạt động</option><option value="inactive">Ngừng hoạt động</option></select></label></div>
       </div>
       {error && <div className="reception-filter-error"><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={12} />Thử lại</button></div>}
-      {loading ? <ViewLoader /> : !filteredRooms.length ? <div className="reception-empty"><span><DoorOpen size={24} /></span><strong>Không tìm thấy phòng</strong><p>Thử đổi trạng thái, loại phòng hoặc từ khóa tìm kiếm.</p></div> : <div className="reception-facility-room-grid">{filteredRooms.map(room => <article key={room.id} className={room.isActive === false ? 'inactive' : ''}>
+      {loading ? <ViewLoader /> : !filteredRooms.length ? <div className="reception-empty"><span><DoorOpen size={24} /></span><strong>Không tìm thấy phòng</strong><p>Thử đổi trạng thái, loại phòng hoặc từ khóa tìm kiếm.</p></div> : <div className="reception-facility-room-grid">{<ReceptionistList items={filteredRooms} label="Danh sách phòng" resetKey={JSON.stringify([query, search, status, roomType])}>{(room, ordinal) => <article key={room.id} className={room.isActive === false ? 'inactive' : ''}>
         <header><span><DoorOpen size={21} /></span><div><h3>{room.name}</h3><small>Mã phòng #{room.id}</small></div><b className={room.isActive !== false ? 'active' : 'inactive'}><i />{room.isActive !== false ? 'Hoạt động' : 'Đã khóa'}</b></header>
         <dl><div><dt><Layers3 size={14} />Loại</dt><dd>{room.roomType || 'General'}</dd></div><div><dt><UsersRound size={14} />Sức chứa</dt><dd>{room.capacity} học viên</dd></div><div><dt><MapPin size={14} />Vị trí</dt><dd>{room.location || 'Chưa cập nhật'}</dd></div></dl>
         <footer><button type="button" className="primary" onClick={() => setScheduleRoom(room)}><CalendarDays size={15} />Xem lịch tuần</button><button type="button" onClick={() => setSelectedRoomId(room.id)}><CalendarClock size={15} />Kiểm tra lịch</button></footer>
-      </article>)}</div>}
+      </article>}</ReceptionistList>}</div>}
     </section>
     {selectedRoomId && <RoomDetailDialog roomId={selectedRoomId} onClose={() => setSelectedRoomId(null)} />}
   </div>

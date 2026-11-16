@@ -89,3 +89,19 @@ test('a new workspace begins without the previous account profile or member reco
   assert.match(html, /aria-label="Đang tải nội dung"/)
   assert.doesNotMatch(html, /Nguyễn Văn An|recep@example.com/)
 })
+
+test('large cached Receptionist lists render ten rows and retain totals for pagination', () => {
+  for (const [view, key, makeItem] of [
+    ['MembersView', 'members', id => ({ memberId: id, fullName: 'Hội viên ' + id, isActive: true })],
+    ['PaymentsView', 'payments', id => ({ id, memberId: 9, amount: 2000, paymentMethod: 'Cash', status: 'Completed' })],
+    ['RoomsView', 'rooms', id => ({ id, name: 'Phòng ' + id, roomType: 'Gym', capacity: 20, isActive: true })],
+    ['CheckInView', 'checkins', id => ({ id, memberId: id, memberName: 'Hội viên ' + id, memberCode: 'SC-' + id })],
+    ['SupportTicketsView', 'support:all', id => ({ id, memberName: 'Hội viên ' + id, title: 'Phiếu ' + id, status: 'Open', priority: 'Normal' })],
+  ]) {
+    const html = renderView(view, cache => cache.setData(key, Array.from({ length: 23 }, (_, index) => makeItem(index + 1))))
+    assert.equal((html.match(/data-stt=/g) || []).length, 10, view)
+    assert.match(html, /1–10 \/ 23/, view)
+    assert.match(html, /data-stt="10"/, view)
+    assert.doesNotMatch(html, /data-stt="11"/, view)
+  }
+})
