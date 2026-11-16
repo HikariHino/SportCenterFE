@@ -1,3 +1,4 @@
+import { CoachList } from './CoachPagination'
 import { useEffect, useState } from 'react'
 import { ArrowLeft, CalendarDays, CheckCircle2, Clock3, RefreshCw, UserCheck, Users } from 'lucide-react'
 import { getCoachSessionAttendances, getCoachSessionRoster, markCoachAttendance } from '../../services/coachService'
@@ -110,9 +111,10 @@ export default function ScheduleSessionDetail({ session, onBack, showNotice }) {
       <div className="coach-view-toolbar"><div><strong>Danh sách điểm danh</strong><span>{loading ? 'Đang tải học viên...' : `${students.length} học viên trong buổi`}</span></div><button type="button" className="coach-schedule-detail-refresh" disabled={loading || savingId !== null} onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={15} />Làm mới</button></div>
       <div className={`coach-checkin-window ${attendanceAvailability.open ? 'open' : ''}`}><UserCheck size={16} /><span><strong>{attendanceAvailability.open ? 'Có thể cập nhật điểm danh' : 'Không thể điểm danh'}</strong><small>{attendanceAvailability.message}.</small></span></div>
       {actionError && <div className="coach-attendance-error" role="alert">{actionError}</div>}
-      {loading ? <EmptyState title="Đang tải danh sách học viên" text="Hệ thống đang lấy đăng ký và trạng thái điểm danh của buổi học." /> : error ? <div className="coach-inline-error"><EmptyState title="Không thể tải danh sách học viên" text={error} /><button type="button" className="coach-retry-button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : students.length ? <div className="coach-attendance-table">
-        <div className="coach-attendance-heading"><span>Học viên</span><span>Đăng ký</span><span>Trạng thái</span><span>Điểm danh</span></div>
-        {students.map(student => {
+      {loading ? <EmptyState title="Đang tải danh sách học viên" text="Hệ thống đang lấy đăng ký và trạng thái điểm danh của buổi học." /> : error ? <div className="coach-inline-error"><EmptyState title="Không thể tải danh sách học viên" text={error} /><button type="button" className="coach-retry-button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : students.length ? <CoachList items={students} label="Học viên buổi huấn luyện" resetKey={session.id} table renderLayout={(rows, pagination) => <div className="coach-paged-table"><div className="coach-table-scroll" role="region" aria-label="Điểm danh buổi học, có thể cuộn" tabIndex={0}><div className="coach-attendance-table">
+        <div className="coach-attendance-heading coach-numbered-heading"><span>STT</span><span>Học viên</span><span>Đăng ký</span><span>Trạng thái</span><span>Điểm danh</span></div>
+        {rows}
+      </div></div>{pagination}</div>}>{student => {
           const saving = savingId === student.registrationId
           return <article className="coach-attendance-row" key={student.id}>
             <span className="coach-roster-person"><i className="coach-student-avatar blue">{initials(student.name)}</i><span><strong>{student.name}</strong><small>Member #{student.memberId}</small></span></span>
@@ -120,8 +122,7 @@ export default function ScheduleSessionDetail({ session, onBack, showNotice }) {
             <span><strong className={`coach-attendance ${student.attendanceTone}`}>{student.attendanceStatus}</strong><small>{student.checkInTime}</small></span>
             <span className="coach-attendance-actions"><select aria-label={`Trạng thái điểm danh của ${student.name}`} value={selections[student.id] || 'Present'} disabled={!attendanceAvailability.open || savingId !== null} onChange={event => setSelections(current => ({ ...current, [student.id]: event.target.value }))}>{attendanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button type="button" className="coach-checkin-button" disabled={!attendanceAvailability.open || savingId !== null} onClick={() => handleUpdate(student)}>{saving ? 'Đang lưu...' : student.attendanceTone === 'pending' ? 'Điểm danh' : 'Cập nhật'}</button></span>
           </article>
-        })}
-      </div> : <EmptyState title="Chưa có học viên" text="Buổi huấn luyện này chưa có hội viên đăng ký." />}
+        }}</CoachList> : <EmptyState title="Chưa có học viên" text="Buổi huấn luyện này chưa có hội viên đăng ký." />}
     </section>
   </div>
 }

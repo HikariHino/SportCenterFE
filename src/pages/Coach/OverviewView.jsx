@@ -1,5 +1,6 @@
+import { CoachList } from './CoachPagination'
 import { useCoachCache, useCoachResource } from '../../contexts/CoachWorkspaceContext'
-import { coachOverviewRange, coachRosterKey, coachSessionsKey } from '../../services/coachWorkspaceReads'
+import { getAllCoachSessions, coachOverviewRange, coachRosterKey, coachSessionsKey } from '../../services/coachWorkspaceReads'
 import RefreshStatus from './RefreshStatus'
 import { useMemo, useState } from 'react'
 import {
@@ -15,7 +16,7 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react'
-import { getCoachSessionRoster, getMyCoachSessions } from '../../services/coachService'
+import { getCoachSessionRoster } from '../../services/coachService'
 import { initials, timeFormatter, ViewLoader } from './CoachViewShared'
 
 const metricSlots = [
@@ -45,8 +46,8 @@ function EmptyState({ title = 'Chưa có dữ liệu', text, actionLabel, onActi
   </div>
 }
 
-function SessionRow({ session, onOpen }) {
-  return <button type="button" className={`coach-session ${session.tone}`} onClick={onOpen} aria-label={`Mở lịch buổi ${session.className}, ${session.time}, ${session.statusLabel}`}>
+function SessionRow({ session, onOpen, className = '', ...props }) {
+  return <button {...props} type="button" className={`coach-session ${session.tone} ${className}`} onClick={onOpen} aria-label={`Mở lịch buổi ${session.className}, ${session.time}, ${session.statusLabel}`}>
     <div className="coach-session-time"><strong>{session.time}</strong><small>{session.duration}</small></div><i />
     <div className="coach-session-info"><strong>{session.className}</strong><span>{session.enrollment}/{session.capacity || '--'} học viên</span><small><Dumbbell size={13} /> {session.coachName || 'Lịch huấn luyện của tôi'}</small></div>
     <span className={`coach-status ${session.tone}`}>{session.statusLabel}</span>
@@ -91,7 +92,7 @@ export function OverviewView({ active = true, onNavigate }) {
   const range = coachOverviewRange()
   const overviewQuery = useCoachResource('overview:' + range.from, async () => {
     const from = new Date(range.from)
-    const result = await cache.load(coachSessionsKey(range), () => getMyCoachSessions(range))
+    const result = await cache.load(coachSessionsKey(range), () => getAllCoachSessions(range))
     const upcomingWeek = result.items.map(sessionPresentation).sort((left, right) => new Date(left.startsAt) - new Date(right.startsAt))
     const activeWeek = upcomingWeek.filter(session => session.tone !== 'cancelled')
     const today = activeWeek.filter(session => sameDay(new Date(session.startsAt), from))
@@ -191,8 +192,8 @@ export function OverviewView({ active = true, onNavigate }) {
     <div className="coach-overview-workspace">
       <section className="coach-card coach-schedule">
         <div className="coach-card-head"><div><span>ƯU TIÊN HÔM NAY</span><h2>Lịch huấn luyện hôm nay</h2></div><button type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem toàn bộ lịch <ChevronRight size={16} /></button></div>
-        {sessions.length ? <div className="coach-session-list">{sessions.slice(0, 3).map(session => <SessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện', session)} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
-        {sessions.length > 3 && <button className="coach-week-more" type="button" onClick={() => onNavigate('Lịch huấn luyện', sessions[3])}>Xem thêm {sessions.length - 3} buổi hôm nay <ChevronRight size={15} /></button>}
+        {sessions.length ? <div className="coach-session-list">{<CoachList items={sessions} label="Lịch huấn luyện hôm nay">{session => <SessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện', session)} />}</CoachList>}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
+        {sessions.length > 0 && <button className="coach-week-more" type="button" onClick={() => onNavigate('Lịch huấn luyện', sessions[0])}>Mở lịch {sessions.length} buổi hôm nay <ChevronRight size={15} /></button>}
       </section>
       <section className="coach-card coach-day-progress-card">
         <div className="coach-card-head"><div><span>TIẾN ĐỘ HÔM NAY</span><h2>Tình hình hoạt động</h2></div><UserCheck size={21} /></div>
