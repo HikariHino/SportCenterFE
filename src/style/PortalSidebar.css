@@ -1,0 +1,46 @@
+/* Keep the moving selection the same size, including when labels wrap. */
+:is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)
+:is(.reception-sliding-nav, .coach-sliding-nav, .member-sliding-nav, .manager-sliding-nav) button {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  flex-shrink: 0;
+  padding: 6px 36px 6px 12px;
+  line-height: 18px;
+}
+
+:is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)
+:is(.reception-sliding-nav, .coach-sliding-nav, .member-sliding-nav, .manager-sliding-nav) button > span {
+  min-width: 0;
+  line-height: 18px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+:is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)
+:is(.reception-sliding-nav, .coach-sliding-nav, .member-sliding-nav, .manager-sliding-nav) button > svg {
+  flex-shrink: 0;
+}
+
+/* Reserve the arrow's space in every button so selection cannot rewrap text. */
+:is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)
+:is(.reception-sliding-nav, .coach-sliding-nav, .member-sliding-nav, .manager-sliding-nav) button > svg:last-child:not(:first-child) {
+  position: absolute;
+  right: 12px;
+  top: 0;
+  bottom: 0;
+  margin-block: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)
+  :is(.reception-sliding-nav, .coach-sliding-nav, .member-sliding-nav, .manager-sliding-nav)[data-pill-ready='true'][data-pill-animated='true']
+  > :is(.reception-nav-pill, .coach-nav-pill, .member-nav-pill, .manager-nav-pill) {
+    transition: transform 340ms cubic-bezier(.22, 1, .36, 1);
+  }
+}

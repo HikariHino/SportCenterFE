@@ -25,6 +25,7 @@ import {
 } from './MemberViews'
 import '../../style/member/Member.css'
 import '../../style/member/MemberMotion.css'
+import '../../style/PortalSidebar.css'
 import MemberScheduleReviewGate from './MemberScheduleReviewGate'
 import MemberAiChat from './MemberAiChat'
 import MemberAiWorkout from './MemberAiWorkout'

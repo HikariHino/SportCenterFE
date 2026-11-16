@@ -17,6 +17,7 @@ import { getNotifications, markNotificationRead } from '../../services/notificat
 import { formatDateTime, requestErrorMessage, ViewLoader } from './ReceptionistViewShared'
 import '../../style/Receptionist/Receptionist.css'
 import '../../style/Receptionist/ReceptionistMotion.css'
+import '../../style/PortalSidebar.css'
 
 const viewLoaders = {
   'Tổng quan': () => import('./OverviewView'), 'Buổi học': () => import('./ScheduleView'),
