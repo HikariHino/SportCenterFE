@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
-let server, workspace, reads, views, MemoryRouter, AuthProvider
+let server, workspace, reads, views, MemoryRouter, AuthProvider, StudentDialog
 const descriptors = new Map()
 before(async () => {
   for (const [key, value] of Object.entries({ localStorage: { getItem: () => null }, sessionStorage: { getItem: () => null }, window: { location: { search: '', pathname: '/coach' } } })) {
@@ -19,6 +19,7 @@ before(async () => {
   reads = await server.ssrLoadModule('/src/services/coachWorkspaceReads.js')
   AuthProvider = (await server.ssrLoadModule('/src/contexts/AuthContext.jsx')).AuthProvider
   MemoryRouter = (await server.ssrLoadModule('react-router-dom')).MemoryRouter
+  StudentDialog = (await server.ssrLoadModule('/src/pages/Coach/StudentDetailsDialog.jsx')).default
   views = {}
   for (const [file, name] of [['AttendanceView', 'AttendanceView'], ['StudentsView', 'StudentsView'], ['OverviewView', 'OverviewView'], ['ProfileView', 'CoachProfileView'], ['RoomsView', 'CoachRoomsView']]) views[name] = (await server.ssrLoadModule('/src/pages/Coach/' + file + '.jsx'))[name]
 })
@@ -99,4 +100,26 @@ test('Overview paginates the complete daily schedule instead of clipping it to t
   assert.equal((html.match(/data-stt=/g) || []).length, 10)
   assert.match(html, /1–10 \/ 23/)
   assert.match(html, /Phân trang Lịch huấn luyện hôm nay/)
+})
+
+test('the student list offers a dialog per row and renders no student detail panel before a click', () => {
+  const html = renderView('StudentsView')
+  assert.match(html, /coach-student-list-layout/)
+  assert.match(html, /aria-label="Xem thông tin học viên Nguyễn Văn An"/)
+  assert.match(html, /aria-haspopup="dialog" aria-expanded="false"/)
+  assert.doesNotMatch(html, /coach-student-profile|coach-student-details-dialog|coach-profile-main/)
+})
+
+test('student popup contains the requested student and keeps check-in restrictions and plan actions', () => {
+  const student = { id: '10', memberId: 9, registrationId: 10, name: 'Nguyễn Văn An', registrationStatus: 'Đã đăng ký', attendanceTone: 'pending', attendanceStatus: 'Chưa điểm danh', checkInTime: 'Chưa có' }
+  const props = { student, session: { className: 'Tennis A', startsAt: '2026-11-16T08:00:00Z', endsAt: '2026-11-16T09:00:00Z' }, sportName: 'Tennis', availability: { open: false, message: 'Buổi học đã hoàn thành.' }, onClose() {}, onCheckIn() {}, onCreatePlan() {}, onViewPlans() {} }
+  const html = renderToStaticMarkup(h(StudentDialog, props))
+  assert.match(html, /<dialog[^>]*aria-labelledby=/)
+  for (const text of ['Nguyễn Văn An', '#9', '#10', 'Tennis A', 'Tạo giáo án', 'Xem giáo án', 'Buổi học đã hoàn thành.']) assert.ok(html.includes(text), text)
+  assert.match(html, /disabled="" title="Buổi học đã hoàn thành\."/)
+  assert.match(html, /aria-label="Đóng thông tin học viên"/)
+  const busy = renderToStaticMarkup(h(StudentDialog, { ...props, checkingIn: true, availability: { open: true, message: 'Có thể check-in.' } }))
+  assert.match(busy, /aria-busy="true"/)
+  assert.match(busy, /disabled="" aria-label="Đóng thông tin học viên"/)
+  assert.match(busy, /Đang check-in/)
 })
