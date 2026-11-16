@@ -17,6 +17,7 @@ import { getNotifications, markNotificationRead } from '../../services/notificat
 import { ViewLoader } from './CoachViewShared'
 import '../../style/Coach/Coach.css'
 import '../../style/Coach/CoachMotion.css'
+import '../../style/PortalSidebar.css'
 
 const viewLoaders = {
   'Tổng quan': () => import('./OverviewView'), 'Lịch huấn luyện': () => import('./AttendanceView'),

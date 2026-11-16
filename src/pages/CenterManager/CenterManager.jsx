@@ -32,6 +32,7 @@ import { getTodayCheckIns } from '../../services/gymCheckInService'
 import '../../style/CenterManager/CenterManager.css'
 import '../../style/CenterManager/ManagerOverview.css'
 import '../../style/CenterManager/ManagerMotion.css'
+import '../../style/PortalSidebar.css'
 
 const managerNavSections = [
   {
