@@ -8,6 +8,20 @@
 /* Moving a view/dialog ancestor would reposition fixed camera and nested dialogs. */
 .reception-dashboard .reception-view { animation: none; }
 
+.reception-dashboard .reception-sliding-nav { position: relative; isolation: isolate; }
+.reception-dashboard .reception-sliding-nav > .reception-nav-title,
+.reception-dashboard .reception-sliding-nav > button { position: relative; z-index: 1; }
+.reception-nav-pill { position: absolute; z-index: 0; top: 0; left: 0; display: block; pointer-events: none; opacity: 0; border-radius: 8px; background: linear-gradient(100deg, #1d4ed8, #004ac6); box-shadow: 0 6px 16px #004ac659; }
+.reception-nav-pill::before { content: ''; position: absolute; left: 0; top: 24%; bottom: 24%; width: 3px; border-radius: 6px; background: #fff; }
+.reception-sliding-nav[data-pill-ready='true'] > .reception-nav-pill { opacity: 1; }
+.reception-dashboard .reception-sliding-nav[data-pill-ready='true'] > button.active,
+.reception-dashboard .reception-sliding-nav[data-pill-ready='true'] > button.active:hover { background: transparent; box-shadow: none; transform: none; }
+.reception-dashboard .reception-sliding-nav[data-pill-ready='true'] > button.active::before { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .reception-sliding-nav[data-pill-animated='true'] > .reception-nav-pill { transition: transform 340ms cubic-bezier(.22, 1, .36, 1), width 260ms ease, height 260ms ease; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .reception-dashboard button,
   .reception-dashboard a {
