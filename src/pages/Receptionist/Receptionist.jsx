@@ -9,6 +9,7 @@ import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
 import usePageMotion from '../../hooks/usePageMotion'
+import useSlidingPill from '../../hooks/useSlidingPill'
 import { ReceptionistViewActivity, ReceptionistWorkspaceProvider, useReceptionistCache } from '../../contexts/ReceptionistWorkspaceContext'
 import { prefetchReceptionistResources } from '../../utils/receptionistResourceCache'
 import { receptionistReadTasks } from '../../services/receptionistWorkspaceReads'
@@ -95,6 +96,7 @@ function ReceptionistWorkspace() {
   const query = queries[activeNav] || ''
   const setQuery = value => setQueries(current => ({ ...current, [activeNav]: value }))
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const sidebarPill = useSlidingPill(activeNav, sidebarOpen)
   const [notice, setNotice] = useState('')
   const [selectedReceptionSession, setSelectedReceptionSession] = useState(storedSelectedSession)
   const [notificationOpen, setNotificationOpen] = useState(false)
@@ -226,7 +228,7 @@ function ReceptionistWorkspace() {
     <aside className={`reception-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
       <Link to="/" className="reception-brand" aria-label="Về trang chủ SportPulse"><span><Trophy size={24} /></span><div><strong>SportPulse<span>.</span></strong><small>RECEPTION PORTAL</small></div></Link>
       <div className="reception-portal-tag"><ShieldCheck size={14} />Cổng thông tin nhân viên lễ tân</div>
-      <nav className="reception-nav" aria-label="Điều hướng lễ tân"><div className="reception-nav-group"><p className="reception-nav-title">VẬN HÀNH QUẦY LỄ TÂN</p>{navigation.map(([Icon, label]) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onPointerEnter={() => preloadView(label)} onFocus={() => preloadView(label)} onClick={() => selectNavigation(label)}><Icon size={18} /><span>{label}</span>{activeNav === label && <ChevronRight size={14} />}</button>)}</div></nav>
+      <nav className="reception-nav" aria-label="Điều hướng lễ tân"><div className="reception-nav-group reception-sliding-nav" ref={sidebarPill.container}><span className="reception-nav-pill" ref={sidebarPill.pill} aria-hidden="true" /><p className="reception-nav-title">VẬN HÀNH QUẦY LỄ TÂN</p>{navigation.map(([Icon, label]) => <button type="button" key={label} className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onPointerEnter={() => preloadView(label)} onFocus={() => preloadView(label)} onClick={() => selectNavigation(label)}><Icon size={18} /><span>{label}</span>{activeNav === label && <ChevronRight size={14} />}</button>)}</div></nav>
       <div className="reception-sidebar-bottom"><div className="reception-user"><span className="reception-avatar">{initials}</span><div><strong>{staffName}</strong><small>Nhân viên lễ tân</small></div><button type="button" onClick={handleLogout} aria-label="Đăng xuất"><LogOut size={18} /></button></div></div>
     </aside>
 
