@@ -92,14 +92,14 @@ test('Coach roster and room lists show ten numbered rows while keeping totals an
   assert.match(roomsHtml, /1–10 \/ 23/)
 })
 
-test('Overview paginates the complete daily schedule instead of clipping it to three sessions', () => {
+test('Overview shows the complete daily schedule without pagination while other Coach lists stay paginated', () => {
   const html = renderView('OverviewView', (cache, session) => cache.setData('overview:' + reads.coachOverviewRange().from, {
     sessions: Array.from({ length: 23 }, (_, index) => ({ ...session, id: index + 1, tone: 'next', time: '15:00', duration: '60 phút', enrollment: 1 })),
     weekSessions: [], students: [], metrics: [], attendance: { present: 0, absent: 0, excused: 0, pending: 0 },
   }))
-  assert.equal((html.match(/data-stt=/g) || []).length, 10)
-  assert.match(html, /1–10 \/ 23/)
-  assert.match(html, /Phân trang Lịch huấn luyện hôm nay/)
+  assert.equal((html.match(/data-stt=/g) || []).length, 23)
+  assert.match(html, /data-stt="23"/)
+  assert.doesNotMatch(html, /Phân trang Lịch huấn luyện hôm nay|10 dòng\/trang/)
 })
 
 test('the student list offers a dialog per row and renders no student detail panel before a click', () => {
