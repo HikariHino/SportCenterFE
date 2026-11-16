@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { MEMBER_TRANSACTION_RESOURCES, useMemberCache, useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
 import {
   AlertCircle, ArrowDownToLine, ArrowRight, Banknote, CheckCircle2, Clock3,
   CreditCard, ExternalLink, Eye, LoaderCircle, QrCode, ReceiptText, RefreshCw, Search, X, XCircle,
@@ -62,10 +63,8 @@ function DetailField({ label, children }) {
 }
 
 export function PaymentsView({ showNotice }) {
-  const [payments, setPayments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [hasLoaded, setHasLoaded] = useState(false)
-  const [loadError, setLoadError] = useState('')
+  const cache = useMemberCache()
+  const viewActive = useMemberViewActive()
   const [actionError, setActionError] = useState('')
   const [notice, setNotice] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -74,28 +73,20 @@ export function PaymentsView({ showNotice }) {
   const [viewingId, setViewingId] = useState(null)
   const [cancelling, setCancelling] = useState(null)
   const actionLock = useRef(false)
-  const loadRevision = useRef(0)
+  const busy = Boolean(action)
+  const paymentsRead = useMemberResource('payments', getMyPayments, { initialData: [], paused: busy })
+  const payments = paymentsRead.data
+  const setPayments = paymentsRead.setData
+  const loading = paymentsRead.loading
+  const hasLoaded = paymentsRead.hasData
+  const loadError = paymentsRead.error ? errorMessage(paymentsRead.error, 'Không thể tải lịch sử thanh toán.') : ''
 
   const viewing = payments.find(payment => String(payment.id) === String(viewingId))
   const summary = paymentSummary(payments)
   const filtered = filterMemberPayments(payments, search, statusFilter)
-  const busy = Boolean(action)
   const announce = text => { if (showNotice) showNotice(text); else setNotice(text) }
 
-  const loadPayments = async () => {
-    const revision = ++loadRevision.current
-    setLoading(true); setLoadError('')
-    try {
-      const data = await getMyPayments()
-      if (revision === loadRevision.current) { setPayments(data); setHasLoaded(true) }
-      return true
-    } catch (err) {
-      if (revision === loadRevision.current) setLoadError(errorMessage(err, 'Không thể tải lịch sử thanh toán.'))
-      return false
-    } finally { if (revision === loadRevision.current) setLoading(false) }
-  }
-
-  useEffect(() => { loadPayments(); return () => { loadRevision.current++ } }, [])
+  const loadPayments = paymentsRead.reload
 
   const openDetail = payment => { setActionError(''); setNotice(''); setViewingId(payment.id) }
   const checkout = payment => {
@@ -111,6 +102,7 @@ export function PaymentsView({ showNotice }) {
     actionLock.current = true; setAction({ id: payment.id, type: 'sync' }); setActionError(''); setNotice('')
     try {
       const updated = await syncPayment(payment.id)
+      cache.invalidate(MEMBER_TRANSACTION_RESOURCES)
       await loadPayments()
       updatePayment(updated)
       announce('Đã cập nhật trạng thái giao dịch từ PayOS.')
@@ -122,6 +114,7 @@ export function PaymentsView({ showNotice }) {
     actionLock.current = true; setAction({ id: cancelling.id, type: 'cancel' }); setActionError('')
     try {
       const result = await cancelPaymentAndSubscription(cancelling)
+      cache.invalidate(MEMBER_TRANSACTION_RESOURCES)
       updatePayment(result.payment)
       await loadPayments()
       updatePayment(result.payment)
@@ -175,7 +168,7 @@ export function PaymentsView({ showNotice }) {
       </div> : <div className="mpay-empty"><Search size={28} /><h4>{payments.length ? 'Không tìm thấy giao dịch phù hợp' : 'Bạn chưa có giao dịch thanh toán'}</h4><p>{payments.length ? 'Thử thay đổi từ khóa hoặc trạng thái lọc.' : 'Giao dịch sẽ xuất hiện tại đây sau khi bạn tạo yêu cầu thanh toán gói tập.'}</p>{payments.length > 0 && <button type="button" className="mpay-button" onClick={() => { setSearch(''); setStatusFilter('all') }}>Xóa bộ lọc</button>}</div>}
     </section>
 
-    {viewing && <PaymentDialog title={`Chi tiết giao dịch #PAY-${viewing.id}`} busy={busy || loading} onClose={() => setViewingId(null)} footer={<>
+    {viewActive && viewing && <PaymentDialog title={`Chi tiết giao dịch #PAY-${viewing.id}`} busy={busy || loading} onClose={() => setViewingId(null)} footer={<>
       <button type="button" className="mpay-button" disabled={busy || loading} onClick={() => setViewingId(null)}>Đóng</button>
       {canCancelPayOSPayment(viewing) && <button type="button" className="mpay-button is-danger" disabled={busy || loading} onClick={() => { setActionError(''); setViewingId(null); setCancelling(viewing) }}><XCircle size={15} />Hủy giao dịch</button>}{canSyncPayOSPayment(viewing) && <button type="button" className="mpay-button is-soft" disabled={busy || loading} onClick={() => handleSync(viewing)}><RefreshCw size={15} className={action?.type === 'sync' ? 'member-spin' : undefined} />{action?.type === 'sync' ? 'Đang đồng bộ...' : 'Đồng bộ trạng thái'}</button>}
       {paymentStatus(viewing) === 'completed' && <button type="button" className="mpay-button is-primary" disabled={busy || loading} onClick={() => exportPdf(viewing)}><ArrowDownToLine size={15} />{action?.type === 'pdf' ? 'Đang tải...' : 'Tải hóa đơn PDF'}</button>}
@@ -188,7 +181,7 @@ export function PaymentsView({ showNotice }) {
       {paymentStatus(viewing) === 'pending' && !viewing.checkoutUrl && !viewing.qrCode && <Message>Giao dịch chưa có liên kết thanh toán. Hãy đồng bộ trạng thái hoặc liên hệ lễ tân để được hỗ trợ.</Message>}
     </PaymentDialog>}
 
-    {cancelling && <PaymentDialog title="Hủy yêu cầu thanh toán" busy={busy || loading} onClose={() => { setCancelling(null); setActionError('') }} footer={<><button type="button" className="mpay-button" disabled={busy || loading} onClick={() => { setCancelling(null); setActionError('') }}>Giữ giao dịch</button><button type="button" className="mpay-button is-danger" disabled={busy || loading || !canCancelPayOSPayment(cancelling)} onClick={confirmCancel}>{action?.type === 'cancel' ? <LoaderCircle className="member-spin" size={16} /> : <XCircle size={16} />}Xác nhận hủy</button></>}>
+    {viewActive && cancelling && <PaymentDialog title="Hủy yêu cầu thanh toán" busy={busy || loading} onClose={() => { setCancelling(null); setActionError('') }} footer={<><button type="button" className="mpay-button" disabled={busy || loading} onClick={() => { setCancelling(null); setActionError('') }}>Giữ giao dịch</button><button type="button" className="mpay-button is-danger" disabled={busy || loading || !canCancelPayOSPayment(cancelling)} onClick={confirmCancel}>{action?.type === 'cancel' ? <LoaderCircle className="member-spin" size={16} /> : <XCircle size={16} />}Xác nhận hủy</button></>}>
       <p>Bạn muốn hủy yêu cầu thanh toán <strong>#PAY-{cancelling.id}</strong> với số tiền <strong>{currency(cancelling.amount)}</strong>?</p><p className="mpay-muted">Khi giao dịch được xác nhận đã hủy, đơn đăng ký gói tương ứng cũng sẽ được hủy. Chỉ áp dụng cho đơn chưa thanh toán; trạng thái cuối cùng được xác nhận từ hệ thống.</p>{actionError && <Message error>{actionError}</Message>}
     </PaymentDialog>}
   </div>

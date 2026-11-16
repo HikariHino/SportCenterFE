@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { MEMBER_TRANSACTION_RESOURCES, useMemberCache, useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
 import { useSearchParams } from 'react-router-dom'
 import {
   CreditCard, Award, CheckCircle2, AlertCircle, LoaderCircle,
@@ -46,11 +47,9 @@ export function SubscriptionsView({ showNotice }) {
   const [searchParams] = useSearchParams()
   const requestedPackage = searchParams.get('packageId')
   const openedLandingPackage = useRef(null)
-  const [packages, setPackages] = useState([])
-  const [packageReferences, setPackageReferences] = useState([])
-  const [subscriptions, setSubscriptions] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const cache = useMemberCache()
+  const viewActive = useMemberViewActive()
+  const [localError, setError] = useState('')
   const [subscribingId, setSubscribingId] = useState(null)
   const registrationLock = useRef(false)
   const confirmedCancellations = useRef(new Map())
@@ -83,31 +82,35 @@ export function SubscriptionsView({ showNotice }) {
   const [cancellingSub, setCancellingSub] = useState(null)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [cancelError, setCancelError] = useState('')
+  const packagesRead = useMemberResource('packages', getMembershipPackages, { initialData: [] })
+  const dataRead = useMemberResource('subscription-data', async () => {
+    const [pkgs, subs] = await Promise.all([
+      cache.load('packages', getMembershipPackages),
+      cache.load('subscriptions', getMySubscriptions, { force: true }),
+    ])
+    return { packages: Array.isArray(pkgs) ? pkgs : [], packageReferences: await loadSubscriptionPackageReferences(subs, pkgs), subscriptions: mergeConfirmedSubscriptionCancellations(Array.isArray(subs) ? subs : [], confirmedCancellations.current) }
+  }, { initialData: { packages: [], packageReferences: [], subscriptions: [] }, paused: subscribingId !== null || cancelLoading || payingSubId !== null })
+  const { packageReferences, subscriptions } = dataRead.data
+  const packages = packagesRead.hasData ? packagesRead.data : dataRead.data.packages
+  const loading = dataRead.loading
+  const error = localError || dataRead.error?.message || ''
+  const setSubscriptions = next => {
+    const previous = cache.snapshot('subscription-data').data?.subscriptions || subscriptions
+    const updated = typeof next === 'function' ? next(previous) : next
+    cache.setData('subscriptions', updated)
+    dataRead.setData(current => ({ ...current, subscriptions: updated }))
+  }
 
   const applySubscriptionData = items => setSubscriptions(mergeConfirmedSubscriptionCancellations(items, confirmedCancellations.current))
 
-  const loadData = async () => {
-    setLoading(true)
+  const loadData = () => {
     setError('')
     setRegistrationError('')
-    try {
-      const [pkgs, subs] = await Promise.all([
-        getMembershipPackages(),
-        getMySubscriptions(),
-      ])
-      const references = await loadSubscriptionPackageReferences(subs, pkgs)
-      setPackages(Array.isArray(pkgs) ? pkgs : [])
-      setPackageReferences(references)
-      applySubscriptionData(Array.isArray(subs) ? subs : [])
-    } catch (err) {
-      setError(err.message || 'Không thể tải danh sách gói tập.')
-    } finally {
-      setLoading(false)
-    }
+    cache.invalidate(['packages', 'subscriptions'])
+    return dataRead.reload()
   }
 
   useEffect(() => {
-    loadData()
     const timer = window.setInterval(() => setNow(Date.now()), 30000)
     return () => window.clearInterval(timer)
   }, [])
@@ -129,13 +132,13 @@ export function SubscriptionsView({ showNotice }) {
   }
 
   useEffect(() => {
-    if (loading || error || !/^[1-9]\d*$/.test(requestedPackage || '') || openedLandingPackage.current === requestedPackage) return
+    if (!viewActive || loading || error || !/^[1-9]\d*$/.test(requestedPackage || '') || openedLandingPackage.current === requestedPackage) return
     openedLandingPackage.current = requestedPackage
     const selected = packages.find(pkg => String(pkg.id) === requestedPackage && pkg.isActive !== false)
     setTab('catalog')
     if (selected) handleOpenPackageDetail(selected)
     else setRegistrationError('Gói bạn chọn hiện không còn mở bán. Vui lòng chọn gói khác trong danh mục.')
-  }, [loading, error, requestedPackage, packages])
+  }, [viewActive, loading, error, requestedPackage, packages])
 
   const handleRegister = (pkg) => {
     if (registrationLock.current || loading) return
@@ -147,6 +150,7 @@ export function SubscriptionsView({ showNotice }) {
   }
 
   const handlePurchaseCreated = async (sub, purchase) => {
+    cache.invalidate(MEMBER_TRANSACTION_RESOURCES)
     setPurchasePackage(null)
     registrationLock.current = true
     setSubscribingId(sub.packageId)
@@ -210,6 +214,7 @@ export function SubscriptionsView({ showNotice }) {
     setCancelError('')
     try {
       const cancelled = await cancelSubscriptionOrder(cancellingSub.id)
+      cache.invalidate(MEMBER_TRANSACTION_RESOURCES)
       confirmedCancellations.current.set(String(cancelled.id), cancelled)
       setSubscriptions(previous => previous.map(item => String(item.id) === String(cancelled.id) ? { ...item, ...cancelled } : item))
       if (showNotice) {
@@ -240,6 +245,7 @@ export function SubscriptionsView({ showNotice }) {
     setCheckoutFeedback(null)
     try {
       const pay = await createPayment(subId)
+      cache.invalidate(MEMBER_TRANSACTION_RESOURCES)
       if (canCheckoutPayOSPayment(pay)) {
         window.location.assign(pay.checkoutUrl)
       } else {
@@ -388,9 +394,9 @@ export function SubscriptionsView({ showNotice }) {
         })}</div> : <div className="member-sub-empty"><Search size={28} /><h4>Không tìm thấy gói tập phù hợp</h4><p>Thử thay đổi từ khóa hoặc thời hạn lọc.</p></div>}
       </section>}
 
-      {purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} onClose={() => setPurchasePackage(null)} onCreated={handlePurchaseCreated} />}
+      {viewActive && purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} onClose={() => setPurchasePackage(null)} onCreated={handlePurchaseCreated} />}
 
-      {viewingPackage && (
+      {viewActive && viewingPackage && (
         <div className="member-modal-overlay" onClick={() => setViewingPackage(null)}>
           <div className="member-modal" onClick={e => e.stopPropagation()}>
             <div className="member-modal-header">
@@ -497,7 +503,7 @@ export function SubscriptionsView({ showNotice }) {
       {/* =========================================================================
           MODAL 2: THÔNG BÁO TỰ ĐĂNG KÝ GÓI THÀNH CÔNG (Trạng thái Pending)
           ========================================================================= */}
-      {registrationSuccessSub && (
+      {viewActive && registrationSuccessSub && (
         <div className="member-modal-overlay" onClick={() => setRegistrationSuccessSub(null)}>
           <div className="member-modal" onClick={e => e.stopPropagation()}>
             <div className="member-modal-header" style={{ background: 'var(--theme-green-bg, #e1f6ee)', borderBottom: '1px solid var(--theme-border, #d8e0ed)' }}>
@@ -611,7 +617,7 @@ export function SubscriptionsView({ showNotice }) {
       {/* =========================================================================
           MODAL 3: XEM CHI TIẾT ĐĂNG KÝ GÓI CÁ NHÂN (GET /api/member-subscriptions/{id})
           ========================================================================= */}
-      {viewingSub && (
+      {viewActive && viewingSub && (
         <div className="member-modal-overlay" onClick={() => setViewingSub(null)}>
           <div className="member-modal member-modal--lg" onClick={e => e.stopPropagation()}>
             <div className="member-modal-header">
@@ -846,7 +852,7 @@ export function SubscriptionsView({ showNotice }) {
       {/* =========================================================================
           MODAL 4: XÁC NHẬN HỦY GÓI TẬP CHƯA THANH TOÁN (POST /api/member-subscriptions/{id}/cancel)
           ========================================================================= */}
-      {cancellingSub && (
+      {viewActive && cancellingSub && (
         <div className="member-modal-overlay" onClick={handleCloseCancellation}>
           <div className="member-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-subscription-title" aria-busy={cancelLoading} onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
             <div className="member-modal-header" style={{ background: 'var(--theme-red-bg, #fef2f2)', borderBottom: '1px solid var(--theme-border, #d8e0ed)' }}>

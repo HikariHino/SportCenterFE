@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useMemberCache, useMemberResource } from '../../contexts/MemberWorkspaceContext'
 import { AlertCircle, ArrowRight, BookOpen, CalendarDays, ChevronDown, Dumbbell, LoaderCircle, RefreshCw, Target, User } from 'lucide-react'
-import { getMyTrainingPlans, getTrainingPlanErrorMessage } from '../../services/trainingPlanService'
+import { getMemberTrainingPlans, getTrainingPlanErrorMessage } from '../../services/trainingPlanService'
+import { getMyMemberProfile } from '../../services/memberService'
 import '../../style/member/TrainingPlansView.css'
 
 function formatDate(value) {
@@ -42,26 +43,14 @@ function ExerciseTable({ exercises }) {
 }
 
 export function TrainingPlansView({ user }) {
-  const [plans, setPlans] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [revision, setRevision] = useState(0)
-  const reload = () => setRevision(value => value + 1)
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    setError('')
-    setPlans([])
-    getMyTrainingPlans().then(data => {
-      if (active) setPlans([...data].sort((a, b) => (Date.parse(b.startDate) || 0) - (Date.parse(a.startDate) || 0)))
-    }).catch(requestError => {
-      if (active) setError(getTrainingPlanErrorMessage(requestError))
-    }).finally(() => {
-      if (active) setLoading(false)
-    })
-    return () => { active = false }
-  }, [user?.userId, user?.memberId, revision])
+  const cache = useMemberCache()
+  const plansRead = useMemberResource('training-plans', async () => {
+    const member = await cache.load('member-profile', getMyMemberProfile)
+    return getMemberTrainingPlans(member?.memberId)
+  }, { initialData: [] })
+  const plans = [...plansRead.data].sort((a, b) => (Date.parse(b.startDate) || 0) - (Date.parse(a.startDate) || 0))
+  const { loading, reload } = plansRead
+  const error = !plansRead.hasData && plansRead.error ? getTrainingPlanErrorMessage(plansRead.error) : ''
 
   return <div className="member-view-stack training-plans-view">
     <div className="member-section-heading">

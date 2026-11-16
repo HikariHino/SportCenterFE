@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useMemberResource } from '../../contexts/MemberWorkspaceContext'
 import { AlertCircle, Bell, CalendarDays, CheckCheck, ChevronLeft, ChevronRight, LoaderCircle, RefreshCw } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification } from '../../utils/sessionNotifications'
@@ -13,17 +14,20 @@ function formatDate(value) {
 }
 
 export function NotificationsView({ refreshKey = 0, onNotificationsChange, onViewSchedule, unreadCount }) {
-  const [result, setResult] = useState({ items: [], total: 0, pageSize: PAGE_SIZE })
   const [page, setPage] = useState(1)
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [revision, setRevision] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [actionError, setActionError] = useState('')
   const [notice, setNotice] = useState('')
   const [markingId, setMarkingId] = useState(null)
   const [markingAll, setMarkingAll] = useState(false)
   const actionBusy = markingAll || markingId !== null
+  const notificationRead = useMemberResource(`notifications:list:${unreadOnly}:${page}`, () => getNotifications({ unreadOnly, page, pageSize: PAGE_SIZE }), {
+    initialData: { items: [], total: 0, pageSize: PAGE_SIZE }, refreshKey: `${revision}:${refreshKey}`, paused: actionBusy,
+  })
+  const result = notificationRead.data
+  const loading = notificationRead.loading
+  const error = !notificationRead.hasData && notificationRead.error ? getNotificationErrorMessage(notificationRead.error, 'Không thể tải thông báo.') : ''
   const locked = useRef(false)
   const mounted = useRef(true)
   const reload = () => setRevision(value => value + 1)
@@ -34,25 +38,8 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
   }, [])
 
   useEffect(() => {
-    let active = true
-    setLoading(true)
-    setError('')
-    getNotifications({ unreadOnly, page, pageSize: PAGE_SIZE }).then(data => {
-      if (!active) return
-      const lastPage = Math.max(1, Math.ceil(data.total / data.pageSize))
-      if (page > lastPage) {
-        setPage(lastPage)
-        return
-      }
-      setResult(data)
-      setLoading(false)
-    }).catch(requestError => {
-      if (!active) return
-      setError(getNotificationErrorMessage(requestError, 'Không thể tải thông báo.'))
-      setLoading(false)
-    })
-    return () => { active = false }
-  }, [page, unreadOnly, revision, refreshKey])
+    if (notificationRead.hasData) setPage(previous => Math.min(previous, Math.max(1, Math.ceil(result.total / result.pageSize))))
+  }, [notificationRead.hasData, result])
 
   const markRead = async item => {
     if (locked.current || item.isRead) return

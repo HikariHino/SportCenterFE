@@ -113,7 +113,7 @@ export default function MemberAiChat({ active, onNavigate }) {
       if (mounted.current) setClearError(getMemberAiErrorMessage(error))
     } finally {
       clearLock.current = false
-      if (mounted.current) setClearing(false)
+      if (mounted.current) { setClearing(false); history.resume() }
     }
   }
 
@@ -203,7 +203,7 @@ export default function MemberAiChat({ active, onNavigate }) {
           </nav>
         </aside>
       </div>
-      {confirmClear && <AiDeleteConfirmation title="Xóa tất cả cuộc trò chuyện?" busy={clearing} error={clearError} onClose={() => setConfirmClear(false)} onConfirm={clearHistory}><p>Tất cả cuộc trò chuyện và các lượt hỏi đáp đã lưu trên máy chủ của tài khoản này sẽ bị xóa. Thao tác này không thể hoàn tác.</p></AiDeleteConfirmation>}
+      {active && confirmClear && <AiDeleteConfirmation title="Xóa tất cả cuộc trò chuyện?" busy={clearing} error={clearError} onClose={() => setConfirmClear(false)} onConfirm={clearHistory}><p>Tất cả cuộc trò chuyện và các lượt hỏi đáp đã lưu trên máy chủ của tài khoản này sẽ bị xóa. Thao tác này không thể hoàn tác.</p></AiDeleteConfirmation>}
     </div>
   )
 }

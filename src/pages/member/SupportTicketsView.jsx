@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
 import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Headset, LoaderCircle, MessageSquare, Plus, RefreshCw, Send, X } from 'lucide-react'
 import { createSupportTicket, getMySupportTickets, getTicketErrorMessage } from '../../services/supportTicketService'
 import '../../style/member/SupportTicketsView.css'
@@ -122,30 +123,16 @@ function TicketCard({ ticket }) {
 }
 
 export function SupportTicketsView() {
-  const [tickets, setTickets] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [revision, setRevision] = useState(0)
+  const viewActive = useMemberViewActive()
+  const ticketsRead = useMemberResource('support-tickets', getMySupportTickets, { initialData: [] })
+  const tickets = [...ticketsRead.data].sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
+  const { loading, reload } = ticketsRead
+  const error = !ticketsRead.hasData && ticketsRead.error ? getTicketErrorMessage(ticketsRead.error, 'Không thể tải danh sách phiếu hỗ trợ.') : ''
   const [creating, setCreating] = useState(false)
   const [notice, setNotice] = useState('')
   const [status, setStatus] = useState('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
-  const reload = () => setRevision(value => value + 1)
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    setError('')
-    getMySupportTickets().then(data => {
-      if (active) setTickets([...data].sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)))
-    }).catch(requestError => {
-      if (active) setError(getTicketErrorMessage(requestError, 'Không thể tải danh sách phiếu hỗ trợ.'))
-    }).finally(() => {
-      if (active) setLoading(false)
-    })
-    return () => { active = false }
-  }, [revision])
 
   const query = search.trim().toLocaleLowerCase('vi')
   const filtered = tickets.filter(ticket => (status === 'all' || statusKey(ticket.status) === status)
@@ -184,6 +171,6 @@ export function SupportTicketsView() {
               {totalPages > 1 && <nav className="member-support-pagination" aria-label="Phân trang phiếu hỗ trợ"><span>Trang {currentPage}/{totalPages}</span><div><button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={15} /> Trang trước</button><button type="button" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}>Trang sau <ChevronRight size={15} /></button></div></nav>}
             </>}
     </section>
-    {creating && <CreateTicketDialog onClose={() => setCreating(false)} onCreated={created} />}
+    {viewActive && creating && <CreateTicketDialog onClose={() => setCreating(false)} onCreated={created} />}
   </div>
 }

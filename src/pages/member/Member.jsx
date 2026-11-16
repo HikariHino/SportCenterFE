@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
 import usePageMotion from '../../hooks/usePageMotion'
 import useSlidingPill from '../../hooks/useSlidingPill'
+import { MemberViewActivity, MemberWorkspaceProvider, useMemberCache } from '../../contexts/MemberWorkspaceContext'
 import { getUserDisplayName, getUserInitials } from '../../utils/auth'
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getNotificationErrorMessage } from '../../services/notificationService'
 import { isSessionUpdateNotification, sessionNotificationId } from '../../utils/sessionNotifications'
@@ -26,6 +27,7 @@ import {
 import '../../style/member/Member.css'
 import '../../style/member/MemberMotion.css'
 import '../../style/PortalSidebar.css'
+import '../../style/member/MemberWorkspace.css'
 import MemberScheduleReviewGate from './MemberScheduleReviewGate'
 import MemberAiChat from './MemberAiChat'
 import MemberAiWorkout from './MemberAiWorkout'
@@ -105,7 +107,14 @@ const allNavItems = memberNavSections.flatMap(section => section.items)
 const memberViewIds = allNavItems.map(item => item.id)
 
 export default function Member() {
+  const { user } = useAuth()
+  const sessionKey = user?.userId || user?.id || user?.email || 'member'
+  return <MemberWorkspaceProvider key={sessionKey} sessionKey={sessionKey}><MemberWorkspace /></MemberWorkspaceProvider>
+}
+
+function MemberWorkspace() {
   const { user, logout } = useAuth()
+  const cache = useMemberCache()
   const navigate = useNavigate()
   const location = useLocation()
   const paymentReturnView = ['payments', 'subscriptions'].includes(location.state?.activeNav) ? location.state.activeNav : undefined
@@ -146,7 +155,7 @@ export default function Member() {
 
   useEffect(() => {
     const refreshVisible = () => { if (document.visibilityState === 'visible') refreshNotifications() }
-    const timer = window.setInterval(refreshVisible, 30000)
+    const timer = window.setInterval(refreshVisible, 10000)
     window.addEventListener('focus', refreshVisible)
     document.addEventListener('visibilitychange', refreshVisible)
     return () => {
@@ -182,20 +191,20 @@ export default function Member() {
     setNotifError('')
     setNotifLoading(notificationOpen)
     Promise.allSettled([
-      getNotifications({ unreadOnly: true, page: 1, pageSize: 1 }),
+      cache.load('notifications:unread', () => getNotifications({ unreadOnly: true, page: 1, pageSize: 1 }), { force: true }),
       notificationOpen ? getNotifications({ page: 1, pageSize: 5 }) : Promise.resolve(null),
     ]).then(([unread, recent]) => {
         if (!active) return
-        setUnreadCount(unread.status === 'fulfilled' ? unread.value.total : null)
+        if (unread.status === 'fulfilled') setUnreadCount(unread.value.total)
         if (notificationOpen) {
-          setQuickNotifications(recent.status === 'fulfilled' ? recent.value.items : [])
+          if (recent.status === 'fulfilled') setQuickNotifications(recent.value.items)
           if (recent.status === 'rejected') setNotifError(getNotificationErrorMessage(recent.reason))
           else if (unread.status === 'rejected') setNotifError('Chưa thể cập nhật số thông báo chưa đọc. Vui lòng thử lại.')
         }
         setNotifLoading(false)
     })
     return () => { active = false }
-  }, [activeNav, notificationOpen, notificationRevision])
+  }, [cache, notificationOpen, notificationRevision])
 
   // Handle outside click to close notification popup
   useEffect(() => {
@@ -277,8 +286,8 @@ export default function Member() {
     selectNav('classes')
   }
 
-  const renderActiveView = () => {
-    switch (activeNav) {
+  const renderView = view => {
+    switch (view) {
       case 'profile':
         return <ProfileView user={user} showNotice={showNotice} />
       case 'subscriptions':
@@ -288,12 +297,13 @@ export default function Member() {
       case 'checkin':
         return <GymCheckInView showNotice={showNotice} />
       case 'classes':
-        return <ClassesView key={scheduleRequest?.revision || 'classes'} initialTab={new URLSearchParams(location.search).get('browse') === '1' ? 'browse' : 'mine'} showNotice={showNotice} onNavigateTab={selectNav} notificationSessionId={scheduleRequest?.sessionId} />
+        return <ClassesView initialTab={new URLSearchParams(location.search).get('browse') === '1' ? 'browse' : 'mine'} showNotice={showNotice} onNavigateTab={selectNav} notificationSessionId={scheduleRequest?.sessionId} notificationRequestKey={scheduleRequest?.revision} />
       case 'training-plans':
         return <TrainingPlansView user={user} showNotice={showNotice} />
       case 'ai-chat':
+        return <MemberAiChat active={activeNav === 'ai-chat'} onNavigate={selectNav} />
       case 'ai-workout':
-        return null
+        return <MemberAiWorkout active={activeNav === 'ai-workout'} onNavigate={selectNav} />
       case 'support':
         return <SupportTicketsView showNotice={showNotice} />
       case 'notifications':
@@ -410,7 +420,7 @@ export default function Member() {
 
                   {notifError && <div className="member-notifications-error" role="alert"><p>{notifError}</p><button type="button" disabled={notifLoading} onClick={refreshNotifications}>Thử lại</button></div>}
 
-                  {notifLoading ? (
+                  {notifLoading && !quickNotifications.length ? (
                     <div className="member-notifications-popup-state" role="status">Đang tải...</div>
                   ) : quickNotifications.length === 0 ? (
                     !notifError && <div className="member-notifications-popup-state">Chưa có thông báo.</div>
@@ -451,7 +461,7 @@ export default function Member() {
           </div>
         </header>
 
-        <main className="member-main-content" ref={contentMotion}>
+        <main className="member-main-content">
           {notice && (
             <div className="member-toast" data-tone={noticeTone} role="status">
               {noticeTone === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
@@ -459,13 +469,9 @@ export default function Member() {
             </div>
           )}
 
-          {renderActiveView()}
-          <div hidden={activeNav !== 'ai-chat'}>
-            <MemberAiChat key={user?.userId ?? user?.id ?? user?.email} active={activeNav === 'ai-chat'} onNavigate={selectNav} />
-          </div>
-          <div hidden={activeNav !== 'ai-workout'}>
-            <MemberAiWorkout key={user?.userId ?? user?.id ?? user?.email} active={activeNav === 'ai-workout'} onNavigate={selectNav} />
-          </div>
+          {memberViewIds.map(view => <div className="member-view-content" key={view} ref={activeNav === view ? contentMotion : undefined} hidden={activeNav !== view}>
+            <MemberViewActivity active={activeNav === view}>{renderView(view)}</MemberViewActivity>
+          </div>)}
         </main>
       </section>
     </div>

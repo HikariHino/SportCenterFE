@@ -41,7 +41,7 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
   const [sessionPage, setSessionPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState([])
   const classes = useResource(getMemberClasses, { search: filters.search.trim() || undefined, sportId: filters.sportId || undefined, coachId: filters.coachId || undefined, page, pageSize: PAGE_SIZE }, refreshKey)
-  const sessions = useResource(loadSessions, { classId: course?.id }, refreshKey)
+  const sessions = useResource(loadSessions, { classId: course?.id }, refreshKey, { resourceKey: 'available-sessions:class:' + (course?.id || 'none'), paused: busy })
   useEffect(() => { if (classes.data) setPage(previous => Math.min(previous, Math.max(1, Math.ceil(classes.data.total / PAGE_SIZE)))) }, [classes.data])
   useEffect(() => { if (sessions.data) setSessionPage(previous => Math.min(previous, Math.max(1, Math.ceil(sessions.data.total / PAGE_SIZE)))) }, [sessions.data])
   const enrich = item => ({ ...item, classId: course.id, className: item.className || course.className, sportName: item.sportName || course.sportName, coachName: item.coachName || ((item.coachId == null || String(item.coachId) === String(course.coachId)) ? course.coachName : undefined), roomName: item.roomName || getRoomForClass(item, rooms)?.name || getRoomForClass(course, rooms)?.name })
