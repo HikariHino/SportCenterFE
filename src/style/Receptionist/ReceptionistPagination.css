@@ -1,0 +1,27 @@
+.reception-pagination { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 16px; border-top: 1px solid var(--rc-line); color: var(--rc-muted); background: var(--theme-surface, #fff); font-size: 12px; line-height: 1.6; }
+.reception-paged-table { display: flex; flex-direction: column; height: clamp(260px, 60dvh, 560px); min-height: 0; }
+.reception-dashboard .reception-paged-table > .reception-table-scroll { flex: 1 1 0; height: auto; min-height: 0; }
+.reception-paged-table > .reception-pagination { position: relative; z-index: 3; flex-shrink: 0; box-shadow: 0 -4px 12px #10264b0a; }
+.reception-pagination > div, .reception-pagination label { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.reception-dashboard .reception-pagination button, .reception-dashboard .reception-pagination select { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 36px; min-height: 34px; margin: 0; padding: 6px 9px; border: 1px solid var(--rc-line); border-radius: 7px; color: var(--rc-ink); background: var(--theme-raised, #f5f8fc); font: inherit; }
+.reception-pagination button:disabled { opacity: .45; cursor: not-allowed; }
+.reception-dashboard .reception-pagination select { width: auto; max-width: 85px; }
+.reception-stt { color: var(--rc-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.reception-dashboard .reception-table-scroll .reception-numbered-row, .reception-dashboard .reception-table-scroll .reception-numbered-heading { grid-template-columns: 45px minmax(0,.8fr) minmax(0,1.15fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr); min-width: 780px; }
+.reception-dashboard .reception-gym-today-table .reception-numbered-row, .reception-dashboard .reception-gym-today-table .reception-numbered-heading { display: grid; grid-template-columns: 45px minmax(150px,1.2fr) minmax(130px,1fr) minmax(140px,1fr) minmax(140px,1fr) minmax(110px,.8fr); min-width: 870px; }
+.reception-dashboard .reception-numbered-row > .reception-stt { display: block; }
+.reception-numbered-item { position: relative; }
+.reception-numbered-item::before { content: 'STT ' attr(data-stt); display: block; grid-column: 1 / -1; color: var(--rc-muted); font-size: 11px; line-height: 1.6; margin-bottom: 6px; }
+.reception-support-list > .reception-numbered-item::before { grid-column: 1 / -1; }
+.reception-numbered-item > header { min-width: 0; }
+.reception-schedule-session-list > .reception-numbered-item::before, .reception-room-cancelled-list > .reception-numbered-item::before { position: absolute; top: 3px; left: 12px; pointer-events: none; }
+.reception-schedule-session-list > .reception-numbered-item, .reception-room-cancelled-list > .reception-numbered-item { padding-top: 19px; }
+.reception-notification-list > .reception-numbered-item::before { grid-column: 1 / -1; }
+.reception-pagination + .reception-numbered-item { margin-top: 0; }
+.reception-overview-checkins .reception-numbered-item::before, .reception-overview-rooms .reception-numbered-item::before { flex-shrink: 0; margin: 0; }
+.reception-dashboard .reception-roster-table { overflow-x: auto; }
+.reception-dashboard .reception-roster-table .reception-numbered-row, .reception-dashboard .reception-roster-table .reception-numbered-heading { display: grid; min-width: 780px; grid-template-columns: 45px .75fr 1.35fr .75fr 1fr 1.1fr; }
+.reception-dashboard .reception-roster-table .reception-numbered-row > span { display: block; }
+.reception-dashboard .reception-subscription-receipts > .reception-pagination { display: flex; border: 0; background: transparent; }
+.reception-dashboard .reception-numbered-item::before { padding-inline: 10px; }
+@media (max-width: 600px) { .reception-pagination { justify-content: center; padding-inline: 8px; }.reception-pagination > span { width: 100%; text-align: center; } }
