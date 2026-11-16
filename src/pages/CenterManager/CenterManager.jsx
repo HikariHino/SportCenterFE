@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
 import usePageMotion from '../../hooks/usePageMotion'
+import useSlidingPill from '../../hooks/useSlidingPill'
 import StaffManagement from './StaffManagement'
 import ClassManagement from './ClassManagement'
 import RoomManagement from './RoomManagement'
@@ -30,6 +31,7 @@ import { getStaffUsers } from '../../services/userService'
 import { getTodayCheckIns } from '../../services/gymCheckInService'
 import '../../style/CenterManager/CenterManager.css'
 import '../../style/CenterManager/ManagerOverview.css'
+import '../../style/CenterManager/ManagerMotion.css'
 
 const managerNavSections = [
   {
@@ -101,6 +103,7 @@ export default function CenterManager() {
   const [section, setSection] = usePortalNavigation(managerViewIds, 'overview')
   const contentMotion = usePageMotion(section)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const sidebarPill = useSlidingPill(section, sidebarOpen)
 
   // Live Dashboard States
   const [loadingOverview, setLoadingOverview] = useState(true)
@@ -316,7 +319,8 @@ export default function CenterManager() {
           <div><strong>SportPulse<span>.</span></strong><small>TRUNG TÂM OLYMPUS</small></div>
         </Link>
         <div className="manager-portal"><ShieldCheck size={15} /> Không gian quản lý</div>
-        <nav className="manager-nav" aria-label="Điều hướng quản lý">
+        <nav className="manager-nav manager-sliding-nav" ref={sidebarPill.container} aria-label="Điều hướng quản lý">
+          <span className="manager-nav-pill" ref={sidebarPill.pill} aria-hidden="true" />
           {managerNavSections.map(group => (
             <div key={group.title} className="manager-nav-group">
               <p>{group.title}</p>
@@ -326,6 +330,7 @@ export default function CenterManager() {
                   key={id}
                   className={section === id ? 'active' : ''}
                   aria-current={section === id ? 'page' : undefined}
+                  aria-pressed={section === id}
                   onClick={() => selectSection(id)}
                 >
                   <Icon size={19} />
