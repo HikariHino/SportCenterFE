@@ -3,6 +3,7 @@ import { listPage } from '../../utils/listPagination'
 import { useCoachCache, useCoachResource } from '../../contexts/CoachWorkspaceContext'
 import { coachRosterKey, loadCoachStudentCatalog } from '../../services/coachWorkspaceReads'
 import RefreshStatus from './RefreshStatus'
+import StudentDetailsDialog from './StudentDetailsDialog'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, CircleAlert, Clock3, PencilLine, Plus, Sparkles, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
 import { checkInCoachRegistration, getCoachSessionRoster } from '../../services/coachService'
@@ -453,7 +454,8 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
   const [status, setStatus] = useState('Tất cả')
   const [selectedClassId, setSelectedClassId] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
-  const [selectedId, setSelectedId] = useState(null)
+  const [studentSelection, setStudentSelection] = useState(null)
+  const selectedId = studentSelection?.sessionId === String(selectedSessionId) ? studentSelection.id : null
   const [planStudent, setPlanStudent] = useState(() => getCoachPlanDemoStudent(window.location.search, import.meta.env.DEV))
   const [plansStudent, setPlansStudent] = useState(null)
   const [checkingInRegistrationId, setCheckingInRegistrationId] = useState(null)
@@ -510,8 +512,8 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
     : []
 
   useEffect(() => {
-    setSelectedId(current => students.some(student => student.id === current) ? current : students[0]?.id ?? null)
-  }, [students])
+    setStudentSelection(current => active && current?.sessionId === String(selectedSessionId) && students.some(student => student.id === current.id) ? current : null)
+  }, [students, active, selectedSessionId])
 
   const normalizedQuery = query.trim().toLocaleLowerCase('vi')
   const filtered = students.filter(student => {
@@ -519,7 +521,7 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
     const matchesQuery = !normalizedQuery || `${student.name} ${student.memberId} ${student.registrationStatus} ${student.attendanceStatus}`.toLocaleLowerCase('vi').includes(normalizedQuery)
     return matchesStatus && matchesQuery
   })
-  const selected = students.find(student => student.id === selectedId)
+  const selected = active ? students.find(student => student.id === selectedId) : null
   const selectedSession = sessions.find(session => String(session.id) === String(selectedSessionId))
   const attendanceAvailability = useCoachAttendanceWindow(selectedSession, active)
   const selectedClass = classes.find(item => String(item.id) === String(selectedSession?.classId))
@@ -573,10 +575,10 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
 
     <div className={`coach-checkin-window ${attendanceAvailability.open ? 'open' : ''}`}><Clock3 size={16} /><span><strong>{attendanceAvailability.open ? 'Có thể check-in học viên' : 'Không thể check-in học viên'}</strong><small>{attendanceAvailability.message}.</small></span></div>
 
-    <div className="coach-student-layout">
+    <div className="coach-student-list-layout">
       <section className="coach-card coach-roster">
         <div className="coach-view-toolbar"><div><strong>Danh sách học viên theo buổi</strong><span>{rosterLoading ? 'Đang tải roster...' : `${filtered.length} kết quả`}</span></div><div className="coach-filter-pills">{['Tất cả', 'Đã điểm danh', 'Chưa điểm danh', 'Vắng mặt'].map(label => <button type="button" key={label} className={status === label ? 'active' : ''} onClick={() => setStatus(label)}>{label}</button>)}</div></div>
-        {rosterLoading ? <EmptyState title="Đang tải học viên" text="Danh sách đăng ký của buổi học đang được đồng bộ." /> : error && !rosterQuery.hasData ? <div className="coach-inline-error"><EmptyState title="Không thể tải học viên" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <CoachList items={filtered} label="Học viên theo buổi" resetKey={JSON.stringify([query, status, selectedSessionId])} table renderLayout={(rows, pagination) => <div className="coach-paged-table"><div className="coach-table-scroll" role="region" aria-label="Danh sách học viên, có thể cuộn" tabIndex={0}><div className="coach-roster-table"><div className="coach-roster-heading coach-numbered-heading"><span>STT</span><span>Học viên</span><span>Đăng ký</span><span>Điểm danh</span><span>Giờ check-in</span></div>{rows}</div></div>{pagination}</div>}>{student => <button type="button" className={selected?.id === student.id ? 'selected' : ''} key={student.id} onClick={() => setSelectedId(student.id)}>
+        {rosterLoading ? <EmptyState title="Đang tải học viên" text="Danh sách đăng ký của buổi học đang được đồng bộ." /> : error && !rosterQuery.hasData ? <div className="coach-inline-error"><EmptyState title="Không thể tải học viên" text={error} /><button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <CoachList items={filtered} label="Học viên theo buổi" resetKey={JSON.stringify([query, status, selectedSessionId])} table renderLayout={(rows, pagination) => <div className="coach-paged-table"><div className="coach-table-scroll" role="region" aria-label="Danh sách học viên, có thể cuộn" tabIndex={0}><div className="coach-roster-table"><div className="coach-roster-heading coach-numbered-heading"><span>STT</span><span>Học viên</span><span>Đăng ký</span><span>Điểm danh</span><span>Giờ check-in</span></div>{rows}</div></div>{pagination}</div>}>{student => <button type="button" className={selected?.id === student.id ? 'selected' : ''} key={student.id} aria-label={`Xem thông tin học viên ${student.name}`} aria-haspopup="dialog" aria-expanded={selected?.id === student.id} onClick={() => { setCheckInError(''); setStudentSelection({ id: student.id, sessionId: String(selectedSessionId) }) }}>
           <span className="coach-roster-person"><i className="coach-student-avatar blue">{initials(student.name)}</i><span><strong>{student.name}</strong><small>Member #{student.memberId}</small></span></span>
           <span><strong>{student.registrationStatus}</strong><small>Đăng ký #{student.registrationId}</small></span>
           <span><strong className={`coach-attendance ${student.attendanceTone}`}>{student.attendanceStatus}</strong><small>{student.attendanceTone === 'pending' ? 'Chưa có dữ liệu điểm danh' : 'Đã cập nhật trên hệ thống'}</small></span>
@@ -584,11 +586,17 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
         </button>}</CoachList> : <EmptyState title="Chưa có học viên" text={query || status !== 'Tất cả' ? 'Không có học viên phù hợp với bộ lọc hiện tại.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
       </section>
 
-      <aside className="coach-card coach-student-profile">
-        {selected ? <><div className="coach-profile-cover"><span className="coach-student-avatar blue">{initials(selected.name)}</span></div><div className="coach-profile-main"><h2>{selected.name}</h2><p>{selectedSession?.className || 'Buổi huấn luyện'}{selectedClass?.sportName ? ` · ${selectedClass.sportName}` : ''}</p><span className={`coach-profile-state ${selected.attendanceTone}`}><i />{selected.attendanceStatus}</span><div className="coach-profile-numbers"><div><strong>#{selected.memberId}</strong><small>Mã hội viên</small></div><div><strong>#{selected.registrationId}</strong><small>Mã đăng ký</small></div><div><strong>{selected.registrationStatus}</strong><small>Trạng thái</small></div></div><div className="coach-profile-info"><span><Clock3 size={16} /><span><small>Thời gian check-in</small><strong>{selected.checkInTime}</strong></span></span><span><CalendarDays size={16} /><span><small>Buổi huấn luyện</small><strong>{selectedSession ? formatSessionOption(selectedSession) : 'Chưa xác định'}</strong></span></span></div>{checkInError && <p className="coach-profile-action-error" role="alert">{checkInError}</p>}<div className="coach-profile-actions"><button type="button" disabled={!attendanceAvailability.open || selected.attendanceTone !== 'pending' || checkingInRegistrationId !== null} title={!attendanceAvailability.open ? attendanceAvailability.message : undefined} onClick={() => handleCheckIn(selected)}><UserCheck size={15} />{checkingInRegistrationId === selected.registrationId ? 'Đang check-in...' : selected.attendanceTone === 'pending' ? 'Check-in học viên' : 'Đã check-in'}</button><button type="button" onClick={() => setPlanStudent({ ...selected, classId: selectedClass?.id || selectedSession?.classId, className: selectedClass?.className || selectedSession?.className, sportId: selectedClass?.sportId || selectedSession?.sportId, sportName: selectedClass?.sportName || selectedSession?.sportName || '' })}><Plus size={15} />Tạo giáo án</button><button type="button" onClick={() => setPlansStudent(selected)}><BookOpen size={15} />Xem giáo án</button></div></div></> : <EmptyState title="Chưa chọn học viên" text={students.length ? 'Chọn một học viên trong danh sách để xem chi tiết.' : 'Buổi huấn luyện này chưa có hội viên đăng ký.'} />}
-      </aside>
+
     </div>
     </>}
+    {selected && <StudentDetailsDialog student={selected} session={selectedSession} sportName={selectedClass?.sportName || selectedSession?.sportName} availability={attendanceAvailability}
+      checkingIn={checkingInRegistrationId !== null} error={checkInError}
+      onClose={() => { setStudentSelection(null); setCheckInError('') }} onCheckIn={handleCheckIn}
+      onCreatePlan={student => {
+        setPlanStudent({ ...student, classId: selectedClass?.id || selectedSession?.classId, className: selectedClass?.className || selectedSession?.className, sportId: selectedClass?.sportId || selectedSession?.sportId, sportName: selectedClass?.sportName || selectedSession?.sportName || '' })
+        setStudentSelection(null)
+      }}
+      onViewPlans={student => { setPlansStudent(student); setStudentSelection(null) }} />}
     {planStudent && <TrainingPlanDialog student={planStudent} onClose={() => setPlanStudent(null)} onCreated={plan => showNotice?.(`Đã tạo giáo án “${plan.planName}” cho ${planStudent.name}.`)} />}
     {plansStudent && <TrainingPlanListDialog student={plansStudent} onClose={() => setPlansStudent(null)} />}
   </div>
