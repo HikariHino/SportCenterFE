@@ -1,0 +1,7 @@
+.manager-dashboard .manager-view-content[hidden], .manager-dashboard [data-manager-panel][hidden] { display: none !important; }
+.manager-view-content { min-width: 0; }
+.manager-view-content .manager-numbered-item::before { color: var(--manager-muted, var(--theme-muted)); }
+.manager-paged-list .manager-list-scroll > table { min-width: 760px; }
+.manager-paged-list .manager-list-scroll > table :is(th, td).manager-stt { width: 46px; min-width: 46px; }
+.manager-paged-list .manager-list-scroll > table :is(th, td) { padding: 12px 14px; }
+.manager-numbered-item { position: relative; }

@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
-import { AlertCircle, ChevronLeft, ChevronRight, History, LogOut, RefreshCw, Search, Users } from 'lucide-react'
+import { useManagerResource } from '../../contexts/ManagerWorkspaceContext'
+import { ManagerList } from './ManagerPagination'
+import { useState } from "react"
+import { AlertCircle, History, LogOut, RefreshCw, Search, Users } from "lucide-react"
 import { getCheckInErrorMessage, getGymCheckInHistory, getGymCheckInSummaryByMember } from '../../services/gymCheckInService'
 import { GymCheckInStatus, GymDateRangeFields } from '../../components/GymHistoryControls'
 import { formatGymDate, gymCheckInStatus, gymDateKey, gymDateRangeReason, gymDurationLabel, gymDurationMinutes, gymHistoryParams } from '../../utils/gymCheckInHistory'
@@ -9,12 +11,10 @@ const PAGE_SIZE = 10
 const statusOptions = [['All', 'Tất cả trạng thái'], ['InGym', 'Đang tập'], ['CheckedOut', 'Đã ra về'], ['ForgotCheckOut', 'Quên check-out']]
 
 export function GymHistoryTable({ items, summary = false, onCheckOut, disabled }) {
-  return <div className="fdesk-table-scroll"><table className="fdesk-table fdesk-gym-history-table">
-    <thead><tr><th>Hội viên</th><th>{summary ? 'Gói trong lượt gần nhất' : 'Gói tập'}</th>
+  return <div className="fdesk-table-scroll"><ManagerList items={items} label="Lịch sử check-in" className="fdesk-table fdesk-gym-history-table" table heading={<tr><th scope="col">STT</th><th>Hội viên</th><th>{summary ? 'Gói trong lượt gần nhất' : 'Gói tập'}</th>
       {summary ? <><th>Số lượt</th><th>Tổng thời lượng</th><th>Lần vào gần nhất</th><th>Trạng thái trong khoảng chọn</th></>
         : <><th>Giờ vào</th><th>Giờ ra</th><th>Thời lượng</th><th>Trạng thái</th><th>Nhân viên trực</th><th>Thao tác</th></>}
-    </tr></thead>
-    <tbody>{items.map(item => <tr key={summary ? item.memberId : item.id}>
+    </tr>}>{item => <tr key={summary ? item.memberId : item.id}>
       <td><strong>{item.memberName || 'Hội viên'}</strong><small>{item.memberCode || `#${item.memberId}`} · {item.phoneNumber || 'Chưa có SĐT'}</small></td>
       <td>{summary ? item.currentPackageName || '—' : item.packageName || '—'}</td>
       {summary ? <><td><strong>{item.totalCheckIns}</strong></td><td>{gymDurationLabel(item.totalDurationMinutes)}</td><td>{formatGymDate(item.lastCheckInTime)}</td><td>{item.isCurrentlyInGym ? <span className="gym-checkin-status" data-status="InGym">Có lượt đang tập</span> : 'Không có lượt đang tập'}</td></>
@@ -22,8 +22,7 @@ export function GymHistoryTable({ items, summary = false, onCheckOut, disabled }
           {gymCheckInStatus(item) === 'InGym' && !item.checkOutTime && onCheckOut
             ? <button type="button" className="fdesk-btn fdesk-btn-secondary" data-checkout-id={item.id} disabled={disabled} onClick={() => onCheckOut(item.id, item.memberName)}><LogOut size={13} />Check-out</button> : '—'}
         </td></>}
-    </tr>)}</tbody>
-  </table></div>
+    </tr>}</ManagerList></div>
 }
 
 export default function FrontDeskGymHistory({ reloadKey = 0, disabled = false, onCheckOut, todayItems = [] }) {
@@ -33,7 +32,8 @@ export default function FrontDeskGymHistory({ reloadKey = 0, disabled = false, o
   const [filterError, setFilterError] = useState('')
   const [revision, setRevision] = useState(0)
   const [page, setPage] = useState(1)
-  const [state, setState] = useState({ key: '', items: [], loading: true, error: '' })
+  const historyRead = useManagerResource('today-checkins:history:' + JSON.stringify([mode, filters]), () => mode === 'summary' ? getGymCheckInSummaryByMember(filters) : getGymCheckInHistory(filters), { initialData: [], refreshKey: revision + ':' + reloadKey, paused: disabled })
+  const state = { key: JSON.stringify([mode, filters]), items: historyRead.data, loading: historyRead.loading, unavailable: historyRead.error?.code === 'GYM_HISTORY_UNAVAILABLE', error: historyRead.hasData ? '' : historyRead.error ? getCheckInErrorMessage(historyRead.error) : '' }
   const key = JSON.stringify([mode, filters])
   const current = state.key === key
   const loading = !current || state.loading
@@ -45,17 +45,6 @@ export default function FrontDeskGymHistory({ reloadKey = 0, disabled = false, o
   const summary = mode === 'summary'
   const canShowTodayFallback = state.unavailable && !summary && filters.fromDate === gymDateKey() && filters.toDate === gymDateKey()
     && !filters.search.trim() && !filters.memberId && filters.status === 'All' && todayItems.length > 0
-
-  useEffect(() => {
-    const controller = new AbortController()
-    setState({ key, items: [], loading: true, error: '' })
-    const request = mode === 'summary'
-      ? getGymCheckInSummaryByMember(filters, { signal: controller.signal })
-      : getGymCheckInHistory(filters, { signal: controller.signal })
-    request.then(items => { if (!controller.signal.aborted) setState({ key, items, loading: false, error: '' }) })
-      .catch(error => { if (!controller.signal.aborted) setState({ key, items: [], loading: false, unavailable: error.code === 'GYM_HISTORY_UNAVAILABLE', error: getCheckInErrorMessage(error, 'Không thể tải lịch sử check-in.') }) })
-    return () => controller.abort()
-  }, [key, mode, filters, revision, reloadKey])
 
   const apply = values => {
     try {
@@ -88,8 +77,8 @@ export default function FrontDeskGymHistory({ reloadKey = 0, disabled = false, o
       : error ? <><div className="fdesk-gym-history-state is-error" role="alert"><AlertCircle size={20} /><p>{error}</p><button type="button" className="fdesk-btn fdesk-btn-secondary" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>
         {canShowTodayFallback && <details className="fdesk-gym-today-fallback" open><summary>Danh sách hôm nay đang có tại quầy · {todayItems.length} lượt</summary><p>Danh sách này vẫn hỗ trợ check-out. Bộ lọc lịch sử ngày cũ chưa khả dụng.</p><GymHistoryTable items={todayItems} onCheckOut={onCheckOut} disabled={disabled} /></details>}</>
         : !items.length ? <p className="fdesk-gym-history-state" role="status">Không có dữ liệu phù hợp. Thử đổi khoảng ngày hoặc điều kiện tìm kiếm.</p>
-          : <><GymHistoryTable items={visible} summary={summary} onCheckOut={onCheckOut} disabled={disabled} />
-            <nav className="fdesk-gym-history-pagination" aria-label="Phân trang lịch sử check-in"><span>{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, items.length)} / {items.length} {summary ? 'hội viên' : 'lượt'} · Trang {currentPage}/{totalPages}</span><div><button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} aria-label="Trang lịch sử trước"><ChevronLeft size={16} /></button><button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)} aria-label="Trang lịch sử sau"><ChevronRight size={16} /></button></div></nav>
+          : <><GymHistoryTable items={items} summary={summary} onCheckOut={onCheckOut} disabled={disabled} />
+
           </>}
   </section>
 }

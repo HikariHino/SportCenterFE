@@ -1,32 +1,7 @@
+import { ManagerList } from './ManagerPagination'
+import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowDownToLine,
-  Calendar,
-  Check,
-  CheckCircle2,
-  Clock,
-  DoorOpen,
-  Dumbbell,
-  Edit2,
-  Filter,
-  Grid,
-  Info,
-  List,
-  MapPin,
-  Plus,
-  Power,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  Trash2,
-  Users,
-  Volleyball,
-  Waves,
-  X,
-  Zap,
-} from 'lucide-react'
+import { AlertCircle, AlertTriangle, ArrowDownToLine, Calendar, CheckCircle2, Clock, DoorOpen, Dumbbell, Edit2, Filter, Grid, List, MapPin, Plus, Power, RefreshCw, Search, ShieldCheck, Trash2, Users, Volleyball, Waves, X, Zap } from "lucide-react"
 import {
   checkRoomAvailability,
   createRoom,
@@ -102,9 +77,9 @@ const toLocalInputString = (d) => {
 }
 
 export default function RoomManagement() {
-  const [rooms, setRooms] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const viewActive = useManagerViewActive()
+
+  const [localError, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   // View & Filters
@@ -147,22 +122,12 @@ export default function RoomManagement() {
   }, [success])
 
   // Load all rooms from API
-  const loadRooms = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const data = await getRooms()
-      setRooms(data)
-    } catch (err) {
-      setError(getRoomErrorMessage(err, 'Không thể tải danh sách phòng tập.'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadRooms()
-  }, [])
+  const dataRead = useManagerResource('rooms', getRooms, { initialData: [], paused: submitting })
+  const rooms = dataRead.data
+  const setRooms = dataRead.setData
+  const loading = dataRead.loading
+  const error = localError || (!dataRead.hasData && dataRead.error ? getRoomErrorMessage(dataRead.error) : '')
+  const loadRooms = () => { setError(''); return dataRead.reload() }
 
   // Filtered rooms
   const filteredRooms = useMemo(() => {
@@ -607,8 +572,7 @@ export default function RoomManagement() {
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
-        <div className="rooms-grid">
-          {filteredRooms.map((room) => {
+        <ManagerList items={filteredRooms} label="Phòng tập" className="rooms-grid" as="div" resetKey={JSON.stringify([searchQuery,typeFilter,statusFilter])}>{(room) => {
             const isActive = room.isActive !== false
             const iconClass = getRoomIconClass(room.roomType)
 
@@ -685,14 +649,11 @@ export default function RoomManagement() {
                 </div>
               </article>
             )
-          })}
-        </div>
+          }}</ManagerList>
       ) : (
         /* TABLE VIEW */
         <div className="room-table-container" role="region" aria-label="Danh sách phòng dạng bảng, có thể cuộn ngang" tabIndex={0}>
-          <table className="room-table">
-            <thead>
-              <tr>
+          <ManagerList items={filteredRooms} label="Phòng tập" table className="room-table" resetKey={JSON.stringify([searchQuery,typeFilter,statusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                 <th>MÃ PHÒNG</th>
                 <th>TÊN PHÒNG / SÂN TẬP</th>
                 <th>LOẠI PHÒNG</th>
@@ -700,10 +661,7 @@ export default function RoomManagement() {
                 <th>VỊ TRÍ</th>
                 <th>TRẠNG THÁI</th>
                 <th style={{ textAlign: 'right' }}>THAO TÁC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRooms.map((room) => {
+              </tr>}>{(room) => {
                 const isActive = room.isActive !== false
                 return (
                   <tr key={room.id}>
@@ -766,9 +724,7 @@ export default function RoomManagement() {
                     </td>
                   </tr>
                 )
-              })}
-            </tbody>
-          </table>
+              }}</ManagerList>
         </div>
       )}
       <footer className="room-directory-footer" role="status">
@@ -777,12 +733,12 @@ export default function RoomManagement() {
       </footer>
       </section>
 
-      {timetableRoom && <RoomTimetableDialog room={timetableRoom} rooms={rooms} onClose={() => setTimetableRoom(null)} />}
+      {viewActive && timetableRoom && <RoomTimetableDialog room={timetableRoom} rooms={rooms} onClose={() => setTimetableRoom(null)} />}
 
       {/* ======================================================== */}
       {/* MODAL: CREATE ROOM */}
       {/* ======================================================== */}
-      {showCreateModal && (
+      {viewActive && showCreateModal && (
         <div className="room-modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="room-modal" onClick={(e) => e.stopPropagation()}>
             <div className="room-modal-header">
@@ -901,7 +857,7 @@ export default function RoomManagement() {
       {/* ======================================================== */}
       {/* MODAL: EDIT ROOM */}
       {/* ======================================================== */}
-      {editingRoom && (
+      {viewActive && editingRoom && (
         <div className="room-modal-overlay" onClick={() => setEditingRoom(null)}>
           <div className="room-modal" onClick={(e) => e.stopPropagation()}>
             <div className="room-modal-header">
@@ -1014,7 +970,7 @@ export default function RoomManagement() {
       {/* ======================================================== */}
       {/* MODAL: DELETE ROOM CONFIRMATION */}
       {/* ======================================================== */}
-      {deletingRoom && (
+      {viewActive && deletingRoom && (
         <div className="room-modal-overlay" onClick={() => setDeletingRoom(null)}>
           <div className="room-modal" onClick={(e) => e.stopPropagation()}>
             <div className="room-modal-header">
@@ -1064,7 +1020,7 @@ export default function RoomManagement() {
       {/* ======================================================== */}
       {/* MODAL: CHECK ROOM AVAILABILITY */}
       {/* ======================================================== */}
-      {checkingRoom && (
+      {viewActive && checkingRoom && (
         <div className="room-modal-overlay" onClick={() => setCheckingRoom(null)}>
           <div className="room-modal" onClick={(e) => e.stopPropagation()}>
             <div className="room-modal-header">

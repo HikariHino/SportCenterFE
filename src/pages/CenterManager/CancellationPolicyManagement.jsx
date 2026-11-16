@@ -1,29 +1,7 @@
+import { ManagerList } from './ManagerPagination'
+import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowDownToLine,
-  Ban,
-  Calendar,
-  Check,
-  CheckCircle2,
-  Clock,
-  Clock3,
-  Edit2,
-  Grid,
-  Info,
-  Layers,
-  List,
-  Plus,
-  Power,
-  RefreshCw,
-  Search,
-  ShieldAlert,
-  ShieldCheck,
-  Sparkles,
-  X,
-  Zap,
-} from 'lucide-react'
+import { AlertCircle, ArrowDownToLine, Ban, CheckCircle2, Clock, Clock3, Edit2, Grid, Info, List, Plus, Power, RefreshCw, Search, X } from "lucide-react"
 import {
   createCancellationPolicy,
   getCancellationPolicies,
@@ -61,9 +39,9 @@ const formatHours = (hours) => {
 }
 
 export default function CancellationPolicyManagement() {
-  const [policies, setPolicies] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const viewActive = useManagerViewActive()
+
+  const [localError, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   // View & Filters
@@ -95,29 +73,19 @@ export default function CancellationPolicyManagement() {
   }, [success])
 
   // Load policies
-  const loadPolicies = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const data = await getCancellationPolicies()
-      setPolicies(data)
-    } catch (err) {
-      setError(getPolicyErrorMessage(err, 'Không thể tải danh sách chính sách hủy lịch.'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadPolicies()
-  }, [])
+  const dataRead = useManagerResource('policies', getCancellationPolicies, { initialData: [], paused: submitting })
+  const policies = dataRead.data
+  const setPolicies = dataRead.setData
+  const loading = dataRead.loading
+  const error = localError || (!dataRead.hasData && dataRead.error ? getPolicyErrorMessage(dataRead.error) : '')
+  const loadPolicies = () => { setError(''); return dataRead.reload() }
 
   // Listen for custom trigger from button
   useEffect(() => {
-    const handleOpen = () => handleOpenCreate()
+    const handleOpen = () => { if (viewActive) handleOpenCreate() }
     window.addEventListener('open-create-policy-modal', handleOpen)
     return () => window.removeEventListener('open-create-policy-modal', handleOpen)
-  }, [])
+  }, [viewActive])
 
   // Filtered policies
   const filteredPolicies = useMemo(() => {
@@ -483,8 +451,7 @@ export default function CancellationPolicyManagement() {
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
-        <div className="policies-grid">
-          {filteredPolicies.map((policy) => {
+        <ManagerList items={filteredPolicies} label="Chính sách hủy lịch" className="policies-grid" as="div" resetKey={JSON.stringify([searchQuery,timeFilter,statusFilter])}>{(policy) => {
             return (
               <article
                 key={policy.id}
@@ -542,24 +509,18 @@ export default function CancellationPolicyManagement() {
                 </div>
               </article>
             )
-          })}
-        </div>
+          }}</ManagerList>
       ) : (
         /* TABLE VIEW */
         <div className="policy-table-container" role="region" aria-label="Bảng chính sách hủy" tabIndex={0}>
-          <table className="policy-table">
-            <thead>
-              <tr>
+          <ManagerList items={filteredPolicies} label="Chính sách hủy lịch" table className="policy-table" resetKey={JSON.stringify([searchQuery,timeFilter,statusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                 <th>MÃ CS</th>
                 <th>TÊN CHÍNH SÁCH HỦY</th>
                 <th>THỜI HẠN TỐI THIỂU</th>
                 <th>QUY ĐỊNH HỦY</th>
                 <th>TRẠNG THÁI</th>
                 <th style={{ textAlign: 'right' }}>THAO TÁC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPolicies.map((policy) => {
+              </tr>}>{(policy) => {
                 return (
                   <tr key={policy.id}>
                     <td><strong>#{policy.id}</strong></td>
@@ -614,9 +575,7 @@ export default function CancellationPolicyManagement() {
                     </td>
                   </tr>
                 )
-              })}
-            </tbody>
-          </table>
+              }}</ManagerList>
         </div>
       )}
       </section>
@@ -624,7 +583,7 @@ export default function CancellationPolicyManagement() {
       {/* ======================================================== */}
       {/* MODAL: CREATE POLICY */}
       {/* ======================================================== */}
-      {showCreateModal && (
+      {viewActive && showCreateModal && (
         <div className="policy-modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="policy-modal" role="dialog" aria-modal="true" aria-label="Tạo chính sách hủy lịch" onClick={(e) => e.stopPropagation()}>
             <div className="policy-modal-header">
@@ -776,7 +735,7 @@ export default function CancellationPolicyManagement() {
       {/* ======================================================== */}
       {/* MODAL: EDIT POLICY */}
       {/* ======================================================== */}
-      {editingPolicy && (
+      {viewActive && editingPolicy && (
         <div className="policy-modal-overlay" onClick={() => setEditingPolicy(null)}>
           <div className="policy-modal" role="dialog" aria-modal="true" aria-label="Chỉnh sửa chính sách hủy" onClick={(e) => e.stopPropagation()}>
             <div className="policy-modal-header">
@@ -911,7 +870,7 @@ export default function CancellationPolicyManagement() {
       {/* ======================================================== */}
       {/* MODAL: DETAIL */}
       {/* ======================================================== */}
-      {selectedPolicyForDetail && (
+      {viewActive && selectedPolicyForDetail && (
         <div className="policy-modal-overlay" onClick={() => setSelectedPolicyForDetail(null)}>
           <div className="policy-modal" role="dialog" aria-modal="true" aria-label="Chi tiết chính sách hủy" onClick={(e) => e.stopPropagation()}>
             <div className="policy-modal-header">
@@ -1012,7 +971,7 @@ export default function CancellationPolicyManagement() {
       {/* ======================================================== */}
       {/* MODAL: TOGGLE STATUS CONFIRM */}
       {/* ======================================================== */}
-      {togglingPolicy && (
+      {viewActive && togglingPolicy && (
         <div className="policy-modal-overlay" onClick={() => setTogglingPolicy(null)}>
           <div className="policy-modal" role="dialog" aria-modal="true" aria-label="Thay đổi trạng thái chính sách" onClick={(e) => e.stopPropagation()}>
             <div className="policy-modal-header">

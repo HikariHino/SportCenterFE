@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { ManagerList } from './ManagerPagination'
+import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
+import { useMemo, useState } from "react"
 import {
   AlertCircle,
   Ban,
@@ -76,11 +78,10 @@ const formatDate = (dateStr) => {
 }
 
 export default function StaffManagement() {
+  const viewActive = useManagerViewActive()
   const { user: currentUser } = useAuth()
 
-  const [staffList, setStaffList] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const [localError, setError] = useState('')
 
   // Filters & search
   const [searchQuery, setSearchQuery] = useState("")
@@ -124,23 +125,12 @@ export default function StaffManagement() {
   }
 
   // Load staff list
-  const fetchStaff = async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const data = await getStaffUsers()
-      setStaffList(data)
-    } catch (err) {
-      const msg = getUserErrorMessage(err, "Không thể tải danh sách nhân sự.")
-      setError(msg)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchStaff()
-  }, [])
+  const dataRead = useManagerResource('staff', getStaffUsers, { initialData: [], paused: createSubmitting || updateRoleSubmitting || deactivateSubmitting })
+  const staffList = dataRead.data
+  const setStaffList = dataRead.setData
+  const loading = dataRead.loading
+  const error = localError || (!dataRead.hasData && dataRead.error ? getUserErrorMessage(dataRead.error) : '')
+  const fetchStaff = () => { setError(''); return dataRead.reload() }
 
   // Metrics calculation
   const metrics = useMemo(() => {
@@ -453,19 +443,14 @@ export default function StaffManagement() {
             </div>
           ) : (
             <div className="staff-table-scroll" role="region" aria-label="Danh sách nhân sự" tabIndex={0}>
-              <table className="staff-table">
-                <thead>
-                  <tr>
+              <ManagerList items={filteredList} label="Danh sách nhân sự" table className="staff-table" resetKey={JSON.stringify([searchQuery,roleFilter,statusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                     <th>NHÂN SỰ</th>
                     <th>SỐ ĐIỆN THOẠI</th>
                     <th>VAI TRÒ</th>
                     <th>TRẠNG THÁI</th>
                     <th>NGÀY TẠO</th>
                     <th style={{ textAlign: "right" }}>THAO TÁC</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredList.map((staff) => {
+                  </tr>}>{(staff) => {
                     const initials = (staff.fullName || "NV")
                       .split(/\s+/)
                       .slice(-2)
@@ -546,16 +531,14 @@ export default function StaffManagement() {
                         </td>
                       </tr>
                     )
-                  })}
-                </tbody>
-              </table>
+                  }}</ManagerList>
             </div>
           )}
         </div>
       </section>
 
       {/* Modal 1: Create Staff */}
-      {showCreateModal && (
+      {viewActive && showCreateModal && (
         <div className="staff-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowCreateModal(false)}>
           <div className="staff-modal">
             <div className="staff-modal-header">
@@ -688,7 +671,7 @@ export default function StaffManagement() {
       )}
 
       {/* Modal 2: Update Role */}
-      {selectedStaffForRole && (
+      {viewActive && selectedStaffForRole && (
         <div
           className="staff-modal-backdrop"
           onClick={(e) => e.target === e.currentTarget && setSelectedStaffForRole(null)}
@@ -779,7 +762,7 @@ export default function StaffManagement() {
       )}
 
       {/* Modal 3: Deactivate Staff */}
-      {selectedStaffForDeactivate && (
+      {viewActive && selectedStaffForDeactivate && (
         <div
           className="staff-modal-backdrop"
           onClick={(e) => e.target === e.currentTarget && setSelectedStaffForDeactivate(null)}
@@ -845,7 +828,7 @@ export default function StaffManagement() {
       )}
 
       {/* Modal 4: Staff Detail */}
-      {selectedStaffForDetail && (
+      {viewActive && selectedStaffForDetail && (
         <div
           className="staff-modal-backdrop"
           onClick={(e) => e.target === e.currentTarget && setSelectedStaffForDetail(null)}

@@ -1,3 +1,4 @@
+import { ManagerList } from './ManagerPagination'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Ban, X } from 'lucide-react'
 import { getClassErrorMessage } from '../../services/sportClassService'
@@ -67,11 +68,11 @@ export default function CancelRoomSessionDialog({ session, sessions, room, conte
   }}>
     <form onSubmit={submit} aria-busy={busy}>
       <header><div><h3 id={`${id}-title`}><Ban size={20} />{requested.length === 1 ? 'Hủy buổi học' : `Hủy ${requested.length} buổi học`}</h3><p>{contextLabel} · {requested.length} buổi đã chọn</p></div><button type="button" aria-label="Đóng hủy buổi học" disabled={busy} onClick={close}><X size={19} /></button></header>
-      <ul className="room-cancel-preview" aria-label="Các buổi học sẽ hủy">{requested.map(item => <li key={item.id}>
+      <ManagerList items={requested} label="Buổi học chờ hủy" className="room-cancel-preview" as="ul">{item => <li key={item.id}>
         <strong>{item.className} · #{item.id}</strong><span>{formatDateTime(item.startsAt)} – {formatDateTime(item.endsAt)}</span>
         {succeededIds.has(String(item.id)) && <small className="room-cancel-success">Đã hủy thành công</small>}
         {failureMessages.has(String(item.id)) && <small className="room-recurring-error">{failureMessages.get(String(item.id))}</small>}
-      </li>)}</ul>
+      </li>}</ManagerList>
       <p className="room-reschedule-help">Lý do bên dưới được áp dụng cho các buổi đã chọn. Học viên đã đăng ký sẽ nhận thông báo hủy. Các buổi không được chọn giữ nguyên.</p>
       <label htmlFor={`${id}-reason`}><span>Lý do hủy <b aria-hidden="true">*</b></span><textarea id={`${id}-reason`} name="cancellationReason" rows={4} required maxLength={500} autoFocus disabled={busy} value={reason} onChange={event => { setReason(event.target.value); setError('') }} placeholder="Nhập lý do hủy buổi học" aria-describedby={error ? `${id}-error` : undefined} /></label>
       {error && <p id={`${id}-error`} className="room-recurring-error" role="alert">{error}</p>}

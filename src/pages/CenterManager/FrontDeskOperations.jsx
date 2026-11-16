@@ -1,52 +1,8 @@
+import { ManagerList } from './ManagerPagination'
+import { useManagerCache, useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowRight,
-  Ban,
-  Calendar,
-  CalendarDays,
-  Check,
-  CheckCircle2,
-  Clock3,
-  CreditCard,
-  DoorOpen,
-  ExternalLink,
-  FileText,
-  Headset,
-  HelpCircle,
-  Layers,
-  LifeBuoy,
-  LogIn,
-  Mail,
-  MapPin,
-  MessageSquare,
-  Package,
-  Phone,
-  Plus,
-  QrCode,
-  ReceiptText,
-  RefreshCw,
-  ScanLine,
-  Search,
-  ShieldAlert,
-  ShieldCheck,
-  TicketCheck,
-  Trash2,
-  User,
-  UserCheck,
-  UserPlus,
-  Users,
-  UserX,
-  Wallet,
-  X,
-  Zap,
-} from 'lucide-react'
-import {
-  deactivateMember,
-  getMemberById,
-  getMembers,
-} from '../../services/memberService'
+import { AlertCircle, AlertTriangle, Ban, CalendarDays, CheckCircle2, Clock3, CreditCard, DoorOpen, ExternalLink, Headset, LifeBuoy, LogIn, Mail, MessageSquare, Package, Phone, Plus, QrCode, ReceiptText, RefreshCw, ScanLine, Search, ShieldAlert, UserCheck, UserPlus, Users, Wallet, X } from "lucide-react"
+import { deactivateMember, getMembers } from "../../services/memberService"
 import { createManagerMember } from '../../services/managerAccountService'
 import { getManagerMemberValidationError, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN, managerBirthDateLimit } from '../../utils/managerAccountValidation'
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../../utils/passwordValidation'
@@ -125,25 +81,22 @@ const emptyMemberForm = {
 }
 
 export default function FrontDeskOperations() {
+  const viewActive = useManagerViewActive()
+  const cache = useManagerCache()
   const [activeTab, setActiveTab] = useState('members') // members, checkin, packages, classes, tickets
 
   // Data states
-  const [members, setMembers] = useState([])
-  const [todayCheckIns, setTodayCheckIns] = useState([])
+
   const [checkInHistoryRevision, setCheckInHistoryRevision] = useState(0)
-  const [packages, setPackages] = useState([])
-  const [tickets, setTickets] = useState([])
 
   // Loading states
-  const [loadingMembers, setLoadingMembers] = useState(false)
-  const [loadingCheckIns, setLoadingCheckIns] = useState(false)
-  const [loadingPackages, setLoadingPackages] = useState(false)
+
   const [loadingSubscriptions, setLoadingSubscriptions] = useState(false)
-  const [loadingTickets, setLoadingTickets] = useState(false)
+
   const [submitting, setSubmitting] = useState(false)
 
   // Feedback states
-  const [errorMessage, setErrorMessage] = useState(null)
+  const [localErrorMessage, setErrorMessage] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
 
   // Modals - Members
@@ -180,7 +133,38 @@ export default function FrontDeskOperations() {
   const [paymentError, setPaymentError] = useState('')
   const [counterPaymentReceived, setCounterPaymentReceived] = useState(false)
   useEffect(() => { setCounterPaymentReceived(false) }, [payModalSubscription?.id])
+  const membersRead = useManagerResource('members', getMembers, { initialData: [], paused: submitting })
+  const members = membersRead.data
+  const setMembers = membersRead.setData
+  const loadingMembers = membersRead.loading
+  const loadMembersData = membersRead.reload
+  const todayCheckInsRead = useManagerResource('today-checkins', getTodayCheckIns, { initialData: [], paused: submitting })
+  const todayCheckIns = todayCheckInsRead.data
+  const setTodayCheckIns = todayCheckInsRead.setData
+  const loadingCheckIns = todayCheckInsRead.loading
+  const loadTodayCheckInsData = todayCheckInsRead.reload
+  const packagesRead = useManagerResource('public-packages', async () => (await getMembershipPackages()).filter(item => item.isActive !== false), { initialData: [], paused: submitting })
+  const packages = packagesRead.data
+  const setPackages = packagesRead.setData
+  const loadingPackages = packagesRead.loading
+  const loadPackagesData = packagesRead.reload
+  const ticketsRead = useManagerResource('tickets', getAllSupportTickets, { initialData: [], paused: submitting })
+  const tickets = ticketsRead.data
+  const setTickets = ticketsRead.setData
+  const loadingTickets = ticketsRead.loading
+  const loadTicketsData = ticketsRead.reload
+  const errorMessage = localErrorMessage || [membersRead, todayCheckInsRead, packagesRead, ticketsRead].map(read => read.error?.message).find(Boolean)
+
   const subscriptionsReady = Boolean(subMemberId && subscriptionsMemberId === subMemberId && !loadingSubscriptions && !subscriptionLoadError)
+  const subscriptionsRead = useManagerResource('subscriptions:' + subMemberId, async () => {
+    const items = await getReceptionistMemberSubscriptions(Number(subMemberId))
+    return { items, references: await loadSubscriptionPackageReferences(items) }
+  }, { enabled: Boolean(subMemberId && subscriptionsMemberId === subMemberId), paused: submitting || loadingSubscriptions })
+  useEffect(() => {
+    if (!subscriptionsRead.hasData || subscriptionsMemberId !== subMemberId) return
+    setMemberSubscriptions(subscriptionsRead.data.items)
+    setMemberPackageReferences(subscriptionsRead.data.references)
+  }, [subscriptionsRead.data, subscriptionsRead.hasData, subscriptionsMemberId, subMemberId])
   const selectedSubscriptionPackage = packages.find(item => String(item.id) === String(selectedPackageId))
   const subscriptionPackages = [...packages.filter(pkg => !memberPackageReferences.some(reference => String(reference.id) === String(pkg.id))), ...memberPackageReferences]
   const reasonForPackage = pkg => subscriptionsReady ? subscriptionPackageReason(pkg, memberSubscriptions, subscriptionPackages) : ''
@@ -219,66 +203,14 @@ export default function FrontDeskOperations() {
   }, [successMessage])
 
   // Load Members
-  async function loadMembersData(showSpinner = true) {
-    if (showSpinner) setLoadingMembers(true)
-    try {
-      const data = await getMembers()
-      setMembers(data)
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể tải danh sách hội viên.')
-    } finally {
-      setLoadingMembers(false)
-    }
-  }
 
   // Load Today Check-Ins
-  async function loadTodayCheckInsData(showSpinner = true) {
-    if (showSpinner) setLoadingCheckIns(true)
-    try {
-      const data = await getTodayCheckIns()
-      setTodayCheckIns(data)
-      setCheckInHistoryRevision(value => value + 1)
-    } catch (err) {
-      setErrorMessage(getCheckInErrorMessage(err, 'Không thể tải danh sách check-in hôm nay.'))
-    } finally {
-      setLoadingCheckIns(false)
-    }
-  }
 
   // Load Packages
-  async function loadPackagesData() {
-    setLoadingPackages(true)
-    try {
-      const data = await getMembershipPackages()
-      const activePkgs = data.filter((p) => p.isActive !== false)
-      setPackages(activePkgs)
-    } catch (err) {
-      setErrorMessage(err.message || 'Không thể tải danh sách gói tập.')
-    } finally {
-      setLoadingPackages(false)
-    }
-  }
 
   // Load Support Tickets
-  async function loadTicketsData(showSpinner = true) {
-    if (showSpinner) setLoadingTickets(true)
-    try {
-      const data = await getAllSupportTickets(ticketStatusFilter !== 'all' ? ticketStatusFilter : null)
-      setTickets(data)
-    } catch (err) {
-      setErrorMessage(getTicketErrorMessage(err, 'Không thể tải danh sách phiếu hỗ trợ.'))
-    } finally {
-      setLoadingTickets(false)
-    }
-  }
 
   // Initial load
-  useEffect(() => {
-    loadMembersData(true)
-    loadTodayCheckInsData(false)
-    loadPackagesData()
-    loadTicketsData(false)
-  }, [])
 
   // Refresh handler
   function handleRefresh() {
@@ -297,11 +229,6 @@ export default function FrontDeskOperations() {
   }
 
   // Effect when switching tabs
-  useEffect(() => {
-    if (activeTab === 'tickets' && tickets.length === 0) {
-      loadTicketsData(true)
-    }
-  }, [activeTab])
 
   // Create member at counter
   const changeMemberField = (field, value) => {
@@ -439,6 +366,7 @@ export default function FrontDeskOperations() {
       if (requestId !== subscriptionRequest.current) return null
       const references = await loadSubscriptionPackageReferences(data)
       if (requestId === subscriptionRequest.current) {
+        cache.setData('subscriptions:' + memId, { items: data, references })
         setMemberSubscriptions(data)
         setMemberPackageReferences(references)
         setSubscriptionsMemberId(String(memId))
@@ -621,7 +549,7 @@ export default function FrontDeskOperations() {
 
   return (
     <div className="fdesk-mgmt">
-      {cancelOrder && <CounterOrderCancellationDialog subscription={cancelOrder} currentPayment={String(payModalSubscription?.id) === String(cancelOrder.id) ? payOsData : null} onClose={() => setCancelOrder(null)} onBusyChange={setSubmitting} onCancelled={updated => {
+      {viewActive && cancelOrder && <CounterOrderCancellationDialog subscription={cancelOrder} currentPayment={String(payModalSubscription?.id) === String(cancelOrder.id) ? payOsData : null} onClose={() => setCancelOrder(null)} onBusyChange={setSubmitting} onCancelled={updated => {
         setMemberSubscriptions(current => current.map(item => String(item.id) === String(updated.id) ? { ...item, ...updated } : item))
         if (String(payModalSubscription?.id) === String(updated.id)) {
           setPayModalSubscription(null)
@@ -630,7 +558,7 @@ export default function FrontDeskOperations() {
         }
         setSuccessMessage(`Đã hủy đơn thanh toán #${updated.id}.`)
       }} />}
-      {purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} memberId={Number(subMemberId)} onClose={() => setPurchasePackage(null)} onCreated={async newSub => {
+      {viewActive && purchasePackage && <SubscriptionPurchaseDialog pkg={purchasePackage} memberId={Number(subMemberId)} onClose={() => setPurchasePackage(null)} onCreated={async newSub => {
         setPurchasePackage(null)
         setSuccessMessage(`Đã tạo đơn gói "${newSub.packageName}". Số tiền cần thu: ${formatVND(newSub.agreedPrice)}.`)
         await handleLoadMemberSubscriptions(subMemberId)
@@ -848,8 +776,7 @@ export default function FrontDeskOperations() {
       </div>
 
       {/* Tab 1: Quản lý Hội viên */}
-      {activeTab === 'members' && (
-        <div className="fdesk-section">
+      {<div className="fdesk-section" data-manager-panel hidden={activeTab !== 'members'}>
           <div className="fdesk-card">
             <div className="fdesk-card-header">
               <div>
@@ -901,19 +828,14 @@ export default function FrontDeskOperations() {
               </div>
             ) : (
               <div className="fdesk-table-scroll">
-                <table className="fdesk-table">
-                  <thead>
-                    <tr>
+                <ManagerList items={filteredMembers} label="Danh sách hội viên" table className="fdesk-table" resetKey={JSON.stringify([memberSearch,memberStatusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                       <th>Hội viên</th>
                       <th>Liên hệ</th>
                       <th>Ngày sinh / Giới tính</th>
                       <th>Mục tiêu tập luyện</th>
                       <th>Trạng thái</th>
                       <th style={{ textAlign: 'right' }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMembers.map((m) => (
+                    </tr>}>{(m) => (
                       <tr key={m.memberId}>
                         <td>
                           <strong>{m.fullName}</strong>
@@ -1001,18 +923,14 @@ export default function FrontDeskOperations() {
                           </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    )}</ManagerList>
               </div>
             )}
           </div>
-        </div>
-      )}
+        </div>}
 
       {/* Tab 2: Check-in phòng tập Real-time */}
-      {activeTab === 'checkin' && (
-        <div className="fdesk-section">
+      {<div className="fdesk-section" data-manager-panel hidden={activeTab !== 'checkin'}>
           {/* Check-in panel */}
           <div className="fdesk-checkin-panel">
             {/* Phương án 1: Quét mã QR */}
@@ -1116,12 +1034,10 @@ export default function FrontDeskOperations() {
           </div>
 
           <FrontDeskGymHistory reloadKey={checkInHistoryRevision} disabled={submitting} onCheckOut={handleCheckOut} todayItems={todayCheckIns} />
-        </div>
-      )}
+        </div>}
 
       {/* Tab 3: Đăng ký gói thẻ & Thanh toán tại quầy */}
-      {activeTab === 'packages' && (
-        <div className="fdesk-section">
+      {<div className="fdesk-section" data-manager-panel hidden={activeTab !== 'packages'}>
           {/* Card: Đăng ký gói mới cho hội viên */}
           <div className="fdesk-card fdesk-subscription-card">
             <div className="fdesk-card-header">
@@ -1217,9 +1133,7 @@ export default function FrontDeskOperations() {
                 </div>
               ) : (
                 <div className="fdesk-table-scroll">
-                  <table className="fdesk-table">
-                    <thead>
-                      <tr>
+                  <ManagerList items={memberSubscriptions} label="Đăng ký gói tại quầy" table className="fdesk-table" resetKey={JSON.stringify([subMemberId])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                         <th>Mã ĐK</th>
                         <th>Gói thẻ</th>
                         <th>Giá thỏa thuận</th>
@@ -1227,10 +1141,7 @@ export default function FrontDeskOperations() {
                         <th>Hiệu lực</th>
                         <th>Trạng thái</th>
                         <th style={{ textAlign: 'right' }}>Thanh toán</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {memberSubscriptions.map((sub) => {
+                      </tr>}>{(sub) => {
                         const isPending = sub.status === 'Pending'
 
                         return (
@@ -1291,31 +1202,25 @@ export default function FrontDeskOperations() {
                             </td>
                           </tr>
                         )
-                      })}
-                    </tbody>
-                  </table>
+                      }}</ManagerList>
                 </div>
               )}
             </div>
           )}
-        </div>
-      )}
+        </div>}
 
       {/* Tab 4: Điểm danh & Quản lý đăng ký lớp */}
-      {activeTab === 'classes' && (
-        <div className="fdesk-section">
+      {<div className="fdesk-section" data-manager-panel hidden={activeTab !== 'classes'}>
           <div className="fdesk-class-switch" role="group" aria-label="Chức năng lớp học">
             <button type="button" aria-pressed={classView === 'booking'} aria-controls="frontdesk-booking-panel" disabled={submitting} onClick={() => setClassView('booking')}><CalendarDays size={16} />Đăng ký học</button>
             <button type="button" aria-pressed={classView === 'attendance'} aria-controls="frontdesk-attendance-panel" disabled={submitting} onClick={() => setClassView('attendance')}><UserCheck size={16} />Điểm danh</button>
           </div>
           <div id="frontdesk-booking-panel" className="fdesk-class-panel" hidden={classView !== 'booking'}><FrontDeskClassBooking disabled={submitting} members={members} membersLoading={loadingMembers} reloadKey={classBookingRevision} onBusyChange={setSubmitting} onRegistered={() => setAttendanceRevision(value => value + 1)} /></div>
           <div id="frontdesk-attendance-panel" className="fdesk-class-panel" hidden={classView !== 'attendance'}><FrontDeskClassAttendance reloadKey={attendanceRevision} disabled={submitting} onBusyChange={setSubmitting} onRegistrationsChanged={() => setClassBookingRevision(value => value + 1)} /></div>
-        </div>
-      )}
+        </div>}
 
       {/* Tab 5: Chăm sóc khách hàng & Ticket */}
-      {activeTab === 'tickets' && (
-        <div className="fdesk-section">
+      {<div className="fdesk-section" data-manager-panel hidden={activeTab !== 'tickets'}>
           <div className="fdesk-card">
             <div className="fdesk-card-header">
               <div>
@@ -1389,9 +1294,7 @@ export default function FrontDeskOperations() {
               </div>
             ) : (
               <div className="fdesk-table-scroll">
-                <table className="fdesk-table">
-                  <thead>
-                    <tr>
+                <ManagerList items={filteredTickets} label="Phiếu hỗ trợ tại quầy" table className="fdesk-table" resetKey={JSON.stringify([ticketSearch,ticketStatusFilter,ticketPriorityFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                       <th>Mã</th>
                       <th>Tiêu đề & Nội dung khiếu nại</th>
                       <th>Hội viên</th>
@@ -1400,10 +1303,7 @@ export default function FrontDeskOperations() {
                       <th>Trạng thái</th>
                       <th>Người xử lý & Phản hồi</th>
                       <th style={{ textAlign: 'right' }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTickets.map((t) => {
+                    </tr>}>{(t) => {
                       const isPending = t.status === 'Pending' || t.status === 'Open'
                       const priorityTone =
                         t.priority === 'Urgent'
@@ -1484,17 +1384,14 @@ export default function FrontDeskOperations() {
                           </td>
                         </tr>
                       )
-                    })}
-                  </tbody>
-                </table>
+                    }}</ManagerList>
               </div>
             )}
           </div>
-        </div>
-      )}
+        </div>}
 
       {/* Modal: Xử lý Ticket */}
-      {ticketToResolve && (
+      {viewActive && ticketToResolve && (
         <div className="fdesk-dialog-overlay" onClick={() => setTicketToResolve(null)}>
           <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="fdesk-dialog-header">
@@ -1573,7 +1470,7 @@ export default function FrontDeskOperations() {
       )}
 
       {/* Modal: Thanh toán gói tập (Tiền mặt / PayOS QR) */}
-      {payModalSubscription && (
+      {viewActive && payModalSubscription && (
         <div className="fdesk-dialog-overlay" onClick={() => { if (!submitting) setPayModalSubscription(null) }}>
           <div className="fdesk-dialog" role="dialog" aria-modal="true" aria-labelledby="frontdesk-payment-title" onClick={(e) => e.stopPropagation()}>
             <div className="fdesk-dialog-header">
@@ -1668,7 +1565,7 @@ export default function FrontDeskOperations() {
       )}
 
       {/* Modal: Đăng ký hội viên tại quầy */}
-      {showCreateMemberModal && (
+      {viewActive && showCreateMemberModal && (
         <div className="fdesk-dialog-overlay" onClick={() => setShowCreateMemberModal(false)}>
           <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="fdesk-dialog-header">
@@ -1835,7 +1732,7 @@ export default function FrontDeskOperations() {
       )}
 
       {/* Modal: Xác nhận Khóa / Vô hiệu hóa tài khoản hội viên */}
-      {memberToDeactivate && (
+      {viewActive && memberToDeactivate && (
         <div className="fdesk-dialog-overlay" onClick={() => setMemberToDeactivate(null)}>
           <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="fdesk-dialog-header">
@@ -1884,7 +1781,7 @@ export default function FrontDeskOperations() {
       )}
 
       {/* Modal: Chi tiết hội viên */}
-      {selectedMemberDetail && (
+      {viewActive && selectedMemberDetail && (
         <div className="fdesk-dialog-overlay" onClick={() => setSelectedMemberDetail(null)}>
           <div className="fdesk-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="fdesk-dialog-header">
