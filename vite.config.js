@@ -16,7 +16,9 @@ export default defineConfig(({ mode }) => {
         }
       },
     }],
-    cacheDir: process.env.VITE_CACHE_DIR || 'node_modules/.vite',
+    // SSR test servers use Vite's default cache. Keep browser bundles separate
+    // so running tests cannot invalidate modules already served to local tabs.
+    cacheDir: process.env.VITE_CACHE_DIR || 'node_modules/.vite-dev',
     server: {
       // Match the ReturnUrl/CancelUrl configured by the existing BE.
       port: 3000,
