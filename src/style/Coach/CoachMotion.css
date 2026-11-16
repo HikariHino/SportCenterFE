@@ -1,0 +1,184 @@
+/* Coach motion follows the Receptionist portal without affecting other roles. */
+.coach-dashboard {
+  --coach-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --coach-motion-fast: 160ms;
+  --coach-motion-normal: 260ms;
+}
+
+.coach-dashboard .coach-sliding-nav { position: relative; isolation: isolate; }
+.coach-dashboard .coach-sliding-nav > .coach-nav-title,
+.coach-dashboard .coach-sliding-nav > button { position: relative; z-index: 1; }
+.coach-dashboard .coach-nav-pill { position: absolute; z-index: 0; top: 0; left: 0; display: block; pointer-events: none; opacity: 0; border-radius: 8px; background: linear-gradient(100deg, #1d4ed8, #004ac6); box-shadow: 0 6px 16px #004ac659; }
+.coach-dashboard .coach-nav-pill::before { content: ''; position: absolute; left: 0; top: 24%; bottom: 24%; width: 3px; border-radius: 6px; background: #fff; }
+.coach-dashboard .coach-sliding-nav[data-pill-ready='true'] > .coach-nav-pill { opacity: 1; }
+.coach-dashboard .coach-sliding-nav[data-pill-ready='true'] > button.active,
+.coach-dashboard .coach-sliding-nav[data-pill-ready='true'] > button.active:hover { background: transparent; box-shadow: none; transform: none; }
+.coach-dashboard .coach-sliding-nav[data-pill-ready='true'] > button.active::before { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .coach-dashboard .coach-sliding-nav[data-pill-animated='true'] > .coach-nav-pill {
+    transition: transform 340ms var(--coach-motion-ease), width 260ms ease, height 260ms ease;
+  }
+
+  .coach-dashboard button,
+  .coach-dashboard a {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: var(--coach-motion-fast);
+    transition-timing-function: var(--coach-motion-ease);
+  }
+
+  .coach-dashboard :is(input, select, textarea, .coach-content-search) {
+    transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  }
+  .coach-dashboard :is(input, select, textarea):focus-visible {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--coach-blue) 14%, transparent);
+  }
+
+  .coach-dashboard .coach-nav button.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 24%;
+    bottom: 24%;
+    width: 3px;
+    border-radius: 6px;
+    background: currentColor;
+    animation: coach-motion-marker-in 280ms var(--coach-motion-ease);
+  }
+  .coach-dashboard .coach-nav button.active > svg:last-child { animation: coach-motion-arrow-in 280ms var(--coach-motion-ease); }
+  .coach-dashboard :is(
+    .coach-nav button > svg:first-child, .coach-card-head button > svg,
+    .coach-week-more > svg, .coach-room-detail-trigger > svg,
+    .coach-focus-main > button > svg, .coach-focus-shortcuts > button > span:first-child
+  ) { transition: transform var(--coach-motion-normal) var(--coach-motion-ease); }
+
+  /* Opacity only on surfaces: nested fixed dialogs keep their viewport position. */
+  .coach-dashboard .coach-view-content :is(
+    .coach-card, .coach-focus-panel, .coach-overview-metrics,
+    .coach-session-picker, .coach-schedule-detail
+  ) {
+    animation: coach-motion-surface-in 380ms var(--coach-motion-ease) backwards;
+    transition: border-color 220ms ease, box-shadow 220ms ease;
+  }
+  .coach-dashboard .coach-overview-workspace > .coach-card:nth-child(2),
+  .coach-dashboard .coach-account-profile-layout > .coach-card:nth-child(2) { animation-delay: 65ms; }
+
+  .coach-dashboard :is(
+    .coach-metric-card, .coach-student-kpis > article, .coach-overview-metrics > button
+  ) { animation: coach-motion-item-in 400ms var(--coach-motion-ease) backwards; }
+  .coach-dashboard :is(.coach-metrics, .coach-student-kpis, .coach-overview-metrics) > :nth-child(2) { animation-delay: 40ms; }
+  .coach-dashboard :is(.coach-metrics, .coach-student-kpis, .coach-overview-metrics) > :nth-child(3) { animation-delay: 80ms; }
+  .coach-dashboard :is(.coach-metrics, .coach-student-kpis, .coach-overview-metrics) > :nth-child(n+4) { animation-delay: 120ms; }
+
+  /* Rows fade without changing table alignment, scrolling, or sticky headers. */
+  .coach-dashboard :is(
+    .coach-session-list > .coach-session, .coach-roster-table > button,
+    .coach-attendance-table > .coach-attendance-row, .coach-room-list > article,
+    .coach-plan-exercises > article, .coach-member-plan-list > article,
+    .coach-member-plan-exercises > div, .coach-plan-ai-sessions > article,
+    .coach-notification-list > article
+  ):nth-child(-n+10) { animation: coach-motion-surface-in 300ms var(--coach-motion-ease) backwards; }
+  .coach-dashboard :is(
+    .coach-session-list > .coach-session, .coach-roster-table > button,
+    .coach-attendance-table > .coach-attendance-row, .coach-room-list > article,
+    .coach-plan-exercises > article, .coach-member-plan-list > article,
+    .coach-member-plan-exercises > div, .coach-plan-ai-sessions > article,
+    .coach-notification-list > article
+  ):nth-child(2) { animation-delay: 25ms; }
+  .coach-dashboard :is(
+    .coach-session-list > .coach-session, .coach-roster-table > button,
+    .coach-attendance-table > .coach-attendance-row, .coach-room-list > article,
+    .coach-plan-exercises > article, .coach-member-plan-list > article,
+    .coach-member-plan-exercises > div, .coach-plan-ai-sessions > article,
+    .coach-notification-list > article
+  ):nth-child(3) { animation-delay: 50ms; }
+  .coach-dashboard :is(
+    .coach-session-list > .coach-session, .coach-roster-table > button,
+    .coach-attendance-table > .coach-attendance-row, .coach-room-list > article,
+    .coach-plan-exercises > article, .coach-member-plan-list > article,
+    .coach-member-plan-exercises > div, .coach-plan-ai-sessions > article,
+    .coach-notification-list > article
+  ):nth-child(n+4):nth-child(-n+10) { animation-delay: 75ms; }
+
+  .coach-dashboard :is(.coach-plan-dialog-backdrop, .coach-room-dialog-backdrop, .coach-ai-progress-backdrop) {
+    animation: coach-motion-backdrop-in 180ms ease-out;
+  }
+  .coach-dashboard :is(.coach-plan-dialog, .coach-room-dialog, .coach-ai-progress-dialog) {
+    animation: coach-motion-surface-in 260ms var(--coach-motion-ease);
+  }
+  .coach-dashboard :is(.coach-plan-dialog, .coach-room-dialog) > header > div {
+    animation: coach-motion-item-in 300ms var(--coach-motion-ease);
+  }
+  .coach-dashboard .coach-notification-panel {
+    transform-origin: top right;
+    animation: coach-motion-popover-in 240ms var(--coach-motion-ease);
+  }
+  .coach-dashboard .coach-toast { animation: coach-motion-toast-in 360ms var(--coach-motion-ease); }
+  .coach-dashboard .coach-toast > svg { animation: coach-motion-success 420ms var(--coach-motion-ease); }
+  .coach-dashboard :is(
+    .coach-empty, .coach-inline-error, .coach-attendance-error, .coach-attendance-schedule-error,
+    .coach-plan-form-error, .coach-profile-action-error, .coach-checkin-window,
+    .coach-room-state, .coach-exercise-result-form, .coach-exercise-catalog-state,
+    .coach-notification-state, .coach-notification-action-error
+  ) { animation: coach-motion-surface-in 240ms ease-out; }
+  .coach-dashboard :is(.coach-status, .coach-attendance, .coach-profile-state) {
+    transition: color 220ms ease, background-color 220ms ease, border-color 220ms ease;
+  }
+  .coach-dashboard .coach-view-loader {
+    background-size: 150% 150%;
+    animation: coach-motion-loader-glow 2.8s ease-in-out infinite alternate;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .coach-dashboard .coach-nav button:not(:disabled):hover { transform: translateX(3px); }
+    .coach-dashboard .coach-nav button:not(:disabled):hover > svg:first-child { transform: scale(1.1); }
+    .coach-dashboard :is(
+      .coach-focus-main > button, .coach-profile-actions > button,
+      .coach-plan-dialog form > footer > button, .coach-account-profile-form > footer > button,
+      .coach-attendance-actions > button, .coach-plan-exercises-head > button,
+      .coach-exercise-result-form > footer > button
+    ):not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 14px #10264b1a; }
+    .coach-dashboard .coach-focus-shortcuts > button:not(:disabled):hover > span:first-child { transform: translateY(-2px); }
+    .coach-dashboard :is(
+      .coach-card-head button:hover > svg, .coach-week-more:hover > svg,
+      .coach-room-detail-trigger:hover > svg, .coach-focus-main > button:hover > svg
+    ) { transform: translateX(3px); }
+    .coach-dashboard :is(.coach-card, .coach-room-list > article):hover { box-shadow: 0 8px 24px #10264b12; }
+    .coach-dashboard .coach-notification:hover > svg { animation: coach-motion-bell 450ms ease-in-out; }
+  }
+
+  .coach-dashboard :is(
+    .coach-focus-main > button, .coach-profile-actions > button,
+    .coach-plan-dialog form > footer > button, .coach-account-profile-form > footer > button,
+    .coach-focus-shortcuts > button, .coach-attendance-actions > button,
+    .coach-plan-exercises-head > button, .coach-exercise-result-form > footer > button
+  ):not(:disabled):active { transform: translateY(0) scale(.98); }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 1024px) {
+  .coach-dashboard .coach-sidebar.is-open { animation: coach-motion-sidebar-in 300ms var(--coach-motion-ease); }
+}
+
+/* Include legacy effects and native student dialogs when less motion is requested. */
+@media (prefers-reduced-motion: reduce) {
+  .coach-dashboard *, .coach-dashboard *::before, .coach-dashboard *::after,
+  .coach-dashboard dialog::backdrop {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .coach-dashboard :is(button, a):hover,
+  .coach-dashboard :is(button, a):active { transform: none !important; }
+}
+
+@keyframes coach-motion-surface-in { from { opacity: .35; } to { opacity: 1; } }
+@keyframes coach-motion-item-in { from { opacity: .35; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes coach-motion-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes coach-motion-popover-in { from { opacity: 0; transform: translateY(-7px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes coach-motion-toast-in { from { opacity: 0; transform: translateY(-12px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes coach-motion-sidebar-in { from { opacity: .4; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+@keyframes coach-motion-marker-in { from { opacity: 0; transform: scaleY(.25); } to { opacity: 1; transform: scaleY(1); } }
+@keyframes coach-motion-arrow-in { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: none; } }
+@keyframes coach-motion-success { from { opacity: 0; transform: scale(.65) rotate(-12deg); } to { opacity: 1; transform: none; } }
+@keyframes coach-motion-bell { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(12deg); } 65% { transform: rotate(-10deg); } }
+@keyframes coach-motion-loader-glow { from { background-position: 40% 30%; } to { background-position: 60% 65%; } }

@@ -9,12 +9,14 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
 import usePageMotion from '../../hooks/usePageMotion'
+import useSlidingPill from '../../hooks/useSlidingPill'
 import { CoachWorkspaceProvider, CoachViewActivity, useCoachCache } from '../../contexts/CoachWorkspaceContext'
 import { prefetchWorkspaceResources } from '../../utils/workspaceResourceCache'
 import { coachReadTasks } from '../../services/coachWorkspaceReads'
 import { getNotifications, markNotificationRead } from '../../services/notificationService'
 import { ViewLoader } from './CoachViewShared'
 import '../../style/Coach/Coach.css'
+import '../../style/Coach/CoachMotion.css'
 
 const viewLoaders = {
   'Tổng quan': () => import('./OverviewView'), 'Lịch huấn luyện': () => import('./AttendanceView'),
@@ -91,6 +93,7 @@ function CoachWorkspace() {
   const query = queries[activeNav] || ''
   const setQuery = value => setQueries(current => ({ ...current, [activeNav]: value }))
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const sidebarPill = useSlidingPill(activeNav, sidebarOpen)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notificationPage, setNotificationPage] = useState({ items: [], total: 0, page: 1, pageSize: 10 })
   const [notificationsLoading, setNotificationsLoading] = useState(false)
@@ -224,7 +227,8 @@ function CoachWorkspace() {
       <div className="coach-portal-tag"><ShieldCheck size={14} />Cổng thông tin huấn luyện viên</div>
 
       <nav className="coach-nav" aria-label="Điều hướng Coach">
-        <div className="coach-nav-group">
+        <div className="coach-nav-group coach-sliding-nav" ref={sidebarPill.container}>
+          <span className="coach-nav-pill" ref={sidebarPill.pill} aria-hidden="true" />
           <p className="coach-nav-title">QUẢN LÝ HUẤN LUYỆN</p>
           {navigation.map(([Icon, label]) => <button key={label} type="button" className={activeNav === label ? 'active' : ''} aria-pressed={activeNav === label} onPointerEnter={() => preloadView(label)} onFocus={() => preloadView(label)} onClick={() => selectNavigation(label)}>
             <Icon size={18} /><span>{label}</span>{activeNav === label && <ChevronRight size={14} />}
