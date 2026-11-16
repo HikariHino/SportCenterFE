@@ -133,7 +133,7 @@ export default function MemberAiWorkout({ active, onNavigate }) {
       if (mounted.current) setDeleteError(getMemberAiErrorMessage(failure))
     } finally {
       deleteLock.current = false
-      if (mounted.current) setDeleting(false)
+      if (mounted.current) { setDeleting(false); history.resume() }
     }
   }
 
@@ -211,7 +211,7 @@ export default function MemberAiWorkout({ active, onNavigate }) {
           <div className="member-ai-history-actions"><button type="button" disabled={sending || reading !== null || deleting || history.loading} onClick={() => viewHistory(item)}>{String(reading) === String(item.id) ? 'Đang tải...' : 'Xem lại'}</button><button type="button" className="danger" disabled={sending || reading !== null || deleting || history.loading} onClick={() => { setDeleteError(''); setDeleteTarget(item) }} aria-label={`Xóa bản gợi ý #${item.id}`}><Trash2 size={14} />Xóa</button></div>
         </li>)}</ul>
       </section>
-      {deleteTarget && <AiDeleteConfirmation title="Xóa bản gợi ý bài tập?" busy={deleting} error={deleteError} onClose={() => setDeleteTarget(null)} onConfirm={deleteHistory}><p>Bản gợi ý “{deleteTarget.goal}” tạo lúc {memberAiHistoryDate(deleteTarget.createdAt)} sẽ bị xóa khỏi lịch sử. Giáo án chính thức của bạn vẫn được giữ nguyên.</p></AiDeleteConfirmation>}
+      {active && deleteTarget && <AiDeleteConfirmation title="Xóa bản gợi ý bài tập?" busy={deleting} error={deleteError} onClose={() => setDeleteTarget(null)} onConfirm={deleteHistory}><p>Bản gợi ý “{deleteTarget.goal}” tạo lúc {memberAiHistoryDate(deleteTarget.createdAt)} sẽ bị xóa khỏi lịch sử. Giáo án chính thức của bạn vẫn được giữ nguyên.</p></AiDeleteConfirmation>}
     </div>
   )
 }

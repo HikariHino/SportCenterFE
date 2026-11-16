@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useMemberResource } from '../../contexts/MemberWorkspaceContext'
 import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
 import QRCode from 'qrcode'
 import { getMyQrCode, getMyGymCheckInHistory, getCheckInErrorMessage } from '../../services/gymCheckInService'
@@ -37,23 +38,9 @@ async function loadQr(options) {
   return { ...info, image }
 }
 
-function useGymData(loader, fallback) {
-  const [state, setState] = useState({ data: null, loading: true, error: '' })
-  const [revision, setRevision] = useState(0)
-
-  useEffect(() => {
-    let active = true
-    const controller = new AbortController()
-    setState({ data: null, loading: true, error: '' })
-    loader({ signal: controller.signal }).then(data => {
-      if (active) setState({ data, loading: false, error: '' })
-    }).catch(error => {
-      if (active) setState({ data: null, loading: false, error: getCheckInErrorMessage(error, fallback) })
-    })
-    return () => { active = false; controller.abort() }
-  }, [loader, fallback, revision])
-
-  return { ...state, reload: () => setRevision(value => value + 1) }
+function useGymData(loader, fallback, key) {
+  const query = useMemberResource(key, () => loader({}))
+  return { ...query, error: !query.hasData && query.error ? getCheckInErrorMessage(query.error, fallback) : '' }
 }
 
 function LoadingState({ children }) {
@@ -71,12 +58,12 @@ function ErrorState({ message, retry }) {
 }
 
 export function GymCheckInView() {
-  const qr = useGymData(loadQr, 'Không thể tải mã QR hội viên.')
+  const qr = useGymData(loadQr, 'Không thể tải mã QR hội viên.', 'gym-qr')
   const [dateRange, setDateRange] = useState({ fromDate: '', toDate: '' })
   const [dateDraft, setDateDraft] = useState(dateRange)
   const [rangeError, setRangeError] = useState('')
   const historyLoader = useCallback(options => getMyGymCheckInHistory(dateRange, options), [dateRange])
-  const history = useGymData(historyLoader, 'Không thể tải lịch sử ra/vào phòng gym.')
+  const history = useGymData(historyLoader, 'Không thể tải lịch sử ra/vào phòng gym.', 'gym-history:' + JSON.stringify(dateRange))
   const [filter, setFilter] = useState('All')
   const [page, setPage] = useState(1)
   const records = [...(history.data || [])].sort((a, b) =>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
 import { AlertCircle, CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, List, LoaderCircle, RefreshCw, Search, ShieldAlert, Star, X } from 'lucide-react'
 import { getSports, getCoaches } from '../../services/classCatalogService'
 import { getAllAvailableSessions, getAllMemberClasses, getAllMyRegistrations, bookClassSessions, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
@@ -145,7 +146,8 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
   </dialog>
 }
 
-export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', notificationSessionId }) {
+export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', notificationSessionId, notificationRequestKey }) {
+  const viewActive = useMemberViewActive()
   const [tab, setTab] = useState(initialTab)
   const [browseRevision, setBrowseRevision] = useState(0)
   const [bulkResult, setBulkResult] = useState(null)
@@ -174,9 +176,9 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
   const coaches = useResource(getCoaches)
   const rooms = useResource(getRooms)
   const publicClasses = useResource(getAllMemberClasses)
-  const allSessions = useResource(getAllAvailableSessions)
-  const mine = useResource(getAllMyRegistrations, {}, 0, { refreshInterval: 30000 })
-  const subscriptions = useResource(getMySubscriptions)
+  const allSessions = useResource(getAllAvailableSessions, {}, 0, { resourceKey: 'available-sessions', paused: busy })
+  const mine = useResource(getAllMyRegistrations, {}, 0, { resourceKey: 'registrations', paused: busy })
+  const subscriptions = useResource(getMySubscriptions, {}, 0, { resourceKey: 'subscriptions', paused: busy })
 
   useEffect(() => {
     if (!mine.data) return
@@ -200,14 +202,15 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
   }, [mine.data])
 
   useEffect(() => {
-    if (!notificationSessionId || openedNotificationSession.current === String(notificationSessionId)) return
+    const requestKey = `${notificationSessionId}:${notificationRequestKey || ''}`
+    if (!viewActive || !notificationSessionId || openedNotificationSession.current === requestKey) return
     const registration = mine.data?.items.find(item => String(item.sessionId) === String(notificationSessionId)
       && !['cancelled', 'canceled'].includes(String(item.status).toLowerCase()))
     if (!registration) return
-    openedNotificationSession.current = String(notificationSessionId)
+    openedNotificationSession.current = requestKey
     setSelectedRegistrationId(registration.id)
     if (Number.isFinite(Date.parse(registration.startsAt))) setWeekStart(timetableWeekStart(registration.startsAt))
-  }, [notificationSessionId, mine.data])
+  }, [viewActive, notificationSessionId, notificationRequestKey, mine.data])
 
   const roomsList = useMemo(() => (Array.isArray(rooms.data) ? rooms.data : []), [rooms.data])
   const coachesList = useMemo(() => (Array.isArray(coaches.data) ? coaches.data : []), [coaches.data])
@@ -467,9 +470,9 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
       {!mine.loading && !mine.error && <CancelledMemberRegistrations items={cancelledRegistrations} onSelect={setSelectedRegistrationId} />}
     </section>}
 
-    {selectedRegistration && <RegistrationDetailsDialog item={selectedRegistration} busy={busy} now={now} onClose={() => setSelectedRegistrationId(null)} onAction={openAction} />}
+    {viewActive && selectedRegistration && <RegistrationDetailsDialog item={selectedRegistration} busy={busy} now={now} onClose={() => setSelectedRegistrationId(null)} onAction={openAction} />}
 
-    {action && (
+    {viewActive && action && (
       <ActionDialog
         action={action.type === 'review' ? { ...action, item: registrations.find(item => String(item.id) === String(action.item.id)) || action.item } : action}
         busy={busy}

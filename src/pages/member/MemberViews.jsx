@@ -20,6 +20,7 @@ import { getProfilePhoneConflict, passwordChangeErrors, profileDateLimit, profil
 import '../../style/member/ProfileValidation.css'
 import '../../style/member/MemberProfile.css'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
+import { useMemberCache, useMemberResource } from '../../contexts/MemberWorkspaceContext'
 
 function formatCurrency(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} đ`
@@ -41,15 +42,15 @@ function formatDate(value) {
    1. TÀI KHOẢN & HỒ SƠ CÁ NHÂN (AuthController, ProfileController)
    ========================================================================= */
 export function ProfileView({ user, showNotice }) {
+  const cache = useMemberCache()
   const profileForm = useRef(null)
   const saveLock = useRef(false)
   const passwordForm = useRef(null)
   const passwordLock = useRef(false)
   const [profile, setProfile] = useState(null)
   const [memberInfo, setMemberInfo] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const [localError, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [phoneConflict, setPhoneConflict] = useState(null)
   const [formData, setFormData] = useState({
@@ -70,38 +71,38 @@ export function ProfileView({ user, showNotice }) {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' })
   const [passwordFieldErrors, setPasswordFieldErrors] = useState({})
+  const profileDirty = useRef(false)
+  const memberRead = useMemberResource('member-profile', getMyMemberProfile)
+  const profileRead = useMemberResource('profile', async () => {
+    const [profile, member] = await Promise.all([getProfile(), cache.load('member-profile', getMyMemberProfile).catch(() => null)])
+    return { profile, member }
+  }, { paused: saving || passwordSaving })
+  const loading = profileRead.loading
+  const error = localError || (profileRead.error ? getProfileErrorMessage(profileRead.error, 'Không thể tải thông tin cá nhân.') : '')
 
-  const loadProfile = async () => {
-    setLoading(true)
+  const loadProfile = () => {
     setError('')
-    try {
-      const [profData, memData] = await Promise.all([
-        getProfile(),
-        getMyMemberProfile().catch(() => null),
-      ])
+    return profileRead.reload()
+  }
+  useEffect(() => {
+    if (profileRead.data) {
+      const { profile: profData, member } = profileRead.data
+      const memData = memberRead.hasData ? memberRead.data : member
       setProfile(profData)
       setMemberInfo(memData)
-
+      if (profileDirty.current) return
       setFormData({
         fullName: profData?.fullName || memData?.fullName || user?.fullName || '',
         email: profData?.email || memData?.email || user?.email || '',
         phoneNumber: profData?.phoneNumber || memData?.phone || '',
-        gender: profData.gender ?? '',
-        dateOfBirth: profData.dateOfBirth ? String(profData.dateOfBirth).slice(0, 10) : '',
-        address: profData.address ?? '',
-        fitnessGoal: profData.fitnessGoal ?? '',
-        emergencyContact: profData.emergencyContact ?? '',
+        gender: profData?.gender ?? '',
+        dateOfBirth: profData?.dateOfBirth ? String(profData.dateOfBirth).slice(0, 10) : '',
+        address: profData?.address ?? '',
+        fitnessGoal: profData?.fitnessGoal ?? '',
+        emergencyContact: profData?.emergencyContact ?? '',
       })
-    } catch (err) {
-      setError(getProfileErrorMessage(err, 'Không thể tải thông tin cá nhân.'))
-    } finally {
-      setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    loadProfile()
-  }, [])
+  }, [profileRead.data, memberRead.data, user])
 
   const validationOptions = { requirePhone: Boolean(profile?.phoneNumber || memberInfo?.phone), requireDateOfBirth: Boolean(profile?.dateOfBirth), phoneConflict }
   const validateProfile = values => {
@@ -115,6 +116,7 @@ export function ProfileView({ user, showNotice }) {
   const hasPhoneConflict = Boolean(getProfilePhoneConflict(formData.phoneNumber, phoneConflict))
   const focusProfileError = errors => window.requestAnimationFrame(() => profileForm.current?.elements.namedItem(Object.keys(errors)[0])?.focus())
   const changeProfileField = (name, value) => {
+    profileDirty.current = true
     const next = { ...formData, [name]: value }
     setFormData(next)
     setError('')
@@ -150,6 +152,7 @@ export function ProfileView({ user, showNotice }) {
       })
       setPhoneConflict(null)
       setProfile(result)
+      profileDirty.current = false
       showNotice('Cập nhật hồ sơ cá nhân thành công!')
       await loadProfile()
     } catch (err) {
