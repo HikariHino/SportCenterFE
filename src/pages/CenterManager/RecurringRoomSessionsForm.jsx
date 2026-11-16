@@ -1,3 +1,4 @@
+import { ManagerList } from './ManagerPagination'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { AlertCircle, CalendarPlus, X } from 'lucide-react'
 import { getCoaches } from '../../services/classCatalogService'
@@ -168,10 +169,10 @@ export default function RecurringRoomSessionsForm({ room, rooms, initialSlot, on
     {preview.error && <p className="room-recurring-error" role="alert"><AlertCircle size={16} />{preview.error}</p>}
     {preview.items.length > 0 && <details className="room-recurring-preview" open>
       <summary><strong>{preview.items.length} buổi học</strong> · {dateLabel(preview.items[0].date)} – {dateLabel(preview.items.at(-1).date)} · {form.startTime}–{form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}</summary>
-      <div><table><thead><tr><th>Thứ</th><th>Ngày học</th><th>Khung giờ</th></tr></thead><tbody>{preview.items.map(item => <tr key={item.startsAt}><td>{weekdayLabel(item.weekday)}</td><td>{dateLabel(item.date)}</td><td>{form.startTime} – {form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}</td></tr>)}</tbody></table></div>
+      <div><ManagerList items={preview.items} label="Buổi học xem trước" table heading={<tr><th scope="col" className="manager-stt">STT</th><th>Thứ</th><th>Ngày học</th><th>Khung giờ</th></tr>}>{item => <tr key={item.startsAt}><td>{weekdayLabel(item.weekday)}</td><td>{dateLabel(item.date)}</td><td>{form.startTime} – {form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}</td></tr>}</ManagerList></div>
     </details>}
     {(totals.created > 0 || totals.existing > 0) && <p className="room-recurring-saved" role="status">Đã tạo {totals.created} buổi; {totals.existing} buổi đã có sẵn được giữ nguyên.{pending && ` Còn ${pending.length} buổi cần xử lý.`}</p>}
-    {error && <div className="room-recurring-error" role="alert"><p>{error}</p>{conflicts.length > 0 && <ul>{conflicts.map(item => <li key={item.startsAt}>{dateLabel(item.date)} {form.startTime}–{form.endTime}: {item.message}</li>)}</ul>}</div>}
+    {error && <div className="room-recurring-error" role="alert"><p>{error}</p>{conflicts.length > 0 && <ManagerList items={conflicts} label="Xung đột lịch" as="ul">{item => <li key={item.startsAt}>{dateLabel(item.date)} {form.startTime}–{form.endTime}: {item.message}</li>}</ManagerList>}</div>}
     {progress && <p role="status">{progress.phase === 'checking' ? 'Đang kiểm tra lịch phòng và huấn luyện viên' : 'Đang tạo buổi học'}: {progress.completed}/{progress.total}...</p>}
     <footer><button type="button" disabled={busy} onClick={onClose}>Đóng biểu mẫu</button><button type="submit" className="room-recurring-submit" disabled={busy || catalog.loading || Boolean(catalog.error) || Boolean(preview.error) || Boolean(capacityError) || !preview.items.length}>{busy ? 'Đang xử lý...' : pending ? `Thử lại ${pending.length} buổi còn lại` : `Tạo ${preview.items.length || ''} buổi học`}</button></footer>
   </form>

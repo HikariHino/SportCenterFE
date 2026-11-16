@@ -1,34 +1,8 @@
+import { ManagerList } from './ManagerPagination'
+import { useManagerCache, useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
+import { getAllManagerClasses } from '../../services/managerWorkspaceReads'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  AlertCircle,
-  AlertTriangle,
-  Ban,
-  BookOpen,
-  Calendar,
-  CalendarX2,
-  CheckCircle2,
-  Clock,
-  DoorOpen,
-  Dumbbell,
-  Edit,
-  Edit2,
-  Eye,
-  Flame,
-  ImageIcon,
-  Layers,
-  Plus,
-  Power,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  Tag,
-  Trash2,
-  Trophy,
-  UserCheck,
-  Users,
-  X,
-  Zap,
-} from 'lucide-react'
+import { AlertCircle, AlertTriangle, Ban, BookOpen, Calendar, CalendarX2, CheckCircle2, Clock, DoorOpen, Dumbbell, Edit, Edit2, Flame, ImageIcon, Plus, Power, RefreshCw, Search, ShieldCheck, Trophy, UserCheck, Users, X, Zap } from "lucide-react"
 import {
   createSport,
   getCoaches,
@@ -38,19 +12,7 @@ import {
 import { uploadClassImage, uploadSportImage } from '../../services/catalogImageService'
 import CatalogImage from '../../components/CatalogImage'
 import CatalogImageUploadDialog from '../../components/CatalogImageUploadDialog'
-import {
-  cancelClassSession,
-  completeClassSession,
-  createClassSession,
-  createSportClass,
-  getClassErrorMessage,
-  getAllClassSessions,
-  getManagedClassesWithSessionDates,
-  getRooms,
-  getSessionRoster,
-  updateClassSession,
-  updateSportClass,
-} from '../../services/sportClassService'
+import { cancelClassSession, completeClassSession, createClassSession, createSportClass, getClassErrorMessage, getAllClassSessions, getRooms, getSessionRoster, updateClassSession, updateSportClass } from "../../services/sportClassService"
 import { validateSessionWrite } from '../../services/sessionSchedulingService'
 import { assignClassToRoom } from '../../services/roomTimetableService'
 import { SESSION_COMPLETION_EVENT } from '../../services/sessionCompletionService'
@@ -168,19 +130,30 @@ export function getRoomForClass(cls, roomsList = []) {
 }
 
 export default function ClassManagement() {
+  const viewActive = useManagerViewActive()
+  const cache = useManagerCache()
   const [activeTab, setActiveTab] = useState('classes') // 'sports' | 'classes'
 
   // Master Data
-  const [sports, setSports] = useState([])
-  const [coaches, setCoaches] = useState([])
-  const [rooms, setRooms] = useState([])
-  const [classes, setClasses] = useState([])
+  const sportsRead = useManagerResource('sports', getSports, { initialData: [] })
+  const sports = sportsRead.data
+  const setSports = sportsRead.setData
+  const coachesRead = useManagerResource('coaches', getCoaches, { initialData: [] })
+  const coaches = coachesRead.data
+  const setCoaches = coachesRead.setData
+  const roomsRead = useManagerResource('rooms', getRooms, { initialData: [] })
+  const rooms = roomsRead.data
+  const setRooms = roomsRead.setData
+  const classesRead = useManagerResource('classes', getAllManagerClasses, { initialData: [] })
+  const classes = classesRead.data
+  const setClasses = classesRead.setData
 
   // Loading & Error States
-  const [loading, setLoading] = useState(true)
-  const [classesLoading, setClassesLoading] = useState(false)
+  const loading = sportsRead.loading
+  const classesLoading = classesRead.loading
   const [sessionsLoading, setSessionsLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [localError, setError] = useState('')
+  const error = localError || [sportsRead, coachesRead, roomsRead, classesRead].map(query => !query.hasData && query.error ? getClassErrorMessage(query.error) : '').find(Boolean) || ''
   const [success, setSuccess] = useState('')
 
   // Filters for Sports Tab
@@ -256,6 +229,11 @@ export default function ClassManagement() {
   const [rosterList, setRosterList] = useState([])
   const [rosterLoading, setRosterLoading] = useState(false)
 
+  const liveSessions = useManagerResource('class-sessions:' + (selectedClassForSessions?.id || ''), () => getAllClassSessions(selectedClassForSessions.id), { initialData: [], enabled: Boolean(viewActive && selectedClassForSessions), paused: submittingSession })
+  const liveRoster = useManagerResource('roster:' + (rosterSession?.id || ''), () => getSessionRoster(rosterSession.id), { initialData: [], enabled: Boolean(viewActive && rosterSession) })
+  useEffect(() => { if (liveSessions.hasData) setSessionsList(liveSessions.data) }, [liveSessions.data, liveSessions.hasData])
+  useEffect(() => { if (liveRoster.hasData) setRosterList(liveRoster.data) }, [liveRoster.data, liveRoster.hasData])
+
   // Auto clear success message
   useEffect(() => {
     if (success) {
@@ -265,49 +243,16 @@ export default function ClassManagement() {
   }, [success])
 
   // Load master data: sports, coaches, rooms
-  const loadMasterData = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const [sportsData, coachesData, roomsData] = await Promise.all([
-        getSports(),
-        getCoaches().catch(() => []),
-        getRooms().catch(() => []),
-      ])
-      setSports(
-        sportsData.map((s) => ({
-          ...s,
-          isActive: s.isActive !== undefined ? s.isActive : true,
-        }))
-      )
-      setCoaches(coachesData)
-      setRooms(roomsData)
-    } catch (err) {
-      setError(getClassErrorMessage(err, 'Không thể tải danh mục thể thao và danh sách huấn luyện viên.'))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loadMasterData = () => Promise.all([sportsRead.reload(), coachesRead.reload(), roomsRead.reload()])
 
   // Load managed classes list
-  const loadClasses = async () => {
-    setClassesLoading(true)
-    try {
-      const res = await getManagedClassesWithSessionDates()
-      setClasses(res.items || [])
-    } catch (err) {
-      console.error('Error loading classes:', err)
-      setError(getClassErrorMessage(err, 'Không thể tải danh sách lớp học.'))
-    } finally {
-      setClassesLoading(false)
-    }
-  }
+  const loadClasses = classesRead.reload
 
   // Load sessions for a specific class
   const loadClassSessions = async (classId) => {
     setSessionsLoading(true)
     try {
-      const sessions = await getAllClassSessions(classId)
+      const sessions = await cache.load('class-sessions:' + classId, () => getAllClassSessions(classId), { force: true })
       setSessionsList(sessions)
       setClasses(previous => previous.map(item => String(item.id) === String(classId)
         ? { ...item, sessionDateRange: getClassSessionDateRange(sessions), sessionDatesError: '' }
@@ -333,11 +278,6 @@ export default function ClassManagement() {
     window.addEventListener(SESSION_COMPLETION_EVENT, refresh)
     return () => window.removeEventListener(SESSION_COMPLETION_EVENT, refresh)
   }, [selectedClassForSessions?.id])
-
-  useEffect(() => {
-    loadMasterData()
-    loadClasses()
-  }, [])
 
   // ==========================================
   // SPORTS CATALOG LOGIC
@@ -771,7 +711,7 @@ export default function ClassManagement() {
     setRosterSession(session)
     setRosterLoading(true)
     try {
-      const students = await getSessionRoster(session.id)
+      const students = await cache.load('roster:' + session.id, () => getSessionRoster(session.id), { force: true })
       setRosterList(students)
     } catch (err) {
       setError(getClassErrorMessage(err, 'Không thể tải danh sách học viên của buổi học.'))
@@ -1007,9 +947,7 @@ export default function ClassManagement() {
             </div>
           ) : (
             <div className="class-table-container" role="region" aria-label="Danh sách lớp học" tabIndex={0}>
-              <table className="class-table">
-                <thead>
-                  <tr>
+              <ManagerList items={filteredClasses} label="Danh sách lớp học" table className="class-table" resetKey={JSON.stringify([classSearch,classSportFilter,classCoachFilter,classStatusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                     <th>LỚP HỌC</th>
                     <th>BỘ MÔN</th>
                     <th>HLV PHỤ TRÁCH</th>
@@ -1017,10 +955,7 @@ export default function ClassManagement() {
                     <th>SĨ SỐ TỐI ĐA</th>
                     <th>TRẠNG THÁI</th>
                     <th className="class-actions-heading">THAO TÁC</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredClasses.map((cls) => {
+                  </tr>}>{(cls) => {
                     const isActive = cls.isActive !== false
                     const imageAction = isCatalogImageUrl(cls.imageUrl) ? 'Thay ảnh' : 'Thêm ảnh'
                     return (
@@ -1100,9 +1035,7 @@ export default function ClassManagement() {
                         </td>
                       </tr>
                     )
-                  })}
-                </tbody>
-              </table>
+                  }}</ManagerList>
             </div>
           )}
         </section>
@@ -1161,8 +1094,7 @@ export default function ClassManagement() {
               </button>
             </div>
           ) : (
-            <div className="sports-grid">
-              {filteredSports.map((sport) => {
+            <ManagerList items={filteredSports} label="Danh mục bộ môn" className="sports-grid" as="div" resetKey={JSON.stringify([sportSearch,sportFilterStatus])}>{(sport) => {
                 const isActive = sport.isActive !== false
                 return (
                   <article key={sport.id} className="sport-card">
@@ -1210,13 +1142,12 @@ export default function ClassManagement() {
                     </div>
                   </article>
                 )
-              })}
-            </div>
+              }}</ManagerList>
           )}
         </section>
       )}
 
-      {imageClass && <CatalogImageUploadDialog
+      {viewActive && imageClass && <CatalogImageUploadDialog
         name={imageClass.className}
         imageUrl={imageClass.imageUrl}
         upload={file => uploadClassImage(imageClass.id, file)}
@@ -1228,7 +1159,7 @@ export default function ClassManagement() {
         }}
       />}
 
-      {imageSport && <CatalogImageUploadDialog
+      {viewActive && imageSport && <CatalogImageUploadDialog
         name={imageSport.name}
         imageUrl={imageSport.imageUrl}
         upload={file => uploadSportImage(imageSport.id, file)}
@@ -1243,7 +1174,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: SESSIONS MANAGEMENT (Chi tiết các buổi học) */}
       {/* ======================================================== */}
-      {selectedClassForSessions && (
+      {viewActive && selectedClassForSessions && (
         <div className="class-modal-overlay" onClick={() => setSelectedClassForSessions(null)}>
           <div className="class-modal wide class-session-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -1420,7 +1351,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: ADD SESSION */}
       {/* ======================================================== */}
-      {showAddSessionModal && (
+      {viewActive && showAddSessionModal && (
         <div className="class-modal-overlay" onClick={() => setShowAddSessionModal(false)}>
           <div className="class-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -1600,7 +1531,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: RESCHEDULE / EDIT SESSION */}
       {/* ======================================================== */}
-      {reschedulingSession && (
+      {viewActive && reschedulingSession && (
         <div className="class-modal-overlay" onClick={() => setReschedulingSession(null)}>
           <div className="class-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -1780,7 +1711,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: CANCEL SESSION WITH REASON */}
       {/* ======================================================== */}
-      {cancellingSession && (
+      {viewActive && cancellingSession && (
         <div className="class-modal-overlay" onClick={() => setCancellingSession(null)}>
           <div className="class-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -1846,7 +1777,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: SESSION ROSTER */}
       {/* ======================================================== */}
-      {rosterSession && (
+      {viewActive && rosterSession && (
         <div className="class-modal-overlay" onClick={() => setRosterSession(null)}>
           <div className="class-modal wide class-session-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -1878,17 +1809,12 @@ export default function ClassManagement() {
                 </div>
               ) : (
                 <div className="roster-container">
-                  <table className="roster-table">
-                    <thead>
-                      <tr>
+                  <ManagerList items={rosterList} label="Học viên trong buổi học" table className="roster-table" heading={<tr><th scope="col" className="manager-stt">STT</th>
                         <th>MÃ ĐĂNG KÝ</th>
                         <th>HỌC VIÊN</th>
                         <th>TRẠNG THÁI</th>
                         <th>ĐIỂM DANH</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rosterList.map((student) => {
+                      </tr>}>{(student) => {
                         const initials = (student.fullName || 'HV')
                           .split(/\s+/)
                           .slice(-2)
@@ -1934,9 +1860,7 @@ export default function ClassManagement() {
                             </td>
                           </tr>
                         )
-                      })}
-                    </tbody>
-                  </table>
+                      }}</ManagerList>
                 </div>
               )}
             </div>
@@ -1956,7 +1880,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: CREATE CLASS */}
       {/* ======================================================== */}
-      {showCreateClassModal && (
+      {viewActive && showCreateClassModal && (
         <div className="class-modal-overlay" onClick={() => setShowCreateClassModal(false)}>
           <div className="class-modal wide" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -2083,7 +2007,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: EDIT CLASS */}
       {/* ======================================================== */}
-      {editingClass && (
+      {viewActive && editingClass && (
         <div className="class-modal-overlay" onClick={() => setEditingClass(null)}>
           <div className="class-modal wide" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -2206,7 +2130,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: DEACTIVATE / CLOSE CLASS */}
       {/* ======================================================== */}
-      {deactivatingClass && (
+      {viewActive && deactivatingClass && (
         <CloseClassDialog sportClass={deactivatingClass} onClose={() => setDeactivatingClass(null)}
           onViewSessions={() => { handleOpenSessions(deactivatingClass); setDeactivatingClass(null) }}
           onClosed={() => {
@@ -2219,7 +2143,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: CREATE SPORT */}
       {/* ======================================================== */}
-      {showCreateSportModal && (
+      {viewActive && showCreateSportModal && (
         <div className="class-modal-overlay" onClick={() => setShowCreateSportModal(false)}>
           <div className="class-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -2300,7 +2224,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: EDIT SPORT */}
       {/* ======================================================== */}
-      {editingSport && (
+      {viewActive && editingSport && (
         <div className="class-modal-overlay" onClick={() => { if (!submittingSport) setEditingSport(null) }}>
           <div className="class-modal" role="dialog" aria-modal="true" aria-labelledby="edit-sport-title" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -2386,7 +2310,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {/* MODAL: CONFIRM TOGGLE SPORT STATUS */}
       {/* ======================================================== */}
-      {togglingSport && (
+      {viewActive && togglingSport && (
         <div className="class-modal-overlay" onClick={() => { if (!submittingSport) setTogglingSport(null) }}>
           <div className="class-modal" role="dialog" aria-modal="true" aria-labelledby="toggle-sport-title" aria-busy={submittingSport} onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
@@ -2442,7 +2366,7 @@ export default function ClassManagement() {
           </div>
         </div>
       )}
-      {cancellingClass && <CancelClassSessionsDialog sportClass={cancellingClass} onClose={() => setCancellingClass(null)} onUpdated={handleClassSessionsCancelled} />}
+      {viewActive && cancellingClass && <CancelClassSessionsDialog sportClass={cancellingClass} onClose={() => setCancellingClass(null)} onUpdated={handleClassSessionsCancelled} />}
     </div>
   )
 }

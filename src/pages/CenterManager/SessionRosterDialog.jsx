@@ -1,3 +1,4 @@
+import { ManagerList } from './ManagerPagination'
 import { useEffect, useId, useRef, useState } from 'react'
 import { AlertCircle, RefreshCw, Users, X } from 'lucide-react'
 import { getClassErrorMessage, getSessionRoster } from '../../services/sportClassService'
@@ -44,11 +45,9 @@ export default function SessionRosterDialog({ session, onClose }) {
         : state.error ? <div className="room-session-roster-state" role="alert"><AlertCircle size={24} /><p>{state.error}</p><button type="button" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>
           : !state.items.length ? <div className="room-session-roster-state" role="status"><Users size={28} /><p>Buổi học này chưa có học viên đăng ký.</p></div>
             : <div className="room-session-roster-scroll" role="region" aria-label="Danh sách học viên, có thể cuộn ngang" tabIndex={0}>
-              <table><caption className="member-timetable-sr-only">Học viên đã đăng ký buổi học #{session.id}</caption><thead><tr><th scope="col">STT</th><th scope="col">Họ và tên</th><th scope="col">Mã học viên</th><th scope="col">Đăng ký</th><th scope="col">Điểm danh</th></tr></thead>
-                <tbody>{state.items.map((student, index) => <tr key={student.registrationId}>
+              <ManagerList items={state.items} label="Danh sách đăng ký buổi học" table heading={<tr><th scope="col" className="manager-stt">STT</th><th scope="col">STT</th><th scope="col">Họ và tên</th><th scope="col">Mã học viên</th><th scope="col">Đăng ký</th><th scope="col">Điểm danh</th></tr>}>{(student, index) => <tr key={student.registrationId}>
                   <td>{index + 1}</td><th scope="row">{student.fullName || 'Chưa cập nhật'}</th><td>#{student.memberId}</td><td>{classStatusLabel(student.registrationStatus)}</td><td>{student.attendanceStatus ? classStatusLabel(student.attendanceStatus) : 'Chưa điểm danh'}{student.checkInTime && <small>{formatDateTime(student.checkInTime)}</small>}</td>
-                </tr>)}</tbody>
-              </table>
+                </tr>}</ManagerList>
             </div>}
     </div>
     <div className="room-session-roster-actions"><button type="button" onClick={onClose}>Đóng</button></div>

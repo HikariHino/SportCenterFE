@@ -1,3 +1,5 @@
+import { ManagerList } from './ManagerPagination'
+import { useManagerResource } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
@@ -68,22 +70,27 @@ export default function ReportManagement() {
   const [selectedYear, setSelectedYear] = useState(currentYear)
 
   // Data states
-  const [overview, setOverview] = useState(null)
-  const [revenueData, setRevenueData] = useState([])
-  const [classStatusList, setClassStatusList] = useState([])
-  const [paymentsList, setPaymentsList] = useState([])
+  const overviewRead = useManagerResource('overview', getDashboardOverview, { initialData: null })
+  const overview = overviewRead.data
+  const revenueDataRead = useManagerResource('revenue:' + selectedYear + '', () => getRevenueByYear(selectedYear), { initialData: [] })
+  const revenueData = revenueDataRead.data
+  const classStatusListRead = useManagerResource('report-classes', getClassStatusReport, { initialData: [] })
+  const classStatusList = classStatusListRead.data
+  const paymentsListRead = useManagerResource('payments', getPaymentsReport, { initialData: [] })
+  const paymentsList = paymentsListRead.data
 
   // Loading states
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [loadingClasses, setLoadingClasses] = useState(false)
-  const [loadingPayments, setLoadingPayments] = useState(false)
+  const loading = overviewRead.loading || revenueDataRead.loading
+  const refreshing = overviewRead.refreshing || revenueDataRead.refreshing
+  const loadingClasses = classStatusListRead.loading
+  const loadingPayments = paymentsListRead.loading
   const [exportingPdfId, setExportingPdfId] = useState(null)
 
   // Feedback states
-  const [errorMessage, setErrorMessage] = useState(null)
-  const [hasReportError, setHasReportError] = useState(false)
-  const [classReportError, setClassReportError] = useState('')
+  const [localErrorMessage, setErrorMessage] = useState(null)
+  const errorMessage = localErrorMessage || [overviewRead, revenueDataRead, paymentsListRead].map(read => read.error ? getReportErrorMessage(read.error) : '').find(Boolean)
+  const hasReportError = Boolean((!overviewRead.hasData && overviewRead.error) || (!revenueDataRead.hasData && revenueDataRead.error))
+  const classReportError = !classStatusListRead.hasData && classStatusListRead.error ? getReportErrorMessage(classStatusListRead.error) : ''
   const [successMessage, setSuccessMessage] = useState(null)
 
   // Filter states - Class status
@@ -104,55 +111,13 @@ export default function ReportManagement() {
   }, [successMessage])
 
   // Load initial overview & revenue
-  async function loadInitialData(showSpinner = true) {
-    if (showSpinner) setLoading(true)
-    else setRefreshing(true)
-    setErrorMessage(null)
-    setHasReportError(false)
-
-    try {
-      const [overviewRes, revenueRes] = await Promise.all([
-        getDashboardOverview(),
-        getRevenueByYear(selectedYear),
-      ])
-      setOverview(overviewRes)
-      setRevenueData(revenueRes)
-    } catch (err) {
-      setHasReportError(true)
-      setErrorMessage(getReportErrorMessage(err))
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
+  const loadInitialData = () => Promise.all([overviewRead.reload(), revenueDataRead.reload()])
 
   // Load class status data
-  async function loadClassStatus() {
-    setLoadingClasses(true)
-    setClassReportError('')
-    try {
-      const data = await getClassStatusReport()
-      setClassStatusList(data)
-    } catch (err) {
-      setClassStatusList([])
-      setClassReportError(getReportErrorMessage(err, 'Không thể tải đủ dữ liệu để thống kê sĩ số lớp học.'))
-    } finally {
-      setLoadingClasses(false)
-    }
-  }
+  const loadClassStatus = classStatusListRead.reload
 
   // Load payments data
-  async function loadPayments(showSpinner = true) {
-    if (showSpinner) setLoadingPayments(true)
-    try {
-      const data = await getPaymentsReport()
-      setPaymentsList(data)
-    } catch (err) {
-      setErrorMessage(getReportErrorMessage(err, 'Không thể tải danh sách giao dịch.'))
-    } finally {
-      setLoadingPayments(false)
-    }
-  }
+  const loadPayments = paymentsListRead.reload
 
   // Refresh current view data
   function handleRefresh() {
@@ -162,18 +127,8 @@ export default function ReportManagement() {
   }
 
   // Effect when year changes
-  useEffect(() => {
-    loadInitialData(true)
-  }, [selectedYear])
 
   // Effect when switching tabs
-  useEffect(() => {
-    if (activeTab === 'class-status' && classStatusList.length === 0) {
-      loadClassStatus()
-    } else if (activeTab === 'payments' && paymentsList.length === 0) {
-      loadPayments(true)
-    }
-  }, [activeTab])
 
   // Export QuestPDF single invoice
   async function handleExportInvoice(payment) {
@@ -630,18 +585,23 @@ export default function ReportManagement() {
               <div className="report-empty-box"><FileText size={28} /><p>Chưa có dữ liệu chi tiết để hiển thị.</p></div>
             ) : (
               <div className="report-table-scroll" role="region" aria-label="Chi tiết doanh thu theo tháng, cuộn ngang để xem đầy đủ" tabIndex={0}>
-                <table className="report-table report-revenue-table">
-                  <thead>
-                    <tr>
+                <ManagerList items={revenueData} label="Doanh thu theo tháng" table className="report-table report-revenue-table" resetKey={JSON.stringify([selectedYear])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                       <th>Tháng / Năm</th>
                       <th className="report-numeric">Doanh thu</th>
                       <th>Tỷ trọng trong năm</th>
                       <th className="report-numeric">So với trung bình</th>
                       <th>Đánh giá</th>
+                    </tr>} tableFooter={<tfoot>
+                    <tr>
+                      <td>TỔNG DOANH THU NĂM {selectedYear}</td>
+                      <td className="report-numeric" style={{ color: 'var(--manager-success, #059669)', fontSize: 15 }}>
+                        {formatVND(yearStats.totalYear)}
+                      </td>
+                      <td colSpan={3} style={{ color: 'var(--manager-muted, #748096)' }}>
+                        Trung bình: {formatVND(Math.round(yearStats.avgMonth))}/tháng
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {revenueData.map((item) => {
+                  </tfoot>}>{(item) => {
                       const rev = Number(item.revenue) || 0
                       const share = yearStats.totalYear > 0
                         ? Math.round((rev / yearStats.totalYear) * 100)
@@ -699,20 +659,7 @@ export default function ReportManagement() {
                           </td>
                         </tr>
                       )
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td>TỔNG DOANH THU NĂM {selectedYear}</td>
-                      <td className="report-numeric" style={{ color: 'var(--manager-success, #059669)', fontSize: 15 }}>
-                        {formatVND(yearStats.totalYear)}
-                      </td>
-                      <td colSpan={3} style={{ color: 'var(--manager-muted, #748096)' }}>
-                        Trung bình: {formatVND(Math.round(yearStats.avgMonth))}/tháng
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    }}</ManagerList>
               </div>
             )}
           </div>
@@ -816,19 +763,24 @@ export default function ReportManagement() {
               </div>
             ) : (
               <div className="report-table-scroll">
-                <table className="report-table">
-                  <thead>
-                    <tr>
+                <ManagerList items={filteredClasses} label="Báo cáo sĩ số lớp" table className="report-table" resetKey={JSON.stringify([classSearch,classFillFilter,classSort])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                       <th>Lớp học</th>
                       <th>Huấn luyện viên</th>
                       <th>Học viên / Sức chứa</th>
                       <th>Tỷ lệ lấp đầy</th>
                       <th>Trạng thái</th>
                       <th>Đề xuất tối ưu hóa lịch học</th>
+                    </tr>} tableFooter={<tfoot>
+                    <tr>
+                      <td colSpan={2}>TỔNG SĨ SỐ THEO LỚP</td>
+                      <td style={{ fontWeight: 700, color: 'var(--manager-ink, #18263e)' }}>
+                        {classOverallStats.totalRegistered} / {classOverallStats.totalCapacity}
+                      </td>
+                      <td colSpan={3} style={{ color: 'var(--manager-blue, #2463eb)', fontWeight: 700 }}>
+                        Tỷ lệ lấp đầy trung bình toàn trung tâm: {classOverallStats.avgFill}%
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredClasses.map((cls) => {
+                  </tfoot>}>{(cls) => {
                       const rate = Number(cls.fillRatePercentage) || 0
                       const fillTone = rate >= 80 ? 'green' : rate >= 50 ? 'amber' : 'red'
 
@@ -897,20 +849,7 @@ export default function ReportManagement() {
                           </td>
                         </tr>
                       )
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan={2}>TỔNG SĨ SỐ THEO LỚP</td>
-                      <td style={{ fontWeight: 700, color: 'var(--manager-ink, #18263e)' }}>
-                        {classOverallStats.totalRegistered} / {classOverallStats.totalCapacity}
-                      </td>
-                      <td colSpan={3} style={{ color: 'var(--manager-blue, #2463eb)', fontWeight: 700 }}>
-                        Tỷ lệ lấp đầy trung bình toàn trung tâm: {classOverallStats.avgFill}%
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    }}</ManagerList>
               </div>
             )}
           </div>
@@ -973,9 +912,7 @@ export default function ReportManagement() {
               </div>
             ) : (
               <div className="report-table-scroll">
-                <table className="report-table">
-                  <thead>
-                    <tr>
+                <ManagerList items={filteredPayments} label="Báo cáo giao dịch" table className="report-table" resetKey={JSON.stringify([paymentSearch,paymentStatusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                       <th>Mã giao dịch</th>
                       <th>Ngày thanh toán</th>
                       <th>Số tiền</th>
@@ -983,10 +920,7 @@ export default function ReportManagement() {
                       <th>Phương thức</th>
                       <th>Trạng thái</th>
                       <th style={{ textAlign: 'right' }}>Hóa đơn PDF</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPayments.map((p) => {
+                    </tr>}>{(p) => {
                       const isCompleted = p.status === 'Completed'
                       const isExporting = exportingPdfId === p.id
 
@@ -1067,9 +1001,7 @@ export default function ReportManagement() {
                           </td>
                         </tr>
                       )
-                    })}
-                  </tbody>
-                </table>
+                    }}</ManagerList>
               </div>
             )}
           </div>

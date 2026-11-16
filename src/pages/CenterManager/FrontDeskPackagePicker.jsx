@@ -1,3 +1,4 @@
+import { ManagerList } from './ManagerPagination'
 import { CheckCircle2 } from 'lucide-react'
 import { membershipPackageTypeLabel } from '../../utils/memberSubscriptions'
 
@@ -19,8 +20,7 @@ export function FrontDeskPackageSelect({ packages, selectedId, onSelect, disable
 }
 
 export function FrontDeskPackageCards({ packages, selectedId, onSelect, disabled, reasonForPackage }) {
-  return <div className="fdesk-package-grid" style={{ padding: 0 }}>
-    {packages.map(pkg => {
+  return <ManagerList items={packages} label="Gói tập tại quầy" className="fdesk-package-grid" as="div">{pkg => {
       const reason = reasonForPackage(pkg)
       const blocked = disabled || Boolean(reason)
       const selected = !blocked && selectedId === String(pkg.id)
@@ -35,6 +35,5 @@ export function FrontDeskPackageCards({ packages, selectedId, onSelect, disabled
         <span className="fdesk-package-description">{pkg.description || 'Gói tập chất lượng cao tại Sports Center.'}</span>
         {reason && <span id={`fdesk-package-reason-${pkg.id}`} className="fdesk-package-registration-reason">{reason}</span>}
       </button>
-    })}
-  </div>
+    }}</ManagerList>
 }

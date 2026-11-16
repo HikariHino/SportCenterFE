@@ -1,31 +1,7 @@
+import { ManagerList } from './ManagerPagination'
+import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  AlertCircle,
-  ArrowDownToLine,
-  Calendar,
-  Check,
-  CheckCircle2,
-  Clock,
-  CreditCard,
-  Crown,
-  Edit2,
-  Grid,
-  Info,
-  Layers,
-  List,
-  Package,
-  Plus,
-  Power,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Tag,
-  Trash2,
-  Users,
-  X,
-  Zap,
-} from 'lucide-react'
+import { AlertCircle, ArrowDownToLine, Calendar, CheckCircle2, Crown, Edit2, Grid, Info, List, Package, Plus, Power, RefreshCw, Search, Sparkles, X } from "lucide-react"
 import {
   createMembershipPackage,
   deleteMembershipPackage,
@@ -96,9 +72,9 @@ const formatDuration = (days) => {
 }
 
 export default function PackageManagement() {
-  const [packages, setPackages] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const viewActive = useManagerViewActive()
+
+  const [localError, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   // View & Filters
@@ -134,29 +110,19 @@ export default function PackageManagement() {
   }, [success])
 
   // Load packages for manager
-  const loadPackages = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const data = await getMembershipPackagesForManagement()
-      setPackages(data)
-    } catch (err) {
-      setError(getPackageErrorMessage(err, 'Không thể tải danh sách gói hội viên.'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadPackages()
-  }, [])
+  const dataRead = useManagerResource('packages', getMembershipPackagesForManagement, { initialData: [], paused: submitting })
+  const packages = dataRead.data
+  const setPackages = dataRead.setData
+  const loading = dataRead.loading
+  const error = localError || (!dataRead.hasData && dataRead.error ? getPackageErrorMessage(dataRead.error) : '')
+  const loadPackages = () => { setError(''); return dataRead.reload() }
 
   // Listen for custom trigger from button
   useEffect(() => {
-    const handleOpen = () => handleOpenCreate()
+    const handleOpen = () => { if (viewActive) handleOpenCreate() }
     window.addEventListener('open-create-package-modal', handleOpen)
     return () => window.removeEventListener('open-create-package-modal', handleOpen)
-  }, [])
+  }, [viewActive])
 
   // Filtered packages
   const filteredPackages = useMemo(() => {
@@ -570,8 +536,7 @@ export default function PackageManagement() {
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
-        <div className="packages-grid">
-          {filteredPackages.map((pkg) => {
+        <ManagerList items={filteredPackages} label="Gói thẻ hội viên" className="packages-grid" as="div" resetKey={JSON.stringify([searchQuery,durationFilter,statusFilter])}>{(pkg) => {
             const isVip = (pkg.packageName || '').toLowerCase().includes('vip')
             const perDayPrice =
               pkg.durationInDays > 0 ? Math.round(Number(pkg.price) / pkg.durationInDays) : 0
@@ -635,14 +600,11 @@ export default function PackageManagement() {
                 </div>
               </article>
             )
-          })}
-        </div>
+          }}</ManagerList>
       ) : (
         /* TABLE VIEW */
         <div className="package-table-container" role="region" aria-label="Bảng gói hội viên" tabIndex={0}>
-          <table className="package-table">
-            <thead>
-              <tr>
+          <ManagerList items={filteredPackages} label="Gói thẻ hội viên" table className="package-table" resetKey={JSON.stringify([searchQuery,durationFilter,statusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                 <th>MÃ GÓI</th>
                 <th>TÊN GÓI THẺ</th>
                 <th>LOẠI GÓI</th>
@@ -651,10 +613,7 @@ export default function PackageManagement() {
                 <th>ƯỚC TÍNH / NGÀY</th>
                 <th>TRẠNG THÁI</th>
                 <th style={{ textAlign: 'right' }}>THAO TÁC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPackages.map((pkg) => {
+              </tr>}>{(pkg) => {
                 const perDayPrice =
                   pkg.durationInDays > 0 ? Math.round(Number(pkg.price) / pkg.durationInDays) : 0
 
@@ -712,14 +671,12 @@ export default function PackageManagement() {
                     </td>
                   </tr>
                 )
-              })}
-            </tbody>
-          </table>
+              }}</ManagerList>
         </div>
       )}
       </section>
 
-      {imagePackage && <CatalogImageUploadDialog
+      {viewActive && imagePackage && <CatalogImageUploadDialog
         name={imagePackage.packageName}
         imageUrl={imagePackage.imageUrl}
         upload={file => uploadMembershipPackageImage(imagePackage.id, file)}
@@ -734,7 +691,7 @@ export default function PackageManagement() {
       {/* ======================================================== */}
       {/* MODAL: CREATE PACKAGE */}
       {/* ======================================================== */}
-      {showCreateModal && (
+      {viewActive && showCreateModal && (
         <div className="pkg-modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="pkg-modal wide" role="dialog" aria-modal="true" aria-label="Tạo gói thẻ hội viên mới" onClick={(e) => e.stopPropagation()}>
             <div className="pkg-modal-header">
@@ -891,7 +848,7 @@ export default function PackageManagement() {
       {/* ======================================================== */}
       {/* MODAL: EDIT PACKAGE */}
       {/* ======================================================== */}
-      {editingPackage && (
+      {viewActive && editingPackage && (
         <div className="pkg-modal-overlay" onClick={() => setEditingPackage(null)}>
           <div className="pkg-modal wide" role="dialog" aria-modal="true" aria-label="Chỉnh sửa gói hội viên" onClick={(e) => e.stopPropagation()}>
             <div className="pkg-modal-header">
@@ -1044,7 +1001,7 @@ export default function PackageManagement() {
       {/* ======================================================== */}
       {/* MODAL: DETAIL */}
       {/* ======================================================== */}
-      {selectedPackageForDetail && (
+      {viewActive && selectedPackageForDetail && (
         <div className="pkg-modal-overlay" onClick={() => setSelectedPackageForDetail(null)}>
           <div className="pkg-modal" role="dialog" aria-modal="true" aria-label="Chi tiết gói hội viên" onClick={(e) => e.stopPropagation()}>
             <div className="pkg-modal-header">
@@ -1140,7 +1097,7 @@ export default function PackageManagement() {
       {/* ======================================================== */}
       {/* MODAL: TOGGLE STATUS CONFIRM */}
       {/* ======================================================== */}
-      {togglingPackage && (
+      {viewActive && togglingPackage && (
         <div className="pkg-modal-overlay" onClick={() => setTogglingPackage(null)}>
           <div className="pkg-modal" role="dialog" aria-modal="true" aria-label="Thay đổi trạng thái gói hội viên" onClick={(e) => e.stopPropagation()}>
             <div className="pkg-modal-header">

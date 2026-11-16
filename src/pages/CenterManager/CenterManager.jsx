@@ -1,5 +1,6 @@
+import { ManagerList } from './ManagerPagination'
 import ThemeToggle from '../../components/ThemeToggle'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from "react"
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ArrowDownToLine, ArrowUpRight, Ban, BookOpen, CalendarDays, Check,
@@ -11,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
 import usePageMotion from '../../hooks/usePageMotion'
 import useSlidingPill from '../../hooks/useSlidingPill'
+import { ManagerWorkspaceProvider, ManagerViewActivity, useManagerResource } from "../../contexts/ManagerWorkspaceContext"
 import StaffManagement from './StaffManagement'
 import ClassManagement from './ClassManagement'
 import RoomManagement from './RoomManagement'
@@ -33,6 +35,7 @@ import '../../style/CenterManager/CenterManager.css'
 import '../../style/CenterManager/ManagerOverview.css'
 import '../../style/CenterManager/ManagerMotion.css'
 import '../../style/PortalSidebar.css'
+import '../../style/CenterManager/ManagerWorkspace.css'
 
 const managerNavSections = [
   {
@@ -99,6 +102,12 @@ function renderPaymentStatusBadge(status) {
 }
 
 export default function CenterManager() {
+  const { user } = useAuth()
+  const sessionKey = user?.userId || user?.id || user?.email || 'manager'
+  return <ManagerWorkspaceProvider key={sessionKey} sessionKey={sessionKey}><ManagerWorkspace /></ManagerWorkspaceProvider>
+}
+
+function ManagerWorkspace() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [section, setSection] = usePortalNavigation(managerViewIds, 'overview')
@@ -107,18 +116,6 @@ export default function CenterManager() {
   const sidebarPill = useSlidingPill(section, sidebarOpen)
 
   // Live Dashboard States
-  const [loadingOverview, setLoadingOverview] = useState(true)
-  const [overviewData, setOverviewData] = useState({
-    totalActiveMembers: 0,
-    totalActiveClasses: 0,
-    totalRevenue: 0,
-    currentMonthRevenue: 0,
-  })
-  const [revenueMonthly, setRevenueMonthly] = useState([])
-  const [roomsList, setRoomsList] = useState([])
-  const [staffList, setStaffList] = useState([])
-  const [paymentsList, setPaymentsList] = useState([])
-  const [todayCheckIns, setTodayCheckIns] = useState([])
 
   // Dashboard Filters & Controls
   const [revenueYear] = useState(new Date().getFullYear())
@@ -133,54 +130,20 @@ export default function CenterManager() {
   const pageTitle = navigation.find(item => item.id === section)?.label || 'Tổng quan'
 
   // Fetch all live overview data
-  const loadOverviewData = async () => {
-    setLoadingOverview(true)
-    try {
-      const [overview, revData, rooms, staff, payments, checkins] = await Promise.all([
-        getDashboardOverview().catch(err => {
-          console.warn('Dashboard overview error:', err)
-          return { totalActiveMembers: 0, totalActiveClasses: 0, totalRevenue: 0, currentMonthRevenue: 0 }
-        }),
-        getRevenueByYear(revenueYear).catch(err => {
-          console.warn('Revenue error:', err)
-          return []
-        }),
-        getRooms().catch(err => {
-          console.warn('Rooms error:', err)
-          return []
-        }),
-        getStaffUsers().catch(err => {
-          console.warn('Staff error:', err)
-          return []
-        }),
-        getPaymentsReport().catch(err => {
-          console.warn('Payments error:', err)
-          return []
-        }),
-        getTodayCheckIns().catch(err => {
-          console.warn('Check-ins error:', err)
-          return []
-        }),
-      ])
-
-      setOverviewData(overview || {})
-      setRevenueMonthly(Array.isArray(revData) ? revData : [])
-      setRoomsList(Array.isArray(rooms) ? rooms : [])
-      setStaffList(Array.isArray(staff) ? staff : [])
-      setPaymentsList(Array.isArray(payments) ? payments : [])
-      setTodayCheckIns(Array.isArray(checkins) ? checkins : [])
-    } catch (err) {
-      console.error('Lỗi khi tải dữ liệu tổng quan:', err)
-    } finally {
-      setLoadingOverview(false)
-    }
-  }
-
-  useEffect(() => {
-    if (section === 'overview') {
-      loadOverviewData()
-    }
-  }, [section, revenueYear])
+  const overviewDataRead = useManagerResource('overview', getDashboardOverview, { initialData: {} })
+  const overviewData = overviewDataRead.data
+  const revenueMonthlyRead = useManagerResource('revenue:' + revenueYear + '', () => getRevenueByYear(revenueYear), { initialData: [] })
+  const revenueMonthly = revenueMonthlyRead.data
+  const roomsListRead = useManagerResource('rooms', getRooms, { initialData: [] })
+  const roomsList = roomsListRead.data
+  const staffListRead = useManagerResource('staff', getStaffUsers, { initialData: [] })
+  const staffList = staffListRead.data
+  const paymentsListRead = useManagerResource('payments', getPaymentsReport, { initialData: [] })
+  const paymentsList = paymentsListRead.data
+  const todayCheckInsRead = useManagerResource('today-checkins', getTodayCheckIns, { initialData: [] })
+  const todayCheckIns = todayCheckInsRead.data
+  const loadingOverview = [overviewDataRead.loading, revenueMonthlyRead.loading, roomsListRead.loading, staffListRead.loading, paymentsListRead.loading, todayCheckInsRead.loading].some(Boolean)
+  const loadOverviewData = () => Promise.all([overviewDataRead.reload(), revenueMonthlyRead.reload(), roomsListRead.reload(), staffListRead.reload(), paymentsListRead.reload(), todayCheckInsRead.reload()])
 
   // Filtered payments list
   const filteredPayments = paymentsList.filter(payment => {
@@ -217,6 +180,7 @@ export default function CenterManager() {
   })()
 
   function selectSection(id) {
+    detailDialog.current?.close()
     setSection(id)
     setSidebarOpen(false)
   }
@@ -474,25 +438,25 @@ export default function CenterManager() {
           )}
 
           {/* 1. Nhân sự & Phân quyền (UsersController) */}
-          {section === 'users' && <StaffManagement />}
+          <div className="manager-view-content" hidden={section !== 'users'}><ManagerViewActivity active={section === 'users'}><StaffManagement /></ManagerViewActivity></div>
 
           {/* 2. Danh mục & Lớp học (SportClassesController, ClassCatalogController) */}
-          {section === 'classes' && <ClassManagement />}
+          <div className="manager-view-content" hidden={section !== 'classes'}><ManagerViewActivity active={section === 'classes'}><ClassManagement /></ManagerViewActivity></div>
 
           {/* 3. Phòng tập / Cơ sở vật chất (RoomsController) */}
-          {section === 'rooms' && <RoomManagement />}
+          <div className="manager-view-content" hidden={section !== 'rooms'}><ManagerViewActivity active={section === 'rooms'}><RoomManagement /></ManagerViewActivity></div>
 
           {/* 4. Gói thẻ hội viên (MembershipPackagesController) */}
-          {section === 'packages' && <PackageManagement />}
+          <div className="manager-view-content" hidden={section !== 'packages'}><ManagerViewActivity active={section === 'packages'}><PackageManagement /></ManagerViewActivity></div>
 
           {/* 5. Chính sách hủy lịch (CancellationPoliciesController) */}
-          {section === 'cancellation' && <CancellationPolicyManagement />}
+          <div className="manager-view-content" hidden={section !== 'cancellation'}><ManagerViewActivity active={section === 'cancellation'}><CancellationPolicyManagement /></ManagerViewActivity></div>
 
           {/* 6. Báo cáo thống kê & Doanh thu (ReportsController) */}
-          {section === 'reports' && <ReportManagement />}
+          <div className="manager-view-content" hidden={section !== 'reports'}><ManagerViewActivity active={section === 'reports'}><ReportManagement /></ManagerViewActivity></div>
 
           {/* 7. Vận hành dịch vụ khách hàng - FrontDesk */}
-          {section === 'frontdesk' && <FrontDeskOperations />}
+          <div className="manager-view-content" hidden={section !== 'frontdesk'}><ManagerViewActivity active={section === 'frontdesk'}><FrontDeskOperations /></ManagerViewActivity></div>
 
           {/* Overview: Biểu đồ doanh thu 12 tháng + Cơ sở vật chất */}
           {section === 'overview' && (
@@ -567,13 +531,7 @@ export default function CenterManager() {
                   <span><i className="available" />Sẵn sàng ({roomsList.filter(r => r.isActive).length})</span>
                   <span><i className="maintenance" />Tạm dừng / Bảo trì ({roomsList.filter(r => !r.isActive).length})</span>
                 </div>
-                <div className="manager-court-grid">
-                  {roomsList.length === 0 ? (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px 0', color: 'var(--manager-secondary, #94a3b8)', fontSize: 12 }}>
-                      Chưa có phòng tập nào trong hệ thống
-                    </div>
-                  ) : (
-                    roomsList.map(room => (
+                <ManagerList items={roomsList} label="Phòng tập tổng quan" className="manager-court-grid">{room => (
                       <div
                         key={room.id}
                         className={`manager-court ${room.isActive ? 'available' : 'maintenance'}`}
@@ -583,9 +541,7 @@ export default function CenterManager() {
                         <div className="manager-court-info"><strong>{room.name}</strong><small>{room.roomType || 'Phòng tập'} · {room.capacity} chỗ</small></div>
                         <span className="manager-court-status">{room.isActive ? 'Sẵn sàng' : 'Tạm dừng'}</span>
                       </div>
-                    ))
-                  )}
-                </div>
+                    )}</ManagerList>
                 <div className="manager-court-note">
                   <Clock3 size={16} />
                   <span>
@@ -630,19 +586,14 @@ export default function CenterManager() {
                 </select>
               </div>
               <div className="manager-table-scroll" role="region" aria-label="Danh sách giao dịch gần đây" tabIndex={0}>
-                <table>
-                  <thead>
-                    <tr>
+                <ManagerList items={filteredPayments} label="Giao dịch tổng quan" table resetKey={JSON.stringify([paymentQuery,paymentStatusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                       <th scope="col">MÃ GIAO DỊCH / HỘI VIÊN</th>
                       <th scope="col">PHƯƠNG THỨC</th>
                       <th scope="col">THỜI GIAN</th>
                       <th scope="col">SỐ TIỀN</th>
                       <th scope="col">TRẠNG THÁI</th>
                       <th scope="col"><span className="manager-sr-only">Chi tiết</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPayments.map(payment => (
+                    </tr>}>{payment => (
                       <tr key={payment.id}>
                         <td>
                           <div className="manager-customer">
@@ -681,9 +632,7 @@ export default function CenterManager() {
                           </button>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    )}</ManagerList>
                 {filteredPayments.length === 0 && (
                   <div className="manager-empty">
                     <Search size={26} />
@@ -718,13 +667,7 @@ export default function CenterManager() {
                   <Check size={13} /> {staffList.filter(s => s.isActive).length} / {staffList.length} nhân sự hoạt động
                 </span>
               </div>
-              <div className="manager-staff-grid">
-                {staffList.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px 0', color: 'var(--manager-secondary, #94a3b8)', fontSize: 12 }}>
-                    Chưa có nhân sự nào trong hệ thống
-                  </div>
-                ) : (
-                  staffList.map(person => {
+              <ManagerList items={staffList} label="Nhân sự tổng quan" className="manager-staff-grid" as="div">{person => {
                     const roleBadge = getRoleBadge(person.role)
                     const initials = getInitials(person.fullName)
                     return (
@@ -739,9 +682,7 @@ export default function CenterManager() {
                         </div>
                       </article>
                     )
-                  })
-                )}
-              </div>
+                  }}</ManagerList>
             </section>
           )}
 
