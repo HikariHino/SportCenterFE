@@ -183,7 +183,7 @@ test('changing accounts creates a fresh workspace instead of reusing the previou
 
 const pager = label => [...document.querySelectorAll('.member-pagination')].find(node => node.getAttribute('aria-label') === `Phân trang ${label}`)
 function listRows(label) {
-  const body = pager(label).parentElement.querySelector(':scope > .member-list-scroll')
+  const body = [...document.querySelectorAll('.member-list-scroll')].find(node => node.getAttribute('aria-label') === `${label} - nội dung`)
   const list = body.querySelector(':scope > [aria-label]')
   return [...(list.tagName === 'TABLE' ? list.querySelector('tbody').children : list.children)].filter(row => row.hasAttribute('data-stt'))
 }

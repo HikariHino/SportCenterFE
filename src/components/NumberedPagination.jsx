@@ -13,7 +13,7 @@ export function NumberedPagination({ total, page = 1, onChange, label = 'Danh s√
   </nav>
 }
 
-export function NumberedList({ items = [], children, label, resetKey = '', table = false, page, total, onPageChange, disabled, renderLayout, prefix = 'list' }) {
+export function NumberedList({ items = [], children, label, resetKey = '', table = false, page, total, onPageChange, disabled, renderLayout, prefix = 'list', showOrdinal = true }) {
   const [selection, setSelection] = useState({ resetKey, page: 1 })
   const remote = typeof onPageChange === 'function'
   const range = listPage(remote ? total : items.length, remote ? page : selection.resetKey === resetKey ? selection.page : 1)
@@ -21,7 +21,7 @@ export function NumberedList({ items = [], children, label, resetKey = '', table
   const rows = visibleItems.map((item, index) => {
     const ordinal = range.offset + index + 1
     const row = children(item, ordinal)
-    return cloneElement(row, { key: row.key ?? item.id ?? ordinal, 'data-stt': ordinal, className: `${row.props.className || ''} ${table ? `${prefix}-numbered-row` : `${prefix}-numbered-item`}` },
+    return cloneElement(row, { key: row.key ?? item.id ?? ordinal, 'data-stt': ordinal, className: `${row.props.className || ''} ${table ? `${prefix}-numbered-row` : showOrdinal ? `${prefix}-numbered-item` : ''}`.trim() },
       table ? [<span className={`${prefix}-stt`} key="ordinal" aria-label={`STT ${ordinal}`}>{ordinal}</span>, ...Children.toArray(row.props.children)] : row.props.children)
   })
   const pagination = <NumberedPagination prefix={prefix} label={label} total={remote ? total : items.length} page={range.page} disabled={disabled} onChange={remote ? onPageChange : page => setSelection({ resetKey, page })} />
