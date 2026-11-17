@@ -9,6 +9,8 @@ import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } fr
 import { getNewPasswordValidationError, NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../utils/passwordValidation'
 import '../style/Login.css'
 import { ACCOUNT_EMAIL_MAX_LENGTH } from '../utils/emailValidation'
+import useOtpCountdown from '../hooks/useOtpCountdown'
+import OtpCountdown from '../components/OtpCountdown'
 
 function Brand() {
   return <Link to="/" className="login-brand"><span className="login-brand-icon"><Trophy size={26} /></span><span><strong>SportPulse</strong><small>Trung tâm Thể thao Olympus</small></span></Link>
@@ -22,10 +24,14 @@ export default function ForgotPassword() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [otp, setOtp] = useState('')
+  const otpClock = useOtpCountdown()
 
   async function sendOtp(targetEmail) {
     const result = await requestResetPassword({ email: targetEmail })
     if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Không thể gửi mã OTP.'))
+    otpClock.start()
+    setOtp('')
     setEmail(targetEmail)
     setOtpRequested(true)
     setMessage(result.message || `Mã OTP đã được gửi đến ${targetEmail}.`)
@@ -37,6 +43,11 @@ export default function ForgotPassword() {
     const form = event.currentTarget
     const data = new FormData(form)
     const targetEmail = (data.get('email') || email).trim()
+    if (!otpRequested && !otpClock.canResend()) return
+    if (otpRequested && !otpClock.canVerify()) {
+      setMessage('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.')
+      return
+    }
 
     if (otpRequested) {
       const otpError = getOtpValidationError(data.get('otp'))
@@ -83,7 +94,7 @@ export default function ForgotPassword() {
   }
 
   async function handleResend() {
-    if (submitting.current) return
+    if (submitting.current || !otpClock.canResend()) return
     submitting.current = true
     setIsSubmitting(true)
     setMessage('')
@@ -114,12 +125,12 @@ export default function ForgotPassword() {
         <form onSubmit={handleSubmit} className="login-form" aria-busy={isSubmitting} onChange={() => setMessage('')}>
           {!otpRequested && <div><label htmlFor="reset-email">Email</label><div className="login-input"><Mail size={19} /><input id="reset-email" name="email" type="email" maxLength={ACCOUNT_EMAIL_MAX_LENGTH} autoComplete="email" placeholder="name@olympus.vn" required /></div></div>}
           {otpRequested && <>
-            <div><label htmlFor="reset-otp">Mã OTP</label><div className="login-input"><MessageCircle size={19} /><input id="reset-otp" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required /></div></div>
+            <div><label htmlFor="reset-otp">Mã OTP</label><div className="login-input"><MessageCircle size={19} /><input id="reset-otp" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required value={otp} onChange={event => setOtp(event.target.value)} disabled={isSubmitting || !otpClock.remaining} aria-describedby="reset-otp-timer" /></div><OtpCountdown id="reset-otp-timer" remaining={otpClock.remaining} /></div>
             <div><label htmlFor="reset-password">Mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-password" name="newPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} placeholder="Tối thiểu 8 ký tự" required /><button type="button" className="login-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button></div></div>
             <div><label htmlFor="reset-confirm-password">Xác nhận mật khẩu mới</label><div className="login-input"><LockKeyhole size={19} /><input id="reset-confirm-password" name="confirmPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} placeholder="Nhập lại mật khẩu mới" required /></div></div>
           </>}
-          <button className="login-submit" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Đang xử lý...' : otpRequested ? 'Đặt lại mật khẩu' : 'Gửi mã OTP'} <ArrowRight size={19} /></button>
-          {otpRequested && <div className="reset-actions"><button type="button" className="login-text-button" onClick={handleResend} disabled={isSubmitting}>Gửi lại mã OTP</button><button type="button" className="login-text-button" onClick={() => { setOtpRequested(false); setMessage('') }}>Dùng email khác</button></div>}
+          <button className="login-submit" type="submit" disabled={isSubmitting || (otpRequested ? !otpClock.remaining : otpClock.resendRemaining > 0)}>{isSubmitting ? 'Đang xử lý...' : otpRequested ? 'Đặt lại mật khẩu' : otpClock.resendRemaining ? `Gửi lại sau ${otpClock.resendRemaining}s` : 'Gửi mã OTP'} <ArrowRight size={19} /></button>
+          {otpRequested && <div className="reset-actions"><button type="button" className="login-text-button" onClick={handleResend} disabled={isSubmitting || otpClock.resendRemaining > 0}>{otpClock.resendRemaining ? `Gửi lại sau ${otpClock.resendRemaining}s` : 'Gửi lại mã OTP'}</button><button type="button" className="login-text-button" disabled={isSubmitting} onClick={() => { setOtpRequested(false); setEmail(''); setOtp(''); setMessage(''); otpClock.clear() }}>Dùng email khác</button></div>}
         </form>
         <p className="login-feedback" role="status" aria-live="polite">{message}</p>
         <div className="login-register">Đã nhớ mật khẩu? <Link className="login-text-button" to="/login">Đăng nhập ngay</Link></div>

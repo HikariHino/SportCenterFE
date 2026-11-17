@@ -1,13 +1,12 @@
-import { timetableDateKey } from './memberTimetable.js'
 import { getNewPasswordValidationError } from './passwordValidation.js'
-import { getVietnamPhoneValidationError } from './profileValidation.js'
+import { getVietnamPhoneValidationError, profileDateLimit } from './profileValidation.js'
 import { getTextLengthValidationError } from './textLengthValidation.js'
 import { getFullNameCharactersError } from './fullNameValidation.js'
 
 export const MANAGER_ACCOUNT_LIMITS = { fullName: 100, email: 256, phone: 10, address: 200, fitnessGoal: 100 }
 export const MANAGER_PHONE_PATTERN = '0[0-9]{9}'
 export const MANAGER_PHONE_MESSAGE = 'Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0.'
-export const managerBirthDateLimit = (now = Date.now()) => timetableDateKey(now)
+export const managerBirthDateLimit = profileDateLimit
 
 function accountError({ fullName, email, password, phone }, requirePhone) {
   if (typeof fullName !== 'string' || !fullName.trim()) return { field: 'fullName', message: 'Vui lòng nhập họ và tên, không chỉ gồm khoảng trắng.' }

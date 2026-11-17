@@ -1,5 +1,6 @@
 import { getNewPasswordValidationError } from './passwordValidation.js'
 import { getFullNameCharactersError } from './fullNameValidation.js'
+import { timetableDateKey } from './memberTimetable.js'
 
 export const PROFILE_FULL_NAME_MAX_LENGTH = 100
 export const PROFILE_PHONE_MAX_LENGTH = 30
@@ -14,8 +15,8 @@ export function getProfilePhoneConflict(value, conflict) {
   const key = phone => typeof phone === 'string' ? normalizeProfilePhone(phone).replace(/^\+84/, '0') : ''
   return conflict?.phoneNumber && key(value) === key(conflict.phoneNumber) ? conflict.message : undefined
 }
-// Match ProfileService's DateTime.UtcNow.Date comparison and the stored date-only value.
-export const profileDateLimit = (now = Date.now()) => new Date(now).toISOString().slice(0, 10)
+// Calendar limits use the center's day, regardless of the browser's timezone.
+export const profileDateLimit = (now = Date.now()) => timetableDateKey(now)
 
 export function profileValidationErrors(values, { partial = false, requirePhone = false, requireDateOfBirth = false, phoneConflict = null, now = Date.now() } = {}) {
   const errors = {}
