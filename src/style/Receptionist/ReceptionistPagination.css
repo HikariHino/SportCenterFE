@@ -12,7 +12,7 @@
 .reception-dashboard .reception-numbered-row > .reception-stt { display: block; }
 .reception-numbered-item { position: relative; }
 .reception-numbered-item::before { content: 'STT ' attr(data-stt); display: block; grid-column: 1 / -1; color: var(--rc-muted); font-size: 11px; line-height: 1.6; margin-bottom: 6px; }
-.reception-support-list > .reception-numbered-item::before { grid-column: 1 / -1; }
+.reception-support-list > .reception-numbered-item::before { content: none; }
 .reception-numbered-item > header { min-width: 0; }
 .reception-schedule-session-list > .reception-numbered-item::before, .reception-room-cancelled-list > .reception-numbered-item::before { position: absolute; top: 3px; left: 12px; pointer-events: none; }
 .reception-schedule-session-list > .reception-numbered-item, .reception-room-cancelled-list > .reception-numbered-item { padding-top: 19px; }
