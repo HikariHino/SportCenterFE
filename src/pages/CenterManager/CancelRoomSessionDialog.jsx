@@ -39,6 +39,7 @@ export default function CancelRoomSessionDialog({ session, sessions, room, conte
   const close = () => { if (!actionLock.current) onClose() }
   const submit = async event => {
     event.preventDefault()
+    // Khóa gửi lặp và kiểm tra lý do trước khi gọi service.
     if (actionLock.current) return
     if (!reason.trim() || reason.trim().length > 500) {
       setError('Vui lòng nhập lý do hủy từ 1 đến 500 ký tự.')
@@ -50,9 +51,12 @@ export default function CancelRoomSessionDialog({ session, sessions, room, conte
     setProgress({ completed: 0, total: pending.length })
     onBusyChange(true)
     try {
+      // Luồng theo lớp truyền cancelSessionsForClass. Luồng theo phòng mặc định dùng cancelRoomSessions.
+      // setProgress nhận số buổi đã xử lý, gồm cả buổi thành công và thất bại.
       const result = await cancelSessions({ sessions: pending, reason }, setProgress)
       setSucceeded(previous => [...previous, ...result.cancelled])
       setFailures(result.failed)
+      // Lần xác nhận tiếp theo chỉ gửi các buổi hủy thất bại.
       setPending(result.failed.map(item => item.session))
       onCancelled(result)
     } catch (requestError) {

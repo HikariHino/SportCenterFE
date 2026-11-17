@@ -17,7 +17,7 @@ const suggestions = [
   { icon: Dumbbell, title: 'Cách khởi động', question: 'Tôi mới bắt đầu tập gym. Tôi nên khởi động như thế nào trước buổi tập?' },
 ]
 
-export default function MemberAiChat({ active, onNavigate }) {
+export default function MemberAiChat({ active, onNavigate, showWorkoutShortcut }) {
   const user = useAuth()?.user
   const account = user ? String(user.userId ?? user.id ?? user.email ?? '') : null
   const loginId = user ? getLoginSessionId() : ''
@@ -196,7 +196,7 @@ export default function MemberAiChat({ active, onNavigate }) {
         <aside className="member-ai-side">
           <nav className="member-ai-shortcuts" aria-label="Truy cập nhanh">
           <h3>Tiện ích hội viên</h3>
-          <button type="button" onClick={() => onNavigate('ai-workout')}><Dumbbell size={16} /> Gợi ý bài tập AI <ArrowUpRight size={14} /></button>
+          {showWorkoutShortcut && <button type="button" onClick={() => onNavigate('ai-workout')}><Dumbbell size={16} /> Gợi ý bài tập AI <ArrowUpRight size={14} /></button>}
           <button type="button" onClick={() => onNavigate('subscriptions')}><CreditCard size={14} /> Gói tập <ArrowUpRight size={12} /></button>
           <button type="button" onClick={() => onNavigate('classes')}><CalendarDays size={14} /> Lịch học <ArrowUpRight size={12} /></button>
           <button type="button" onClick={() => onNavigate('support')}><AlertCircle size={14} /> Hỗ trợ <ArrowUpRight size={12} /></button>

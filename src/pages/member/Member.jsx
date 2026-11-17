@@ -81,6 +81,7 @@ export const memberNavSections = [
         id: 'ai-workout',
         label: 'Gợi ý bài tập AI',
         icon: Dumbbell,
+        hidden: true,
       },
       {
         id: 'ai-chat',
@@ -101,7 +102,7 @@ export const memberNavSections = [
       },
     ],
   },
-]
+].map(section => ({ ...section, items: section.items.filter(item => !item.hidden) }))
 
 const allNavItems = memberNavSections.flatMap(section => section.items)
 const memberViewIds = allNavItems.map(item => item.id)
@@ -301,7 +302,7 @@ function MemberWorkspace() {
       case 'training-plans':
         return <TrainingPlansView user={user} showNotice={showNotice} />
       case 'ai-chat':
-        return <MemberAiChat active={activeNav === 'ai-chat'} onNavigate={selectNav} />
+        return <MemberAiChat active={activeNav === 'ai-chat'} onNavigate={selectNav} showWorkoutShortcut={memberViewIds.includes('ai-workout')} />
       case 'ai-workout':
         return <MemberAiWorkout active={activeNav === 'ai-workout'} onNavigate={selectNav} />
       case 'support':
