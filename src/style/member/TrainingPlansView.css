@@ -37,13 +37,16 @@
 .training-plans-exercises:not([open]) summary svg { transform: rotate(-90deg); }
 .training-plans-exercises summary span:last-child { font-size: 10px; font-weight: 400; color: var(--theme-muted); }
 .training-plans-exercises summary:hover { background: var(--theme-raised); }
-.training-plans-table-scroll { max-width: 100%; overflow-x: auto; border-radius: 0 0 14px 14px; scrollbar-width: thin; }
+.training-plans-table-scroll { min-width: 0; max-width: 100%; border-radius: 0 0 14px 14px; overflow: hidden; }
 .training-plans-table-scroll table { width: 100%; min-width: 660px; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
 .training-plans-col-exercise { width: 32%; }
 .training-plans-col-number { width: 10%; }
 .training-plans-col-duration { width: 13%; }
 .training-plans-col-notes { width: 35%; }
 .training-plans-table-scroll thead th { background: var(--theme-bg); color: var(--theme-muted); font-size: 10px; font-weight: 600; white-space: nowrap; }
+.training-plans-table-scroll thead th:first-child { width: 46px; }
+.training-plans-table-scroll thead th:nth-child(2) { width: 28%; }
+.training-plans-table-scroll thead th:is(:nth-child(3), :nth-child(4), :nth-child(5)) { width: 11%; }
 .training-plans-table-scroll th, .training-plans-table-scroll td { padding: 10px 14px; border-top: 1px solid var(--theme-border); text-align: left; vertical-align: top; line-height: 1.65; }
 .training-plans-table-scroll td:not(.training-plans-notes) { white-space: nowrap; }
 .training-plans-exercise-name { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }

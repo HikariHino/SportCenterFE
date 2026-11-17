@@ -193,7 +193,7 @@ export function SupportTicketsView() {
           : !filtered.length ? <div className="member-support-state" role="status"><MessageSquare size={34} /><h3>{tickets.length ? 'Không tìm thấy phiếu phù hợp' : 'Bạn chưa có phiếu hỗ trợ'}</h3><p>{tickets.length ? 'Thử thay đổi từ khóa hoặc trạng thái để xem các phiếu khác.' : 'Gửi yêu cầu mới khi bạn cần trợ giúp hoặc muốn phản ánh sự cố.'}</p></div>
             : <>
               <div className="member-support-list-heading"><p className="member-support-count">{filtered.length} phiếu hỗ trợ</p><span>Mới nhất trước</span></div>
-              <MemberList items={visible} total={filtered.length} page={currentPage} onPageChange={setPage} label="Phiếu hỗ trợ" className="member-support-list" resetKey={JSON.stringify([search, status])}>{ticket => <TicketCard key={ticket.id} ticket={ticket} onAttach={setAttaching} />}</MemberList>
+              <MemberList items={visible} total={filtered.length} page={currentPage} onPageChange={setPage} label="Phiếu hỗ trợ" className="member-support-list" showOrdinal={false} resetKey={JSON.stringify([search, status])}>{ticket => <TicketCard key={ticket.id} ticket={ticket} onAttach={setAttaching} />}</MemberList>
 
             </>}
     </section>
