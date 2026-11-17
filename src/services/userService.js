@@ -1,4 +1,5 @@
 import api from './api'
+import { STAFF_ASSIGNABLE_ROLES } from '../utils/managerAccountValidation.js'
 
 /**
  * @typedef {Object} StaffUser
@@ -95,10 +96,11 @@ export async function createStaffUser({ email, password, fullName, phone, role }
  * Thay đổi vai trò (Role) của nhân viên
  * @param {number} id
  * @param {Object} data
- * @param {'Manager'|'Receptionist'|'Coach'} data.role
+ * @param {'Receptionist'|'Coach'} data.role
  * @returns {Promise<StaffUser>}
  */
 export async function updateStaffRole(id, { role }) {
+  if (!STAFF_ASSIGNABLE_ROLES.includes(role)) throw new Error('Vui lòng chọn vai trò Huấn luyện viên hoặc Lễ tân.')
   const response = await api.put(`/users/staff/${id}/role`, { role })
   const body = response.data
 

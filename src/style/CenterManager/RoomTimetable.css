@@ -43,10 +43,14 @@
 .room-recurring-preview { padding: 14px; border: 1px solid var(--theme-border); border-radius: 10px; background: var(--theme-surface); }
 .room-recurring-preview summary { cursor: pointer; font-size: 12px; }
 .room-recurring-preview summary strong { color: var(--theme-accent); }
-.room-recurring-preview > div { max-height: 240px; overflow: auto; margin-top: 12px; }
-.room-recurring-preview table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.room-recurring-preview th, .room-recurring-preview td { padding: 8px 10px; border: 1px solid var(--theme-border); text-align: left; }
-.room-recurring-preview th { background: var(--theme-bg); }
+.room-recurring-preview > .manager-paged-list { margin-top: 10px; }
+.room-recurring-preview .manager-list-scroll > table { min-width: 0; font-size: 12px; }
+.room-recurring-preview :is(th, td) { padding: 8px 10px; border-bottom: 1px solid var(--theme-border); text-align: left; }
+.room-recurring-preview tbody tr:last-child > td { border-bottom: 0; }
+:is(.room-recurring-preview, .room-cancel-dialog) .manager-list-scroll { scrollbar-gutter: auto; }
+:is(.room-recurring-preview, .room-cancel-dialog) .manager-pagination { padding: 8px 10px; }
+:is(.room-recurring-preview, .room-cancel-dialog) .manager-pagination label { display: flex; align-items: center; white-space: nowrap; font-weight: 400; }
+:is(.room-recurring-preview, .room-cancel-dialog) .manager-pagination :is(select, button) { width: auto; padding: 5px 8px; }
 .room-recurring-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--theme-red, #b42318); font-size: 12px; overflow-wrap: anywhere; }
 .room-recurring-error p, .room-recurring-class-range { margin: 0; }
 .room-recurring-error ul { flex-basis: 100%; max-height: 180px; overflow: auto; margin: 0; padding-left: 20px; }
@@ -130,9 +134,10 @@
 .room-bulk-actions .room-bulk-confirm { margin-left: auto; color: #fff; background: #b42318; border-color: #b42318; }
 .room-bulk-actions .room-bulk-confirm:hover:not(:disabled) { background: #8f1b13; }
 .room-timetable-header-actions .room-bulk-toggle[aria-pressed='true'] { color: var(--theme-accent); border-color: var(--theme-accent); background: var(--theme-raised); }
-.room-cancel-preview { display: grid; gap: 10px; max-height: 230px; overflow-y: auto; list-style: none; margin: 0; padding: 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-bg); }
-.room-cancel-preview li { display: grid; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--theme-border); }
-.room-cancel-preview li:last-child { padding-bottom: 0; border-bottom: 0; }
+.room-cancel-preview { background: var(--theme-bg); }
+.room-cancel-preview li { display: grid; gap: 3px; padding: 10px 14px; border-bottom: 1px solid var(--theme-border); overflow-wrap: anywhere; }
+.room-cancel-preview li:last-child { border-bottom: 0; }
+.room-cancel-preview .manager-numbered-item::before { content: none; }
 .room-cancel-preview span { color: var(--theme-muted); font-size: 12px; }
 .room-cancel-success { color: var(--theme-green, #096445); }
 .room-timetable-refresh-error { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; padding: 12px; border-radius: 8px; color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fff0f2); }
@@ -153,4 +158,8 @@
   .room-recurring-fields { grid-template-columns: minmax(0, 1fr); }
   .room-recurring-form > footer { flex-wrap: wrap; }
   .room-recurring-form > footer > button { flex: 1 1 140px; }
+  .room-recurring-preview { padding: 10px; }
+  .room-recurring-preview :is(th, td) { padding: 7px 6px; }
+  .room-cancel-dialog { padding: 16px; }
+  .room-cancel-dialog footer > button { flex: 1 1 auto; }
 }

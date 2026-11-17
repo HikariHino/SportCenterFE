@@ -76,6 +76,8 @@ export default function RecurringRoomSessionsForm({ room, rooms, initialSlot, on
     }
     catch (validationError) { return { items: [], error: validationError.message } }
   }, [form, selectedClass, room, rooms])
+  const firstPreviewDate = preview.items[0]?.date
+  const lastPreviewDate = preview.items.at(-1)?.date
   let chosenDays = []
   try { chosenDays = parseRecurringWeekdays(form.weekdays) } catch { /* The preview shows the validation message. */ }
 
@@ -168,8 +170,14 @@ export default function RecurringRoomSessionsForm({ room, rooms, initialSlot, on
     {preview.skippedOutsideRange > 0 && <p className="room-recurring-skip">Bỏ qua {preview.skippedOutsideRange} buổi có giờ học nằm ngoài thời gian bắt đầu hoặc kết thúc của lớp.</p>}
     {preview.error && <p className="room-recurring-error" role="alert"><AlertCircle size={16} />{preview.error}</p>}
     {preview.items.length > 0 && <details className="room-recurring-preview" open>
-      <summary><strong>{preview.items.length} buổi học</strong> · {dateLabel(preview.items[0].date)} – {dateLabel(preview.items.at(-1).date)} · {form.startTime}–{form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}</summary>
-      <div><ManagerList items={preview.items} label="Buổi học xem trước" table heading={<tr><th scope="col" className="manager-stt">STT</th><th>Thứ</th><th>Ngày học</th><th>Khung giờ</th></tr>}>{item => <tr key={item.startsAt}><td>{weekdayLabel(item.weekday)}</td><td>{dateLabel(item.date)}</td><td>{form.startTime} – {form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}</td></tr>}</ManagerList></div>
+      <summary>
+        <strong>{preview.items.length} buổi học</strong> · {dateLabel(firstPreviewDate)}
+        {lastPreviewDate !== firstPreviewDate && ` – ${dateLabel(lastPreviewDate)}`}
+        {' · '}{form.startTime}–{form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}
+      </summary>
+      <ManagerList items={preview.items} label="Buổi học xem trước" compact hideSinglePagePagination table heading={<tr><th scope="col" className="manager-stt">STT</th><th scope="col">Thứ</th><th scope="col">Ngày học</th><th scope="col">Khung giờ</th></tr>}>
+        {item => <tr key={item.startsAt}><td>{weekdayLabel(item.weekday)}</td><td>{dateLabel(item.date)}</td><td>{form.startTime} – {form.endTime}{form.mode === 'date' && form.endsNextDay && ' (+1 ngày)'}</td></tr>}
+      </ManagerList>
     </details>}
     {(totals.created > 0 || totals.existing > 0) && <p className="room-recurring-saved" role="status">Đã tạo {totals.created} buổi; {totals.existing} buổi đã có sẵn được giữ nguyên.{pending && ` Còn ${pending.length} buổi cần xử lý.`}</p>}
     {error && <div className="room-recurring-error" role="alert"><p>{error}</p>{conflicts.length > 0 && <ManagerList items={conflicts} label="Xung đột lịch" as="ul">{item => <li key={item.startsAt}>{dateLabel(item.date)} {form.startTime}–{form.endTime}: {item.message}</li>}</ManagerList>}</div>}
