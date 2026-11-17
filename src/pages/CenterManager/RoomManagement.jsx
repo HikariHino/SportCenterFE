@@ -1,3 +1,5 @@
+import useExclusiveAction from '../../hooks/useExclusiveAction'
+import ManagerFormError from './ManagerFormError'
 import { ManagerList } from './ManagerPagination'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
@@ -77,6 +79,7 @@ const toLocalInputString = (d) => {
 }
 
 export default function RoomManagement() {
+  const exclusiveAction = useExclusiveAction()
   const viewActive = useManagerViewActive()
 
   const [localError, setError] = useState('')
@@ -192,6 +195,7 @@ export default function RoomManagement() {
 
   // Open Check Availability Modal
   const handleOpenCheck = (room) => {
+    setError('')
     setCheckingRoom(room)
     setAvailResult(null)
     const now = new Date()
@@ -206,7 +210,7 @@ export default function RoomManagement() {
   }
 
   // Submit Create Room
-  const handleCreateSubmit = async (e) => {
+  const handleCreateSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     const validationError = getManagerFormValidationError('room', roomForm)
     if (validationError) { setError(validationError); return }
@@ -231,10 +235,10 @@ export default function RoomManagement() {
     } finally {
       setSubmitting(false)
     }
-  }
+  })
 
   // Submit Edit Room
-  const handleEditSubmit = async (e) => {
+  const handleEditSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     const validationError = getManagerFormValidationError('room', roomForm)
     if (validationError) { setError(validationError); return }
@@ -262,10 +266,10 @@ export default function RoomManagement() {
     } finally {
       setSubmitting(false)
     }
-  }
+  })
 
   // Submit Delete Room
-  const handleDeleteSubmit = async () => {
+  const handleDeleteSubmit = exclusiveAction(async () => {
     if (!deletingRoom) return
     setSubmitting(true)
     setError('')
@@ -278,15 +282,14 @@ export default function RoomManagement() {
       setDeletingRoom(null)
       setSuccess(`Đã xóa / ngừng hoạt động phòng "${deletingRoom.name}".`)
     } catch (err) {
-      setDeletingRoom(null)
       setError(getRoomErrorMessage(err, 'Không thể xóa phòng tập.'))
     } finally {
       setSubmitting(false)
     }
-  }
+  })
 
   // Quick toggle active
-  const handleToggleActive = async (room) => {
+  const handleToggleActive = exclusiveAction(async (room) => {
     const nextActive = !room.isActive
     if (!nextActive) {
       // Prompt confirm deletion
@@ -305,10 +308,10 @@ export default function RoomManagement() {
     } catch (err) {
       setError(getRoomErrorMessage(err, 'Không thể kích hoạt lại phòng tập.'))
     }
-  }
+  })
 
   // Submit Availability Check
-  const handleCheckAvailabilitySubmit = async (e) => {
+  const handleCheckAvailabilitySubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!checkingRoom) return
     if (!availForm.startsAt || !availForm.endsAt) {
@@ -334,7 +337,7 @@ export default function RoomManagement() {
     } finally {
       setCheckingAvail(false)
     }
-  }
+  })
 
   // Export CSV
   const handleExportCSV = () => {
@@ -447,7 +450,7 @@ export default function RoomManagement() {
       </section>
 
       {/* Notification Alerts */}
-      {error && (
+      {error && !(showCreateModal || editingRoom || deletingRoom || checkingRoom) && (
         <div className="room-alert room-alert-error" role="alert">
           <div className="room-alert-content">
             <AlertCircle size={18} />
@@ -753,6 +756,7 @@ export default function RoomManagement() {
             </div>
             <form onSubmit={handleCreateSubmit}>
               <div className="room-modal-body">
+                <ManagerFormError message={error} />
                 <div className="room-form-group">
                   <label>
                     Tên phòng / sân tập <span className="required">*</span>
@@ -872,6 +876,7 @@ export default function RoomManagement() {
             </div>
             <form onSubmit={handleEditSubmit}>
               <div className="room-modal-body">
+                <ManagerFormError message={error} />
                 <div className="room-form-group">
                   <label>
                     Tên phòng / sân tập <span className="required">*</span>
@@ -984,6 +989,7 @@ export default function RoomManagement() {
               </button>
             </div>
             <div className="room-modal-body">
+              <ManagerFormError message={error} />
               <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn xóa phòng <strong>"{deletingRoom.name}"</strong> (Mã: #{deletingRoom.id})?
               </p>
@@ -1040,6 +1046,7 @@ export default function RoomManagement() {
             </div>
             <form onSubmit={handleCheckAvailabilitySubmit}>
               <div className="room-modal-body">
+                <ManagerFormError message={error} />
                 <p style={{ margin: 0, fontSize: 12, color: 'var(--manager-muted)' }}>
                   Kiểm tra xem phòng có bị trùng với bất kỳ buổi học nào trong khung thời gian dự kiến hay không.
                 </p>

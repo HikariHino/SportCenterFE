@@ -1,3 +1,5 @@
+import useExclusiveAction from '../../hooks/useExclusiveAction'
+import ManagerFormError from './ManagerFormError'
 import { ManagerList } from './ManagerPagination'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
@@ -72,6 +74,7 @@ const formatDuration = (days) => {
 }
 
 export default function PackageManagement() {
+  const exclusiveAction = useExclusiveAction()
   const viewActive = useManagerViewActive()
 
   const [localError, setError] = useState('')
@@ -199,7 +202,7 @@ export default function PackageManagement() {
   }
 
   // Submit Create Package
-  const handleCreateSubmit = async (e) => {
+  const handleCreateSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     const validationError = getManagerFormValidationError('package', packageForm)
     if (validationError) { setError(validationError); return }
@@ -234,10 +237,10 @@ export default function PackageManagement() {
     } finally {
       setSubmitting(false)
     }
-  }
+  })
 
   // Submit Edit Package
-  const handleEditSubmit = async (e) => {
+  const handleEditSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     const validationError = getManagerFormValidationError('package', packageForm)
     if (validationError) { setError(validationError); return }
@@ -274,10 +277,10 @@ export default function PackageManagement() {
     } finally {
       setSubmitting(false)
     }
-  }
+  })
 
   // Quick toggle active / inactive
-  const handleToggleStatus = async (pkg) => {
+  const handleToggleStatus = exclusiveAction(async (pkg) => {
     setSubmitting(true)
     setError('')
     try {
@@ -302,13 +305,13 @@ export default function PackageManagement() {
         )
         setSuccess(`Đã mở bán lại gói "${pkg.packageName}".`)
       }
+      setTogglingPackage(null)
     } catch (err) {
       setError(getPackageErrorMessage(err, 'Không thể cập nhật trạng thái gói hội viên.'))
     } finally {
       setSubmitting(false)
-      setTogglingPackage(null)
     }
-  }
+  })
 
   // Export CSV
   const handleExportCSV = () => {
@@ -428,7 +431,7 @@ export default function PackageManagement() {
       </section>
 
       {/* Notification Alerts */}
-      {error && (
+      {error && !(showCreateModal || editingPackage || selectedPackageForDetail || togglingPackage) && (
         <div className="pkg-alert pkg-alert-error" role="alert">
           <div className="pkg-alert-content">
             <AlertCircle size={18} />
@@ -706,6 +709,7 @@ export default function PackageManagement() {
             </div>
             <form onSubmit={handleCreateSubmit}>
               <div className="pkg-modal-body">
+                <ManagerFormError message={error} />
                 <PackageTypeField id="create-package-type" value={packageForm.packageType} onChange={packageType => setPackageForm(current => ({ ...current, packageType }))} disabled={submitting} />
                 <div className="pkg-form-group">
                   <label>
@@ -863,6 +867,7 @@ export default function PackageManagement() {
             </div>
             <form onSubmit={handleEditSubmit}>
               <div className="pkg-modal-body">
+                <ManagerFormError message={error} />
                 <PackageTypeField id="edit-package-type" value={packageForm.packageType} onChange={packageType => setPackageForm(current => ({ ...current, packageType }))} disabled={submitting} />
                 <div className="pkg-form-group">
                   <label>
@@ -1015,6 +1020,7 @@ export default function PackageManagement() {
               </button>
             </div>
             <div className="pkg-modal-body">
+              <ManagerFormError message={error} />
               <CatalogImage src={selectedPackageForDetail.imageUrl} fallback={<Package size={32} />} className="catalog-image--detail" />
               <div className="package-pricing">
                 <strong>{formatCurrency(selectedPackageForDetail.price)}</strong>
@@ -1113,6 +1119,7 @@ export default function PackageManagement() {
               </button>
             </div>
             <div className="pkg-modal-body">
+              <ManagerFormError message={error} />
               <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn{' '}
                 <strong>{togglingPackage.isActive ? 'tạm dừng bán' : 'mở bán lại'}</strong> gói thẻ{' '}
