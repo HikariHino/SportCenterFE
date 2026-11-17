@@ -26,16 +26,15 @@ import {
   updateStaffRole,
 } from "../../services/userService"
 import { createManagerStaff } from "../../services/managerAccountService"
-import { getManagerStaffValidationError, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN } from "../../utils/managerAccountValidation"
+import { getManagerStaffValidationError, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN, STAFF_ASSIGNABLE_ROLES } from "../../utils/managerAccountValidation"
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from "../../utils/passwordValidation"
 import "../../style/CenterManager/StaffManagement.css"
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from "../../utils/fullNameValidation"
 
-const ROLE_OPTIONS = [
-  { value: "Manager", label: "Quản lý", tone: "role-manager", icon: ShieldCheck, desc: "Toàn quyền quản trị trung tâm, tài khoản và chính sách." },
-  { value: "Coach", label: "Huấn luyện viên", tone: "role-coach", icon: Shield, desc: "Quản lý lớp học, điểm danh và học viên." },
-  { value: "Receptionist", label: "Lễ tân", tone: "role-receptionist", icon: UserCheck, desc: "Tiếp đón khách, check-in, đăng ký gói và giao dịch tại quầy." },
-]
+const ROLE_DESCRIPTIONS = {
+  Coach: "Quản lý lớp học, điểm danh và học viên.",
+  Receptionist: "Tiếp đón khách, check-in, đăng ký gói và giao dịch tại quầy.",
+}
 
 const roleBadgeClass = (role) => {
   switch (String(role || "").toLowerCase()) {
@@ -106,9 +105,10 @@ export default function StaffManagement() {
   const [createError, setCreateError] = useState("")
   const [createInvalidField, setCreateInvalidField] = useState("")
 
-  const [updateRoleForm, setUpdateRoleForm] = useState("Coach")
+  const [updateRoleForm, setUpdateRoleForm] = useState("")
   const [updateRoleSubmitting, setUpdateRoleSubmitting] = useState(false)
   const [updateRoleError, setUpdateRoleError] = useState("")
+  const canUpdateRole = STAFF_ASSIGNABLE_ROLES.includes(updateRoleForm) && updateRoleForm !== selectedStaffForRole?.role
 
   const [deactivateSubmitting, setDeactivateSubmitting] = useState(false)
   const [deactivateError, setDeactivateError] = useState("")
@@ -215,13 +215,13 @@ export default function StaffManagement() {
   // Handlers for Update Role
   const handleOpenUpdateRole = (staff) => {
     setSelectedStaffForRole(staff)
-    setUpdateRoleForm(staff.role || "Coach")
+    setUpdateRoleForm(STAFF_ASSIGNABLE_ROLES.includes(staff.role) ? staff.role : "")
     setUpdateRoleError("")
   }
 
   const handleUpdateRoleSubmit = async (e) => {
     e.preventDefault()
-    if (!selectedStaffForRole) return
+    if (!selectedStaffForRole || updateRoleSubmitting || !canUpdateRole) return
 
     setUpdateRoleError("")
     setUpdateRoleSubmitting(true)
@@ -640,15 +640,15 @@ export default function StaffManagement() {
                   <select
                     id="staff-role"
                     name="role"
+                    aria-invalid={createInvalidField === "role" || undefined}
+                    aria-describedby={createInvalidField === "role" ? "staff-create-error" : undefined}
                     value={createForm.role}
                     onChange={(e) => changeCreateField("role", e.target.value)}
                     required
                   >
-                    <option value="Coach">Huấn luyện viên (Coach)</option>
-                    <option value="Receptionist">Lễ tân (Receptionist)</option>
-                    <option value="Manager">Quản lý (Manager)</option>
+                    {STAFF_ASSIGNABLE_ROLES.map(role => <option key={role} value={role}>{roleNameVi(role)} ({role})</option>)}
                   </select>
-                  <small>{ROLE_OPTIONS.find(option => option.value === createForm.role)?.desc}</small>
+                  <small>{ROLE_DESCRIPTIONS[createForm.role]}</small>
                 </div>
               </div>
 
@@ -720,11 +720,10 @@ export default function StaffManagement() {
                     onChange={(e) => setUpdateRoleForm(e.target.value)}
                     required
                   >
-                    <option value="Coach">Huấn luyện viên (Coach)</option>
-                    <option value="Receptionist">Lễ tân (Receptionist)</option>
-                    <option value="Manager">Quản lý (Manager)</option>
+                    <option value="" disabled>Chọn vai trò mới</option>
+                    {STAFF_ASSIGNABLE_ROLES.map(role => <option key={role} value={role}>{roleNameVi(role)} ({role})</option>)}
                   </select>
-                  <small>{ROLE_OPTIONS.find(option => option.value === updateRoleForm)?.desc}</small>
+                  {updateRoleForm && <small>{ROLE_DESCRIPTIONS[updateRoleForm]}</small>}
                 </div>
 
                 <div className="staff-deactivate-notice" style={{ background: "var(--manager-info-bg, #f0f9ff)", borderColor: "var(--manager-info-border, #bae6fd)", color: "var(--manager-info, #0369a1)" }}>
@@ -751,7 +750,7 @@ export default function StaffManagement() {
                 <button
                   type="submit"
                   className="staff-btn staff-btn-primary"
-                  disabled={updateRoleSubmitting || updateRoleForm === selectedStaffForRole.role}
+                  disabled={updateRoleSubmitting || !canUpdateRole}
                 >
                   {updateRoleSubmitting ? "Đang cập nhật..." : "Cập nhật vai trò"}
                 </button>

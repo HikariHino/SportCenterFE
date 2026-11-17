@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 import { getManagerMemberValidationError, getManagerStaffValidationError, managerBirthDateLimit } from '../src/utils/managerAccountValidation.js'
 
-let server, api, service
+let server, api, service, userService
 const descriptors = new Map()
 const now = Date.parse('2026-11-04T10:00:00+07:00')
 const member = { fullName: 'Nguyễn Thế Anh', email: 'anh@fpt.edu.vn', password: 'Password123!', phone: '0912345678', dateOfBirth: '2000-01-01', gender: 'Male', address: 'Hà Nội', fitnessGoal: 'Tăng sức bền' }
@@ -19,6 +19,7 @@ before(async () => {
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   api = (await server.ssrLoadModule('/src/services/api.js')).default
   service = await server.ssrLoadModule('/src/services/managerAccountService.js')
+  userService = await server.ssrLoadModule('/src/services/userService.js')
 })
 after(async () => {
   await server?.close()
@@ -107,15 +108,23 @@ test('birth date limits follow the Vietnam calendar at midnight without inventin
   assert.equal(getManagerMemberValidationError({ ...member, dateOfBirth: '2026-11-05' }, midnight).field, 'dateOfBirth')
 })
 
-test('optional member text is bounded and staff roles must be selected from the existing list', async t => {
+test('optional member text is bounded and staff creation only accepts Coach and Receptionist', async t => {
   const calls = mockApi(t)
   for (const [field, max] of [['address', 200], ['fitnessGoal', 100]]) {
     await assert.rejects(service.createManagerMember({ ...member, [field]: 'a'.repeat(max + 1) }), error => error.field === field)
     assert.equal(getManagerMemberValidationError({ ...member, [field]: 'a'.repeat(max) }, now), null)
   }
-  for (const role of ['', undefined, 'Member', 'Admin', 'coach']) await assert.rejects(service.createManagerStaff({ ...staff, role }), error => error.field === 'role')
+  for (const role of ['', undefined, 'Manager', 'Member', 'Admin', 'coach']) await assert.rejects(service.createManagerStaff({ ...staff, role }), error => error.field === 'role')
   assert.equal(calls.length, 0)
-  for (const role of ['Manager', 'Coach', 'Receptionist']) assert.equal(getManagerStaffValidationError({ ...staff, role }), null)
+  for (const role of ['Coach', 'Receptionist']) assert.equal(getManagerStaffValidationError({ ...staff, role }), null)
+})
+
+test('staff role updates only send Coach and Receptionist to the API', async t => {
+  const calls = mockApi(t)
+  for (const role of ['Manager', '']) await assert.rejects(userService.updateStaffRole(2, { role }), /Huấn luyện viên hoặc Lễ tân/)
+  assert.deepEqual(calls, [])
+  for (const role of ['Coach', 'Receptionist']) await userService.updateStaffRole(2, { role })
+  assert.deepEqual(calls, ['Coach', 'Receptionist'].map(role => ({ url: '/users/staff/2/role', method: 'put', data: { role } })))
 })
 
 test('valid member payloads trim profile text, preserve the password and convert the selected date only', async t => {

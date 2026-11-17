@@ -4,6 +4,7 @@ import { getTextLengthValidationError } from './textLengthValidation.js'
 import { getFullNameCharactersError } from './fullNameValidation.js'
 
 export const MANAGER_ACCOUNT_LIMITS = { fullName: 100, email: 256, phone: 10, address: 200, fitnessGoal: 100 }
+export const STAFF_ASSIGNABLE_ROLES = ['Coach', 'Receptionist']
 export const MANAGER_PHONE_PATTERN = '0[0-9]{9}'
 export const MANAGER_PHONE_MESSAGE = 'Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0.'
 export const managerBirthDateLimit = profileDateLimit
@@ -47,5 +48,5 @@ export function getManagerMemberValidationError(form = {}, now = Date.now()) {
 export function getManagerStaffValidationError(form = {}) {
   const error = accountError(form, false)
   if (error) return error
-  return ['Manager', 'Receptionist', 'Coach'].includes(form.role) ? null : { field: 'role', message: 'Vui lòng chọn vai trò nhân viên hợp lệ.' }
+  return STAFF_ASSIGNABLE_ROLES.includes(form.role) ? null : { field: 'role', message: 'Vui lòng chọn vai trò Huấn luyện viên hoặc Lễ tân.' }
 }
