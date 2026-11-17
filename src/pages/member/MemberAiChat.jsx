@@ -36,6 +36,7 @@ export default function MemberAiChat({ active, onNavigate, showWorkoutShortcut }
   const nextId = useRef(0)
   const conversationRef = useRef(null)
   const inputRef = useRef(null)
+  const animatedAnswerIds = useRef(new Set())
 
   useEffect(() => {
     mounted.current = true
@@ -80,6 +81,7 @@ export default function MemberAiChat({ active, onNavigate, showWorkoutShortcut }
     try {
       const answer = await askMemberAi(text, { signal: request.controller.signal })
       if (requestRef.current !== request) return
+      animatedAnswerIds.current.add(id)
       chat.update(conversationId, id, { status: 'success', answer })
       history.latest()
     } catch (error) {
@@ -165,7 +167,9 @@ export default function MemberAiChat({ active, onNavigate, showWorkoutShortcut }
                   <div>
                     <strong>SportPulse AI</strong>
                     {item.status === 'pending' && <p className="member-ai-pending" role="status"><LoaderCircle size={16} className="member-spin" /> Đang suy nghĩ...</p>}
-                    {item.status === 'success' && <MemberAiAnswer answer={item.answer} />}
+                    {item.status === 'success' && <MemberAiAnswer answer={item.answer}
+                      animate={animatedAnswerIds.current.has(item.id)}
+                      onAnimationComplete={() => animatedAnswerIds.current.delete(item.id)} />}
                     {item.status === 'error' && <div className="member-ai-error" role="alert"><p><AlertCircle size={16} /> {item.error}</p><button type="button" className="member-button" disabled={sending || clearing} onClick={() => send(item.question, item.id)}><RotateCcw size={14} /> Thử lại</button></div>}
                   </div>
                 </article>
