@@ -164,7 +164,7 @@ export default function MemberAiChat({ active, onNavigate, showWorkoutShortcut }
                   <span className="member-ai-avatar"><Bot size={18} /></span>
                   <div>
                     <strong>SportPulse AI</strong>
-                    {item.status === 'pending' && <p className="member-ai-pending" role="status"><LoaderCircle size={16} className="member-spin" /> Đang tìm câu trả lời...</p>}
+                    {item.status === 'pending' && <p className="member-ai-pending" role="status"><LoaderCircle size={16} className="member-spin" /> Đang suy nghĩ...</p>}
                     {item.status === 'success' && <MemberAiAnswer answer={item.answer} />}
                     {item.status === 'error' && <div className="member-ai-error" role="alert"><p><AlertCircle size={16} /> {item.error}</p><button type="button" className="member-button" disabled={sending || clearing} onClick={() => send(item.question, item.id)}><RotateCcw size={14} /> Thử lại</button></div>}
                   </div>
