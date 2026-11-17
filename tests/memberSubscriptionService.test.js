@@ -37,21 +37,21 @@ test('subscription application errors never resolve as successful reads or regis
   await assert.rejects(service.createMemberSubscription(2), /hiệu lực/)
 })
 
-test('member subscriptions prefer /me, retain explicit packageType and fall back to /mine only for missing routes', async () => {
+test('member subscriptions prefer the BE /mine route and retain the legacy /me fallback', async () => {
   const rows = [{ id: 1, status: 'Active', packageType: 'PT', packageName: 'Basic' }]
   const calls = []
   let legacy = false
   api.defaults.adapter = async config => {
     calls.push(config.url)
-    if (legacy && config.url.endsWith('/me')) throw Object.assign(new Error('Not found'), { response: { status: 404 } })
+    if (legacy && config.url.endsWith('/mine')) throw Object.assign(new Error('Not found'), { response: { status: 404 } })
     return { data: { success: true, data: rows }, status: 200, headers: {}, config }
   }
   assert.deepEqual(await service.getMySubscriptions(), rows)
-  assert.deepEqual(calls, ['/member-subscriptions/me'])
+  assert.deepEqual(calls, ['/member-subscriptions/mine'])
   calls.length = 0
   legacy = true
   assert.deepEqual(await service.getMySubscriptions(), rows)
-  assert.deepEqual(calls, ['/member-subscriptions/me', '/member-subscriptions/mine'])
+  assert.deepEqual(calls, ['/member-subscriptions/mine', '/member-subscriptions/me'])
 })
 
 const validPreview = { targetPackageId: 2, canUpgrade: true, currentSubscriptionId: 10, targetPackagePrice: 800000,
@@ -86,6 +86,6 @@ test('authentication, validation, business errors and server errors never trigge
       await assert.rejects(service.getMySubscriptions())
       await assert.rejects(service.getSubscriptionUpgradePreview(2, 5))
     } finally { api.interceptors.request.eject(id) }
-    assert.deepEqual(calls, ['/member-subscriptions/me', '/member-subscriptions/members/5/upgrade-preview'])
+    assert.deepEqual(calls, ['/member-subscriptions/mine', '/member-subscriptions/members/5/upgrade-preview'])
   }
 })

@@ -48,7 +48,7 @@ function mockPurchase({ target = pkg, subscriptions = [active], preview = upgrad
         const id = Number(config.url.split('/').at(-1))
         data = id === state.target.id ? state.target : state.referencePackages.find(pkg => pkg.id === id)
       } else if (config.url.endsWith('/upgrade-preview')) data = state.preview
-      else if (config.url === '/member-subscriptions/me' || /^\/member-subscriptions\/members\/\d+$/.test(config.url)) data = state.subscriptions
+      else if (config.url === '/member-subscriptions/mine' || /^\/member-subscriptions\/members\/\d+$/.test(config.url)) data = state.subscriptions
       else throw new Error('Unexpected request ' + config.url)
     }
     return { data: { success: true, data: structuredClone(data) }, status: 200, headers: {}, config }
@@ -152,7 +152,7 @@ test('a PT that becomes active after opening confirmation is rejected by the fre
 })
 
 test('failed preview, failed history and invalid upgrade amounts cannot create orders', async () => {
-  for (const options of [{ failRead: '/member-subscriptions/upgrade-preview' }, { failRead: '/member-subscriptions/me' },
+  for (const options of [{ failRead: '/member-subscriptions/upgrade-preview' }, { failRead: '/member-subscriptions/mine' },
     { preview: { ...upgrade, amountToPay: null } }, { preview: { ...upgrade, targetPackageId: 99 } },
     { preview: { ...upgrade, newStartDate: 'invalid' } }]) {
     const state = mockPurchase(options)

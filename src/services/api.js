@@ -80,10 +80,11 @@ api.interceptors.response.use(
       config.headers = config.headers || {}
       config.headers.Authorization = `Bearer ${token}`
       return api(config)
-    } catch (refreshError) {
+    } catch {
       clearSession()
       if (window.location.pathname !== '/login') window.location.href = getLoginRedirectPath(window.location)
-      return Promise.reject(refreshError)
+      // Keep the original 401 so resource polling can stop after session expiry.
+      return Promise.reject(error)
     }
   }
 )

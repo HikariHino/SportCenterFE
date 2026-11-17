@@ -6,14 +6,11 @@ const cancelledStatus = value => ['cancelled', 'canceled'].includes(normalizedSt
 
 // Keep report reads bounded even when a class has many sessions.
 async function readReportItems(items, read) {
-  const results = new Array(items.length)
-  let next = 0
-  await Promise.all(Array.from({ length: Math.min(4, items.length) }, async () => {
-    while (next < items.length) {
-      const index = next++
-      results[index] = await read(items[index])
-    }
-  }))
+  const results = []
+  // Finish each batch before scheduling more reads, including a slow denial.
+  for (let offset = 0; offset < items.length; offset += 4) {
+    results.push(...await Promise.all(items.slice(offset, offset + 4).map(read)))
+  }
   return results
 }
 

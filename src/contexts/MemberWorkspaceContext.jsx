@@ -32,9 +32,9 @@ export function useMemberResource(key, loader, { initialData = null, enabled = t
   const subscribe = useCallback(listener => cache.subscribe(key, listener), [cache, key])
   const snapshotForKey = useCallback(() => cache.snapshot(key), [cache, key])
   const snapshot = useSyncExternalStore(subscribe, snapshotForKey, snapshotForKey)
-  const read = useCallback(async (force = false) => {
+  const read = useCallback(async (force = false, background = false) => {
     try {
-      await cache.load(key, () => loaderRef.current(), { force, staleTime: interval })
+      await cache.load(key, () => loaderRef.current(), { force, background, staleTime: interval })
       if (cache.snapshot(key).updatedAt === -Infinity) await cache.load(key, () => loaderRef.current(), { force: true, staleTime: interval })
       return true
     } catch { return false }
@@ -49,7 +49,7 @@ export function useMemberResource(key, loader, { initialData = null, enabled = t
 
   useEffect(() => {
     if (!enabled || paused) return
-    return watchMemberResource(() => read(true), interval)
+    return watchMemberResource(() => read(true, true), interval)
   }, [read, interval, enabled, paused])
 
   return {
