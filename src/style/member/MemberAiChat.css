@@ -79,6 +79,9 @@
 .member-ai-answer > :first-child { margin-top: 0 !important; }
 .member-ai-answer > :last-child { margin-bottom: 0 !important; }
 .member-ai-answer-caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 3px; vertical-align: -.18em; border-radius: 2px; background: currentColor; animation: member-ai-caret-blink .85s step-end infinite; }
+.member-ai-answer > :not(:last-child) .member-ai-answer-caret { display: none; }
+.member-ai-answer > ul > li:not(:last-child) .member-ai-answer-caret,
+.member-ai-answer > ol > li:not(:last-child) .member-ai-answer-caret { display: none; }
 @keyframes member-ai-caret-blink { 0%, 45% { opacity: 1; } 46%, 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .member-ai-answer-caret { animation: none; opacity: .65; } }
 .member-ai-answer strong { font-weight: 700; color: var(--theme-text, var(--member-ink)); }
