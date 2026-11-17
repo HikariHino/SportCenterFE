@@ -15,7 +15,7 @@ import { getMySubscriptions, createMemberSubscription } from '../../services/mem
 import { getMyPayments, createPayment, cancelPayment, syncPayment } from '../../services/paymentService'
 import { exportInvoicePdf, triggerBlobDownload } from '../../services/reportService'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
-import { getFullNameValidationError, getVietnamPhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_LENGTH } from '../../utils/profileValidation'
+import { getFullNameValidationError, getProfilePhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_MAX_LENGTH, PROFILE_PHONE_MESSAGE } from '../../utils/profileValidation'
 import { getProfilePhoneConflict, passwordChangeErrors, profileDateLimit, profileFieldErrors, profileValidationErrors } from '../../utils/profileValidation'
 import '../../style/member/ProfileValidation.css'
 import '../../style/member/MemberProfile.css'
@@ -108,7 +108,7 @@ export function ProfileView({ user, showNotice }) {
   const validateProfile = values => {
     const errors = profileValidationErrors(values, validationOptions)
     const nameError = getFullNameValidationError(values.fullName)
-    const phoneError = getVietnamPhoneValidationError(values.phoneNumber, { required: validationOptions.requirePhone })
+    const phoneError = getProfilePhoneValidationError(values.phoneNumber, { required: validationOptions.requirePhone })
     if (nameError) errors.fullName = nameError
     if (phoneError) errors.phoneNumber = phoneError
     return errors
@@ -292,17 +292,16 @@ export function ProfileView({ user, showNotice }) {
                   <label htmlFor="member-profile-phoneNumber">Số điện thoại</label>
                   <input
                     type="tel"
-                    maxLength={PROFILE_PHONE_LENGTH}
-                    inputMode="numeric"
-                    pattern="0[0-9]{9}"
-                    title="Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0"
+                    maxLength={PROFILE_PHONE_MAX_LENGTH}
+                    inputMode="tel"
+                    title={PROFILE_PHONE_MESSAGE}
                     autoComplete="tel"
                     required={validationOptions.requirePhone}
                     {...profileInputProps('phoneNumber')}
                     value={formData.phoneNumber}
                     placeholder="0912345678"
                   />
-                  <small className="member-profile-field-hint">Số điện thoại gồm đúng 10 chữ số và bắt đầu bằng 0.</small>
+                  <small className="member-profile-field-hint">{PROFILE_PHONE_MESSAGE}</small>
                   {fieldError('phoneNumber')}
                 </div>
               </div>

@@ -3,7 +3,7 @@ import RefreshStatus from './RefreshStatus'
 import { useState } from 'react'
 import { CheckCircle2, Edit3, IdCard, LoaderCircle, Mail, Phone, RefreshCw, Save, UserRound, X } from 'lucide-react'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
-import { getFullNameValidationError, getVietnamPhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_LENGTH } from '../../utils/profileValidation'
+import { getFullNameValidationError, getProfilePhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_MAX_LENGTH, PROFILE_PHONE_MESSAGE } from '../../utils/profileValidation'
 import { ViewLoader } from './ReceptionistViewShared'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
@@ -35,7 +35,7 @@ export function ReceptionistProfileView({ showNotice }) {
 
   const handleSubmit = async event => {
     event.preventDefault()
-    const validationError = getFullNameValidationError(form.fullName) || getVietnamPhoneValidationError(form.phoneNumber)
+    const validationError = getFullNameValidationError(form.fullName) || getProfilePhoneValidationError(form.phoneNumber)
     if (validationError) {
       setActionError(validationError)
       return
@@ -87,7 +87,7 @@ export function ReceptionistProfileView({ showNotice }) {
       {editing ? <form className="reception-profile-form" onSubmit={handleSubmit}>
         <label>Họ và tên<input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} value={form.fullName} onChange={event => setForm(current => ({ ...current, fullName: event.target.value }))} maxLength={PROFILE_FULL_NAME_MAX_LENGTH} required /></label>
         <label>Email hiện tại<input type="email" value={profile.email} readOnly /></label>
-        <label>Số điện thoại<input type="tel" inputMode="numeric" pattern="0[0-9]{9}" title="Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0" value={form.phoneNumber} onChange={event => setForm(current => ({ ...current, phoneNumber: event.target.value }))} maxLength={PROFILE_PHONE_LENGTH} placeholder="0912345678" /></label>
+        <label>Số điện thoại<input type="tel" inputMode="tel" title={PROFILE_PHONE_MESSAGE} value={form.phoneNumber} onChange={event => setForm(current => ({ ...current, phoneNumber: event.target.value }))} maxLength={PROFILE_PHONE_MAX_LENGTH} placeholder="0912345678" /></label>
         <label>Mật khẩu hiện tại<input type="password" value={form.currentPassword} onChange={event => setForm(current => ({ ...current, currentPassword: event.target.value }))} autoComplete="current-password" placeholder="Chỉ nhập khi đổi mật khẩu" /></label>
         <label className="wide">Mật khẩu mới<input type="password" value={form.password} onChange={event => setForm(current => ({ ...current, password: event.target.value }))} minLength={8} maxLength={72} autoComplete="new-password" placeholder="Để trống nếu không đổi mật khẩu" /></label>
         {actionError && <p>{actionError}</p>}

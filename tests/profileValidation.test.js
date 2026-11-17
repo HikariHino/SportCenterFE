@@ -7,8 +7,8 @@ const valid = { fullName: 'Phạm Thị Hồng Vy', phoneNumber: '0326541256', g
 const errors = (changes = {}, options = {}) => profileValidationErrors({ ...valid, ...changes }, { now, ...options })
 
 test('names preserve Unicode letters and single-character names while digits and punctuation are blocked', () => {
-  for (const fullName of ['  Nguyễn Văn An  ', 'Anne Connor', '李', 'A', 'a'.repeat(200)]) assert.deepEqual(errors({ fullName }), {})
-  for (const fullName of ['', '   ', '\t\n', null, 'a'.repeat(201), 123, 'Nguyễn Văn An1', 'Nguyễn-Văn An', 'Anne O’Connor']) assert.ok(errors({ fullName }).fullName)
+  for (const fullName of ['  Nguyễn Văn An  ', 'Anne Connor', '李', 'A', 'a'.repeat(100)]) assert.deepEqual(errors({ fullName }), {})
+  for (const fullName of ['', '   ', '\t\n', null, 'a'.repeat(101), 123, 'Nguyễn Văn An1', 'Nguyễn-Văn An', 'Anne O’Connor']) assert.ok(errors({ fullName }).fullName)
 })
 
 test('profile phone format matches registration and normalizes separators without removing the country code', () => {
@@ -92,10 +92,10 @@ test('password validation rechecks comparisons after any field changes and compa
 
 import { getEmailValidationError, getFullNameValidationError, getVietnamPhoneValidationError } from '../src/utils/profileValidation.js'
 
-test('profile full name is required and cannot exceed 60 characters', () => {
+test('profile full name uses the same 100-character limit as account creation', () => {
   assert.match(getFullNameValidationError('   '), /không được để trống/)
-  assert.equal(getFullNameValidationError('a'.repeat(60)), '')
-  assert.match(getFullNameValidationError('a'.repeat(61)), /60 ký tự/)
+  assert.equal(getFullNameValidationError('a'.repeat(100)), '')
+  assert.match(getFullNameValidationError('a'.repeat(101)), /100 ký tự/)
 })
 
 test('Vietnam phone number uses exactly ten digits and starts with zero', () => {

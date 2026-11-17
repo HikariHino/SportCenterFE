@@ -783,7 +783,7 @@ export default function PackageManagement() {
                       step="0.01"
                       className="pkg-form-input"
                       value={packageForm.price}
-                      onChange={(e) => setPackageForm({ ...packageForm, price: Number(e.target.value) })}
+                      onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })}
                       required
                     />
                     <span className="pkg-form-help">
@@ -924,7 +924,7 @@ export default function PackageManagement() {
                       step="0.01"
                       className="pkg-form-input"
                       value={packageForm.price}
-                      onChange={(e) => setPackageForm({ ...packageForm, price: Number(e.target.value) })}
+                      onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })}
                       required
                     />
                     <span className="pkg-form-help">

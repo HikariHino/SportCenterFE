@@ -54,7 +54,7 @@ export async function loginWithGoogle({ idToken }, { signal } = {}) {
  * @param {string} details.fitnessGoal
  */
 export async function register({ email, password, fullName, phone, dateOfBirth, gender, address, fitnessGoal }) {
-  const error = getAuthRegistrationValidationError({ email, password, fullName, address, fitnessGoal })
+  const error = getAuthRegistrationValidationError({ email, password, fullName, phone, dateOfBirth, gender, address, fitnessGoal })
   if (error) throw Object.assign(new Error(error.message), { field: error.field })
   const response = await api.post('/auth/register', {
     email,
@@ -71,7 +71,7 @@ export async function register({ email, password, fullName, phone, dateOfBirth, 
 
 /** POST /api/Auth/send-register-otp */
 export async function sendRegisterOtp({ email, password, fullName, phone, dateOfBirth, gender, address, fitnessGoal }) {
-  const error = getAuthRegistrationValidationError({ email, password, fullName, address, fitnessGoal })
+  const error = getAuthRegistrationValidationError({ email, password, fullName, phone, dateOfBirth, gender, address, fitnessGoal })
   if (error) throw Object.assign(new Error(error.message), { field: error.field })
   const response = await api.post('/Auth/send-register-otp', {
     email,

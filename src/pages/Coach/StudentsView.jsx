@@ -1,3 +1,4 @@
+import { TRAINING_GOALS } from '../../utils/trainingPlanValidation'
 import { CoachList } from './CoachPagination'
 import { listPage } from '../../utils/listPagination'
 import { useCoachCache, useCoachResource } from '../../contexts/CoachWorkspaceContext'
@@ -41,13 +42,7 @@ const formatTimeSessionOption = session => {
   return `${timeFormatter.format(start)}–${timeFormatter.format(end)} · ${enrollment}/${capacity} học viên`
 }
 
-const trainingGoals = [
-  ['WeightLoss', 'Giảm cân'],
-  ['MuscleGain', 'Tăng cơ'],
-  ['Endurance', 'Tăng sức bền'],
-  ['Flexibility', 'Cải thiện độ dẻo'],
-  ['GeneralFitness', 'Thể lực tổng quát'],
-]
+const trainingGoals = TRAINING_GOALS
 
 const planDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',

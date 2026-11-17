@@ -2,6 +2,7 @@ import { getVietnamPhoneValidationError } from './profileValidation.js'
 import { getNewPasswordValidationError } from './passwordValidation.js'
 import { getTextLengthValidationError } from './textLengthValidation.js'
 import { getFullNameCharactersError } from './fullNameValidation.js'
+import { getAccountDetailsValidationError } from './accountDetailsValidation.js'
 
 export const RECEPTIONIST_PHONE_PATTERN = '0[0-9]{9}'
 export const RECEPTIONIST_PHONE_MESSAGE = 'Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0.'
@@ -11,7 +12,7 @@ function phoneValidationError(value) {
   return getVietnamPhoneValidationError(value)
 }
 
-export function getReceptionistMemberValidationError({ fullName, phone, password, email, address, fitnessGoal } = {}) {
+export function getReceptionistMemberValidationError({ fullName, phone, password, email, address, fitnessGoal, dateOfBirth, gender } = {}, now = Date.now()) {
   if (typeof fullName !== 'string' || !fullName.trim()) {
     return { field: 'fullName', message: 'Vui lòng nhập họ và tên, không chỉ gồm khoảng trắng.' }
   }
@@ -28,7 +29,7 @@ export function getReceptionistMemberValidationError({ fullName, phone, password
     const message = getTextLengthValidationError(value, label, max)
     if (message) return { field, message }
   }
-  return null
+  return getAccountDetailsValidationError({ email, phone, dateOfBirth, gender }, now)
 }
 
 export function getReceptionistManualCheckInValidationError({ memberId, phoneNumber } = {}) {
