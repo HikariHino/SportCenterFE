@@ -1,15 +1,17 @@
 import { MemberList } from './MemberPagination'
 import { useEffect, useRef, useState } from 'react'
 import { useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
-import { AlertCircle, CheckCircle2, Headset, LoaderCircle, MessageSquare, Plus, RefreshCw, Send, X } from 'lucide-react'
-import { createSupportTicket, getMySupportTickets, getTicketErrorMessage } from '../../services/supportTicketService'
+import { AlertCircle, CheckCircle2, Headset, ImagePlus, LoaderCircle, MessageSquare, Plus, RefreshCw, Send, X } from 'lucide-react'
+import { createSupportTicket, getMySupportTickets, getTicketErrorMessage, uploadSupportTicketImage } from '../../services/supportTicketService'
+import SupportTicketImage, { SupportImagePicker, useSupportImageSelection } from '../../components/SupportTicketImage'
 import '../../style/member/SupportTicketsView.css'
 import { getTextLengthValidationError, SUPPORT_DESCRIPTION_MAX_LENGTH } from '../../utils/textLengthValidation'
 
 import { LIST_PAGE_SIZE as PAGE_SIZE } from '../../utils/listPagination'
 const statuses = { open: 'Chờ tiếp nhận', inprogress: 'Đang xử lý', resolved: 'Đã giải quyết', closed: 'Đã đóng' }
 const priorities = { Low: 'Thấp', Normal: 'Bình thường', High: 'Cao', Urgent: 'Khẩn cấp' }
-const statusKey = value => String(value || '').toLowerCase()
+const statusKey = value => String(value || '').trim().toLowerCase()
+const canAttachImage = ticket => ['open', 'inprogress'].includes(statusKey(ticket.status))
 
 function formatDate(value) {
   if (!value) return 'Chưa cập nhật'
@@ -17,11 +19,14 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? 'Chưa cập nhật' : date.toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-function CreateTicketDialog({ onClose, onCreated }) {
+function CreateTicketDialog({ onClose, onCreated, onComplete }) {
   const dialogRef = useRef(null)
   const openerRef = useRef(null)
   const locked = useRef(false)
   const mounted = useRef(true)
+  const createdTicket = useRef(null)
+  const [ticketSent, setTicketSent] = useState(false)
+  const image = useSupportImageSelection()
   const [form, setForm] = useState({ title: '', description: '', priority: 'Normal' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -44,7 +49,7 @@ function CreateTicketDialog({ onClose, onCreated }) {
 
   const submit = async event => {
     event.preventDefault()
-    if (locked.current) return
+    if (locked.current || image.blocked) return
     const descriptionError = getTextLengthValidationError(form.description, 'Nội dung hỗ trợ', SUPPORT_DESCRIPTION_MAX_LENGTH)
     if (descriptionError) { setError(descriptionError); return }
     if (!form.title.trim() || !form.description.trim()) {
@@ -55,10 +60,19 @@ function CreateTicketDialog({ onClose, onCreated }) {
     setSaving(true)
     setError('')
     try {
-      await createSupportTicket(form)
-      if (mounted.current) onCreated()
+      // A failed attachment must retry against the saved ticket, never create a second one.
+      if (!createdTicket.current) {
+        createdTicket.current = await createSupportTicket(form)
+        onCreated(createdTicket.current)
+        if (mounted.current) setTicketSent(true)
+      }
+      if (image.candidate) {
+        const updated = await uploadSupportTicketImage(createdTicket.current.id, image.candidate.file)
+        onCreated(updated)
+      }
+      if (mounted.current) onComplete()
     } catch (requestError) {
-      if (mounted.current) setError(getTicketErrorMessage(requestError, 'Không thể gửi phiếu hỗ trợ. Vui lòng thử lại.'))
+      if (mounted.current) setError((createdTicket.current ? 'Phiếu đã gửi thành công, nhưng ảnh chưa được xác nhận. Bạn có thể thử gửi lại ảnh hoặc đóng biểu mẫu và bổ sung ảnh trong danh sách. ' : '') + getTicketErrorMessage(requestError, 'Không thể gửi phiếu hỗ trợ. Vui lòng thử lại.'))
     } finally {
       locked.current = false
       if (mounted.current) setSaving(false)
@@ -76,29 +90,31 @@ function CreateTicketDialog({ onClose, onCreated }) {
         <div className="member-support-dialog-fields">
           <div className="member-support-field">
             <label htmlFor="member-support-title">Tiêu đề yêu cầu <span aria-hidden="true">*</span></label>
-            <input id="member-support-title" type="text" required maxLength={200} disabled={saving} value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Ví dụ: Cần kiểm tra gói tập" aria-describedby="member-support-title-count" />
+            <input id="member-support-title" type="text" required maxLength={200} disabled={saving || ticketSent} value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Ví dụ: Cần kiểm tra gói tập" aria-describedby="member-support-title-count" />
             <small id="member-support-title-count">{form.title.length}/200 ký tự</small>
           </div>
           <div className="member-support-field">
             <label htmlFor="member-support-priority">Mức độ ưu tiên</label>
-            <select id="member-support-priority" disabled={saving} value={form.priority} onChange={event => setForm({ ...form, priority: event.target.value })}>
+            <select id="member-support-priority" disabled={saving || ticketSent} value={form.priority} onChange={event => setForm({ ...form, priority: event.target.value })}>
               {Object.entries(priorities).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
         </div>
         <div className="member-support-field">
           <label htmlFor="member-support-description">Nội dung chi tiết <span aria-hidden="true">*</span></label>
-          <textarea id="member-support-description" required rows={5} maxLength={SUPPORT_DESCRIPTION_MAX_LENGTH} aria-describedby="member-support-description-count" disabled={saving} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Mô tả vấn đề, thời gian xảy ra và thông tin liên quan..." />
+          <textarea id="member-support-description" required rows={5} maxLength={SUPPORT_DESCRIPTION_MAX_LENGTH} aria-describedby="member-support-description-count" disabled={saving || ticketSent} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Mô tả vấn đề, thời gian xảy ra và thông tin liên quan..." />
           <small id="member-support-description-count">{form.description.length}/{SUPPORT_DESCRIPTION_MAX_LENGTH} ký tự</small>
         </div>
+        {ticketSent && <p className="member-support-notice" role="status">Phiếu #{createdTicket.current.id} đã được gửi. Bạn chỉ cần bổ sung ảnh.</p>}
+        <SupportImagePicker selection={image} disabled={saving} />
         {error && <p className="member-support-error" role="alert">{error}</p>}
       </div>
-      <footer><button type="button" disabled={saving} onClick={onClose}>Đóng</button><button className="primary" type="submit" disabled={saving}>{saving ? <><LoaderCircle className="member-spin" size={16} /> Đang gửi...</> : <><Send size={16} /> Gửi yêu cầu</>}</button></footer>
+      <footer><button type="button" disabled={saving} onClick={onClose}>Đóng</button><button className="primary" type="submit" disabled={saving || image.blocked}>{saving ? <><LoaderCircle className="member-spin" size={16} /> Đang gửi...</> : <><Send size={16} /> {ticketSent ? (image.candidate ? 'Gửi lại ảnh' : 'Hoàn tất') : 'Gửi yêu cầu'}</>}</button></footer>
     </form>
   </dialog>
 }
 
-function TicketCard({ ticket, className = '', ...rowProps }) {
+function TicketCard({ ticket, onAttach, className = '', ...rowProps }) {
   const status = statusKey(ticket.status)
   const priority = Object.entries(priorities).find(([key]) => key.toLowerCase() === statusKey(ticket.priority))?.[1] || ticket.priority || 'Chưa cập nhật'
   const tone = Object.hasOwn(statuses, status) ? status : 'unknown'
@@ -108,6 +124,8 @@ function TicketCard({ ticket, className = '', ...rowProps }) {
     <div className="member-support-ticket-content">
     <h3 id={`member-support-ticket-${ticket.id}`}>{ticket.title || 'Yêu cầu hỗ trợ'}</h3>
     <p className="member-support-description">{ticket.description || 'Chưa có nội dung'}</p>
+    <SupportTicketImage imageUrl={ticket.imageUrl} ticketId={ticket.id} />
+    {canAttachImage(ticket) && <button className="member-support-image-action" type="button" onClick={() => onAttach(ticket)}><ImagePlus size={16} /> {ticket.imageUrl ? 'Thay ảnh sự cố' : 'Bổ sung ảnh sự cố'}</button>}
     <dl className="member-support-meta">
       <div><dt>Mức độ ưu tiên</dt><dd>{priority}</dd></div>
       <div><dt>Ngày gửi</dt><dd>{formatDate(ticket.createdAt)}</dd></div>
@@ -130,6 +148,7 @@ export function SupportTicketsView() {
   const { loading, reload } = ticketsRead
   const error = !ticketsRead.hasData && ticketsRead.error ? getTicketErrorMessage(ticketsRead.error, 'Không thể tải danh sách phiếu hỗ trợ.') : ''
   const [creating, setCreating] = useState(false)
+  const [attaching, setAttaching] = useState(null)
   const [notice, setNotice] = useState('')
   const [status, setStatus] = useState('all')
   const [search, setSearch] = useState('')
@@ -142,14 +161,20 @@ export function SupportTicketsView() {
   const currentPage = Math.min(page, totalPages)
   const visible = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
-  const created = () => {
-    setCreating(false)
+  const recordTicket = ticket => {
+    if (!ticket?.id) return
+    ticketsRead.setData(current => {
+      const items = current || []
+      return items.some(item => String(item.id) === String(ticket.id))
+        ? items.map(item => String(item.id) === String(ticket.id) ? { ...item, ...ticket } : item)
+        : [ticket, ...items]
+    })
     setNotice('Đã gửi yêu cầu hỗ trợ thành công. Bạn có thể theo dõi trạng thái và phản hồi tại đây.')
     setSearch('')
     setStatus('all')
     setPage(1)
-    reload()
   }
+  const closeCreate = () => { setCreating(false); reload() }
 
   return <div className="member-view-stack member-support-view">
     <div className="member-section-heading">
@@ -168,10 +193,62 @@ export function SupportTicketsView() {
           : !filtered.length ? <div className="member-support-state" role="status"><MessageSquare size={34} /><h3>{tickets.length ? 'Không tìm thấy phiếu phù hợp' : 'Bạn chưa có phiếu hỗ trợ'}</h3><p>{tickets.length ? 'Thử thay đổi từ khóa hoặc trạng thái để xem các phiếu khác.' : 'Gửi yêu cầu mới khi bạn cần trợ giúp hoặc muốn phản ánh sự cố.'}</p></div>
             : <>
               <div className="member-support-list-heading"><p className="member-support-count">{filtered.length} phiếu hỗ trợ</p><span>Mới nhất trước</span></div>
-              <MemberList items={visible} total={filtered.length} page={currentPage} onPageChange={setPage} label="Phiếu hỗ trợ" className="member-support-list" resetKey={JSON.stringify([search, status])}>{ticket => <TicketCard key={ticket.id} ticket={ticket} />}</MemberList>
+              <MemberList items={visible} total={filtered.length} page={currentPage} onPageChange={setPage} label="Phiếu hỗ trợ" className="member-support-list" resetKey={JSON.stringify([search, status])}>{ticket => <TicketCard key={ticket.id} ticket={ticket} onAttach={setAttaching} />}</MemberList>
 
             </>}
     </section>
-    {viewActive && creating && <CreateTicketDialog onClose={() => setCreating(false)} onCreated={created} />}
+    {viewActive && creating && <CreateTicketDialog onClose={closeCreate} onCreated={recordTicket} onComplete={closeCreate} />}
+    {viewActive && attaching && <TicketImageDialog ticket={tickets.find(ticket => String(ticket.id) === String(attaching.id)) || attaching} onClose={() => setAttaching(null)} onUploaded={ticket => { recordTicket(ticket); setNotice(`Đã cập nhật ảnh sự cố cho phiếu #${ticket.id}.`); setAttaching(null); reload() }} />}
   </div>
+}
+
+function TicketImageDialog({ ticket, onClose, onUploaded }) {
+  const dialog = useRef(null)
+  const locked = useRef(false)
+  const image = useSupportImageSelection()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const mounted = useRef(true)
+  const editable = canAttachImage(ticket)
+  useEffect(() => {
+    mounted.current = true
+    const element = dialog.current, opener = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    element.showModal()
+    return () => {
+      mounted.current = false
+      element.close()
+      document.body.style.overflow = previousOverflow
+      if (opener?.isConnected) opener.focus({ preventScroll: true })
+    }
+  }, [])
+  const submit = async event => {
+    event.preventDefault()
+    if (locked.current || !editable || image.blocked || !image.candidate || !image.ready) return
+    locked.current = true
+    setSaving(true)
+    setError('')
+    try {
+      const updated = await uploadSupportTicketImage(ticket.id, image.candidate.file)
+      onUploaded(updated)
+    } catch (failure) {
+      if (mounted.current) setError(getTicketErrorMessage(failure, 'Không thể gửi ảnh sự cố. Vui lòng thử lại.'))
+    } finally {
+      locked.current = false
+      if (mounted.current) setSaving(false)
+    }
+  }
+  return <dialog ref={dialog} className="member-support-dialog" aria-labelledby="member-support-image-title" onCancel={event => { event.preventDefault(); if (!locked.current) onClose() }}>
+    <form onSubmit={submit} aria-busy={saving}>
+      <header className="member-support-dialog-header"><div><h2 id="member-support-image-title">Ảnh sự cố · Phiếu #{ticket.id}</h2><p className="member-support-muted">{ticket.title}</p></div><button type="button" aria-label="Đóng biểu mẫu ảnh" disabled={saving} onClick={onClose}><X size={20} /></button></header>
+      <div className="member-support-dialog-body">
+        <SupportTicketImage imageUrl={ticket.imageUrl} ticketId={ticket.id} />
+        {!editable && <p role="alert" className="member-support-error">Phiếu đã giải quyết hoặc đóng, không thể thay ảnh.</p>}
+        <SupportImagePicker selection={image} disabled={saving || !editable} />
+        {error && <p role="alert" className="member-support-error">{error}</p>}
+      </div>
+      <footer><button type="button" disabled={saving} onClick={onClose}>Đóng</button><button type="submit" className="primary" disabled={saving || !editable || image.blocked || !image.candidate || !image.ready}>{saving ? <><LoaderCircle className="member-spin" size={16} /> Đang gửi ảnh...</> : <><Send size={16} /> Gửi ảnh</>}</button></footer>
+    </form>
+  </dialog>
 }

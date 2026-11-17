@@ -1,4 +1,5 @@
 import api from './api'
+import { isCatalogImageUrl, validateCatalogImage } from '../utils/catalogImages'
 import { getTextLengthValidationError, SUPPORT_DESCRIPTION_MAX_LENGTH } from '../utils/textLengthValidation.js'
 
 /**
@@ -91,11 +92,34 @@ export async function getMySupportTickets() {
   return payload
 }
 
+export async function uploadSupportTicketImage(ticketId, file) {
+  const id = Number(ticketId)
+  if (!Number.isInteger(id) || id < 1 || id > 2147483647) {
+    throw new Error('Không tìm thấy phiếu hỗ trợ để gửi ảnh.')
+  }
+  await validateCatalogImage(file)
+  const form = new FormData()
+  form.append('file', file)
+  const { data: body } = await api.post(`/SupportTickets/${id}/image`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 30000,
+  })
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
+    throw new Error(body.message || 'Không thể gửi ảnh sự cố. Vui lòng thử lại.')
+  }
+  const ticket = body?.data ?? body
+  if (String(ticket?.id) !== String(id) || !isCatalogImageUrl(ticket?.imageUrl)) {
+    throw new Error('Chưa xác nhận được ảnh mới. Hãy làm mới phiếu để kiểm tra trước khi thử lại.')
+  }
+  return ticket
+}
+
 export default {
   getTicketErrorMessage,
   getAllSupportTickets,
   resolveSupportTicket,
   createSupportTicket,
   getMySupportTickets,
+  uploadSupportTicketImage,
 }
 
