@@ -46,15 +46,15 @@ export default memo(function MemberAiAnswer({ answer, animate = false, onAnimati
   const typing = animate && visibleAnswer.length < fullAnswer.length
   const markdownComponents = typing ? {
     ...components,
-    p: ({ children }) => <p>{children}<span className="member-ai-answer-caret" aria-hidden="true" /></p>,
-    h1: ({ children }) => <h1>{children}<span className="member-ai-answer-caret" aria-hidden="true" /></h1>,
-    h2: ({ children }) => <h2>{children}<span className="member-ai-answer-caret" aria-hidden="true" /></h2>,
-    h3: ({ children }) => <h3>{children}<span className="member-ai-answer-caret" aria-hidden="true" /></h3>,
-    h4: ({ children }) => <h4>{children}<span className="member-ai-answer-caret" aria-hidden="true" /></h4>,
-    h5: ({ children }) => <h5>{children}<span className="member-ai-answer-caret" aria-hidden="true" /></h5>,
-    h6: ({ children }) => <h6>{children}<span className="member-ai-answer-caret" aria-hidden="true" /></h6>,
-    li: ({ children }) => <li>{children}<span className="member-ai-answer-caret" aria-hidden="true" /></li>,
-    table: ({ children }) => <div className="member-ai-answer-table" role="region" aria-label="Bảng thông tin từ trợ lý AI" tabIndex={0}><table>{children}</table><span className="member-ai-answer-caret" aria-hidden="true" /></div>,
+    p: ({ children }) => <p>{children}{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></p>,
+    h1: ({ children }) => <h1>{children}{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></h1>,
+    h2: ({ children }) => <h2>{children}{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></h2>,
+    h3: ({ children }) => <h3>{children}{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></h3>,
+    h4: ({ children }) => <h4>{children}{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></h4>,
+    h5: ({ children }) => <h5>{children}{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></h5>,
+    h6: ({ children }) => <h6>{children}{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></h6>,
+    li: ({ children }) => <li>{children}{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></li>,
+    table: ({ children }) => <div className="member-ai-answer-table" role="region" aria-label="Bảng thông tin từ trợ lý AI" tabIndex={0}><table>{children}</table>{'\u2060'}<span className="member-ai-answer-caret" aria-hidden="true" /></div>,
   } : components
   return (
     <div className="member-ai-answer">

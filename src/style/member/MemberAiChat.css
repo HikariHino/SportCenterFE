@@ -78,7 +78,7 @@
 .member-ai-answer :is(h1, h2, h3, h4, h5, h6) { margin: 16px 0 6px; color: var(--theme-text, var(--member-ink)); font-size: 14px; font-weight: 700; line-height: 1.6; letter-spacing: 0; }
 .member-ai-answer > :first-child { margin-top: 0 !important; }
 .member-ai-answer > :last-child { margin-bottom: 0 !important; }
-.member-ai-answer-caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 3px; vertical-align: -.18em; border-radius: 2px; background: currentColor; animation: member-ai-caret-blink .85s step-end infinite; }
+.member-ai-answer-caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 2px; vertical-align: -.18em; border-radius: 2px; background: currentColor; animation: member-ai-caret-blink .85s step-end infinite; white-space: nowrap; }
 .member-ai-answer > :not(:last-child) .member-ai-answer-caret { display: none; }
 .member-ai-answer > ul > li:not(:last-child) .member-ai-answer-caret,
 .member-ai-answer > ol > li:not(:last-child) .member-ai-answer-caret { display: none; }
