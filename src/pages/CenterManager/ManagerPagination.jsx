@@ -22,7 +22,7 @@ function ListLayout({ rows, pagination, as: Element, className, heading, compact
   </div>
 }
 
-export function ManagerList({ items = [], page, total, onPageChange, as = 'div', className = '', heading, tableFooter, compact = false, table = false, resetKey = '', ...props }) {
+export function ManagerList({ items = [], page, total, onPageChange, as = 'div', className = '', heading, tableFooter, compact = false, table = false, hideSinglePagePagination = false, resetKey = '', ...props }) {
   const [selection, setSelection] = useState({ resetKey, page: 1 })
   const remote = typeof onPageChange === 'function'
   const range = listPage(remote ? total : items.length, remote ? page : selection.resetKey === resetKey ? selection.page : 1)
@@ -32,6 +32,6 @@ export function ManagerList({ items = [], page, total, onPageChange, as = 'div',
   if (!range.total) return <div className="manager-list-empty" role="status">Không có dữ liệu phù hợp.</div>
   const visible = remote ? items : items.slice(range.offset, range.to)
   return <NumberedList {...props} items={visible} page={range.page} total={range.total} onPageChange={remote ? onPageChange : next => setSelection({ resetKey, page: next })} prefix="manager" renderLayout={(rows, pagination) =>
-    <ListLayout rows={rows} pagination={pagination} as={as} className={className} heading={heading} compact={compact} resetKey={resetKey} table={table} tableFooter={tableFooter} label={props.label} />
+    <ListLayout rows={rows} pagination={hideSinglePagePagination && range.pageCount === 1 ? null : pagination} as={as} className={className} heading={heading} compact={compact} resetKey={resetKey} table={table} tableFooter={tableFooter} label={props.label} />
   } />
 }

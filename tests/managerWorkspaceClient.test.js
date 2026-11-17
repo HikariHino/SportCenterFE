@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 let window, server, root, Manager, MemoryRouter, AuthProvider, ThemeProvider, api
 const descriptors = new Map(), requests = [], intervals = new Map(), errors = []
 let nextInterval = 0, offline = false, createdRoom = null
+let roomSession, waitForRoomSessionRead
 const rows = factory => Array.from({ length: 23 }, (_, index) => factory(index + 1))
 const classes = rows(id => ({ id, className: `Lớp ${id}`, sportId: 1, coachId: 1, maxCapacity: 30, isActive: true, sportName: 'Tennis', coachName: 'HLV An' }))
 const rooms = rows(id => ({ id, name: `Phòng ${id}`, roomType: 'General', capacity: 30, isActive: true, location: 'Tầng 1' }))
@@ -40,16 +41,20 @@ before(async () => {
   ThemeProvider = (await server.ssrLoadModule('/src/contexts/ThemeContext.jsx')).ThemeProvider
   api = (await server.ssrLoadModule('/src/services/api.js')).default
   api.defaults.adapter = async config => {
-    requests.push({ url: config.url, method: config.method, params: config.params })
+    requests.push({ url: config.url, method: config.method, params: config.params, signal: config.signal })
     if (offline) throw new Error('offline')
     let data = []
     const url = config.url.toLowerCase()
     if (url === '/reports/overview') data = { totalActiveMembers: 23, totalActiveClasses: 23, totalRevenue: 23000, currentMonthRevenue: 1000 }
     if (url === '/reports/revenue') data = Array.from({ length: 12 }, (_, index) => ({ month: index + 1, revenue: 1000 }))
     if (url === '/users/staff') data = rows(id => ({ id, fullName: `Nhân sự ${id}`, email: `staff${id}@example.com`, role: 'Coach', isActive: true }))
-    if (url === '/rooms') data = config.method === 'post' ? (createdRoom = { ...JSON.parse(config.data), id: 24 }) : createdRoom ? [...rooms, createdRoom] : rooms
+    if (url === '/rooms') data = config.method === 'post' ? (createdRoom = { ...JSON.parse(config.data), id: 24 }) : createdRoom ? [...rooms, createdRoom] : [...rooms]
     if (url === '/classes/manage' || url === '/classes') data = { items: classes, total: classes.length, page: config.params?.page || 1, pageSize: 100 }
-    if (/^\/classes\/\d+\/sessions$/.test(url)) data = { items: [], total: 0, page: config.params?.page || 1, pageSize: 100 }
+    if (/^\/classes\/\d+\/sessions$/.test(url)) {
+      const items = url === '/classes/1/sessions' && roomSession ? [roomSession] : []
+      if (items.length) await waitForRoomSessionRead
+      data = { items, total: items.length, page: config.params?.page || 1, pageSize: 100 }
+    }
     if (url === '/sports') data = rows(id => ({ id, name: `Bộ môn ${id}`, isActive: true }))
     if (url === '/coaches') data = rows(id => ({ id, fullName: `HLV ${id}`, isActive: true }))
     if (url === '/membership-packages/manage' || url === '/membership-packages') data = packages
@@ -180,4 +185,50 @@ test('switching Manager accounts creates a new cache and resets the previous acc
   assert.match(document.querySelector('.manager-account').textContent, /Quản lý Bình/)
   assert.equal(document.querySelector('.room-modal'), null)
   assert.deepEqual(errors, [])
+})
+
+test('the open room timetable skips catalog polling and allows actions during a schedule refresh', async () => {
+  const start = Date.now() + 86_400_000
+  roomSession = { id: 101, classId: 1, roomId: 1, status: 'Scheduled', startsAt: new Date(start).toISOString(), endsAt: new Date(start + 3_600_000).toISOString() }
+  let releaseRead
+  try {
+    await tab('Phòng tập')
+    await act(async () => document.querySelector('.room-mgmt button[title="Xem thời khóa biểu Phòng 1"]').click())
+    const dialog = document.querySelector('.room-timetable-dialog')
+    assert.ok(dialog.querySelector('[data-session-id="101"]'))
+    const timetableReads = () => requests.filter(request => request.url === '/classes/1/sessions' && request.signal).length
+    const readCount = timetableReads()
+    const roomsBefore = count('/Rooms')
+    const complete = id => act(async () => window.dispatchEvent(new CustomEvent('sportcenter:sessions-completed', { detail: [{ id }] })))
+
+    await tick(30000)
+    assert.ok(count('/Rooms') > roomsBefore)
+    assert.equal(timetableReads(), readCount, 'refreshing the list of rooms does not reload its timetable')
+    await complete(999)
+    assert.equal(timetableReads(), readCount, 'completion in another room does not reload this timetable')
+
+    waitForRoomSessionRead = new Promise(resolve => { releaseRead = resolve })
+    const refresh = [...dialog.querySelectorAll('button')].find(button => button.textContent.trim() === 'Làm mới')
+    await act(async () => refresh.click())
+    assert.equal(timetableReads(), readCount + 1)
+    assert.match(dialog.textContent, /Đang cập nhật lịch/)
+    assert.equal(dialog.querySelector('.room-timetable-add').disabled, false)
+    await act(async () => dialog.querySelector('.room-bulk-toggle').click())
+    const session = dialog.querySelector('[data-session-id="101"]')
+    assert.equal(session.disabled, false)
+    await act(async () => session.click())
+    assert.equal(session.getAttribute('aria-pressed'), 'true')
+    await act(async () => releaseRead())
+    assert.equal(session.getAttribute('aria-pressed'), 'true', 'a refresh preserves the selection')
+
+    roomSession = { ...roomSession, status: 'Completed' }
+    await complete(roomSession.id)
+    assert.equal(timetableReads(), readCount + 2)
+    assert.match(dialog.querySelector('[data-session-id="101"]').textContent, /Đã hoàn thành/)
+    assert.deepEqual(errors, [])
+  } finally {
+    await act(async () => releaseRead?.())
+    waitForRoomSessionRead = undefined
+    roomSession = undefined
+  }
 })
