@@ -23,6 +23,9 @@ export default function CancelClassSessionsDialog({ sportClass, onClose, onUpdat
   const [confirmation, setConfirmation] = useState(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
+
+  // Chỉ cho chọn buổi Scheduled có giờ bắt đầu trong tương lai.
+  // Lọc theo ngày Việt Nam và sắp xếp ngay trên danh sách đã tải.
   const eligible = state.items.filter(item => canCancelRoomSession(item))
   const invalidRange = Boolean(range.from && range.to && range.from > range.to)
   const visible = invalidRange ? [] : eligible.filter(item => {
@@ -39,11 +42,14 @@ export default function CancelClassSessionsDialog({ sportClass, onClose, onUpdat
     return () => { dialog.close(); document.body.style.overflow = previousOverflow }
   }, [])
 
+  // getAllClassSessions gọi GET /api/classes/{classId}/sessions theo từng trang.
+  // Effect chạy khi mở hộp thoại, đổi lớp hoặc bấm Làm mới để tăng revision.
   useEffect(() => {
     const controller = new AbortController()
     setState(previous => ({ ...previous, loading: true, error: '' }))
     getAllClassSessions(sportClass.id, { signal: controller.signal }).then(items => {
       if (!controller.signal.aborted) {
+        // Kiểm tra dữ liệu trả về và giữ lại các lựa chọn vẫn đủ điều kiện hủy.
         if (items.some(item => String(item.classId) !== String(sportClass.id))) throw new Error('Dữ liệu buổi học không khớp với lớp đã chọn.')
         setState({ items, loading: false, error: '' })
         const allowed = new Set(items.filter(item => canCancelRoomSession(item)).map(item => String(item.id)))
@@ -52,22 +58,25 @@ export default function CancelClassSessionsDialog({ sportClass, onClose, onUpdat
     }).catch(error => {
       if (!controller.signal.aborted) setState(previous => ({ ...previous, loading: false, error: getClassErrorMessage(error, 'Không thể tải buổi học của lớp.') }))
     })
-    return () => controller.abort()
+    return () => controller.abort() // Dừng request cũ khi đóng hộp thoại hoặc tải lại.
   }, [sportClass.id, revision])
 
   const close = () => { if (!busy && !confirmation) onClose() }
   const changeRange = (field, value) => {
     setRange(previous => ({ ...previous, [field]: value }))
+    // Đổi khoảng ngày thì chọn lại để tránh hủy nhầm buổi đã bị bộ lọc ẩn.
     setSelectedIds([])
   }
   const toggle = sessionId => setSelectedIds(previous => previous.includes(String(sessionId))
     ? previous.filter(value => value !== String(sessionId)) : [...previous, String(sessionId)])
   const cancelled = result => {
     if (result.cancelled.length) {
+      // Chỉ cập nhật trạng thái các buổi hủy thành công và báo kết quả về ClassManagement.
       setState(previous => ({ ...previous, items: applyRoomSessionCancellations(previous.items, result.cancelled) }))
       setNotice(`Đã hủy ${confirmation.length - result.failed.length} buổi của lớp ${sportClass.className}.${result.failed.length ? ` Còn ${result.failed.length} buổi chưa hủy được.` : ''}`)
       onUpdated(result)
     }
+    // Giữ lựa chọn thất bại để thử lại. Đóng xác nhận khi đã hủy hết.
     setSelectedIds(result.failed.map(item => String(item.session.id)))
     if (!result.failed.length) setConfirmation(null)
   }
@@ -79,11 +88,14 @@ export default function CancelClassSessionsDialog({ sportClass, onClose, onUpdat
       {notice && <p className="room-timetable-notice" role="status">{notice}</p>}
       <div className="class-cancel-filters"><label>Từ ngày<input type="date" value={range.from} disabled={busy || !!confirmation} onChange={event => changeRange('from', event.target.value)} /></label><label>Đến ngày<input type="date" value={range.to} min={range.from || undefined} disabled={busy || !!confirmation} onChange={event => changeRange('to', event.target.value)} /></label><button type="button" disabled={busy || !!confirmation || (!range.from && !range.to)} onClick={() => { setRange({ from: '', to: '' }); setSelectedIds([]) }}>Xóa lọc ngày</button></div>
       {invalidRange && <p className="room-recurring-error" role="alert">Ngày kết thúc phải từ ngày bắt đầu trở đi.</p>}
+      {/* Chọn tất cả áp dụng cho toàn bộ kết quả lọc, kể cả các buổi ở trang khác. */}
       <div className="class-cancel-selection"><strong aria-live="polite">Đã chọn {selected.length}/{visible.length} buổi</strong><div><button type="button" disabled={state.loading || !!state.error || busy || !visible.length} onClick={() => setSelectedIds(visible.map(item => String(item.id)))}>Chọn tất cả</button><button type="button" disabled={busy || !selected.length} onClick={() => setSelectedIds([])}>Bỏ chọn</button><button type="button" aria-label="Tải lại buổi học của lớp" disabled={state.loading || busy} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />Làm mới</button></div></div>
       {state.error && <p className="room-recurring-error" role="alert">{state.error}</p>}
       {state.loading ? <p role="status">Đang tải buổi học của lớp…</p> : !visible.length ? <p className="class-cancel-empty">{eligible.length ? 'Không có buổi học phù hợp với khoảng ngày đã chọn.' : 'Lớp này không còn buổi học chưa bắt đầu để hủy.'}</p> : <ManagerList items={visible} label="Buổi học chờ hủy" className="class-cancel-list" as="ul">{item => <li key={item.id}><label><input type="checkbox" checked={selectedIds.includes(String(item.id))} disabled={busy || !!state.error} onChange={() => toggle(item.id)} /><span><strong>Buổi #{item.id} · {item.coachName || sportClass.coachName || 'Chưa phân công HLV'}</strong><span>{formatDateTime(item.startsAt)} – {formatDateTime(item.endsAt)}</span><small>{item.currentEnrollment ?? 0} học viên đã đăng ký{item.roomName ? ` · ${item.roomName}` : ''}</small></span></label></li>}</ManagerList>}
     </div>
+    {/* Nút Hủy mở hộp thoại xác nhận với danh sách đã chọn. API hủy được gọi sau khi nhập lý do và gửi biểu mẫu. */}
     <footer><button type="button" disabled={busy || !!confirmation} onClick={close}>Đóng</button><button type="button" className="class-cancel-confirm" disabled={state.loading || !!state.error || busy || !selected.length} onClick={() => setConfirmation(selected.map(item => ({ ...item, className: sportClass.className })))}><Ban size={16} />Hủy {selected.length} buổi đã chọn</button></footer>
+    {/* Truyền classId để service kiểm tra lại các buổi thuộc đúng lớp trước khi hủy. */}
     {confirmation && <CancelRoomSessionDialog sessions={confirmation} contextLabel={`Lớp ${sportClass.className}`} cancelSessions={(request, onProgress) => cancelSessionsForClass({ ...request, classId: sportClass.id }, onProgress)} onClose={() => setConfirmation(null)} onBusyChange={setBusy} onCancelled={cancelled} />}
   </dialog>
 }

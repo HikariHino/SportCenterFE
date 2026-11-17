@@ -12,15 +12,18 @@ export async function getRoomTimetableClasses({ signal } = {}) {
 export async function cancelRoomSessions({ sessions, reason }, onProgress = () => {}) {
   const trimmedReason = reason.trim()
   if (!trimmedReason || trimmedReason.length > 500) throw new Error('Vui lòng nhập lý do hủy từ 1 đến 500 ký tự.')
+  // Bỏ ID trùng để mỗi buổi chỉ được gửi một yêu cầu hủy trong lần xác nhận này.
   const unique = [...new Map(sessions.map(session => [String(session.id), session])).values()]
   if (!unique.length) throw new Error('Vui lòng chọn ít nhất một buổi học để hủy.')
   const cancelled = [], failed = []
   for (const session of unique) {
     try {
       if (!canCancelRoomSession(session)) throw new Error('Buổi học đã bắt đầu, đã hủy hoặc đã hoàn thành.')
+      // POST /api/class-sessions/{sessionId}/cancel với body { reason }.
       await cancelClassSession(session.id, trimmedReason)
       cancelled.push(session)
     } catch (error) {
+      // Ghi lỗi theo từng buổi rồi tiếp tục xử lý các buổi còn lại.
       failed.push({ session, message: getClassErrorMessage(error, 'Không thể hủy buổi học. Vui lòng thử lại.') })
     }
     onProgress({ completed: cancelled.length + failed.length, total: unique.length })

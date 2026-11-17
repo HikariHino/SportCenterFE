@@ -159,8 +159,8 @@ async function assertClassCanClose(classId) {
  */
 
 /**
- * GET /api/classes/{id}/sessions
- * Xem danh sách các buổi học của một lớp
+ * GET /api/classes/{classId}/sessions
+ * Đọc một trang buổi học của lớp. params chứa page và pageSize.
  */
 export async function getClassSessions(classId, params = {}, { signal } = {}) {
   const response = await api.get(`/classes/${classId}/sessions`, { params, signal })
@@ -180,6 +180,7 @@ export async function getClassSessions(classId, params = {}, { signal } = {}) {
   }
 }
 
+// Gọi getClassSessions cho đến khi đủ tổng số buổi BE trả về.
 export async function getAllClassSessions(classId, { signal } = {}) {
   const items = []
   const seen = new Set()
@@ -271,8 +272,8 @@ export async function updateClassSession(classId, sessionId, data) {
 }
 
 /**
- * POST /api/class-sessions/{id}/cancel
- * Hủy buổi học đột xuất kèm lý do
+ * POST /api/class-sessions/{sessionId}/cancel
+ * Gửi { reason } để hủy một buổi. sessionId là mã buổi học.
  */
 export async function cancelClassSession(sessionId, reason) {
   const response = await api.post(`/class-sessions/${sessionId}/cancel`, {

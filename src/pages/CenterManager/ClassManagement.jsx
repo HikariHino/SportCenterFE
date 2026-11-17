@@ -527,9 +527,11 @@ export default function ClassManagement() {
   }
 
   const handleClassSessionsCancelled = result => {
+    // onUpdated trả kết quả hủy để cập nhật lịch của lớp đang xem.
     if (String(selectedClassForSessions?.id) === String(cancellingClass?.id)) {
       setSessionsList(previous => applyRoomSessionCancellations(previous, result.cancelled))
     }
+    // Tải lại GET /api/classes/manage và các buổi của từng lớp để cập nhật thông tin trong bảng quản lý.
     loadClasses()
   }
 
@@ -2375,6 +2377,7 @@ export default function ClassManagement() {
           </div>
         </div>
       )}
+      {/* Bấm Hủy buổi sẽ gán lớp vào cancellingClass và mở hộp thoại chọn buổi. */}
       {viewActive && cancellingClass && <CancelClassSessionsDialog sportClass={cancellingClass} onClose={() => setCancellingClass(null)} onUpdated={handleClassSessionsCancelled} />}
     </div>
   )
