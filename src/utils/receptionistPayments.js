@@ -9,11 +9,38 @@ export const receptionistPaymentMethodLabel = method => receptionistPaymentMetho
 
 export function filterReceptionistPayments(payments, { query = '', status = 'all', method = 'all' } = {}) {
   const term = query.trim().replace(/^#/, '').toLocaleLowerCase('vi')
+  const subscriptionId = term.match(/^sub-(\d+)$/)?.[1]
+  const paymentId = term.match(/^pay-(\d+)$/)?.[1]
   return payments.filter(payment => (status === 'all' || paymentStatus(payment) === status)
     && (method === 'all' || String(payment.paymentMethod).toLowerCase() === method)
-    && (!term || [payment.id, payment.memberId, payment.subscriptionId, payment.payOSOrderCode, payment.transactionReference, payment.packageName, payment.memberName]
-      .some(value => String(value ?? '').toLocaleLowerCase('vi').includes(term))))
+    && (subscriptionId ? String(payment.subscriptionId) === subscriptionId : paymentId ? String(payment.id) === paymentId
+      : !term || [payment.id, payment.memberId, payment.subscriptionId, payment.payOSOrderCode, payment.transactionReference, payment.packageName, payment.memberName, payment.memberPhone, payment.memberEmail]
+        .some(value => String(value ?? '').toLocaleLowerCase('vi').includes(term))))
     .sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0) || Number(b.id) - Number(a.id))
+}
+
+/** Keep subscription orders and real receipts distinct while displaying one paginated list. */
+export function getReceptionistPaymentRows(orders, payments, filters = {}) {
+  const subscriptions = new Map(orders.map(order => [String(order.id), order]))
+  const receipts = payments.map(payment => {
+    const order = subscriptions.get(String(payment.subscriptionId))
+    if (!order || String(order.memberId) !== String(payment.memberId)) return payment
+    return { ...payment, memberName: payment.memberName || order.memberName,
+      memberPhone: payment.memberPhone || order.memberPhone, memberEmail: payment.memberEmail || order.memberEmail,
+      packageName: payment.packageName || order.packageName }
+  })
+  const activeSubscriptions = new Set(payments.filter(payment =>
+    !['cancelled', 'expired', 'failed'].includes(paymentStatus(payment)) || Number(payment.amountReceived) > 0)
+    .map(payment => String(payment.subscriptionId)))
+  const history = filterReceptionistPayments(receipts, filters)
+    .map(payment => ({ key: `payment:${payment.id}`, kind: 'payment', payment, createdAt: payment.createdAt, status: paymentStatus(payment) }))
+  const pending = getReceptionistPendingCounterOrders(orders, payments, filters)
+    .filter(order => !activeSubscriptions.has(String(order.id)))
+    .map(order => ({ key: `order:${order.id}`, kind: 'order', order, createdAt: order.createdAt, status: 'pending' }))
+  return [...pending, ...history].sort((a, b) => Number(b.status === 'pending') - Number(a.status === 'pending')
+    || (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)
+    || Number(b.order?.id ?? b.payment?.id) - Number(a.order?.id ?? a.payment?.id)
+    || a.key.localeCompare(b.key))
 }
 
 
