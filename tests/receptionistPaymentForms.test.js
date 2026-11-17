@@ -30,5 +30,5 @@ test('counter checkout requires receipt consent and payment history exposes all 
   assert.match(counter, /Tôi đã thực nhận đủ tiền/)
   assert.doesNotMatch(counter, /value="PayOS"/)
   const history = renderToStaticMarkup(createElement(PaymentsView, { query: '', showNotice() {} }))
-  for (const label of ['Lịch sử thanh toán', 'Làm mới', 'Hết hạn', 'Thất bại', 'Hoàn tiền', 'Tiền mặt', 'Chuyển khoản', 'Thẻ tín dụng']) assert.ok(history.includes(label), label)
+  for (const label of ['Danh sách thanh toán', 'Làm mới', 'Hết hạn', 'Thất bại', 'Hoàn tiền', 'Tiền mặt', 'Chuyển khoản', 'Thẻ tín dụng']) assert.ok(history.includes(label), label)
 })

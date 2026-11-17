@@ -6,14 +6,14 @@ import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 import { getAllReceptionistPages, receptionistPage, RECEPTIONIST_PAGE_SIZE } from '../src/utils/receptionistPagination.js'
 
-let server, List, Pagination, PendingOrders
+let server, List, Pagination, PaymentTable
 before(async () => {
   server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), configFile: false, esbuild: { jsx: 'automatic' },
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   const module = await server.ssrLoadModule('/src/pages/Receptionist/ReceptionistPagination.jsx')
   List = module.ReceptionistList
   Pagination = module.ReceptionistPagination
-  PendingOrders = (await server.ssrLoadModule('/src/pages/Receptionist/PendingCounterOrders.jsx')).default
+  PaymentTable = (await server.ssrLoadModule('/src/pages/Receptionist/PaymentTable.jsx')).default
 })
 after(async () => { await server?.close() })
 
@@ -79,8 +79,8 @@ test('last and empty pages are clamped after data shrinks and buttons disable at
 
 test('counter orders paginate while preserving blocked state and the exact collect action IDs', () => {
   const orders = Array.from({ length: 21 }, (_, index) => ({ id: 48 + index, memberId: 9, packageName: 'Gold', agreedPrice: 2000, blockedReason: index === 2 ? 'Cần đối soát' : '' }))
-  const html = renderToStaticMarkup(h(PendingOrders, { orders, onCollect() {}, onRefresh() {} }))
-  assert.equal((html.match(/reception-pending-order-row/g) || []).length, 10)
+  const html = renderToStaticMarkup(h(PaymentTable, { rows: orders.map(order => ({ key: `order:${order.id}`, kind: 'order', status: 'pending', order })), onCollect() {}, onView() {} }))
+  assert.equal((html.match(/data-order-id=/g) || []).length, 10)
   assert.match(html, /Thu tiền đơn đăng ký 48/)
   assert.match(html, /Thu tiền đơn đăng ký 57/)
   assert.doesNotMatch(html, /Thu tiền đơn đăng ký 58/)

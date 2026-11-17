@@ -6,7 +6,7 @@ import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 import { getReceptionistPendingCounterOrders } from '../src/utils/receptionistPayments.js'
 
-let server, api, service, CounterOrders, Checkout
+let server, api, service, PaymentTable, Checkout
 const descriptors = new Map()
 before(async () => {
   for (const key of ['localStorage', 'sessionStorage']) {
@@ -17,7 +17,7 @@ before(async () => {
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   api = (await server.ssrLoadModule('/src/services/api.js')).default
   service = await server.ssrLoadModule('/src/services/receptionistPaymentService.js')
-  CounterOrders = (await server.ssrLoadModule('/src/pages/Receptionist/PendingCounterOrders.jsx')).default
+  PaymentTable = (await server.ssrLoadModule('/src/pages/Receptionist/PaymentTable.jsx')).default
   Checkout = (await server.ssrLoadModule('/src/pages/Receptionist/CheckoutDialog.jsx')).default
 })
 after(async () => {
@@ -140,14 +140,13 @@ test('access denial fails the load and cancellation stops scheduling further mem
   assert.ok(scans <= 4)
 })
 
-test('the counter table renders order identity, member details and one direct collect button; blocked orders have no collect button', () => {
+test('the shared payment table renders order identity and collection; blocked orders have no collect button', () => {
   const rows = getReceptionistPendingCounterOrders([{ ...order, memberName: member.fullName, memberPhone: member.phone }])
-  const render = props => renderToStaticMarkup(createElement(CounterOrders, { orders: rows, onRefresh() {}, onCollect() {}, ...props }))
+  const render = props => renderToStaticMarkup(createElement(PaymentTable, { rows: rows.map(order => ({ key: `order:${order.id}`, kind: 'order', status: 'pending', order })), onView() {}, onCollect() {}, ...props }))
   const html = render({})
   for (const label of ['#SUB-48', 'Gold All-Access', 'Nguyễn Văn An', '0912345678', 'Thu tiền đơn đăng ký 48']) assert.ok(html.includes(label), label)
-  assert.doesNotMatch(render({ orders: [{ ...rows[0], blockedReason: 'Cần đối soát' }] }), /aria-label="Thu tiền/)
-  assert.match(render({ disabled: true }), /disabled=""/)
-  assert.match(render({ orders: [], error: 'Không tải được đơn' }), /role="alert"/)
+  assert.doesNotMatch(render({ rows: [{ key: 'order:48', kind: 'order', status: 'pending', order: { ...rows[0], blockedReason: 'Cần đối soát' } }] }), /aria-label="Thu tiền/)
+  assert.match(render({ collectingDisabled: true }), /disabled=""/)
 })
 
 test('direct checkout locks the chosen order and honors the selected counter payment method', () => {
