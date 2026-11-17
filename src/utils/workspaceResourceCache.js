@@ -5,7 +5,7 @@ export function createWorkspaceResourceCache({ now = Date.now } = {}) {
   let generation = 0
   const empty = () => ({ data: undefined, hasData: false, fetching: false, error: null, updatedAt: 0, invalidation: 0 })
   const entry = key => {
-    if (!entries.has(key)) entries.set(key, { snapshot: empty(), request: null, version: 0 })
+    if (!entries.has(key)) entries.set(key, { snapshot: empty(), request: null, version: 0, errorVersion: null })
     return entries.get(key)
   }
   const publish = (key, value, changes) => {
@@ -19,9 +19,14 @@ export function createWorkspaceResourceCache({ now = Date.now } = {}) {
       listeners.get(key).add(listener)
       return () => { listeners.get(key)?.delete(listener); if (!listeners.get(key)?.size) listeners.delete(key) }
     },
-    load(key, loader, { force = false, staleTime = 30000 } = {}) {
+    load(key, loader, { force = false, background = false, staleTime = 30000 } = {}) {
       const value = entry(key)
       if (value.request) return value.request
+      const status = Number(value.snapshot.error?.response?.status ?? value.snapshot.error?.status)
+      // A timer or tab remount cannot fix permission errors or a missing route.
+      // Explicit refresh/invalidation may retry; a new login gets a fresh cache.
+      if ((!force || background) && value.errorVersion === value.version
+        && [401, 403, 404, 405].includes(status)) return Promise.reject(value.snapshot.error)
       if (!force && value.snapshot.hasData && now() - value.snapshot.updatedAt < staleTime) return Promise.resolve(value.snapshot.data)
       const currentGeneration = generation
       const version = value.version
@@ -29,7 +34,10 @@ export function createWorkspaceResourceCache({ now = Date.now } = {}) {
         if (generation === currentGeneration && value.version === version) publish(key, value, { data, hasData: true, error: null, updatedAt: now() })
         return data
       }, error => {
-        if (generation === currentGeneration && value.version === version) publish(key, value, { error })
+        if (generation === currentGeneration && value.version === version) {
+          value.errorVersion = version
+          publish(key, value, { error })
+        }
         throw error
       }).finally(() => {
         if (value.request === request) {

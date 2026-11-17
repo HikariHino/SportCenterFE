@@ -49,13 +49,13 @@ before(async () => {
     if (config.url === '/payments/3/sync') { paymentStatus = 'Completed'; subscriptionStatus = 'Active'; data = { id: 3, subscriptionId: 7, amount: 1000, status: paymentStatus, paymentMethod: 'PayOS' } }
     if (config.url === '/payments') data = [{ id: 3, subscriptionId: 7, amount: 1000, status: paymentStatus, paymentMethod: 'PayOS' }]
     if (config.url === '/membership-packages') data = [{ id: 1, packageName: 'Gói tải sẵn', packageType: 'Standard', price: 1000, durationInDays: 30, isActive: true }]
-    if (config.url === '/member-subscriptions/me') data = [{ id: 7, packageId: 1, packageName: 'Gói tải sẵn', packageType: 'Standard', agreedPrice: 1000, durationInDays: 30, status: subscriptionStatus, startDate: '2026-11-15T00:00:00Z', endDate: '2027-11-15T00:00:00Z' }]
+    if (config.url === '/member-subscriptions/mine') data = [{ id: 7, packageId: 1, packageName: 'Gói tải sẵn', packageType: 'Standard', agreedPrice: 1000, durationInDays: 30, status: subscriptionStatus, startDate: '2026-11-15T00:00:00Z', endDate: '2027-11-15T00:00:00Z' }]
     if (config.url === '/SupportTickets/my-tickets') data = [{ id: 1, title: 'Phiếu đã tải sẵn', description: 'Cần tư vấn', status: 'Open', createdAt: '2026-11-16T08:00:00Z' }]
     if (config.url === '/notifications') data = [{ id: 1, title: 'Thông báo đã tải sẵn', content: 'Thông tin tài khoản', isRead: false, sentAt: '2026-11-16T08:00:00Z' }]
     if (config.url.includes('/history') && config.url.startsWith('/ai/')) data = { items: [], total: 0, page: config.params.page, pageSize: config.params.pageSize }
     if (largeLists) {
       if (config.url === '/membership-packages') data = packageRows()
-      if (config.url === '/member-subscriptions/me') data = subscriptionRows()
+      if (config.url === '/member-subscriptions/mine') data = subscriptionRows()
       if (/^\/member-subscriptions\/\d+$/.test(config.url)) data = { ...subscriptionRows().find(item => String(item.id) === config.url.split('/').at(-1)), payments: paymentRows() }
       if (config.url === '/payments') data = paymentRows()
       if (config.url === '/notifications') data = rows(index => ({ id: index + 1, title: `Thông báo ${index + 1}`, content: 'Nội dung thông báo', isRead: false, sentAt: '2026-11-16T08:00:00Z' }))
@@ -104,9 +104,9 @@ test('entry warms enabled Member tabs and skips the hidden workout view', () => 
   assert.deepEqual(errors, [])
   assert.equal(document.querySelectorAll('.member-view-content').length, 9)
   assert.equal(document.querySelectorAll('.member-view-content[hidden]').length, 8)
-  for (const url of ['/profile', '/member-subscriptions/me', '/membership-packages', '/payments', '/GymCheckIns/my-qr', '/GymCheckIns/my-history', '/class-registrations/mine', '/TrainingPlans/members/9', '/SupportTickets/my-tickets', '/notifications', '/ai/chat/history']) assert.ok(count(url) > 0, url)
+  for (const url of ['/profile', '/member-subscriptions/mine', '/membership-packages', '/payments', '/GymCheckIns/my-qr', '/GymCheckIns/my-history', '/class-registrations/mine', '/TrainingPlans/members/9', '/SupportTickets/my-tickets', '/notifications', '/ai/chat/history']) assert.ok(count(url) > 0, url)
   assert.equal(count('/ai/workout-recommendations/history'), 0)
-  assert.equal(count('/member-subscriptions/me'), 1)
+  assert.equal(count('/member-subscriptions/mine'), 1)
   assert.equal(count('/members/me'), 1)
   assert.ok(requests.every(request => request.method === 'get'))
 })
@@ -159,9 +159,9 @@ test('payment synchronization updates the already mounted subscription tab immed
   await clickTab('Thanh toán trực tuyến')
   await act(async () => [...document.querySelectorAll('.mpay-record-actions button')].find(button => button.textContent.includes('Chi tiết')).click())
   assert.ok(document.querySelector('.mpay-dialog[open]'))
-  const subscriptionsBefore = count('/member-subscriptions/me')
+  const subscriptionsBefore = count('/member-subscriptions/mine')
   await act(async () => [...document.querySelectorAll('.mpay-dialog button')].find(button => button.textContent.includes('Đồng bộ trạng thái')).click())
-  assert.ok(count('/member-subscriptions/me') > subscriptionsBefore)
+  assert.ok(count('/member-subscriptions/mine') > subscriptionsBefore)
   await clickTab('Gói tập & Thẻ hội viên')
   assert.equal(document.querySelector('.mpay-dialog[open]'), null, 'inactive tabs cannot keep native dialogs open')
   assert.match(document.querySelector('.member-view-content:not([hidden])').textContent, /Đang hiệu lực/)

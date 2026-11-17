@@ -11,13 +11,13 @@ function unwrap(body, fallback) {
 
 const isMissingRoute = error => [404, 405].includes(Number(error.response?.status))
 
-/** GET /api/member-subscriptions/me (legacy: /mine). */
+/** GET /api/member-subscriptions/mine (legacy fallback: /me). */
 export async function getMySubscriptions() {
   let response
-  try { response = await api.get('/member-subscriptions/me') }
+  try { response = await api.get('/member-subscriptions/mine') }
   catch (error) {
     if (!isMissingRoute(error)) throw error
-    response = await api.get('/member-subscriptions/mine')
+    response = await api.get('/member-subscriptions/me')
   }
   const payload = unwrap(response.data, 'Không thể tải danh sách đăng ký gói.')
   if (!Array.isArray(payload)) throw new Error('Dữ liệu gói đã đăng ký không hợp lệ. Vui lòng tải lại.')

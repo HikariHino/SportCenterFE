@@ -62,6 +62,44 @@ test('failed refreshes retain the last successful result and allow a deliberate 
   assert.equal(cache.snapshot('rooms').error, null)
 })
 
+test('authorization and missing-route failures stop background retries while explicit refresh and new sessions can recover', async () => {
+  for (const status of [401, 403, 404, 405]) {
+    const cache = createReceptionistResourceCache()
+    cache.setData('records', [{ id: 1 }])
+    let requests = 0
+    const error = Object.assign(new Error('Read rejected'), { response: { status } })
+    const fail = () => { requests++; throw error }
+    await assert.rejects(cache.load('records', fail, { force: true }), failure => failure === error)
+    for (let tick = 0; tick < 40; tick++) {
+      await assert.rejects(cache.load('records', fail, { force: true, background: true }), failure => failure === error)
+      await assert.rejects(cache.load('records', fail), failure => failure === error)
+    }
+    assert.equal(requests, 1)
+    assert.deepEqual(cache.snapshot('records').data, [{ id: 1 }])
+    assert.equal(cache.snapshot('records').fetching, false)
+    await cache.load('records', () => { requests++; return [{ id: 2 }] }, { force: true })
+    assert.equal(requests, 2)
+    assert.equal(cache.snapshot('records').error, null)
+    await assert.rejects(cache.load('records', fail, { force: true }))
+    cache.invalidate(['records'])
+    await cache.load('records', () => { requests++; return [{ id: 3 }] })
+    assert.equal(requests, 4)
+    const newSession = createReceptionistResourceCache()
+    await newSession.load('records', () => [{ id: 4 }])
+    assert.equal(newSession.snapshot('records').data[0].id, 4)
+  }
+})
+
+test('temporary network and server errors still retry on later background intervals', async () => {
+  for (const status of [undefined, 500, 502, 503]) {
+    const cache = createReceptionistResourceCache()
+    const error = Object.assign(new Error('Temporary failure'), { response: status ? { status } : undefined })
+    await assert.rejects(cache.load('records', () => { throw error }))
+    await cache.load('records', () => [{ id: 1 }], { background: true, force: true })
+    assert.equal(cache.snapshot('records').data[0].id, 1)
+  }
+})
+
 test('a confirmed check-in cannot be overwritten by a slower earlier background read', async () => {
   const cache = createReceptionistResourceCache()
   await cache.load('checkins', () => [])
