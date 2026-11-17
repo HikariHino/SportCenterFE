@@ -125,6 +125,7 @@ test('long AI history retains ten items per page and selected state across page 
     assert.equal(new Set(seen).size, 23)
     assert.equal(document.querySelector('[aria-current="true"]').title, 'Cuộc trò chuyện 1')
     assert.equal(document.querySelectorAll('.member-numbered-item').length, 0)
+    assert.doesNotMatch(pager('Cuộc trò chuyện AI').textContent, /Trước|Sau|Trang/)
   })
 })
 

@@ -22,7 +22,7 @@ function ListLayout({ rows, pagination, as: Element, className, heading, compact
   </div>
 }
 
-export function MemberList({ items = [], page, total, onPageChange, as = 'div', className = '', heading, compact = false, table = false, resetKey = '', layout = 'default', hideSinglePagePagination = false, ...props }) {
+export function MemberList({ items = [], page, total, onPageChange, as = 'div', className = '', heading, compact = false, table = false, resetKey = '', layout = 'default', hideSinglePagePagination = false, iconOnlyPagination = false, ...props }) {
   const [selection, setSelection] = useState({ resetKey, page: 1 })
   const remote = typeof onPageChange === 'function'
   const range = listPage(remote ? total : items.length, remote ? page : selection.resetKey === resetKey ? selection.page : 1)
@@ -31,7 +31,7 @@ export function MemberList({ items = [], page, total, onPageChange, as = 'div', 
   }, [remote, resetKey, range.page, selection])
   if (!range.total) return null
   const visible = remote ? items : items.slice(range.offset, range.to)
-  return <NumberedList {...props} items={visible} page={range.page} total={range.total} onPageChange={remote ? onPageChange : next => setSelection({ resetKey, page: next })} prefix="member" renderLayout={(rows, pagination) =>
+  return <NumberedList {...props} items={visible} page={range.page} total={range.total} iconOnlyPagination={iconOnlyPagination} onPageChange={remote ? onPageChange : next => setSelection({ resetKey, page: next })} prefix="member" renderLayout={(rows, pagination) =>
     <ListLayout rows={rows} pagination={hideSinglePagePagination && range.pageCount === 1 ? null : pagination} as={as} className={className} heading={heading} compact={compact} resetKey={resetKey} table={table} label={props.label} layout={layout} />
   } />
 }
