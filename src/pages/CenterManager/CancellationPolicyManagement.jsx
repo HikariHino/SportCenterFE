@@ -1,3 +1,5 @@
+import useExclusiveAction from '../../hooks/useExclusiveAction'
+import ManagerFormError from './ManagerFormError'
 import { ManagerList } from './ManagerPagination'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
@@ -39,6 +41,7 @@ const formatHours = (hours) => {
 }
 
 export default function CancellationPolicyManagement() {
+  const exclusiveAction = useExclusiveAction()
   const viewActive = useManagerViewActive()
 
   const [localError, setError] = useState('')
@@ -142,7 +145,7 @@ export default function CancellationPolicyManagement() {
   }
 
   // Submit Create Policy
-  const handleCreateSubmit = async (e) => {
+  const handleCreateSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     const validationError = getManagerFormValidationError('policy', policyForm)
     if (validationError) { setError(validationError); return }
@@ -172,10 +175,10 @@ export default function CancellationPolicyManagement() {
     } finally {
       setSubmitting(false)
     }
-  }
+  })
 
   // Submit Edit Policy
-  const handleEditSubmit = async (e) => {
+  const handleEditSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     const validationError = getManagerFormValidationError('policy', policyForm)
     if (validationError) { setError(validationError); return }
@@ -206,10 +209,10 @@ export default function CancellationPolicyManagement() {
     } finally {
       setSubmitting(false)
     }
-  }
+  })
 
   // Quick toggle active / inactive
-  const handleToggleStatus = async (policy) => {
+  const handleToggleStatus = exclusiveAction(async (policy) => {
     setSubmitting(true)
     setError('')
     try {
@@ -227,13 +230,13 @@ export default function CancellationPolicyManagement() {
           ? `Đã kích hoạt áp dụng chính sách "${policy.name}".`
           : `Đã tạm dừng áp dụng chính sách "${policy.name}".`
       )
+      setTogglingPolicy(null)
     } catch (err) {
       setError(getPolicyErrorMessage(err, 'Không thể cập nhật trạng thái chính sách hủy.'))
     } finally {
       setSubmitting(false)
-      setTogglingPolicy(null)
     }
-  }
+  })
 
   // Export CSV
   const handleExportCSV = () => {
@@ -344,7 +347,7 @@ export default function CancellationPolicyManagement() {
       </section>
 
       {/* Notification Alerts */}
-      {error && (
+      {error && !(showCreateModal || editingPolicy || selectedPolicyForDetail || togglingPolicy) && (
         <div className="policy-alert policy-alert-error" role="alert">
           <div className="policy-alert-content">
             <AlertCircle size={18} />
@@ -598,6 +601,7 @@ export default function CancellationPolicyManagement() {
             </div>
             <form onSubmit={handleCreateSubmit}>
               <div className="policy-modal-body">
+                <ManagerFormError message={error} />
                 <div className="policy-form-group">
                   <label>
                     Tên chính sách hủy <span className="required">*</span>
@@ -750,6 +754,7 @@ export default function CancellationPolicyManagement() {
             </div>
             <form onSubmit={handleEditSubmit}>
               <div className="policy-modal-body">
+                <ManagerFormError message={error} />
                 <div className="policy-form-group">
                   <label>
                     Tên chính sách hủy <span className="required">*</span>
@@ -884,6 +889,7 @@ export default function CancellationPolicyManagement() {
               </button>
             </div>
             <div className="policy-modal-body">
+              <ManagerFormError message={error} />
               <div className="policy-rule-box">
                 <div className="policy-rule-info">
                   <span>Thời gian hủy tối thiểu:</span>
@@ -989,6 +995,7 @@ export default function CancellationPolicyManagement() {
               </button>
             </div>
             <div className="policy-modal-body">
+              <ManagerFormError message={error} />
               <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn{' '}
                 <strong>{togglingPolicy.isActive ? 'tạm dừng áp dụng' : 'kích hoạt lại'}</strong> chính sách{' '}

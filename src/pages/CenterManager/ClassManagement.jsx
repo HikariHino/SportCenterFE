@@ -1,3 +1,5 @@
+import useExclusiveAction from '../../hooks/useExclusiveAction'
+import ManagerFormError from './ManagerFormError'
 import { ManagerList } from './ManagerPagination'
 import { useManagerCache, useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { getAllManagerClasses } from '../../services/managerWorkspaceReads'
@@ -130,6 +132,7 @@ export function getRoomForClass(cls, roomsList = []) {
 }
 
 export default function ClassManagement() {
+  const exclusiveAction = useExclusiveAction()
   const viewActive = useManagerViewActive()
   const cache = useManagerCache()
   const [activeTab, setActiveTab] = useState('classes') // 'sports' | 'classes'
@@ -320,7 +323,7 @@ export default function ClassManagement() {
     setError('')
   }
 
-  const handleCreateSportSubmit = async (e) => {
+  const handleCreateSportSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!sportForm.name.trim()) {
       setError('Vui lòng nhập tên bộ môn thể thao.')
@@ -343,9 +346,9 @@ export default function ClassManagement() {
     } finally {
       setSubmittingSport(false)
     }
-  }
+  })
 
-  const handleEditSportSubmit = async (e) => {
+  const handleEditSportSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!editingSport || submittingSport) return
     if (!sportForm.name.trim()) {
@@ -371,9 +374,9 @@ export default function ClassManagement() {
     } finally {
       setSubmittingSport(false)
     }
-  }
+  })
 
-  const handleToggleSportStatus = async (sport) => {
+  const handleToggleSportStatus = exclusiveAction(async (sport) => {
     if (submittingSport) return
     const nextStatus = !sport.isActive
     setSubmittingSport(true)
@@ -398,7 +401,7 @@ export default function ClassManagement() {
     } finally {
       setSubmittingSport(false)
     }
-  }
+  })
 
   // ==========================================
   // SPORT CLASSES LOGIC
@@ -456,7 +459,7 @@ export default function ClassManagement() {
     setError('')
   }
 
-  const handleCreateClassSubmit = async (e) => {
+  const handleCreateClassSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!classForm.className.trim()) {
       setError('Vui lòng nhập tên lớp học.')
@@ -483,9 +486,9 @@ export default function ClassManagement() {
     } finally {
       setSubmittingClass(false)
     }
-  }
+  })
 
-  const handleEditClassSubmit = async (e) => {
+  const handleEditClassSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!editingClass) return
     if (!classForm.className.trim()) {
@@ -513,7 +516,7 @@ export default function ClassManagement() {
     } finally {
       setSubmittingClass(false)
     }
-  }
+  })
 
   // ==========================================
   // CLASS SESSIONS LOGIC
@@ -552,7 +555,7 @@ export default function ClassManagement() {
     setShowAddSessionModal(true)
   }
 
-  const handleCheckRoomAvailability = async () => {
+  const handleCheckRoomAvailability = exclusiveAction(async () => {
     if (!sessionForm.roomId) {
       setError('Vui lòng chọn phòng trước khi kiểm tra.')
       return
@@ -578,9 +581,9 @@ export default function ClassManagement() {
     } finally {
       setCheckingAvailability(false)
     }
-  }
+  })
 
-  const handleCreateSessionSubmit = async (e) => {
+  const handleCreateSessionSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!selectedClassForSessions) return
     if (!sessionForm.coachId) {
@@ -622,7 +625,7 @@ export default function ClassManagement() {
     } finally {
       setSubmittingSession(false)
     }
-  }
+  })
 
   const handleOpenReschedule = (session) => {
     setReschedulingSession(session)
@@ -641,7 +644,7 @@ export default function ClassManagement() {
     setAvailabilityResult(null)
   }
 
-  const handleRescheduleSubmit = async (e) => {
+  const handleRescheduleSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!selectedClassForSessions || !reschedulingSession) return
     if (!sessionForm.roomId) {
@@ -667,14 +670,14 @@ export default function ClassManagement() {
     } finally {
       setSubmittingSession(false)
     }
-  }
+  })
 
   const handleOpenCancelSession = (session) => {
     setCancellingSession(session)
     setCancelReason('')
   }
 
-  const handleCancelSessionSubmit = async (e) => {
+  const handleCancelSessionSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!cancellingSession) return
     if (!cancelReason.trim()) {
@@ -694,9 +697,9 @@ export default function ClassManagement() {
     } finally {
       setSubmittingSession(false)
     }
-  }
+  })
 
-  const handleCompleteSession = async (session) => {
+  const handleCompleteSession = exclusiveAction(async (session) => {
     try {
       await completeClassSession(session.id)
       await loadClassSessions(selectedClassForSessions.id)
@@ -704,7 +707,7 @@ export default function ClassManagement() {
     } catch (err) {
       setError(getClassErrorMessage(err, 'Không thể hoàn thành buổi học.'))
     }
-  }
+  })
 
   // Roster logic
   const handleOpenRoster = async (session) => {
@@ -831,7 +834,7 @@ export default function ClassManagement() {
       </div>
 
       {/* Alert Notifications */}
-      {error && (
+      {error && !(showCreateSportModal || editingSport || togglingSport || showCreateClassModal || editingClass || deactivatingClass || selectedClassForSessions || showAddSessionModal || reschedulingSession || cancellingSession || rosterSession) && (
         <div className="class-alert class-alert-error" role="alert">
           <div className="class-alert-content">
             <AlertCircle size={18} />
@@ -1194,6 +1197,7 @@ export default function ClassManagement() {
             </div>
 
             <div className="class-modal-body">
+              <ManagerFormError message={(showAddSessionModal || reschedulingSession || cancellingSession || rosterSession) ? '' : error} />
               {/* Header card summary */}
               <div className="sessions-header-card">
                 <div className="sessions-header-info">
@@ -1366,7 +1370,7 @@ export default function ClassManagement() {
             </div>
             <form onSubmit={handleCreateSessionSubmit}>
               <div className="class-modal-body">
-                {error && <p className="class-form-error" role="alert">{error}</p>}
+                <ManagerFormError message={error} />
                 {invalidSessionCapacity && <p className="class-form-error" role="alert">{sessionCapacityLimit > 0 ? `Sức chứa phải từ 1 đến ${sessionCapacityLimit} học viên, theo sức chứa của phòng và lớp.` : 'Vui lòng chọn phòng để xác nhận sức chứa.'}</p>}
                 <div className="class-form-group">
                   <label>
@@ -1547,7 +1551,7 @@ export default function ClassManagement() {
             <form onSubmit={handleRescheduleSubmit}>
               <div className="class-modal-body">
                 <p className="class-scheduling-note" role="status">Khi đổi ngày, giờ hoặc HLV, học viên đã đăng ký sẽ nhận thông báo kiểm tra lại lịch. Đăng ký được giữ nguyên; học viên tự hủy nếu không thể tham gia, theo hạn hủy của buổi học.</p>
-                {error && <p className="class-form-error" role="alert">{error}</p>}
+                <ManagerFormError message={error} />
                 {invalidSessionCapacity && <p className="class-form-error" role="alert">{sessionCapacityLimit > 0 ? `Sức chứa phải từ 1 đến ${sessionCapacityLimit} học viên, theo sức chứa của phòng và lớp.` : 'Vui lòng chọn phòng để xác nhận sức chứa.'}</p>}
                 <div className="class-form-group">
                   <label>
@@ -1726,6 +1730,7 @@ export default function ClassManagement() {
             </div>
             <form onSubmit={handleCancelSessionSubmit}>
               <div className="class-modal-body">
+                <ManagerFormError message={error} />
                 <div className="class-alert class-alert-error" style={{ margin: 0 }}>
                   <AlertTriangle size={18} />
                   <span>
@@ -1796,6 +1801,7 @@ export default function ClassManagement() {
               </button>
             </div>
             <div className="class-modal-body">
+              <ManagerFormError message={error} />
               {rosterLoading ? (
                 <div className="class-loading">
                   <div className="class-spinner" />
@@ -1895,6 +1901,7 @@ export default function ClassManagement() {
             </div>
             <form onSubmit={handleCreateClassSubmit}>
               <div className="class-modal-body">
+                <ManagerFormError message={error} />
                 <div className="class-form-group">
                   <label>
                     Tên lớp học <span className="required">*</span>
@@ -1969,7 +1976,7 @@ export default function ClassManagement() {
                   />
                 </div>
 
-                <ClassCourseFields values={classForm} onChange={setClassForm} error={error} />
+                <ClassCourseFields values={classForm} onChange={setClassForm} />
 
                 <div className="class-form-group">
                   <label className="class-form-checkbox">
@@ -2022,6 +2029,7 @@ export default function ClassManagement() {
             </div>
             <form onSubmit={handleEditClassSubmit}>
               <div className="class-modal-body">
+                <ManagerFormError message={error} />
                 <div className="class-form-group">
                   <label>
                     Tên lớp học <span className="required">*</span>
@@ -2092,7 +2100,7 @@ export default function ClassManagement() {
                   />
                 </div>
 
-                <ClassCourseFields values={classForm} onChange={setClassForm} error={error} />
+                <ClassCourseFields values={classForm} onChange={setClassForm} />
 
                 <div className="class-form-group">
                   <label className="class-form-checkbox">
@@ -2158,6 +2166,7 @@ export default function ClassManagement() {
             </div>
             <form onSubmit={handleCreateSportSubmit}>
               <div className="class-modal-body">
+                <ManagerFormError message={error} />
                 <div className="class-form-group">
                   <label>
                     Tên môn thể thao <span className="required">*</span>
@@ -2241,7 +2250,7 @@ export default function ClassManagement() {
             </div>
             <form onSubmit={handleEditSportSubmit} aria-busy={submittingSport}>
               <div className="class-modal-body">
-                {sportUpdateError && <div className="class-alert class-alert-error" role="alert"><AlertCircle size={16} /><span>{sportUpdateError}</span></div>}
+                <ManagerFormError message={sportUpdateError} />
                 <div className="class-form-group">
                   <label htmlFor="edit-sport-name">
                     Tên môn thể thao <span className="required">*</span>
@@ -2343,7 +2352,7 @@ export default function ClassManagement() {
                   </span>
                 </div>
               )}
-              {sportUpdateError && <div className="class-alert class-alert-error" role="alert"><AlertCircle size={16} /><span>{sportUpdateError}</span></div>}
+              <ManagerFormError message={sportUpdateError} />
             </div>
             <div className="class-modal-footer">
               <button
