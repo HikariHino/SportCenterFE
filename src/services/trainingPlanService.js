@@ -1,7 +1,7 @@
 import api from './api'
 import { getMyMemberProfile } from './memberService'
-import { EXERCISE_NOTES_MAX_LENGTH, getTextLengthValidationError, TRAINING_PLAN_NAME_MAX_LENGTH } from '../utils/textLengthValidation.js'
-import { getTrainingExercisesValidationError } from '../utils/trainingPlanValidation.js'
+import { EXERCISE_NOTES_MAX_LENGTH, getTextLengthValidationError } from '../utils/textLengthValidation.js'
+import { getTrainingExercisesValidationError, getTrainingPlanValidationError } from '../utils/trainingPlanValidation.js'
 
 const toUtcISOString = value => {
   const date = value instanceof Date ? value : new Date(value)
@@ -33,8 +33,8 @@ export async function getExerciseCatalog() {
 }
 
 export async function createTrainingPlan({ planName, goal, memberId, startDate, endDate, exercises = [] }) {
-  const nameError = getTextLengthValidationError(planName, 'Tên giáo án', TRAINING_PLAN_NAME_MAX_LENGTH)
-  if (nameError) throw new Error(nameError)
+  const planError = getTrainingPlanValidationError({ planName, goal, memberId, startDate, endDate })
+  if (planError) throw new Error(planError)
   const exerciseError = getTrainingExercisesValidationError(exercises)
   if (exerciseError) throw new Error(exerciseError)
   for (const exercise of exercises) {
@@ -42,9 +42,9 @@ export async function createTrainingPlan({ planName, goal, memberId, startDate, 
     if (notesError) throw new Error(notesError)
   }
   const response = await api.post('/TrainingPlans', {
-    planName,
+    planName: planName.trim(),
     goal,
-    memberId,
+    memberId: Number(memberId),
     startDate: toUtcISOString(startDate),
     endDate: toUtcISOString(endDate),
     exercises: exercises.map(exercise => ({ ...exercise, exerciseId: Number(exercise.exerciseId), sets: Number(exercise.sets), reps: Number(exercise.reps),

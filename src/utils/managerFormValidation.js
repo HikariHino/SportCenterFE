@@ -2,7 +2,14 @@ import { getTextLengthValidationError } from './textLengthValidation.js'
 import { isIntegerInRange, isNumericInput } from './numberValidation.js'
 
 export const PACKAGE_PRICE_MIN = 0.01
-export const PACKAGE_PRICE_MAX = '9999999999999999.99'
+export const PACKAGE_PRICE_MAX = '90071992547409.91'
+
+function priceInCents(value) {
+  const text = String(value).trim()
+  if (text.length > 32 || !/^(?:\d+(?:\.\d{0,2})?|\.\d{1,2})$/.test(text)) return null
+  const [whole, fraction = ''] = text.split('.')
+  return BigInt(whole || '0') * 100n + BigInt(fraction.padEnd(2, '0'))
+}
 
 export const MANAGER_FORM_LIMITS = {
   room: { name: 100, roomType: 50, location: 100 },
@@ -29,9 +36,13 @@ export function getManagerFormValidationError(kind, values) {
   if (kind === 'policy' && !isIntegerInRange(values.minimumHoursBeforeStart, 2, 720)) return 'Thời gian hủy tối thiểu phải là số nguyên từ 2 đến 720 giờ.'
   if (kind === 'package') {
     const price = Number(values.price)
-    // The decimal maximum rounds up to 10^16 as a JS number, outside BE's range.
-    if (!isNumericInput(values.price) || price < PACKAGE_PRICE_MIN || price >= Number(PACKAGE_PRICE_MAX)
-      || Math.abs(price * 100 - Math.round(price * 100)) > 0.000001) return 'Giá gói phải từ 0,01 đến 9.999.999.999.999.999,99 và có tối đa hai chữ số thập phân.'
+    const cents = isNumericInput(values.price) ? priceInCents(values.price) : null
+    // Validate the original decimal before Number/JSON can round it. Both the
+    // minor-unit calculation and the serialized amount must retain its value.
+    if (cents == null || cents < 1n || cents > BigInt(Number.MAX_SAFE_INTEGER)
+      || !Number.isSafeInteger(Math.round(price * 100)) || BigInt(Math.round(price * 100)) !== cents || priceInCents(String(price)) !== cents) {
+      return 'Giá gói phải từ 0,01 đến 90.071.992.547.409,91, có tối đa hai chữ số thập phân và giữ nguyên giá trị khi lưu. Vui lòng nhập số tiền nhỏ hơn nếu vượt giới hạn chính xác.'
+    }
     if (!isIntegerInRange(values.durationInDays, 1, 36500)) return 'Thời hạn gói phải là số nguyên từ 1 đến 36500 ngày.'
   }
   return ''

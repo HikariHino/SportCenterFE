@@ -1,7 +1,10 @@
 import { getNewPasswordValidationError } from './passwordValidation.js'
 import { getFullNameCharactersError } from './fullNameValidation.js'
 
-export const PROFILE_LIMITS = { fullName: 200, phoneNumber: 30, gender: 10, address: 500, fitnessGoal: 100, emergencyContact: 100 }
+export const PROFILE_FULL_NAME_MAX_LENGTH = 100
+export const PROFILE_PHONE_MAX_LENGTH = 30
+export const PROFILE_PHONE_MESSAGE = 'Số điện thoại cần 10 chữ số bắt đầu bằng 0 hoặc dùng mã +84.'
+export const PROFILE_LIMITS = { fullName: PROFILE_FULL_NAME_MAX_LENGTH, phoneNumber: PROFILE_PHONE_MAX_LENGTH, gender: 10, address: 500, fitnessGoal: 100, emergencyContact: 100 }
 const labels = { fullName: 'Họ và tên', phoneNumber: 'Số điện thoại', gender: 'Giới tính', address: 'Địa chỉ thường trú', fitnessGoal: 'Mục tiêu tập luyện', emergencyContact: 'Liên hệ khẩn cấp' }
 const fields = [...Object.keys(PROFILE_LIMITS), 'dateOfBirth', 'password', 'currentPassword']
 
@@ -27,9 +30,9 @@ export function profileValidationErrors(values, { partial = false, requirePhone 
     if (nameError) errors.fullName = nameError
   }
   const phone = typeof values.phoneNumber === 'string' ? values.phoneNumber.trim() : ''
-  if (requirePhone && !phone) errors.phoneNumber = 'Vui lòng nhập số điện thoại.'
-  else if (phone && !errors.phoneNumber && !/^(?:0|\+84)[0-9]{9}$/.test(normalizeProfilePhone(phone))) {
-    errors.phoneNumber = 'Số điện thoại cần 10 chữ số bắt đầu bằng 0 hoặc dùng mã +84.'
+  if (!errors.phoneNumber) {
+    const phoneError = getProfilePhoneValidationError(values.phoneNumber, { required: requirePhone })
+    if (phoneError) errors.phoneNumber = phoneError
   }
   if (!errors.phoneNumber && getProfilePhoneConflict(phone, phoneConflict)) errors.phoneNumber = getProfilePhoneConflict(phone, phoneConflict)
   if (values.gender != null && !['', 'Male', 'Female', 'Other'].includes(String(values.gender).trim())) errors.gender = 'Vui lòng chọn giới tính trong danh sách.'
@@ -89,14 +92,17 @@ export function profileFieldErrors(error) {
   return result
 }
 
-export const PROFILE_FULL_NAME_MAX_LENGTH = 60
-export const PROFILE_PHONE_LENGTH = 10
-
 export function getFullNameValidationError(value) {
   const fullName = String(value || '').trim()
   if (!fullName) return 'Họ và tên không được để trống.'
-  if ([...fullName].length > PROFILE_FULL_NAME_MAX_LENGTH) return `Họ và tên không được vượt quá ${PROFILE_FULL_NAME_MAX_LENGTH} ký tự.`
+  if (fullName.length > PROFILE_FULL_NAME_MAX_LENGTH) return `Họ và tên không được vượt quá ${PROFILE_FULL_NAME_MAX_LENGTH} ký tự.`
   return getFullNameCharactersError(value)
+}
+
+export function getProfilePhoneValidationError(value, { required = false } = {}) {
+  if (value == null || (typeof value === 'string' && !value.trim())) return required ? 'Vui lòng nhập số điện thoại.' : ''
+  if (typeof value !== 'string' || value.trim().length > PROFILE_PHONE_MAX_LENGTH || !/^(?:0|\+84)[0-9]{9}$/.test(normalizeProfilePhone(value))) return PROFILE_PHONE_MESSAGE
+  return ''
 }
 
 export function getVietnamPhoneValidationError(value, { required = false } = {}) {

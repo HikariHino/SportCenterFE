@@ -1,8 +1,9 @@
+import RoomDialog from './RoomDialog'
 import useExclusiveAction from '../../hooks/useExclusiveAction'
 import ManagerFormError from './ManagerFormError'
 import { ManagerList } from './ManagerPagination'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { AlertCircle, AlertTriangle, ArrowDownToLine, Calendar, CheckCircle2, Clock, DoorOpen, Dumbbell, Edit2, Filter, Grid, List, MapPin, Plus, Power, RefreshCw, Search, ShieldCheck, Trash2, Users, Volleyball, Waves, X, Zap } from "lucide-react"
 import {
   checkRoomAvailability,
@@ -80,6 +81,7 @@ const toLocalInputString = (d) => {
 
 export default function RoomManagement() {
   const exclusiveAction = useExclusiveAction()
+  const fieldId = useId()
   const viewActive = useManagerViewActive()
 
   const [localError, setError] = useState('')
@@ -742,11 +744,10 @@ export default function RoomManagement() {
       {/* MODAL: CREATE ROOM */}
       {/* ======================================================== */}
       {viewActive && showCreateModal && (
-        <div className="room-modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="room-modal" onClick={(e) => e.stopPropagation()}>
+        <RoomDialog label="Thêm phòng tập" busy={submitting} onClose={() => setShowCreateModal(false)}>
             <div className="room-modal-header">
               <h3>Thêm phòng / sân tập mới</h3>
-              <button
+              <button aria-label="Đóng cửa sổ" disabled={submitting}
                 type="button"
                 className="room-modal-close"
                 onClick={() => setShowCreateModal(false)}
@@ -758,10 +759,10 @@ export default function RoomManagement() {
               <div className="room-modal-body">
                 <ManagerFormError message={error} />
                 <div className="room-form-group">
-                  <label>
+                  <label htmlFor={fieldId + '-create-name'}>
                     Tên phòng / sân tập <span className="required">*</span>
                   </label>
-                  <input
+                  <input id={fieldId + '-create-name'}
                     type="text"
                     className="room-form-input"
                     placeholder="Ví dụ: Phòng Yoga 01, Sân Pickleball P01, Phòng Gym VIP..."
@@ -774,8 +775,8 @@ export default function RoomManagement() {
                 </div>
 
                 <div className="room-form-group">
-                  <label>Loại hình phòng tập</label>
-                  <select
+                  <label htmlFor={fieldId + '-create-roomType'}>Loại hình phòng tập</label>
+                  <select id={fieldId + '-create-roomType'}
                     className="room-form-select"
                     value={roomForm.roomType}
                     onChange={(e) => setRoomForm({ ...roomForm, roomType: e.target.value })}
@@ -805,10 +806,10 @@ export default function RoomManagement() {
 
                 <div className="room-form-grid-2">
                   <div className="room-form-group">
-                    <label>
+                    <label htmlFor={fieldId + '-create-capacity'}>
                       Sức chứa tối đa (Capacity) <span className="required">*</span>
                     </label>
-                    <input
+                    <input id={fieldId + '-create-capacity'}
                       type="number"
                       min="1"
                       max="500"
@@ -823,8 +824,8 @@ export default function RoomManagement() {
                   </div>
 
                   <div className="room-form-group">
-                    <label>Vị trí / Khu vực</label>
-                    <input
+                    <label htmlFor={fieldId + '-create-location'}>Vị trí / Khu vực</label>
+                    <input id={fieldId + '-create-location'}
                       type="text"
                       className="room-form-input"
                       placeholder="Ví dụ: Tầng 2 - Tòa A"
@@ -854,19 +855,17 @@ export default function RoomManagement() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </RoomDialog>
       )}
 
       {/* ======================================================== */}
       {/* MODAL: EDIT ROOM */}
       {/* ======================================================== */}
       {viewActive && editingRoom && (
-        <div className="room-modal-overlay" onClick={() => setEditingRoom(null)}>
-          <div className="room-modal" onClick={(e) => e.stopPropagation()}>
+        <RoomDialog label="Chỉnh sửa phòng tập" busy={submitting} onClose={() => setEditingRoom(null)}>
             <div className="room-modal-header">
               <h3>Chỉnh sửa phòng tập: #{editingRoom.id}</h3>
-              <button
+              <button aria-label="Đóng cửa sổ" disabled={submitting}
                 type="button"
                 className="room-modal-close"
                 onClick={() => setEditingRoom(null)}
@@ -878,10 +877,10 @@ export default function RoomManagement() {
               <div className="room-modal-body">
                 <ManagerFormError message={error} />
                 <div className="room-form-group">
-                  <label>
+                  <label htmlFor={fieldId + '-edit-name'}>
                     Tên phòng / sân tập <span className="required">*</span>
                   </label>
-                  <input
+                  <input id={fieldId + '-edit-name'}
                     type="text"
                     className="room-form-input"
                     maxLength={MANAGER_FORM_LIMITS.room.name}
@@ -892,8 +891,8 @@ export default function RoomManagement() {
                 </div>
 
                 <div className="room-form-group">
-                  <label>Loại hình phòng tập</label>
-                  <select
+                  <label htmlFor={fieldId + '-edit-roomType'}>Loại hình phòng tập</label>
+                  <select id={fieldId + '-edit-roomType'}
                     className="room-form-select"
                     value={roomForm.roomType}
                     onChange={(e) => setRoomForm({ ...roomForm, roomType: e.target.value })}
@@ -908,10 +907,10 @@ export default function RoomManagement() {
 
                 <div className="room-form-grid-2">
                   <div className="room-form-group">
-                    <label>
+                    <label htmlFor={fieldId + '-edit-capacity'}>
                       Sức chứa tối đa <span className="required">*</span>
                     </label>
-                    <input
+                    <input id={fieldId + '-edit-capacity'}
                       type="number"
                       min="1"
                       max="500"
@@ -925,8 +924,8 @@ export default function RoomManagement() {
                   </div>
 
                   <div className="room-form-group">
-                    <label>Vị trí</label>
-                    <input
+                    <label htmlFor={fieldId + '-edit-location'}>Vị trí</label>
+                    <input id={fieldId + '-edit-location'}
                       type="text"
                       className="room-form-input"
                       maxLength={MANAGER_FORM_LIMITS.room.location}
@@ -968,19 +967,17 @@ export default function RoomManagement() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </RoomDialog>
       )}
 
       {/* ======================================================== */}
       {/* MODAL: DELETE ROOM CONFIRMATION */}
       {/* ======================================================== */}
       {viewActive && deletingRoom && (
-        <div className="room-modal-overlay" onClick={() => setDeletingRoom(null)}>
-          <div className="room-modal" onClick={(e) => e.stopPropagation()}>
+        <RoomDialog label="Ngừng hoạt động phòng tập" busy={submitting} onClose={() => setDeletingRoom(null)}>
             <div className="room-modal-header">
               <h3>Xóa / Ngừng hoạt động phòng tập</h3>
-              <button
+              <button aria-label="Đóng cửa sổ" disabled={submitting}
                 type="button"
                 className="room-modal-close"
                 onClick={() => setDeletingRoom(null)}
@@ -1019,16 +1016,14 @@ export default function RoomManagement() {
                 {submitting ? 'Đang xóa...' : 'Xác nhận xóa phòng'}
               </button>
             </div>
-          </div>
-        </div>
+          </RoomDialog>
       )}
 
       {/* ======================================================== */}
       {/* MODAL: CHECK ROOM AVAILABILITY */}
       {/* ======================================================== */}
       {viewActive && checkingRoom && (
-        <div className="room-modal-overlay" onClick={() => setCheckingRoom(null)}>
-          <div className="room-modal" onClick={(e) => e.stopPropagation()}>
+        <RoomDialog label="Kiểm tra lịch trống phòng" busy={checkingAvail} onClose={() => setCheckingRoom(null)}>
             <div className="room-modal-header">
               <div>
                 <h3>Kiểm tra lịch trống phòng</h3>
@@ -1036,7 +1031,7 @@ export default function RoomManagement() {
                   Phòng: <strong>{checkingRoom.name}</strong> (#{checkingRoom.id})
                 </small>
               </div>
-              <button
+              <button aria-label="Đóng cửa sổ" disabled={checkingAvail}
                 type="button"
                 className="room-modal-close"
                 onClick={() => setCheckingRoom(null)}
@@ -1053,10 +1048,10 @@ export default function RoomManagement() {
 
                 <div className="room-form-grid-2">
                   <div className="room-form-group">
-                    <label>
+                    <label htmlFor={fieldId + '-availability-startsAt'}>
                       Khung giờ bắt đầu <span className="required">*</span>
                     </label>
-                    <input
+                    <input id={fieldId + '-availability-startsAt'}
                       type="datetime-local"
                       className="room-form-input"
                       value={availForm.startsAt}
@@ -1066,10 +1061,10 @@ export default function RoomManagement() {
                   </div>
 
                   <div className="room-form-group">
-                    <label>
+                    <label htmlFor={fieldId + '-availability-endsAt'}>
                       Khung giờ kết thúc <span className="required">*</span>
                     </label>
-                    <input
+                    <input id={fieldId + '-availability-endsAt'}
                       type="datetime-local"
                       className="room-form-input"
                       value={availForm.endsAt}
@@ -1120,8 +1115,7 @@ export default function RoomManagement() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </RoomDialog>
       )}
     </div>
   )
