@@ -16,6 +16,7 @@ import CatalogImage from '../../components/CatalogImage'
 import CatalogImageUploadDialog from '../../components/CatalogImageUploadDialog'
 import { cancelClassSession, completeClassSession, createClassSession, createSportClass, getClassErrorMessage, getAllClassSessions, getRooms, getSessionRoster, updateClassSession, updateSportClass } from "../../services/sportClassService"
 import { validateSessionWrite } from '../../services/sessionSchedulingService'
+import { getCancellationPolicies } from '../../services/cancellationPolicyService'
 import { assignClassToRoom } from '../../services/roomTimetableService'
 import { SESSION_COMPLETION_EVENT } from '../../services/sessionCompletionService'
 import { getClassSessionDateRange } from '../../utils/classSessionDates'
@@ -216,13 +217,33 @@ export default function ClassManagement() {
   const [sessionForm, setSessionForm] = useState({
     coachId: '',
     roomId: '',
-    cancellationPolicyId: 1,
+    cancellationPolicyId: '',
     startsAt: '',
     endsAt: '',
     capacity: 20,
   })
   const [checkingAvailability, setCheckingAvailability] = useState(false)
   const [availabilityResult, setAvailabilityResult] = useState(null)
+  const policiesRead = useManagerResource('policies', getCancellationPolicies, { initialData: [], enabled: Boolean(viewActive && (showAddSessionModal || reschedulingSession)) })
+  const activePolicies = policiesRead.data.filter(policy => policy.isActive !== false)
+  const validSessionPolicy = activePolicies.some(policy => String(policy.id) === String(sessionForm.cancellationPolicyId))
+  useEffect(() => {
+    if ((showAddSessionModal || reschedulingSession) && !sessionForm.cancellationPolicyId && activePolicies.length) {
+      setSessionForm(previous => ({ ...previous, cancellationPolicyId: String(activePolicies[0].id) }))
+    }
+  }, [showAddSessionModal, reschedulingSession, sessionForm.cancellationPolicyId, policiesRead.data])
+  const sessionPolicyField = <div className="class-form-group">
+    <label htmlFor="class-session-policy">Chính sách hủy <span className="required">*</span></label>
+    <select id="class-session-policy" name="cancellationPolicyId" className="class-form-select" required
+      value={sessionForm.cancellationPolicyId} disabled={submittingSession || policiesRead.loading || Boolean(policiesRead.error)}
+      onChange={event => setSessionForm(previous => ({ ...previous, cancellationPolicyId: event.target.value }))}>
+      <option value="">{policiesRead.loading ? 'Đang tải chính sách hủy...' : 'Chọn chính sách hủy'}</option>
+      {activePolicies.map(policy => <option key={policy.id} value={policy.id}>{policy.name} · Trước {policy.minimumHoursBeforeStart} giờ</option>)}
+    </select>
+    {policiesRead.error ? <div className="class-form-error" role="alert">Không thể tải chính sách hủy. <button type="button" className="class-btn class-btn-secondary" onClick={() => policiesRead.reload()}>Thử lại</button></div>
+      : !policiesRead.loading && !activePolicies.length ? <p className="class-form-error" role="status">Chưa có chính sách hủy đang hoạt động. Vui lòng kích hoạt hoặc tạo chính sách tại mục Chính sách hủy lịch.</p>
+      : <span className="class-form-help">Chọn thời hạn hội viên được phép hủy đăng ký buổi học.</span>}
+  </div>
   const sessionRoom = rooms.find(room => String(room.id) === String(sessionForm.roomId))
   const sessionCapacityLimit = Math.min(Number(sessionRoom?.capacity) || 0, Number(selectedClassForSessions?.maxCapacity) || 0)
   const invalidSessionCapacity = !Number.isInteger(Number(sessionForm.capacity)) || Number(sessionForm.capacity) < 1 || Number(sessionForm.capacity) > sessionCapacityLimit
@@ -548,12 +569,13 @@ export default function ClassManagement() {
     setSessionForm({
       coachId: selectedClassForSessions.coachId || coaches[0]?.id || '',
       roomId: defaultRoom?.id || rooms[0]?.id || '',
-      cancellationPolicyId: 1,
+      cancellationPolicyId: '',
       startsAt: toLocalInputString(start),
       endsAt: toLocalInputString(end),
       capacity: Math.min(Number(selectedClassForSessions.maxCapacity) || 20, Number((defaultRoom || rooms[0])?.capacity) || 20),
     })
     setAvailabilityResult(null)
+    setError('')
     setShowAddSessionModal(true)
   }
 
@@ -588,6 +610,10 @@ export default function ClassManagement() {
   const handleCreateSessionSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!selectedClassForSessions) return
+    if (!validSessionPolicy || policiesRead.error) {
+      setError('Vui lòng chọn chính sách hủy đang hoạt động.')
+      return
+    }
     if (!sessionForm.coachId) {
       setError('Vui lòng chọn huấn luyện viên cho buổi học.')
       return
@@ -638,17 +664,22 @@ export default function ClassManagement() {
     setSessionForm({
       coachId: session.coachId,
       roomId: currentRoom?.id || rooms[0]?.id || '',
-      cancellationPolicyId: session.cancellationPolicyId || 1,
+      cancellationPolicyId: session.cancellationPolicyId || '',
       startsAt: toLocalInputString(session.startsAt),
       endsAt: toLocalInputString(session.endsAt),
       capacity: session.capacity,
     })
     setAvailabilityResult(null)
+    setError('')
   }
 
   const handleRescheduleSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
     if (!selectedClassForSessions || !reschedulingSession) return
+    if (!validSessionPolicy || policiesRead.error) {
+      setError('Vui lòng chọn chính sách hủy đang hoạt động.')
+      return
+    }
     if (!sessionForm.roomId) {
       setError('Vui lòng chọn phòng tập cho buổi học.')
       return
@@ -1359,7 +1390,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {viewActive && showAddSessionModal && (
         <div className="class-modal-overlay" onClick={() => setShowAddSessionModal(false)}>
-          <div className="class-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="class-modal class-session-form-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
               <h3>Thêm buổi học mới</h3>
               <button
@@ -1373,6 +1404,7 @@ export default function ClassManagement() {
             <form onSubmit={handleCreateSessionSubmit}>
               <div className="class-modal-body">
                 <ManagerFormError message={error} />
+                <p className="class-session-context">{selectedClassForSessions?.className} · Thời gian theo giờ Việt Nam</p>
                 {invalidSessionCapacity && <p className="class-form-error" role="alert">{sessionCapacityLimit > 0 ? `Sức chứa phải từ 1 đến ${sessionCapacityLimit} học viên, theo sức chứa của phòng và lớp.` : 'Vui lòng chọn phòng để xác nhận sức chứa.'}</p>}
                 <div className="class-form-group">
                   <label>
@@ -1444,6 +1476,7 @@ export default function ClassManagement() {
                   )}
                 </div>
 
+                {sessionPolicyField}
                 <div className="class-form-grid-2">
                   <div className="class-form-group">
                     <label>
@@ -1524,7 +1557,7 @@ export default function ClassManagement() {
                 <button
                   type="submit"
                   className="class-btn class-btn-primary"
-                  disabled={submittingSession || invalidSessionCapacity}
+                  disabled={submittingSession || invalidSessionCapacity || policiesRead.loading || Boolean(policiesRead.error) || !validSessionPolicy}
                 >
                   {submittingSession ? 'Đang tạo...' : 'Tạo buổi học'}
                 </button>
@@ -1539,7 +1572,7 @@ export default function ClassManagement() {
       {/* ======================================================== */}
       {viewActive && reschedulingSession && (
         <div className="class-modal-overlay" onClick={() => setReschedulingSession(null)}>
-          <div className="class-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="class-modal class-session-form-modal" onClick={(e) => e.stopPropagation()}>
             <div className="class-modal-header">
               <h3>Dời lịch / Đổi HLV buổi học #{reschedulingSession.id}</h3>
               <button
@@ -1554,6 +1587,7 @@ export default function ClassManagement() {
               <div className="class-modal-body">
                 <p className="class-scheduling-note" role="status">Khi đổi ngày, giờ hoặc HLV, học viên đã đăng ký sẽ nhận thông báo kiểm tra lại lịch. Đăng ký được giữ nguyên; học viên tự hủy nếu không thể tham gia, theo hạn hủy của buổi học.</p>
                 <ManagerFormError message={error} />
+                <p className="class-session-context">{selectedClassForSessions?.className} · Thời gian theo giờ Việt Nam</p>
                 {invalidSessionCapacity && <p className="class-form-error" role="alert">{sessionCapacityLimit > 0 ? `Sức chứa phải từ 1 đến ${sessionCapacityLimit} học viên, theo sức chứa của phòng và lớp.` : 'Vui lòng chọn phòng để xác nhận sức chứa.'}</p>}
                 <div className="class-form-group">
                   <label>
@@ -1624,6 +1658,7 @@ export default function ClassManagement() {
                   )}
                 </div>
 
+                {sessionPolicyField}
                 <div className="class-form-grid-2">
                   <div className="class-form-group">
                     <label>
@@ -1704,7 +1739,7 @@ export default function ClassManagement() {
                 <button
                   type="submit"
                   className="class-btn class-btn-primary"
-                  disabled={submittingSession || invalidSessionCapacity}
+                  disabled={submittingSession || invalidSessionCapacity || policiesRead.loading || Boolean(policiesRead.error) || !validSessionPolicy}
                 >
                   {submittingSession ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>

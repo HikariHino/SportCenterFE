@@ -616,6 +616,12 @@
 }
 
 .class-modal.class-session-modal { max-width: 960px; }
+.class-modal.class-session-form-modal { max-width: 680px; }
+.class-session-context { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--manager-raised, #f8fafc); color: var(--manager-muted); font-size: 12px; line-height: 1.6; }
+.class-session-form-modal .class-form-select { min-width: 0; }
+.class-session-modal .sessions-header-card { flex-wrap: wrap; gap: 12px; }
+.class-session-modal .sessions-header-info { flex: 1 1 100%; }
+.class-session-modal .sessions-header-card > .class-btn-primary { margin-left: auto; }
 .class-close-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .class-modal > form { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
