@@ -19,6 +19,7 @@ import { checkInReceptionistMemberRegistration } from '../../services/receptioni
 import { receptionistCheckInReason } from '../../utils/receptionistCheckIn'
 import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, sessionDateTimeFormatter, subscriptionStatusLabel, ViewLoader } from './ReceptionistViewShared'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
+import { profileDateLimit } from '../../utils/profileValidation'
 
 function CreateMemberDialog({ onClose, onCreated }) {
   const [form, setForm] = useState(emptyMemberForm)
@@ -65,7 +66,7 @@ function CreateMemberDialog({ onClose, onCreated }) {
           <label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="256" required /></label>
           <label>Mật khẩu ban đầu<input name="password" type="password" value={form.password} onChange={updateField} minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} aria-invalid={invalidField === 'password' || undefined} aria-describedby={invalidField === 'password' ? 'reception-create-member-error' : undefined} autoComplete="new-password" placeholder="Từ 8 đến 72 ký tự" required /></label>
           <label>Số điện thoại<input name="phone" type="tel" inputMode="numeric" pattern={RECEPTIONIST_PHONE_PATTERN} title={RECEPTIONIST_PHONE_MESSAGE} minLength="10" maxLength="10" value={form.phone} onChange={updateField} aria-invalid={invalidField === 'phone' || undefined} aria-describedby={invalidField === 'phone' ? 'reception-create-member-error' : undefined} placeholder="0912345678" /></label>
-          <label>Ngày sinh<input name="dateOfBirth" type="date" value={form.dateOfBirth} max={new Date().toISOString().slice(0, 10)} onChange={updateField} /></label>
+          <label>Ngày sinh<input name="dateOfBirth" type="date" value={form.dateOfBirth} max={profileDateLimit()} onChange={updateField} /></label>
           <label>Giới tính<select name="gender" value={form.gender} onChange={updateField}><option value="">Chưa cung cấp</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></label>
           <label className="wide">Địa chỉ<input name="address" value={form.address} onChange={updateField} maxLength="200" /></label>
           <label className="wide">Mục tiêu tập luyện<input name="fitnessGoal" value={form.fitnessGoal} onChange={updateField} maxLength="100" placeholder="Ví dụ: tăng sức bền, giảm cân..." /></label>

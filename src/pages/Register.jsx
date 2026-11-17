@@ -13,6 +13,9 @@ import { AUTH_REGISTRATION_LIMITS, getAuthRegistrationValidationError } from '..
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../utils/passwordValidation'
 import '../style/Register.css'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../utils/fullNameValidation'
+import { profileDateLimit } from '../utils/profileValidation'
+import useOtpCountdown from '../hooks/useOtpCountdown'
+import OtpCountdown from '../components/OtpCountdown'
 
 const benefits = [
   [Gift, 'Tích điểm thưởng', 'quy đổi giờ chơi miễn phí và voucher phụ kiện'],
@@ -47,6 +50,7 @@ export default function Register() {
   const [message, setMessage] = useState('')
   const [emailError, setEmailError] = useState('')
   const [pendingRegistration, setPendingRegistration] = useState(null)
+  const otpClock = useOtpCountdown()
   const strength = password ? [password.length >= 8, /[a-z]/.test(password) && /[A-Z]/.test(password), /\d/.test(password), /[^\w\s]/.test(password)].filter(Boolean).length : 0
   const busy = isSubmitting || isSendingOtp || isGoogleSubmitting
 
@@ -89,6 +93,7 @@ export default function Register() {
     if (result.field === 'email') {
       setEmailError(result.message)
       setPendingRegistration(null)
+      otpClock.clear()
       setOtp('')
       setMessage('')
     } else {
@@ -102,6 +107,11 @@ export default function Register() {
     const form = event.currentTarget
     if (!pendingRegistration) {
       setMessage('Vui lòng nhấn Gửi OTP để nhận mã xác minh trước khi đăng ký.')
+      form.elements.namedItem('send-otp')?.focus()
+      return
+    }
+    if (!otpClock.canVerify()) {
+      setMessage('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.')
       form.elements.namedItem('send-otp')?.focus()
       return
     }
@@ -133,7 +143,7 @@ export default function Register() {
   }
 
   async function handleSendOtp(event) {
-    if (submitting.current || emailError) return
+    if (submitting.current || emailError || !otpClock.canResend()) return
     const form = event.currentTarget.form
     // Sending a code needs the registration details, but not the code itself.
     for (const field of Array.from(form.elements)) {
@@ -157,8 +167,9 @@ export default function Register() {
       setMessage('Mật khẩu xác nhận chưa khớp. Vui lòng nhập lại.')
       return
     }
-    const dateOfBirth = new Date(`${data.get('dateOfBirth')}T00:00:00.000Z`)
-    if (Number.isNaN(dateOfBirth.getTime()) || dateOfBirth > new Date()) {
+    const birthDate = data.get('dateOfBirth')
+    const dateOfBirth = new Date(`${birthDate}T00:00:00.000Z`)
+    if (Number.isNaN(dateOfBirth.getTime()) || dateOfBirth.toISOString().slice(0, 10) !== birthDate || birthDate > profileDateLimit()) {
       form.elements.namedItem('dateOfBirth').focus()
       setMessage('Vui lòng nhập ngày sinh hợp lệ, không ở tương lai.')
       return
@@ -185,6 +196,8 @@ export default function Register() {
     try {
       const result = await sendRegisterOtp(registration)
       if (!result?.success) throw new Error(getAuthErrorMessage({ response: { data: result } }, 'Không thể gửi mã OTP.'))
+      if (!mounted.current) return
+      otpClock.start()
       setPendingRegistration({ email: registration.email })
       setOtp('')
       setMessage(result.message || `Mã OTP đã được gửi đến ${registration.email}.`)
@@ -222,6 +235,7 @@ export default function Register() {
           if (event.target.name === 'email') setEmailError('')
           if (pendingRegistration && !['otp', 'terms'].includes(event.target.name)) {
             setPendingRegistration(null)
+            otpClock.clear()
             setOtp('')
             setMessage('Thông tin đăng ký đã thay đổi. Vui lòng gửi lại mã OTP.')
           }
@@ -230,7 +244,7 @@ export default function Register() {
           <Field pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} id="fullname" label="Họ và tên đầy đủ" icon={UserRound} maxLength={AUTH_REGISTRATION_LIMITS.fullName} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
           <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" maxLength={AUTH_REGISTRATION_LIMITS.email} autoComplete="email" placeholder="name@olympus.vn" error={emailError} /></div>
           <div className="register-row">
-            <Field id="dateOfBirth" label="Ngày sinh" icon={CalendarCheck} type="date" autoComplete="bday" max={new Date().toISOString().slice(0, 10)} />
+            <Field id="dateOfBirth" label="Ngày sinh" icon={CalendarCheck} type="date" autoComplete="bday" max={profileDateLimit()} />
             <div className="register-field"><label htmlFor="gender">Giới tính <span>*</span></label><div className="register-input"><UserRound size={18} /><select id="gender" name="gender" autoComplete="sex" required defaultValue=""><option value="" disabled>Chọn giới tính</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></div></div>
           </div>
           <Field id="address" label="Địa chỉ" icon={MapPin} maxLength={AUTH_REGISTRATION_LIMITS.address} autoComplete="street-address" placeholder="Địa chỉ của bạn" />
@@ -241,12 +255,13 @@ export default function Register() {
           <div className="register-field">
             <label htmlFor="otp">Mã OTP <span>*</span></label>
             <div className="register-otp-row">
-              <div className="register-input"><MessageCircle size={18} /><input id="otp" name="otp" type="text" autoComplete="one-time-code" inputMode="numeric" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required value={otp} onChange={event => setOtp(event.target.value)} aria-describedby="register-otp-hint" /></div>
-              <button type="button" name="send-otp" className="register-send-otp" onClick={handleSendOtp} disabled={busy || !!emailError}>{isSendingOtp ? 'Đang gửi...' : pendingRegistration ? 'Gửi lại OTP' : 'Gửi OTP'}</button>
+              <div className="register-input"><MessageCircle size={18} /><input id="otp" name="otp" type="text" autoComplete="one-time-code" inputMode="numeric" pattern={OTP_PATTERN} minLength={OTP_LENGTH} maxLength={OTP_LENGTH} title={OTP_FORMAT_MESSAGE} placeholder="Nhập 6 chữ số OTP" required disabled={!pendingRegistration || !otpClock.remaining} value={otp} onChange={event => setOtp(event.target.value)} aria-describedby="register-otp-hint register-otp-timer" /></div>
+              <button type="button" name="send-otp" className="register-send-otp" onClick={handleSendOtp} disabled={busy || !!emailError || otpClock.resendRemaining > 0}>{isSendingOtp ? 'Đang gửi...' : otpClock.resendRemaining ? `Gửi lại sau ${otpClock.resendRemaining}s` : pendingRegistration ? 'Gửi lại OTP' : 'Gửi OTP'}</button>
             </div>
             <p className="register-otp-hint" id="register-otp-hint">{pendingRegistration ? `Mã OTP đã gửi đến ${pendingRegistration.email}.` : 'Nhấn Gửi OTP để nhận mã xác minh qua email.'}</p>
+            {pendingRegistration && <OtpCountdown id="register-otp-timer" remaining={otpClock.remaining} />}
           </div>
-          <button type="submit" className="register-submit" disabled={busy || !!emailError}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'} <ArrowRight size={19} /></button>
+          <button type="submit" className="register-submit" disabled={busy || !!emailError || Boolean(pendingRegistration && !otpClock.remaining)}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'} <ArrowRight size={19} /></button>
           </fieldset>
           <p className="register-feedback" role="status" aria-live="polite">{message}</p>
         </form>

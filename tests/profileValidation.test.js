@@ -28,8 +28,9 @@ test('birth dates reject impossible dates, invalid years and future days without
   for (const dateOfBirth of ['2000-02-29', '2026-10-24', '1900-01-01', '2004-05-29T00:00:00.000Z']) assert.deepEqual(errors({ dateOfBirth }), {})
   for (const dateOfBirth of ['2001-02-29', '2026-02-30', '2026-13-01', '2026-10-25', '29/05/2004', '0000-01-01', '2004-05-29junk', '2004-05-29T99:00:00Z']) assert.ok(errors({ dateOfBirth }).dateOfBirth)
   const beforeUtcMidnight = Date.parse('2026-10-24T18:00:00Z')
-  assert.equal(profileDateLimit(beforeUtcMidnight), '2026-10-24')
-  assert.ok(errors({ dateOfBirth: '2026-10-25' }, { now: beforeUtcMidnight }).dateOfBirth)
+  assert.equal(profileDateLimit(beforeUtcMidnight), '2026-10-25')
+  assert.deepEqual(errors({ dateOfBirth: '2026-10-25' }, { now: beforeUtcMidnight }), {})
+  assert.ok(errors({ dateOfBirth: '2026-10-26' }, { now: beforeUtcMidnight }).dateOfBirth)
 })
 
 test('only supported gender values are accepted, and optional text is checked against backend lengths after trimming', () => {
