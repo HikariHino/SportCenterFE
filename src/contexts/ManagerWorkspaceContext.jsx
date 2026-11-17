@@ -37,9 +37,9 @@ export function useManagerResource(key, loader, { initialData = null, enabled = 
   const subscribe = useCallback(listener => cache.subscribe(key, listener), [cache, key])
   const snapshotForKey = useCallback(() => cache.snapshot(key), [cache, key])
   const snapshot = useSyncExternalStore(subscribe, snapshotForKey, snapshotForKey)
-  const read = useCallback(async (force = false) => {
+  const read = useCallback(async (force = false, background = false) => {
     try {
-      await cache.load(key, () => loaderRef.current(), { force, staleTime: interval })
+      await cache.load(key, () => loaderRef.current(), { force, background, staleTime: interval })
       if (cache.snapshot(key).updatedAt === -Infinity) await cache.load(key, () => loaderRef.current(), { force: true, staleTime: interval })
       return true
     } catch { return false }
@@ -54,7 +54,7 @@ export function useManagerResource(key, loader, { initialData = null, enabled = 
 
   useEffect(() => {
     if (!enabled || paused) return
-    return watchManagerResource(() => read(true), interval)
+    return watchManagerResource(() => read(true, true), interval)
   }, [read, interval, enabled, paused])
 
   return {

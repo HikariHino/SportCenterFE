@@ -16,8 +16,8 @@
 .member-ai-sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 18px 4px 8px; }
 .member-ai .member-ai-sidebar-heading h3 { color: var(--theme-muted); font-size: 11px; font-weight: 600; margin: 0; }
 .member-ai .member-ai-sidebar-heading button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--theme-muted); }
-.member-ai-conversation-list { flex: 1; min-height: 0; overflow-y: auto; padding: 2px; scrollbar-width: thin; }
-.member-ai .member-ai-conversation-list button { display: flex; align-items: flex-start; gap: 9px; width: 100%; margin-bottom: 6px; padding: 12px 10px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: var(--theme-text); text-align: left; font: inherit; }
+.member-ai-conversation-list { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 2px; }
+.member-ai .member-ai-conversation-list button { display: flex; align-items: flex-start; gap: 9px; width: 100%; min-width: 0; margin: 0; padding: 12px 10px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: var(--theme-text); text-align: left; font: inherit; }
 .member-ai-conversation-list button > svg { flex-shrink: 0; margin-top: 2px; color: var(--theme-muted); }
 .member-ai-conversation-list button > span { min-width: 0; }
 .member-ai-conversation-list strong { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; font-size: 12px; line-height: 1.65; font-weight: 500; }
@@ -78,6 +78,12 @@
 .member-ai-answer :is(h1, h2, h3, h4, h5, h6) { margin: 16px 0 6px; color: var(--theme-text, var(--member-ink)); font-size: 14px; font-weight: 700; line-height: 1.6; letter-spacing: 0; }
 .member-ai-answer > :first-child { margin-top: 0 !important; }
 .member-ai-answer > :last-child { margin-bottom: 0 !important; }
+.member-ai-answer-caret { display: inline-block; width: 2px; height: 1.1em; margin-left: 2px; vertical-align: -.18em; border-radius: 2px; background: currentColor; animation: member-ai-caret-blink .85s step-end infinite; white-space: nowrap; }
+.member-ai-answer > :not(:last-child) .member-ai-answer-caret { display: none; }
+.member-ai-answer > ul > li:not(:last-child) .member-ai-answer-caret,
+.member-ai-answer > ol > li:not(:last-child) .member-ai-answer-caret { display: none; }
+@keyframes member-ai-caret-blink { 0%, 45% { opacity: 1; } 46%, 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .member-ai-answer-caret { animation: none; opacity: .65; } }
 .member-ai-answer strong { font-weight: 700; color: var(--theme-text, var(--member-ink)); }
 .member-ai-answer :is(ul, ol) { margin: 0; padding-left: 22px; }
 .member-ai-answer li + li { margin-top: 5px; }
@@ -130,7 +136,6 @@
   .member-ai-chat-layout { grid-template-columns: minmax(0, 1fr); }
   .member-ai-assistant :is(.member-ai-chat, .member-ai-side, .member-ai-conversation-sidebar) { grid-column: 1; grid-row: auto; }
   .member-ai-conversation-sidebar { height: auto; max-height: 300px; padding: 12px; border-radius: 14px; }
-  .member-ai-conversation-list { max-height: 140px; }
   .member-ai-sidebar-note { margin-top: 8px; }
   .member-ai-heading { margin-bottom: 12px; }
   .member-ai .member-ai-heading h2 { font-size: 24px; }

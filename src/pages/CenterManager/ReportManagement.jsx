@@ -1,5 +1,5 @@
 import { ManagerList } from './ManagerPagination'
-import { useManagerResource } from '../../contexts/ManagerWorkspaceContext'
+import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
@@ -68,13 +68,16 @@ export default function ReportManagement() {
   // Navigation tab
   const [activeTab, setActiveTab] = useState('revenue')
   const [selectedYear, setSelectedYear] = useState(currentYear)
+  const viewActive = useManagerViewActive()
 
   // Data states
   const overviewRead = useManagerResource('overview', getDashboardOverview, { initialData: null })
   const overview = overviewRead.data
   const revenueDataRead = useManagerResource('revenue:' + selectedYear + '', () => getRevenueByYear(selectedYear), { initialData: [] })
   const revenueData = revenueDataRead.data
-  const classStatusListRead = useManagerResource('report-classes', getClassStatusReport, { initialData: [] })
+  const classStatusListRead = useManagerResource('report-classes', getClassStatusReport, {
+    initialData: [], enabled: viewActive && activeTab === 'class-status',
+  })
   const classStatusList = classStatusListRead.data
   const paymentsListRead = useManagerResource('payments', getPaymentsReport, { initialData: [] })
   const paymentsList = paymentsListRead.data

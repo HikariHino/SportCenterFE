@@ -1,4 +1,3 @@
-import { ManagerList } from './ManagerPagination'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { AlertCircle, Ban, Calendar, CalendarClock, CalendarPlus, MapPin, RefreshCw, Users, X } from 'lucide-react'
 import RoomSessionTimetable from './RoomSessionTimetable'
@@ -196,7 +195,7 @@ export default function RoomTimetableDialog({ room, rooms, onClose }) {
         {state.unassignedClasses.length > 0 && <section className="room-timetable-unassigned" aria-label="Lịch chưa có phòng">
           <strong>Có buổi học cần xác nhận phòng</strong>
           <p>Một số lịch cũ đang dùng phòng mặc định của lớp. Chọn lớp thuộc {room.name} để xác nhận và lưu phòng cho từng buổi học.</p>
-          <ManagerList items={state.unassignedClasses} label="Lớp chưa xếp lịch" as="ul">{sportClass => <li key={sportClass.id}><span>{sportClass.className} · {sportClass.unassignedCount} buổi chưa lưu phòng</span><button type="button" disabled={creating || showCreate || room.isActive === false} onClick={() => assignRoom(sportClass)}>Gán lịch vào phòng này</button></li>}</ManagerList>
+          <ul aria-label="Lớp cần xác nhận phòng">{state.unassignedClasses.map(sportClass => <li key={sportClass.id}><span>{sportClass.className} · {sportClass.unassignedCount} buổi chưa lưu phòng</span><button type="button" disabled={creating || showCreate || room.isActive === false} onClick={() => assignRoom(sportClass)}>Gán lịch vào phòng này</button></li>)}</ul>
           {assignmentError && <p role="alert" className="room-recurring-error">{assignmentError}</p>}
         </section>}
         <RoomSessionTimetable items={scopedItems} weekStart={weekStart} onWeekChange={changeWeek} onSelect={selectionMode ? toggleCancellation : setSelectedId} onSelectCancelled={setSelectedId} onReschedule={openReschedule} onCreate={openCreate} canReschedule={canRescheduleSession} selectionMode={selectionMode} selectedSessionIds={cancellationIds} canSelectSession={canCancelRoomSession} interactionDisabled={creating || !state.loaded || showCreate || Boolean(reschedule) || Boolean(rosterSession) || Boolean(cancellationSessions) || (!selectionMode && room.isActive === false)} title={selectionMode && cancellationClassId ? `Lịch lớp ${cancellationClasses.find(item => item.id === cancellationClassId)?.name || `#${cancellationClassId}`}` : 'Thời khóa biểu của phòng'} description={selectionMode ? 'Chỉ chọn các buổi chưa bắt đầu trong danh sách đang xem để hủy' : 'Bấm ngày hoặc ô giờ trống để thêm buổi học · Kéo buổi học để đổi lịch'} />

@@ -28,7 +28,7 @@ const report = (classId = 3, overrides = {}) => ({ classId, className: 'Gym Nân
 const session = (id, overrides = {}) => ({ id, classId: 3, status: 'Scheduled', ...overrides })
 const student = (memberId, registrationStatus = 'Registered', overrides = {}) => ({ memberId, registrationStatus, ...overrides })
 
-function mockReport({ reports = [report()], sessions = {}, rosters = {}, pageSize = 2, failRoster, transformSessions, transformRoster, delay = 0 } = {}) {
+function mockReport({ reports = [report()], sessions = {}, rosters = {}, pageSize = 2, failRoster, failStatus, transformSessions, transformRoster, delay = 0 } = {}) {
   const state = { reads: [], active: 0, maxActive: 0 }
   api.defaults.adapter = async config => {
     assert.equal(config.method, 'get')
@@ -46,7 +46,10 @@ function mockReport({ reports = [report()], sessions = {}, rosters = {}, pageSiz
         if (transformSessions) data = transformSessions(data, page)
       } else if (/^\/class-sessions\/\d+\/roster$/.test(config.url)) {
         const id = Number(config.url.split('/')[2])
-        if (id === failRoster) throw new Error('Không tải được danh sách học viên')
+        if (id === failRoster) {
+          config.skipAuth = true
+          throw Object.assign(new Error('Không tải được danh sách học viên'), { config, response: failStatus ? { status: failStatus } : undefined })
+        }
         data = rosters[id] ?? []
         if (transformRoster) data = transformRoster(data)
       } else throw new Error('Unexpected request: ' + config.url)
@@ -107,6 +110,16 @@ test('classes with no sessions or only cancelled registrations have zero members
 test('roster failures reject the report instead of publishing a partial count or the incorrect aggregate', async () => {
   mockReport({ sessions: { 3: [session(1), session(2)] }, rosters: { 1: [student(11)] }, failRoster: 2 })
   await assert.rejects(getClassStatusReport(), /Không tải được danh sách/)
+})
+
+test('a denied roster stops scheduling the remaining report requests', async () => {
+  for (const failStatus of [401, 403]) {
+    const state = mockReport({ sessions: { 3: Array.from({ length: 30 }, (_, index) => session(index + 1)) }, failRoster: 1, failStatus })
+    await assert.rejects(getClassStatusReport(), error => error.response?.status === failStatus)
+    await new Promise(resolve => setImmediate(resolve))
+    assert.ok(state.reads.filter(read => read.url.endsWith('/roster')).length <= 4)
+    assert.equal(state.active, 0)
+  }
 })
 
 test('incomplete or repeated session pages reject the report', async () => {
