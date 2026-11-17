@@ -100,11 +100,12 @@ const clickTab = label => act(async () => {
   button.click()
 })
 
-test('entry warms every Member tab using reads and shares the subscription/profile requests', () => {
+test('entry warms enabled Member tabs and skips the hidden workout view', () => {
   assert.deepEqual(errors, [])
-  assert.equal(document.querySelectorAll('.member-view-content').length, 10)
-  assert.equal(document.querySelectorAll('.member-view-content[hidden]').length, 9)
-  for (const url of ['/profile', '/member-subscriptions/me', '/membership-packages', '/payments', '/GymCheckIns/my-qr', '/GymCheckIns/my-history', '/class-registrations/mine', '/TrainingPlans/members/9', '/SupportTickets/my-tickets', '/notifications', '/ai/chat/history', '/ai/workout-recommendations/history']) assert.ok(count(url) > 0, url)
+  assert.equal(document.querySelectorAll('.member-view-content').length, 9)
+  assert.equal(document.querySelectorAll('.member-view-content[hidden]').length, 8)
+  for (const url of ['/profile', '/member-subscriptions/me', '/membership-packages', '/payments', '/GymCheckIns/my-qr', '/GymCheckIns/my-history', '/class-registrations/mine', '/TrainingPlans/members/9', '/SupportTickets/my-tickets', '/notifications', '/ai/chat/history']) assert.ok(count(url) > 0, url)
+  assert.equal(count('/ai/workout-recommendations/history'), 0)
   assert.equal(count('/member-subscriptions/me'), 1)
   assert.equal(count('/members/me'), 1)
   assert.ok(requests.every(request => request.method === 'get'))
@@ -214,8 +215,23 @@ test('all Member business lists and nested payment/exercise tables expose all 23
   await clickTab('Hỗ trợ khách hàng'); await checkThreePages('Phiếu hỗ trợ')
   await clickTab('Thông báo hệ thống'); await checkThreePages('Thông báo hệ thống')
   await clickTab('Lộ trình tập luyện'); await checkThreePages('Bài tập trong giáo án'); await checkThreePages('Giáo án tập luyện')
-  await clickTab('Gợi ý bài tập AI'); await checkThreePages('Lịch sử gợi ý bài tập')
   assert.deepEqual(errors, [])
+})
+
+test('the hidden AI workout component still paginates its saved history', async () => {
+  const MemberAiWorkout = (await server.ssrLoadModule('/src/pages/member/MemberAiWorkout.jsx')).default
+  const container = document.body.appendChild(document.createElement('div'))
+  const workoutRoot = createRoot(container)
+  const previousLargeLists = largeLists
+  largeLists = true
+  try {
+    await act(async () => workoutRoot.render(h(MemberAiWorkout, { active: true, onNavigate() {} })))
+    await checkThreePages('Lịch sử gợi ý bài tập')
+  } finally {
+    await act(async () => workoutRoot.unmount())
+    container.remove()
+    largeLists = previousLargeLists
+  }
 })
 
 test('class pages use ten records and keep selected sessions when moving between pages', async () => {

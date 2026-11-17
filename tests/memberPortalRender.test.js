@@ -60,6 +60,15 @@ test('the default Member route renders its navigation and profile instead of cra
   assert.match(html, /member-main-content/)
 })
 
+test('the AI workout entry and shortcut are hidden, and its old URL opens the profile', () => {
+  const chat = renderPortal('/member?view=ai-chat')
+  assert.match(chat, /Trợ lý AI/)
+  assert.doesNotMatch(chat, /Gợi ý bài tập AI/)
+  const oldWorkoutUrl = renderPortal('/member?view=ai-workout')
+  assert.doesNotMatch(oldWorkoutUrl, /Gợi ý bài tập AI/)
+  assert.match(oldWorkoutUrl, /class="member-sidebar-item active"[^>]+>.*?Tài khoản &amp; Hồ sơ cá nhân/)
+})
+
 test('every Member navigation destination renders with one active sidebar button', () => {
   for (const item of navSections.flatMap(group => group.items)) {
     const html = renderPortal('/member?view=' + item.id)
