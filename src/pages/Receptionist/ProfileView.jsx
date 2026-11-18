@@ -1,4 +1,4 @@
-import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
+import { useReceptionistResource, useReceptionistViewActive } from '../../contexts/ReceptionistWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
 import { useState } from 'react'
 import { CheckCircle2, Edit3, IdCard, LoaderCircle, Mail, Phone, RefreshCw, Save, UserRound, X } from 'lucide-react'
@@ -7,6 +7,7 @@ import { getFullNameValidationError, getProfilePhoneValidationError, PROFILE_FUL
 import { ViewLoader } from './ReceptionistViewShared'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
+import useProfileMorph from '../../hooks/useProfileMorph'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' }
@@ -14,6 +15,8 @@ const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '
 export function ReceptionistProfileView({ showNotice }) {
   const [requestKey, setRequestKey] = useState(0)
   const [editing, setEditing] = useState(false)
+  const viewActive = useReceptionistViewActive()
+  const morph = useProfileMorph(editing, viewActive)
   const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState('')
   const [form, setForm] = useState(emptyForm)
@@ -25,11 +28,11 @@ export function ReceptionistProfileView({ showNotice }) {
   const startEditing = () => {
     setForm({ fullName: profile.fullName || '', email: profile.email || '', phoneNumber: profile.phoneNumber || '', currentPassword: '', password: '' })
     setActionError('')
-    setEditing(true)
+    morph.transition(() => setEditing(true))
   }
 
   const stopEditing = () => {
-    setEditing(false)
+    morph.transition(() => setEditing(false))
     setActionError('')
   }
 
@@ -59,7 +62,7 @@ export function ReceptionistProfileView({ showNotice }) {
       }
       const updatedProfile = await updateProfile(payload)
       setProfile(updatedProfile)
-      setEditing(false)
+      morph.transition(() => setEditing(false))
       showNotice?.('Đã cập nhật hồ sơ Receptionist.')
     } catch (requestError) {
       setActionError(getProfileErrorMessage(requestError, 'Không thể cập nhật hồ sơ.'))
@@ -79,7 +82,7 @@ export function ReceptionistProfileView({ showNotice }) {
       <div className="reception-profile-cover"><span>{initials}</span></div>
       <div><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><dl><div><dt>Mã tài khoản</dt><dd>#{profile.userId}</dd></div><div><dt>Vai trò</dt><dd>{profile.roleName || 'Receptionist'}</dd></div></dl></div>
     </section>
-    <section className="reception-card reception-profile-details">
+    <section ref={morph.panel} className="reception-card reception-profile-details">
       <div className="reception-card-head">
         <div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>
         {editing ? <button type="button" onClick={stopEditing} disabled={saving}><X size={16} />Hủy</button> : <button type="button" onClick={startEditing}><Edit3 size={15} />Chỉnh sửa</button>}

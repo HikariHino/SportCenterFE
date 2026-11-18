@@ -8,6 +8,7 @@ import { ViewLoader } from './CoachViewShared'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
 import { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
+import useProfileMorph from '../../hooks/useProfileMorph'
 
 const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -19,6 +20,7 @@ export function CoachProfileView({ active = true, showNotice }) {
   const profileFormId = useId()
   const [requestKey, setRequestKey] = useState(0)
   const [editing, setEditing] = useState(false)
+  const morph = useProfileMorph(editing, active)
   const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState('')
   const [form, setForm] = useState({ fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' })
@@ -32,7 +34,7 @@ export function CoachProfileView({ active = true, showNotice }) {
   const updateField = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }))
 
   const cancelEdit = () => {
-    setEditing(false)
+    morph.transition(() => setEditing(false))
     setActionError('')
     setForm({ fullName: profile.fullName || '', email: profile.email || '', phoneNumber: profile.phoneNumber || '', currentPassword: '', password: '' })
   }
@@ -56,7 +58,7 @@ export function CoachProfileView({ active = true, showNotice }) {
       const result = await updateProfile(payload)
       setProfile(result)
       setForm({ fullName: result.fullName || '', email: result.email || '', phoneNumber: result.phoneNumber || '', currentPassword: '', password: '' })
-      setEditing(false)
+      morph.transition(() => setEditing(false))
       notifyCoachDataChanged('profile')
       showNotice?.('Đã cập nhật hồ sơ Coach.')
     } catch (requestError) {
@@ -77,8 +79,8 @@ export function CoachProfileView({ active = true, showNotice }) {
   return <div className="coach-account-profile-layout">
     <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />
     <section className="coach-card coach-account-profile-summary"><div className="coach-account-profile-cover"><span>{initials}</span></div><div className="coach-account-profile-main"><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><div><span><strong>#{profile.userId}</strong><small>Mã tài khoản</small></span><span><strong>{profile.roleName}</strong><small>Vai trò</small></span></div></div></section>
-    <section className="coach-card coach-account-profile-details">
-      <div className="coach-card-head"><div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>{editing ? <button type="button" onClick={cancelEdit} disabled={saving}><X size={15} />Hủy</button> : <button type="button" onClick={() => setEditing(true)}><PencilLine size={15} />Chỉnh sửa</button>}</div>
+    <section ref={morph.panel} className="coach-card coach-account-profile-details">
+      <div className="coach-card-head"><div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>{editing ? <button type="button" onClick={cancelEdit} disabled={saving}><X size={15} />Hủy</button> : <button type="button" onClick={() => morph.transition(() => setEditing(true))}><PencilLine size={15} />Chỉnh sửa</button>}</div>
       {editing ? <form id={profileFormId} className="coach-account-profile-form" onSubmit={submitProfile}>
         <div className="coach-account-profile-fields">
           <label className="coach-profile-name-field">Họ và tên<input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} name="fullName" value={form.fullName} onChange={updateField} minLength="1" maxLength={PROFILE_FULL_NAME_MAX_LENGTH} required /></label>
