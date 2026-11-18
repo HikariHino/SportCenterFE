@@ -7,6 +7,7 @@ import { getPaymentById, getPayments } from '../../services/paymentService'
 import { getReceptionistPendingOrders, getReceptionistPaymentError, receptionistCheckoutUrl, syncReceptionistPayment } from '../../services/receptionistPaymentService'
 import CheckoutDialog from './CheckoutDialog'
 import PaymentTable from './PaymentTable'
+import PaymentSuccessDialog from './PaymentSuccessDialog'
 import { cancelOpenPayment } from '../../services/subscriptionCancellationService'
 import { canCancelPayOSPayment, canSyncPayOSPayment, paymentCheckoutMessage, paymentStatus, paymentSummary, paymentStatusLabel as gatewayStatusLabel } from '../../utils/memberPayments'
 import { getReceptionistPaymentRows, receptionistPaymentMethods, receptionistPaymentMethodLabel, receptionistPaymentStatuses } from '../../utils/receptionistPayments'
@@ -20,6 +21,7 @@ export function PaymentsView({ query, showNotice, paymentReturn }) {
   const [selectedPaymentId, setSelectedPaymentId] = useState(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [counterOrder, setCounterOrder] = useState(null)
+  const [dismissedSuccessId, setDismissedSuccessId] = useState(null)
 
   const paymentsQuery = useReceptionistResource('payments', getPayments, { initialData: [], refreshKey: requestKey })
   const { data: paymentItems, loading, refreshing } = paymentsQuery
@@ -43,13 +45,13 @@ export function PaymentsView({ query, showNotice, paymentReturn }) {
     if (!paymentReturn?.id) return
     setStatus('all'); setMethod('all'); setRequestKey(key => key + 1)
   }, [paymentReturn])
-  const onCreated = payment => {
+  const onCreated = (payment, { redirect = true } = {}) => {
     const payosPending = String(payment.paymentMethod).toLowerCase() === 'payos' && paymentStatus(payment) === 'pending'
     const url = payosPending ? receptionistCheckoutUrl(payment) : ''
     if (payosPending && !url) throw new Error('Chưa có liên kết PayOS hợp lệ. Hãy tải lại trạng thái giao dịch trước khi tiếp tục.')
     paymentsQuery.setData(current => [payment, ...(current || []).filter(item => String(item.id) !== String(payment.id))])
     refresh()
-    if (url) { window.location.assign(url); return }
+    if (url) { if (redirect) window.location.assign(url); return }
     setSelectedPaymentId(payment.id)
     showNotice(paymentCheckoutMessage(payment))
   }
@@ -69,9 +71,11 @@ export function PaymentsView({ query, showNotice, paymentReturn }) {
       <p className="reception-payment-sort-hint">Ưu tiên chờ thanh toán, sau đó theo ngày mới nhất.</p>
       <PaymentTable rows={rows} resetKey={JSON.stringify([query, status, method])} loading={loading || pendingLoading} collectingDisabled={Boolean(error || pendingError)} onCollect={setCounterOrder} onView={setSelectedPaymentId} />
     </section>
-    {counterOrder && <CheckoutDialog counterOnly memberId={counterOrder.memberId} subscriptionId={counterOrder.id} initialPaymentMethod={method === 'banktransfer' ? 'BankTransfer' : method === 'creditcard' ? 'CreditCard' : 'Cash'} onClose={() => setCounterOrder(null)} onCreated={onCreated} />}
+    {counterOrder && <CheckoutDialog counterOnly memberId={counterOrder.memberId} subscriptionId={counterOrder.id} initialPaymentMethod={method === 'banktransfer' ? 'BankTransfer' : 'Cash'} onClose={() => setCounterOrder(null)} onCreated={onCreated} />}
     {selectedPaymentId !== null && <PaymentDetailDialog paymentId={selectedPaymentId} onClose={() => setSelectedPaymentId(null)} onUpdated={() => setRequestKey(key => key + 1)} showNotice={showNotice} />}
     {showCreateDialog && <CheckoutDialog onClose={() => setShowCreateDialog(false)} onCreated={onCreated} onOrderCreated={refresh} />}
+    {viewActive && paymentReturn?.id && returnStatus === 'success' && String(dismissedSuccessId) !== String(paymentReturn.id)
+      && <PaymentSuccessDialog key={paymentReturn.id} paymentId={paymentReturn.id} payment={returnedPayment} onClose={() => setDismissedSuccessId(paymentReturn.id)} />}
   </>
 }
 

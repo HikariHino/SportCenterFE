@@ -1,0 +1,10 @@
+.reception-payment-success-dialog { position:fixed; inset:0; width:min(460px,calc(100% - 32px)); max-height:calc(100dvh - 32px); margin:auto; padding:32px 24px 24px; overflow:auto; border:1px solid var(--theme-border); border-radius:16px; color:var(--theme-text); background:var(--theme-surface); box-shadow:0 24px 80px #07132766; text-align:center; font-family:'Be Vietnam Pro',sans-serif; }
+.reception-payment-success-dialog::backdrop { background:#07132799; backdrop-filter:blur(5px); }
+.reception-payment-success-close { position:absolute; top:12px; right:12px; display:grid; place-items:center; width:32px; height:32px; border:0; border-radius:7px; color:var(--theme-muted); background:var(--theme-raised); cursor:pointer; }
+.reception-payment-success-icon { color:var(--theme-green,#08795b); }
+.reception-payment-success-dialog h2 { margin:16px 0 10px; font-size:calc(27px + var(--font-size-adjustment,0px)); line-height:1.4; }
+.reception-payment-success-dialog p { margin:10px 0; color:var(--theme-muted); font-size:calc(17px + var(--font-size-adjustment,0px)); line-height:1.7; }
+.reception-payment-success-dialog strong { display:block; margin-top:14px; overflow-wrap:anywhere; font-size:calc(18px + var(--font-size-adjustment,0px)); }
+.reception-payment-success-dialog .reception-payment-success-amount { color:var(--theme-green,#08795b); font-size:calc(25px + var(--font-size-adjustment,0px)); font-weight:800; }
+.reception-payment-success-done { min-height:44px; margin-top:16px; padding:10px 26px; border:1px solid var(--theme-accent); border-radius:9px; color:var(--theme-text); background:var(--theme-blue-bg,#edf3ff); font:inherit; font-size:calc(17px + var(--font-size-adjustment,0px)); font-weight:700; cursor:pointer; }
+.reception-payment-success-dialog button:focus-visible { outline:3px solid var(--theme-accent); outline-offset:3px; }

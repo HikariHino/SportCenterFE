@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
-import { act, createElement as h } from 'react'
+import { act, createElement as h, StrictMode } from 'react'
 import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 
@@ -102,8 +102,8 @@ async function screen(run, route = '/receptionist?view=Thanh+to%C3%A1n', setup =
     return h(Workspace, { sessionKey: 'package-checkout' }, h(Payments, { query: '', showNotice() {}, paymentReturn: location.state?.receptionistPaymentReturn }))
   }
   try {
-    await act(async () => root.render(h(Router, { initialEntries: [route] }, h(Auth, null,
-      h(Routes, null, h(Route, { path: '/receptionist', element: h(History) }), h(Route, { path: '/payment/success', element: h(Result) }))))))
+    await act(async () => root.render(h(StrictMode, null, h(Router, { initialEntries: [route] }, h(Auth, null,
+      h(Routes, null, h(Route, { path: '/receptionist', element: h(History) }), h(Route, { path: '/payment/success', element: h(Result) })))))))
     await run(container)
   } finally { await act(async () => root.unmount()); container.remove() }
 }
@@ -160,6 +160,59 @@ test('counter checkout waits for receipt consent, records the backend upgrade am
   assert.deepEqual(state.redirects, [])
 }))
 
+const pendingCounterOrder = () => ({ id: 28, memberId: 9, packageId: 2, packageType: 'Standard', packageName: 'Gói nâng cấp', status: 'Pending', agreedPrice: 500000, durationInDays: 90, payments: [] })
+const submitCounterOrder = () => act(async () => {
+  const form = document.querySelector('.reception-checkout-dialog form')
+  for (let count = 0; count < 2; count++) form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }))
+})
+
+test('bank transfer collection hides receipt consent and pays the existing order through PayOS once', () => screen(async () => {
+  await click('[aria-label="Thu tiền đơn đăng ký 28"]')
+  assert.ok(document.querySelector('.reception-payment-confirm'))
+  const methods = '.reception-checkout-fields label:last-child select'
+  assert.deepEqual([...document.querySelector(methods).options].map(option => option.value), ['Cash', 'BankTransfer'])
+  await choose(methods, 'BankTransfer')
+  assert.equal(document.querySelector('.reception-payment-confirm'), null)
+  const payButton = document.querySelector('.reception-checkout-dialog [type=submit]')
+  assert.equal(payButton.textContent, 'Trả tiền')
+  assert.equal(payButton.disabled, false)
+  await submitCounterOrder()
+  assert.equal(createCalls().length, 0, 'the existing order is reused')
+  assert.equal(paymentCalls().length, 1)
+  assert.deepEqual(paymentCalls()[0].data, { subscriptionId: 28 })
+  assert.equal(state.calls.some(call => call.method === 'post' && call.url === '/member-subscriptions/28/payments'), false)
+  assert.deepEqual(state.redirects, ['https://pay.payos.vn/web/test-payment'])
+}, undefined, state => { state.subscriptions.push(pendingCounterOrder()) }))
+
+test('switching from transfer back to cash restores receipt consent and prevents accidental cash collection', () => screen(async () => {
+  await click('[aria-label="Thu tiền đơn đăng ký 28"]')
+  const methods = '.reception-checkout-fields label:last-child select'
+  await choose(methods, 'BankTransfer')
+  await choose(methods, 'Cash')
+  assert.ok(document.querySelector('.reception-payment-confirm'))
+  assert.equal(document.querySelector('.reception-checkout-dialog [type=submit]').textContent, 'Xác nhận thu tiền')
+  assert.equal(document.querySelector('.reception-checkout-dialog [type=submit]').disabled, true)
+  await submitCounterOrder()
+  assert.equal(paymentCalls().length, 0)
+  assert.equal(state.calls.some(call => call.method === 'post'), false)
+}, undefined, state => { state.subscriptions.push(pendingCounterOrder()) }))
+
+test('a failed transfer payment keeps the existing order and retries only after refreshing', () => screen(async () => {
+  await click('[aria-label="Thu tiền đơn đăng ký 28"]')
+  await choose('.reception-checkout-fields label:last-child select', 'BankTransfer')
+  state.failPayOS = true
+  await submitCounterOrder()
+  assert.ok(document.querySelector('.reception-checkout-dialog [role=alert]'))
+  assert.equal(document.querySelector('.reception-checkout-dialog [type=submit]').disabled, true)
+  assert.deepEqual(state.redirects, [])
+  await click('.reception-checkout-dialog footer button')
+  state.failPayOS = false
+  await submitCounterOrder()
+  assert.equal(paymentCalls().length, 2)
+  assert.equal(createCalls().length, 0)
+  assert.equal(state.redirects.length, 1)
+}, undefined, state => { state.subscriptions.push(pendingCounterOrder()) }))
+
 test('changed preview terms require another confirmation before an order is created', () => screen(async () => {
   await selectUpgrade(); state.amount = 600000
   await submit()
@@ -207,6 +260,14 @@ test('verified PayOS completion returns to Receptionist history with success and
   assert.equal(state.calls.filter(call => call.url === '/payments/90/sync').length, 1)
   assert.equal(createCalls().length, 0)
   assert.equal(paymentCalls().length, 0)
+  const popup = document.querySelector('.reception-payment-success-dialog')
+  assert.ok(popup?.open)
+  assert.match(popup.textContent, /Thanh toán thành công/)
+  assert.match(popup.textContent, /#PAY-90/)
+  assert.match(popup.textContent, /500.000 đ/)
+  await click('.reception-payment-success-done')
+  assert.equal(document.querySelector('.reception-payment-success-dialog'), null)
+  assert.ok(document.querySelector('[data-payment-id="90"]'))
 }, '/payment/success?orderCode=1090&status=PAID', state => { state.payments = [receipt()] }))
 
 test('a PAID query string cannot turn a cancelled backend transaction into a success message', () => screen(async () => {
@@ -214,4 +275,5 @@ test('a PAID query string cannot turn a cancelled backend transaction into a suc
   assert.doesNotMatch(document.querySelector('.reception-payment-return').textContent, /Thanh toán thành công/)
   assert.equal(createCalls().length, 0)
   assert.equal(paymentCalls().length, 0)
+  assert.equal(document.querySelector('.reception-payment-success-dialog'), null)
 }, '/payment/success?orderCode=1090&status=PAID', state => { state.payments = [receipt('Cancelled')] }))

@@ -31,7 +31,7 @@ const response = (config, data) => ({ config, status: 200, headers: {}, data: { 
 const failure = (status, message) => Object.assign(new Error(message), { response: { status, data: { message } } })
 
 test('all checkout methods reread the selected member/order and send only the BE payment contract', async () => {
-  for (const paymentMethod of ['PayOS', 'Cash', 'BankTransfer', 'CreditCard']) {
+  for (const paymentMethod of ['PayOS', 'Cash', 'BankTransfer']) {
     const calls = []
     api.defaults.adapter = async config => {
       calls.push({ url: config.url, method: config.method, data: config.data && JSON.parse(config.data) })
@@ -49,7 +49,7 @@ test('all checkout methods reread the selected member/order and send only the BE
 test('invalid identifiers, amounts, methods and missing receipt confirmation never call the API', async () => {
   let calls = 0
   api.defaults.adapter = async config => { calls++; return response(config, order) }
-  for (const patch of [{ memberId: 0 }, { subscriptionId: -1 }, { subscriptionId: 2147483648 }, { amount: 0 }, { amount: NaN }, { paymentMethod: 'Other' }, { paymentMethod: 'Cash', paymentReceived: false }]) {
+  for (const patch of [{ memberId: 0 }, { subscriptionId: -1 }, { subscriptionId: 2147483648 }, { amount: 0 }, { amount: NaN }, { paymentMethod: 'Other' }, { paymentMethod: 'CreditCard', paymentReceived: true }, { paymentMethod: 'Cash', paymentReceived: false }]) {
     await assert.rejects(service.checkoutReceptionistSubscription({ ...input, ...patch }))
   }
   assert.equal(calls, 0)
