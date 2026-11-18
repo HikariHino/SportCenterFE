@@ -9,6 +9,7 @@ import ChangeEmailForm from '../../components/ChangeEmailForm'
 import { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 import useProfileMorph from '../../hooks/useProfileMorph'
+import StaffProfileCard from '../../components/StaffProfileCard'
 
 const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -72,13 +73,12 @@ export function CoachProfileView({ active = true, showNotice }) {
   if (error && !profile) return <section className="coach-card coach-profile-api-state error"><UserRound size={28} /><strong>Không thể tải hồ sơ</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></section>
   if (!profile) return <section className="coach-card coach-profile-api-state"><UserRound size={28} /><strong>Chưa có hồ sơ</strong><p>Chưa có dữ liệu tài khoản.</p></section>
 
-  const initials = profile.fullName?.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase() || 'HLV'
   const createdAt = profile.createdAt ? profileDateFormatter.format(new Date(profile.createdAt)) : 'Chưa xác định'
   const updatedAt = profile.updatedAt ? profileDateFormatter.format(new Date(profile.updatedAt)) : 'Chưa cập nhật'
 
   return <div className="coach-account-profile-layout">
     <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />
-    <section className="coach-card coach-account-profile-summary"><div className="coach-account-profile-cover"><span>{initials}</span></div><div className="coach-account-profile-main"><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><div><span><strong>#{profile.userId}</strong><small>Mã tài khoản</small></span><span><strong>{profile.roleName}</strong><small>Vai trò</small></span></div></div></section>
+    <StaffProfileCard profile={profile} role="Coach" className="coach-card coach-account-profile-summary" />
     <section ref={morph.panel} className="coach-card coach-account-profile-details">
       <div className="coach-card-head"><div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>{editing ? <button type="button" onClick={cancelEdit} disabled={saving}><X size={15} />Hủy</button> : <button type="button" onClick={() => morph.transition(() => setEditing(true))}><PencilLine size={15} />Chỉnh sửa</button>}</div>
       {editing ? <form id={profileFormId} className="coach-account-profile-form" onSubmit={submitProfile}>
