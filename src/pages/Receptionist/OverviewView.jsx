@@ -63,7 +63,7 @@ export function Overview({ onNavigate }) {
       </section>
       <section className="reception-card reception-court-panel">
         <div className="reception-card-head"><div><span>PHÒNG HOẠT ĐỘNG</span><h2>Cơ sở đang sẵn sàng</h2></div><button type="button" onClick={() => onNavigate('Phòng tập')}>Xem phòng <ArrowRight size={15} /></button></div>
-        {loading ? <EmptyState icon={DoorOpen} title="Đang tải phòng" text="Dữ liệu phòng đang được đồng bộ từ hệ thống." /> : data.rooms.length ? <div className="reception-overview-rooms">{<ReceptionistList items={data.rooms} label="Phòng đang hoạt động">{(room, ordinal) => <article key={room.id}><span><DoorOpen size={16} /></span><div><strong>{room.name}</strong><small>{room.roomType} · {room.capacity} người</small></div></article>}</ReceptionistList>}</div> : <EmptyState icon={MapPin} title="Chưa có phòng hoạt động" text="Hiện chưa có phòng nào ở trạng thái hoạt động." />}
+        {loading ? <EmptyState icon={DoorOpen} title="Đang tải phòng" text="Dữ liệu phòng đang được đồng bộ từ hệ thống." /> : data.rooms.length ? <div className="reception-overview-rooms">{<ReceptionistList items={data.rooms} label="Phòng đang hoạt động" showOrdinal={false}>{(room, ordinal) => <article key={room.id}><span><DoorOpen size={16} /></span><div><strong>{room.name}</strong><small>{room.roomType} · {room.capacity} người</small></div></article>}</ReceptionistList>}</div> : <EmptyState icon={MapPin} title="Chưa có phòng hoạt động" text="Hiện chưa có phòng nào ở trạng thái hoạt động." />}
         {data.rooms.length > 0 && <button className="reception-overview-more" type="button" onClick={() => onNavigate('Phòng tập')}>Mở danh sách {data.rooms.length} phòng <ArrowRight size={15} /></button>}
       </section>
     </div>

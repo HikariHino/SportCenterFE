@@ -72,9 +72,9 @@ function WorkoutRecommendationResult({ recommendation, startDate, endDate, onClo
       <span><small>Thời gian áp dụng</small><strong>{startDate} – {endDate}</strong></span>
     </div>
     <div className="coach-plan-ai-sessions">
-      {<CoachList items={recommendation.sessions} label="Buổi trong gợi ý AI">{(session, ordinal) => { const sessionIndex = ordinal - 1; return <article key={`${session.day}-${sessionIndex}`}>
+      {<CoachList items={recommendation.sessions} label="Buổi trong gợi ý AI" showOrdinal={false}>{(session, ordinal) => { const sessionIndex = ordinal - 1; return <article key={`${session.day}-${sessionIndex}`}>
         <header><div><span>BUỔI {session.day}</span><strong>{session.title}</strong></div>{session.durationMinutes && <time><Clock3 size={14} />{session.durationMinutes} phút</time>}</header>
-        {session.exercises.length ? <ul>{session.exercises.map((exercise, exerciseIndex) => <li key={`${exercise.exerciseName}-${exerciseIndex}`} className="coach-numbered-item" data-stt={exerciseIndex + 1}>
+        {session.exercises.length ? <ul>{session.exercises.map((exercise, exerciseIndex) => <li key={`${exercise.exerciseName}-${exerciseIndex}`}>
           <div><strong>{exercise.exerciseName}</strong><span>{[exercise.sets && `${exercise.sets} hiệp`, exercise.reps && `${exercise.reps} lần`, exercise.restSeconds && `nghỉ ${exercise.restSeconds} giây`].filter(Boolean).join(' · ') || 'Theo hướng dẫn của Coach'}</span></div>
           {exercise.note && <p>{exercise.note}</p>}
         </li>)}</ul> : <p className="coach-plan-ai-empty">AI chưa đề xuất bài tập cho buổi này.</p>}

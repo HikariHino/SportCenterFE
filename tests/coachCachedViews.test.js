@@ -97,8 +97,8 @@ test('Overview shows the complete daily schedule without pagination while other 
     sessions: Array.from({ length: 23 }, (_, index) => ({ ...session, id: index + 1, tone: 'next', time: '15:00', duration: '60 phút', enrollment: 1 })),
     weekSessions: [], students: [], metrics: [], attendance: { present: 0, absent: 0, excused: 0, pending: 0 },
   }))
-  assert.equal((html.match(/data-stt=/g) || []).length, 23)
-  assert.match(html, /data-stt="23"/)
+  assert.equal((html.match(/aria-label="Mở lịch buổi /g) || []).length, 23)
+  assert.doesNotMatch(html, /coach-numbered-item|data-stt=/)
   assert.doesNotMatch(html, /Phân trang Lịch huấn luyện hôm nay|10 dòng\/trang/)
 })
 
