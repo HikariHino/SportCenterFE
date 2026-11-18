@@ -1,6 +1,31 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { applyExercisesPerSession, buildWorkoutGoalContext, buildWorkoutRecommendationPayload, extractWorkoutRecommendation, mapWorkoutRecommendationToPlanExercises } from '../src/utils/aiWorkoutRecommendation.js'
+import { applyExercisesPerSession, buildCoachWorkoutGoalContext, buildWorkoutGoalContext, buildWorkoutRecommendationPayload, COACH_AI_PROMPT_MAX_LENGTH, extractWorkoutRecommendation, mapWorkoutRecommendationToPlanExercises } from '../src/utils/aiWorkoutRecommendation.js'
+
+test('Coach freeform requests preserve the prompt, selected goal, both dates and sport within the backend limit', () => {
+  const input = { prompt: '  Cải thiện sức bền, ưu tiên kỹ thuật  ', goal: 'Tăng sức bền', startDate: '2026-11-18', endDate: '2026-12-16', sportName: 'Tennis', exerciseCatalog: [{ exerciseName: 'Squat (Gánh tạ đùi)' }] }
+  const context = buildCoachWorkoutGoalContext(input)
+  assert.ok(context.includes('Mục tiêu: Tăng sức bền'))
+  for (const value of [input.prompt.trim(), input.startDate, input.endDate, input.sportName]) assert.ok(context.includes(value), value)
+  assert.ok(context.includes('Squat'))
+  assert.ok(context.length <= 1000)
+  assert.equal(COACH_AI_PROMPT_MAX_LENGTH, 400)
+  const maximum = { ...input, prompt: 'a'.repeat(400) }
+  const payload = buildWorkoutRecommendationPayload({ ...maximum, memberId: 4, level: 'Beginner', daysPerWeek: 3 })
+  assert.ok(payload.goal.startsWith(maximum.prompt))
+  assert.ok(payload.goal.includes('Mục tiêu: Tăng sức bền'))
+  assert.ok(payload.goal.includes('2026-11-18'))
+  assert.ok(payload.goal.includes('2026-12-16'))
+  assert.ok(payload.goal.length > 400 && payload.goal.length <= 1000)
+  assert.throws(() => buildCoachWorkoutGoalContext({ ...maximum, prompt: maximum.prompt + 'b' }), /ký tự/)
+})
+
+test('Coach prompts reject blank input, missing or impossible dates and reversed dates before an AI request', () => {
+  const input = { prompt: 'Tăng sức bền', goal: 'Tăng sức bền', startDate: '2026-11-18', endDate: '2026-12-16', sportName: 'Tennis' }
+  for (const invalid of [{ prompt: '  ' }, { goal: '' }, { startDate: '' }, { endDate: '' }, { endDate: '2026-02-30' }, { endDate: '2026-11-17' }]) {
+    assert.throws(() => buildCoachWorkoutGoalContext({ ...input, ...invalid }))
+  }
+})
 
 test('AI workout recommendation payload matches the backend contract', () => {
   assert.deepEqual(buildWorkoutRecommendationPayload({
@@ -19,6 +44,7 @@ test('AI workout recommendation payload matches the backend contract', () => {
 test('AI workout recommendation payload rejects invalid data before calling the API', () => {
   assert.throws(() => buildWorkoutRecommendationPayload({ memberId: 0, goal: 'Tăng cơ', level: 'Beginner', daysPerWeek: 3 }), /học viên/)
   assert.throws(() => buildWorkoutRecommendationPayload({ memberId: 4, goal: '', level: 'Beginner', daysPerWeek: 3 }), /Mục tiêu/)
+  assert.throws(() => buildWorkoutRecommendationPayload({ memberId: 4, goal: 'a'.repeat(201), level: 'Beginner', daysPerWeek: 3 }), /200 ký tự/)
   assert.throws(() => buildWorkoutRecommendationPayload({ memberId: 4, goal: 'Tăng cơ', level: 'Unknown', daysPerWeek: 3 }), /Trình độ/)
   assert.throws(() => buildWorkoutRecommendationPayload({ memberId: 4, goal: 'Tăng cơ', level: 'Beginner', daysPerWeek: 8 }), /1 đến 7/)
 })

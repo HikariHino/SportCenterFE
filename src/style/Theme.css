@@ -267,7 +267,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-plan-dialog > header button { color: var(--theme-muted); background: var(--theme-raised); }
 [data-theme='dark'] :is(.coach-plan-form-grid input, .coach-plan-form-grid select, .coach-plan-exercise-title + div input, .coach-plan-exercise-title + div select, .coach-plan-exercises article, .coach-plan-exercises-empty, .coach-exercise-catalog-state) { border-color: var(--theme-border); color: var(--theme-text); background: var(--theme-raised); }
 [data-theme='dark'] .coach-exercise-catalog-state.error { border-color:#6d3a41; color:#ff9eaa; background:#351f25; }
-[data-theme='dark'] .coach-plan-exercises-head > button { border-color: #3c5f9f; color: var(--theme-accent); background: var(--theme-blue-bg); }
+[data-theme='dark'] .coach-plan-exercise-actions > button { border-color: #3c5f9f; color: var(--theme-accent); background: var(--theme-blue-bg); }
 [data-theme='dark'] .coach-plan-exercise-title button { color: #ff9eaa; background: #351f25; }
 [data-theme='dark'] .coach-plan-form-error { border-color: #6d3a41; color: #ff9eaa; background: #351f25; }
 [data-theme='dark'] .coach-plan-dialog form > footer { border-color: var(--theme-border); }
@@ -275,7 +275,6 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-plan-ai-demo { border-color:#4c56a4; background:linear-gradient(135deg,#1d2540,#202c4d); }
 [data-theme='dark'] .coach-plan-ai-demo strong { color:var(--theme-text); }
 [data-theme='dark'] .coach-plan-ai-message { color:#c8bdff; background:#292349; }
-[data-theme='dark'] .coach-plan-ai-options select,[data-theme='dark'] .coach-plan-ai-options input { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
 [data-theme='dark'] .coach-plan-ai-result { border-color:#4c56a4; background:var(--theme-raised); }
 [data-theme='dark'] .coach-plan-ai-result>header { border-color:#4c56a4; background:#292349; }
 [data-theme='dark'] .coach-plan-ai-summary { border-color:var(--theme-border); background:var(--theme-border); }
