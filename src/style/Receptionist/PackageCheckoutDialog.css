@@ -24,6 +24,7 @@
 .reception-checkout-purchase dd { margin:0; font-weight:800; }
 .reception-checkout-method { display:grid; gap:7px; }
 .reception-checkout-method select { min-height:40px; padding:8px 10px; border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text); background:var(--theme-surface); }
+.reception-package-checkout-body > .reception-checkout-method + .reception-checkout-note { margin:3px 0 0; }
 .reception-payment-return { padding:14px 16px; margin-bottom:16px; border:1px solid var(--theme-border); border-radius:10px; color:var(--theme-text); background:var(--theme-surface); font-size:calc(17px + var(--font-size-adjustment,0px)); }
 .reception-payment-return[data-status='success'] { border-color:var(--theme-green,#08795b); color:var(--theme-green,#08795b); background:var(--theme-green-bg,#e1f6ee); }
 @media(max-width:620px) { .reception-checkout-package-grid { grid-template-columns:1fr; } }
