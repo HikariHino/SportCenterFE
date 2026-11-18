@@ -37,6 +37,12 @@ export const memberNavSections = [
     title: 'HỒ SƠ & DỊCH VỤ THẺ',
     items: [
       {
+        id: 'checkin',
+        label: 'Ra/Vào trung tâm',
+        subtitle: 'GymCheckInsController',
+        icon: QrCode,
+      },
+      {
         id: 'profile',
         label: 'Tài khoản & Hồ sơ cá nhân',
         subtitle: 'AuthController, ProfileController',
@@ -53,12 +59,6 @@ export const memberNavSections = [
         label: 'Thanh toán trực tuyến & Hóa đơn',
         subtitle: 'PaymentsController',
         icon: ReceiptText,
-      },
-      {
-        id: 'checkin',
-        label: 'Ra/vào phòng gym',
-        subtitle: 'GymCheckInsController',
-        icon: QrCode,
       },
     ],
   },
@@ -119,7 +119,7 @@ function MemberWorkspace() {
   const navigate = useNavigate()
   const location = useLocation()
   const paymentReturnView = ['payments', 'subscriptions'].includes(location.state?.activeNav) ? location.state.activeNav : undefined
-  const [activeNav, setActiveNav] = usePortalNavigation(memberViewIds, 'profile', paymentReturnView)
+  const [activeNav, setActiveNav] = usePortalNavigation(memberViewIds, 'checkin', paymentReturnView)
   const contentMotion = usePageMotion(activeNav)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const sidebarPill = useSlidingPill(activeNav, sidebarOpen)
@@ -310,7 +310,7 @@ function MemberWorkspace() {
       case 'notifications':
         return <NotificationsView refreshKey={notificationRevision} onNotificationsChange={refreshNotifications} onViewSchedule={viewUpdatedSchedule} unreadCount={unreadCount} />
       default:
-        return <ProfileView user={user} showNotice={showNotice} />
+        return <GymCheckInView showNotice={showNotice} />
     }
   }
 

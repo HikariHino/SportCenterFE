@@ -64,7 +64,7 @@ export function GymCheckInView() {
   const [dateDraft, setDateDraft] = useState(dateRange)
   const [rangeError, setRangeError] = useState('')
   const historyLoader = useCallback(options => getMyGymCheckInHistory(dateRange, options), [dateRange])
-  const history = useGymData(historyLoader, 'Không thể tải lịch sử ra/vào phòng gym.', 'gym-history:' + JSON.stringify(dateRange))
+  const history = useGymData(historyLoader, 'Không thể tải lịch sử ra/vào trung tâm.', 'gym-history:' + JSON.stringify(dateRange))
   const [filter, setFilter] = useState('All')
   const [page, setPage] = useState(1)
   const records = [...(history.data || [])].sort((a, b) =>
@@ -101,7 +101,7 @@ export function GymCheckInView() {
       <header className="gym-page-heading">
         <div>
           <p className="member-eyebrow"><ScanLine size={16} /> THẺ SỐ HỘI VIÊN</p>
-          <h2>Ra/vào phòng gym</h2>
+          <h2>Ra/Vào trung tâm</h2>
           <p>Thẻ QR cá nhân và lịch sử tập luyện của bạn, ngay tại đây.</p>
         </div>
         <button type="button" className="gym-button" disabled={qr.loading || history.loading} onClick={() => { qr.reload(); reloadHistory() }}>

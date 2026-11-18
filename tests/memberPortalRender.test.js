@@ -53,20 +53,23 @@ test('browser dependencies stay isolated from middleware render-test caches', as
   assert.notEqual(browserConfig.cacheDir, server.config.cacheDir)
 })
 
-test('the default Member route renders its navigation and profile instead of crashing', () => {
+test('the default Member route opens center entry and exit as the first sidebar item', () => {
   const html = renderPortal('/member')
   assert.match(html, /Điều hướng hội viên/)
   assert.match(html, /Nguyễn Văn An/)
   assert.match(html, /member-main-content/)
+  assert.equal(navSections[0].items[0].id, 'checkin')
+  assert.match(html, /class="member-sidebar-item active"[^>]+>.*?Ra\/Vào trung tâm/)
+  assert.match(html, /<h2>Ra\/Vào trung tâm<\/h2>/)
 })
 
-test('the AI workout entry and shortcut are hidden, and its old URL opens the profile', () => {
+test('the AI workout entry and shortcut are hidden, and its old URL opens center entry and exit', () => {
   const chat = renderPortal('/member?view=ai-chat')
   assert.match(chat, /Trợ lý AI/)
   assert.doesNotMatch(chat, /Gợi ý bài tập AI/)
   const oldWorkoutUrl = renderPortal('/member?view=ai-workout')
   assert.doesNotMatch(oldWorkoutUrl, /Gợi ý bài tập AI/)
-  assert.match(oldWorkoutUrl, /class="member-sidebar-item active"[^>]+>.*?Tài khoản &amp; Hồ sơ cá nhân/)
+  assert.match(oldWorkoutUrl, /class="member-sidebar-item active"[^>]+>.*?Ra\/Vào trung tâm/)
 })
 
 test('every Member navigation destination renders with one active sidebar button', () => {
