@@ -1,7 +1,6 @@
 import { useReceptionistResource, useReceptionistViewActive } from '../../contexts/ReceptionistWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import QRCode from 'qrcode'
 import { ArrowRight, Clock3, Download, ReceiptText, Ban, Plus, RefreshCw, ScanLine, WalletCards, X } from 'lucide-react'
 import { getPaymentById, getPayments } from '../../services/paymentService'
 import { getReceptionistPendingOrders, getReceptionistPaymentError, receptionistCheckoutUrl, syncReceptionistPayment } from '../../services/receptionistPaymentService'
@@ -179,7 +178,6 @@ function PaymentDetailDialog({ paymentId, onClose, onUpdated, showNotice }) {
               <div><small>Ngày tạo</small><strong>{formatDateTime(payment.createdAt)}</strong></div><div><small>Ngày thanh toán</small><strong>{formatDateTime(payment.paidAt)}</strong></div><div><small>Mã tham chiếu</small><strong>{payment.transactionReference || 'Chưa có'}</strong></div>
               {String(payment.paymentMethod).toLowerCase() === 'payos' && <><div><small>Trạng thái PayOS</small><strong>{payment.gatewayStatus || 'Chưa đồng bộ'}</strong></div><div><small>Mã đơn PayOS</small><strong>{payment.payOSOrderCode || 'Chưa có'}</strong></div><div><small>Hết hạn</small><strong>{formatDateTime(payment.expiresAt)}</strong></div><div><small>Lý do kiểm tra</small><strong>{payment.reviewReason || 'Không có'}</strong></div></>}
             </div>
-            {checkoutUrl && !syncing && <ReceptionistPaymentQr payment={payment} checkoutUrl={checkoutUrl} />}
             {paymentStatus(payment) === 'needsreview' && <p className="reception-form-error" role="alert">Giao dịch cần đối soát. Không thu thêm tiền cho đến khi xác minh xong.</p>}
             {actionError && <p className="reception-form-error" role="alert">{actionError}</p>}
             <div className="reception-payment-detail-actions">
@@ -196,23 +194,6 @@ function PaymentDetailDialog({ paymentId, onClose, onUpdated, showNotice }) {
   </div>
 }
 
-function ReceptionistPaymentQr({ payment, checkoutUrl }) {
-  const payload = payment.qrCode || checkoutUrl
-  const [image, setImage] = useState(null)
-  const [error, setError] = useState('')
-  useEffect(() => {
-    let active = true
-    setError('')
-    QRCode.toDataURL(payload, { width: 240, margin: 4, color: { dark: '#000000', light: '#ffffff' } })
-      .then(url => { if (active) setImage({ payload, url }) })
-      .catch(() => { if (active) setError('Không thể hiển thị QR. Bạn vẫn có thể mở trang thanh toán PayOS.') })
-    return () => { active = false }
-  }, [payload])
-  return <section className="reception-payment-qr" aria-label="QR thanh toán PayOS">
-    {image?.payload === payload ? <img src={image.url} width="176" height="176" alt={payment.qrCode ? 'Mã QR thanh toán PayOS' : 'Mã QR mở trang thanh toán PayOS'} /> : <p role="status">{error || 'Đang tạo mã QR...'}</p>}
-    <div><strong>{payment.qrCode ? 'Quét bằng ứng dụng ngân hàng' : 'Quét để mở trang PayOS'}</strong><p>Chỉ ghi nhận thành công khi trạng thái đã được hệ thống xác nhận.</p>{payment.expiresAt && <small>Hết hạn: {formatDateTime(payment.expiresAt)}</small>}</div>
-  </section>
-}
 function CancelPaymentDialog({ payment, onClose, onCancelled, onReconciled }) {
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
