@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { ArrowUpRight, Check, RefreshCw, WalletCards, X } from 'lucide-react'
 import { getMembers } from '../../services/memberService'
+import { getMembershipPackages } from '../../services/membershipPackageService'
 import { getReceptionistPaymentError } from '../../services/receptionistPaymentService'
 import { checkoutReceptionistPackageOrder, createReceptionistCheckoutOrder, loadReceptionistPackageOptions, prepareReceptionistPackageCheckout, recoverReceptionistCheckoutOrder } from '../../services/receptionistPackageCheckout'
 import { membershipPackageTypeLabel } from '../../utils/memberSubscriptions'
@@ -21,7 +22,7 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
   const [method, setMethod] = useState('PayOS')
   const [received, setReceived] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [packagesLoading, setPackagesLoading] = useState(false)
+  const [packagesLoading, setPackagesLoading] = useState(true)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -30,6 +31,8 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
   const lock = useRef(false)
   const attempted = useRef(false)
   const mounted = useRef(true)
+  const selectedMemberRef = useRef('')
+  selectedMemberRef.current = memberId
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
   useEffect(() => {
@@ -42,9 +45,23 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
 
   useEffect(() => {
     let active = true
-    setPackages([]); setPackageId(''); setPurchase(null); setOrder(null); setReceived(false); setRequiresRefresh(false)
+    getMembershipPackages().then(items => {
+      if (active) setPackages(current => current.length && selectedMemberRef.current
+        ? current
+        : items.map(pkg => ({ ...pkg, disabledReason: 'Chọn hội viên để kiểm tra điều kiện gói.' })))
+    }).catch(error => { if (active) setError(getReceptionistPaymentError(error, 'Không thể tải danh mục gói tập.')) })
+      .finally(() => { if (active) setPackagesLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    setPackageId(''); setPurchase(null); setOrder(null); setReceived(false); setRequiresRefresh(false)
     attempted.current = false
-    if (!memberId) { setPackagesLoading(false); return () => { active = false } }
+    if (!memberId) {
+      setPackages(current => current.map(pkg => ({ ...pkg, disabledReason: 'Chọn hội viên để kiểm tra điều kiện gói.' })))
+      return () => { active = false }
+    }
     setPackagesLoading(true)
     loadReceptionistPackageOptions(memberId).then(items => { if (active) setPackages(items) })
       .catch(error => { if (active) setError(getReceptionistPaymentError(error)) })
@@ -135,7 +152,7 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
           <label>Hội viên<select value={memberId} required disabled={frozen || loading} onChange={event => { setMemberId(event.target.value); setError('') }}><option value="">{loading ? 'Đang tải hội viên...' : 'Chọn hội viên'}</option>{visibleMembers.map(member => <option key={member.memberId} value={member.memberId}>#{member.memberId} · {member.fullName} · {member.phone || member.email}</option>)}</select></label>
         </div>
         <fieldset className="reception-checkout-packages"><legend>Chọn gói tập</legend>
-          {!memberId ? <p>Chọn hội viên để xem các gói có thể đăng ký.</p> : packagesLoading ? <p role="status">Đang kiểm tra gói của hội viên...</p> : !packages.length ? <p>Chưa có gói tập để lựa chọn. Hãy tải lại trạng thái.</p> : <div className="reception-checkout-package-grid">{packages.map(pkg => <button type="button" key={pkg.id} aria-label={`Chọn gói ${pkg.packageName}`} aria-pressed={packageId === String(pkg.id)} disabled={frozen || Boolean(pkg.disabledReason)} title={pkg.disabledReason || undefined} onClick={() => { setPackageId(String(pkg.id)); setError('') }}>
+          {!packages.length ? <p>{memberId ? (packagesLoading ? 'Đang tải danh mục gói tập...' : 'Chưa có gói tập để lựa chọn. Hãy tải lại trạng thái.') : 'Chọn hội viên để kiểm tra điều kiện gói.'}</p> : <div className="reception-checkout-package-grid">{packages.map(pkg => <button type="button" key={pkg.id} aria-label={`Chọn gói ${pkg.packageName}`} aria-pressed={packageId === String(pkg.id)} disabled={frozen || Boolean(pkg.disabledReason)} title={pkg.disabledReason || undefined} onClick={() => { setPackageId(String(pkg.id)); setError('') }}>
             <CatalogImage src={pkg.imageUrl} /><span><strong>{pkg.packageName}</strong><small>{membershipPackageTypeLabel(pkg)} · {pkg.durationInDays} ngày</small><b>{money(pkg.price)}</b>{pkg.disabledReason && <em>{pkg.disabledReason.replaceAll('Bạn', 'Hội viên')}</em>}</span>{packageId === String(pkg.id) && <Check size={18} />}
           </button>)}</div>}
         </fieldset>
