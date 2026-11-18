@@ -1,7 +1,7 @@
 import { MemberList } from './MemberPagination'
 import { useCallback, useState } from 'react'
 import { useMemberResource } from '../../contexts/MemberWorkspaceContext'
-import { AlertCircle, ArrowDownLeft, ArrowUpRight, CheckCircle2, ChevronDown, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
+import { AlertCircle, ArrowDownLeft, ArrowUpRight, Clock3, History, LoaderCircle, QrCode, RefreshCw, ScanLine } from 'lucide-react'
 import QRCode from 'qrcode'
 import { getMyQrCode, getMyGymCheckInHistory, getCheckInErrorMessage } from '../../services/gymCheckInService'
 import { GymCheckInStatus, GymDateRangeFields } from '../../components/GymHistoryControls'
@@ -81,14 +81,12 @@ export function GymCheckInView() {
   }
 
   const latest = records[0]
-  const completed = records.filter(item => gymCheckInStatus(item) === 'CheckedOut').length
-  const forgotten = records.filter(item => gymCheckInStatus(item) === 'ForgotCheckOut').length
   const historyReady = !history.loading && !history.error
   const filters = [
-    { value: 'All', label: 'Tất cả', count: records.length },
-    { value: 'InGym', label: 'Đang tập', count: records.filter(item => gymCheckInStatus(item) === 'InGym').length },
-    { value: 'CheckedOut', label: 'Đã ra về', count: completed },
-    { value: 'ForgotCheckOut', label: 'Quên check-out', count: forgotten },
+    { value: 'All', label: 'Tất cả trạng thái' },
+    { value: 'InGym', label: 'Đang tập' },
+    { value: 'CheckedOut', label: 'Đã ra về' },
+    { value: 'ForgotCheckOut', label: 'Quên check-out' },
   ]
   const applyRange = value => {
     const reason = gymDateRangeReason(value)
@@ -108,18 +106,6 @@ export function GymCheckInView() {
           <RefreshCw size={16} /> Làm mới
         </button>
       </header>
-
-      <form className="gym-history-query" aria-label="Lọc lịch sử tập luyện theo ngày Việt Nam" onSubmit={event => { event.preventDefault(); applyRange(dateDraft) }}>
-        <GymDateRangeFields value={dateDraft} onChange={setDateDraft} onPreset={applyRange} />
-        <button type="submit">Xem lịch sử</button>
-        {rangeError && <p className="gym-history-range-error" role="alert">{rangeError}</p>}
-      </form>
-
-      <section className="gym-stats" aria-label="Tổng quan tập luyện">
-        {[{ label: dateRange.fromDate || dateRange.toDate ? 'Lượt tập trong khoảng chọn' : 'Tổng lượt tập', value: records.length, icon: History }, { label: 'Đã ra về', value: completed, icon: CheckCircle2 }, { label: 'Quên check-out', value: forgotten, icon: Clock3 }].map(({ label, value, icon: Icon }) =>
-          <div className="gym-panel" key={label}><Icon size={18} /><span>{label}</span><strong>{historyReady ? value : '—'}</strong></div>
-        )}
-      </section>
 
       <div className="gym-checkin-overview">
         <section className="gym-panel gym-member-card" aria-labelledby="gym-qr-title" aria-busy={qr.loading}>
@@ -142,6 +128,14 @@ export function GymCheckInView() {
                 </dl>
                 <p className="gym-qr-caption">Xuất trình mã QR này tại quầy lễ tân.</p>
               </div>}
+          <section className="gym-checkin-guide" aria-labelledby="gym-guide-title">
+            <h4 id="gym-guide-title"><ScanLine size={16} />Hướng dẫn sử dụng</h4>
+            <ol>
+              <li><span>1</span><div><strong>Mở thẻ QR</strong><p>Chuẩn bị mã QR cá nhân khi đến trung tâm.</p></div></li>
+              <li><span>2</span><div><strong>Quét mã tại lễ tân</strong><p>Lễ tân quét mã để ghi nhận giờ vào.</p></div></li>
+              <li><span>3</span><div><strong>Xác nhận khi ra về</strong><p>Nhờ lễ tân check-out, sau đó làm mới lịch sử.</p></div></li>
+            </ol>
+          </section>
         </section>
 
         <div className="gym-checkin-side">
@@ -160,25 +154,24 @@ export function GymCheckInView() {
                 </> : <div className="gym-checkin-state"><History size={28} /><p>Không có lượt tập trong khoảng ngày đã chọn.</p></div>}
           </section>
 
-          <details className="gym-panel gym-checkin-guide">
-            <summary><ScanLine size={18} /><span>Sử dụng thẻ trong 3 bước</span><ChevronDown size={16} /></summary>
-            <ol>
-              <li><span>1</span><div><strong>Mở thẻ QR</strong><p>Chuẩn bị mã QR cá nhân khi đến phòng tập.</p></div></li>
-              <li><span>2</span><div><strong>Quét mã tại lễ tân</strong><p>Lễ tân quét mã để ghi nhận giờ vào.</p></div></li>
-              <li><span>3</span><div><strong>Xác nhận khi ra về</strong><p>Nhờ lễ tân check-out, sau đó làm mới lịch sử.</p></div></li>
-            </ol>
-          </details>
         </div>
       </div>
 
       <section className="gym-checkin-history" aria-labelledby="gym-history-title" aria-busy={history.loading}>
         <div className="gym-history-heading">
           <div><h3 id="gym-history-title">Lịch sử tập luyện</h3><p>Theo dõi thời gian vào, ra và thông tin từng lượt tập.</p></div>
-          <div className="gym-history-filters" role="group" aria-label="Lọc lịch sử theo trạng thái">
-            {filters.map(({ value, label, count }) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => { setFilter(value); setPage(1) }}>{label}<span>{historyReady ? count : '—'}</span></button>)}
-          </div>
           <button type="button" className="gym-button" disabled={history.loading} onClick={reloadHistory} aria-label="Làm mới lịch sử" title="Làm mới lịch sử"><RefreshCw size={15} /><span>Làm mới lịch sử</span></button>
         </div>
+        <form className="gym-history-query" aria-label="Lọc lịch sử tập luyện" onSubmit={event => { event.preventDefault(); applyRange(dateDraft) }}>
+          <GymDateRangeFields value={dateDraft} onChange={setDateDraft} onPreset={applyRange} />
+          <label className="gym-history-status">Trạng thái
+            <select name="status" value={filter} onChange={event => { setFilter(event.target.value); setPage(1) }}>
+              {filters.map(({ value, label }) => <option value={value} key={value}>{label}</option>)}
+            </select>
+          </label>
+          <button type="submit">Xem lịch sử</button>
+          {rangeError && <p className="gym-history-range-error" role="alert">{rangeError}</p>}
+        </form>
         <div className="gym-panel gym-history-content">
           {history.loading ? <LoadingState>Đang tải lịch sử tập luyện...</LoadingState>
             : history.error ? <ErrorState message={history.error} retry={reloadHistory} />
