@@ -20,7 +20,7 @@
 }
 
 .fdesk-header h2 {
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 700;
   margin: 0;
   color: var(--manager-ink, #18263e);
@@ -31,7 +31,7 @@
 
 .fdesk-header p {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: 18px;
   color: var(--manager-secondary, #536179);
   line-height: 1.7;
 }
@@ -53,7 +53,7 @@
   max-width: 100%;
   padding: 9px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -133,7 +133,7 @@
   padding: 10px 8px;
   background: transparent;
   color: var(--manager-secondary, #536179);
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -162,7 +162,7 @@
 .fdesk-tab-badge {
   padding: 2px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 16px;
   background: var(--manager-track, #e2e8f0);
   color: var(--manager-text, #334155);
   font-weight: 700;
@@ -206,7 +206,7 @@
 }
 
 .fdesk-metric-label {
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--manager-secondary, #536179);
   line-height: 1.5;
@@ -228,7 +228,7 @@
 .fdesk-metric-icon.red { background: var(--manager-danger-bg, #fef2f2); color: var(--manager-danger, #dc2626); }
 
 .fdesk-metric-value {
-  font-size: 24px;
+  font-size: 29px;
   font-weight: 700;
   color: var(--manager-ink, #18263e);
   line-height: 1.1;
@@ -238,14 +238,14 @@
 }
 
 .fdesk-metric-value small {
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--manager-muted, #748096);
   margin-left: 4px;
 }
 
 .fdesk-metric-note {
-  font-size: 11px;
+  font-size: 16px;
   color: var(--manager-secondary, #536179);
   line-height: 1.6;
   display: flex;
@@ -284,7 +284,7 @@
 }
 
 .fdesk-card-header h3, .fdesk-card-header h4 {
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 700;
   margin: 0;
   color: var(--manager-ink, #18263e);
@@ -324,7 +324,7 @@
   border: none;
   background: transparent;
   width: 100%;
-  font-size: 13px;
+  font-size: 18px;
   outline: none;
   color: var(--manager-ink, #18263e);
 }
@@ -344,7 +344,7 @@
   border-radius: 7px;
   border: 1px solid var(--manager-control-border, #cbd5e1);
   background: var(--manager-surface, #fff);
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--manager-ink, #18263e);
 }
@@ -366,7 +366,7 @@
 .fdesk-table th {
   padding: 12px 18px;
   background: var(--manager-raised, #f8fafc);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--manager-muted, #748096);
@@ -377,7 +377,7 @@
 
 .fdesk-table td {
   padding: 14px 18px;
-  font-size: 13px;
+  font-size: 18px;
   color: var(--manager-ink, #18263e);
   border-bottom: 1px solid var(--manager-control-border, #f1f5f9);
   vertical-align: middle;
@@ -396,7 +396,7 @@
   gap: 5px;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -415,7 +415,7 @@
   gap: 6px;
   padding: 5px 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 700;
   background: var(--manager-success-bg, #ecfdf5);
   color: var(--manager-success, #047857);
@@ -457,7 +457,7 @@
 
 .fdesk-checkin-box h4 {
   margin: 0;
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--manager-ink, #18263e);
   display: flex;
@@ -473,7 +473,7 @@
 }
 
 .fdesk-input-group label {
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--manager-ink, #18263e);
 }
@@ -485,7 +485,7 @@
   padding: 9px 13px;
   border-radius: 8px;
   border: 1px solid var(--manager-control-border, #cbd5e1);
-  font-size: 13px;
+  font-size: 18px;
   outline: none;
   background: var(--manager-surface, #fff);
   color: var(--manager-ink, #18263e);
@@ -531,7 +531,7 @@
 
 .fdesk-dialog-header h3 {
   margin: 0;
-  font-size: 17px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--manager-ink, #18263e);
 }
@@ -579,7 +579,7 @@
   padding: 12px 18px;
   margin: 0;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 500;
 }
 
@@ -639,11 +639,11 @@
 .fdesk-package-card:disabled .fdesk-package-price { color: var(--manager-muted, #748096); }
 .fdesk-package-card-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
 .fdesk-package-card-heading > svg { flex-shrink: 0; color: var(--manager-blue, #2463eb); }
-.fdesk-package-duration { font-size: 12px; color: var(--manager-muted, #748096); }
-.fdesk-package-description { font-size: 11px; color: var(--manager-secondary, #64748b); }
+.fdesk-package-duration { font-size: 17px; color: var(--manager-muted, #748096); }
+.fdesk-package-description { font-size: 16px; color: var(--manager-secondary, #64748b); }
 
 .fdesk-package-price {
-  font-size: 18px;
+  font-size: 23px;
   font-weight: 700;
   color: var(--manager-success, #059669);
 }
@@ -687,16 +687,16 @@
 .fdesk-form-grid > * { min-width: 0; }
 .fdesk-form-grid .wide { grid-column: 1 / -1; }
 .fdesk-form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding-top: 16px; border-top: 1px solid var(--manager-line, #e9edf3); }
-.fdesk-subscription-notice { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 9px; flex: 1 1 360px; min-width: 0; padding: 12px 14px; border: 1px solid var(--manager-info-border, #c8dafa); border-radius: 8px; background: var(--manager-info-bg, #eff6ff); color: var(--manager-info, #1d4ed8); font-size: 12px; line-height: 1.7; }
+.fdesk-subscription-notice { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 9px; flex: 1 1 360px; min-width: 0; padding: 12px 14px; border: 1px solid var(--manager-info-border, #c8dafa); border-radius: 8px; background: var(--manager-info-bg, #eff6ff); color: var(--manager-info, #1d4ed8); font-size: 17px; line-height: 1.7; }
 .fdesk-subscription-notice > svg { flex-shrink: 0; margin-top: 2px; }
 .fdesk-subscription-notice > span { flex: 1; min-width: 150px; overflow-wrap: anywhere; }
 .fdesk-subscription-notice.is-error { border-color: var(--manager-danger-border, #fecaca); color: var(--manager-danger, #b91c1c); background: var(--manager-danger-bg, #fef2f2); }
 .fdesk-subscription-form .fdesk-form-actions { align-items: center; }
-.fdesk-subscription-history-error { padding: 30px 20px; color: var(--manager-danger, #b91c1c); text-align: center; font-size: 13px; }
-.fdesk-details-grid { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.fdesk-subscription-history-error { padding: 30px 20px; color: var(--manager-danger, #b91c1c); text-align: center; font-size: 18px; }
+.fdesk-details-grid { font-size: 18px; line-height: 1.7; overflow-wrap: anywhere; }
 .fdesk-checkin-box form { flex: 1; }
 .fdesk-checkin-box form > button { margin-top: auto; }
-.fdesk-metric-value .fdesk-live-pill { padding: 4px 7px; font-size: 10px; }
+.fdesk-metric-value .fdesk-live-pill { padding: 4px 7px; font-size: 15px; }
 
 /* Ticket Priority and Status Styling */
 .fdesk-priority-pill {
@@ -705,7 +705,7 @@
   gap: 4px;
   padding: 3px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -739,7 +739,7 @@
   border-left: 3px solid var(--manager-blue, #2463eb);
   padding: 10px 14px;
   border-radius: 0 6px 6px 0;
-  font-size: 12px;
+  font-size: 17px;
   color: var(--manager-text, #334155);
   margin-top: 6px;
 }
@@ -763,21 +763,21 @@
     padding: 16px;
   }
   .fdesk-mgmt { gap: 14px; }
-  .fdesk-header h2 { font-size: 18px; }
-  .fdesk-header p { font-size: 12px; }
+  .fdesk-header h2 { font-size: 23px; }
+  .fdesk-header p { font-size: 17px; }
   .fdesk-header .fdesk-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }
-  .fdesk-header .fdesk-actions .fdesk-btn { padding-inline: 8px; font-size: 12px; }
+  .fdesk-header .fdesk-actions .fdesk-btn { padding-inline: 8px; font-size: 17px; }
   .fdesk-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .fdesk-tab-btn { gap: 5px; padding-inline: 5px; font-size: 11px; }
-  .fdesk-tab-badge { padding: 2px 5px; font-size: 10px; }
+  .fdesk-tab-btn { gap: 5px; padding-inline: 5px; font-size: 16px; }
+  .fdesk-tab-badge { padding: 2px 5px; font-size: 15px; }
   .fdesk-metric-card { padding: 12px; }
-  .fdesk-metric-label { font-size: 11px; }
+  .fdesk-metric-label { font-size: 16px; }
   .fdesk-metric-top { align-items: flex-start; }
   .fdesk-metric-icon { width: 24px; height: 24px; }
   .fdesk-metric-icon svg { width: 15px; height: 15px; }
-  .fdesk-metric-value { font-size: 22px; }
-  .fdesk-metric-value small { display: inline-block; font-size: 10px; }
-  .fdesk-metric-note { font-size: 10px; align-items: flex-start; }
+  .fdesk-metric-value { font-size: 27px; }
+  .fdesk-metric-value small { display: inline-block; font-size: 15px; }
+  .fdesk-metric-note { font-size: 15px; align-items: flex-start; }
   .fdesk-metric-note svg { margin-top: 2px; }
   .fdesk-card-header, .fdesk-toolbar, .fdesk-checkin-box, .fdesk-subscription-form { padding: 16px; }
   .fdesk-toolbar { align-items: stretch; gap: 10px; }
@@ -826,9 +826,9 @@
 .fdesk-package-card .fdesk-package-registration-reason {
   margin: 8px 0 0;
   color: var(--theme-red, #b42318);
-  font-size: 11px;
+  font-size: 16px;
   line-height: 1.6;
 }
 
 .fdesk-order-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
-.fdesk-order-actions .fdesk-btn { padding: 6px 12px; font-size: 12px; }
+.fdesk-order-actions .fdesk-btn { padding: 6px 12px; font-size: 17px; }

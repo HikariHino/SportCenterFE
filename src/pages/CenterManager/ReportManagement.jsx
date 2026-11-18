@@ -320,7 +320,7 @@ export default function ReportManagement() {
             type="button"
             className="report-btn report-btn-secondary"
             onClick={() => setErrorMessage(null)}
-            style={{ padding: '4px 10px', fontSize: 11 }}
+            style={{ padding: '4px 10px', fontSize: 16 }}
           >
             Đóng
           </button>
@@ -337,7 +337,7 @@ export default function ReportManagement() {
             type="button"
             className="report-btn report-btn-secondary"
             onClick={() => setSuccessMessage(null)}
-            style={{ padding: '4px 10px', fontSize: 11 }}
+            style={{ padding: '4px 10px', fontSize: 16 }}
           >
             Đóng
           </button>
@@ -597,7 +597,7 @@ export default function ReportManagement() {
                     </tr>} tableFooter={<tfoot>
                     <tr>
                       <td>TỔNG DOANH THU NĂM {selectedYear}</td>
-                      <td className="report-numeric" style={{ color: 'var(--manager-success, #059669)', fontSize: 15 }}>
+                      <td className="report-numeric" style={{ color: 'var(--manager-success, #059669)', fontSize: 20 }}>
                         {formatVND(yearStats.totalYear)}
                       </td>
                       <td colSpan={3} style={{ color: 'var(--manager-muted, #748096)' }}>
@@ -631,18 +631,18 @@ export default function ReportManagement() {
                                   style={{ width: `${Math.min(share, 100)}%` }}
                                 />
                               </div>
-                              <span style={{ fontSize: 12, fontWeight: 600 }}>{share}%</span>
+                              <span style={{ fontSize: 17, fontWeight: 600 }}>{share}%</span>
                             </div>
                           </td>
                           <td className="report-numeric">
                             {rev === 0 ? (
-                              <span style={{ color: 'var(--manager-secondary, #94a3b8)', fontSize: 12 }}>Chưa có thu</span>
+                              <span style={{ color: 'var(--manager-secondary, #94a3b8)', fontSize: 17 }}>Chưa có thu</span>
                             ) : diffFromAvg >= 0 ? (
-                              <span style={{ color: 'var(--manager-success, #059669)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ color: 'var(--manager-success, #059669)', fontSize: 17, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                 <TrendingUp size={13} /> +{diffFromAvg}%
                               </span>
                             ) : (
-                              <span style={{ color: 'var(--manager-danger, #dc2626)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ color: 'var(--manager-danger, #dc2626)', fontSize: 17, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                 <TrendingDown size={13} /> {diffFromAvg}%
                               </span>
                             )}
@@ -791,7 +791,7 @@ export default function ReportManagement() {
                         <tr key={cls.classId}>
                           <td>
                             <strong>{cls.className}</strong>
-                            <div style={{ fontSize: 11, color: 'var(--manager-muted, #748096)' }}>
+                            <div style={{ fontSize: 16, color: 'var(--manager-muted, #748096)' }}>
                               Mã lớp: #{cls.classId}
                             </div>
                           </td>
@@ -817,7 +817,7 @@ export default function ReportManagement() {
                                   style={{ width: `${Math.min(rate, 100)}%` }}
                                 />
                               </div>
-                              <strong style={{ fontSize: 13 }}>{rate}%</strong>
+                              <strong style={{ fontSize: 18 }}>{rate}%</strong>
                             </div>
                           </td>
                           <td>
@@ -894,7 +894,7 @@ export default function ReportManagement() {
             <div className="report-table-header">
               <div>
                 <h4>Danh sách giao dịch thanh toán</h4>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--manager-muted, #748096)' }}>
+                <p style={{ margin: '2px 0 0', fontSize: 17, color: 'var(--manager-muted, #748096)' }}>
                   Tra cứu thanh toán và tải hóa đơn PDF cho các giao dịch đã hoàn tất.
                 </p>
               </div>
@@ -932,7 +932,7 @@ export default function ReportManagement() {
                           <td>
                             <strong>#{p.id}</strong>
                             {p.transactionReference && (
-                              <div style={{ fontSize: 11, color: 'var(--manager-muted, #748096)' }}>
+                              <div style={{ fontSize: 16, color: 'var(--manager-muted, #748096)' }}>
                                 Ref: {p.transactionReference}
                               </div>
                             )}
@@ -954,7 +954,7 @@ export default function ReportManagement() {
                             </span>
                           </td>
                           <td>
-                            <span className="report-chip" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #475569)', fontSize: 11 }}>
+                            <span className="report-chip" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #475569)', fontSize: 16 }}>
                               {p.paymentMethod || 'PayOS / Online'}
                             </span>
                           </td>

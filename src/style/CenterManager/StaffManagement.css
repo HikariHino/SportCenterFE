@@ -18,7 +18,7 @@
 }
 
 .staff-mgmt-header h2 {
-  font-size: 18px;
+  font-size: 23px;
   font-weight: 700;
   margin: 0;
   color: var(--manager-ink);
@@ -26,7 +26,7 @@
 
 .staff-mgmt-header p {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: 17px;
   color: var(--manager-secondary, #536179);
   line-height: 1.7;
 }
@@ -47,7 +47,7 @@
   max-width: 100%;
   padding: 9px 16px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -129,13 +129,13 @@
 }
 
 .staff-metric-info small {
-  font-size: 11px;
+  font-size: 16px;
   color: var(--manager-secondary, #536179);
   line-height: 1.5;
 }
 
 .staff-metric-info strong {
-  font-size: 24px;
+  font-size: 29px;
   font-weight: 700;
   color: var(--manager-ink);
   margin-top: 2px;
@@ -175,7 +175,7 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 12px;
+  font-size: 17px;
   color: var(--manager-ink);
 }
 
@@ -195,7 +195,7 @@
   background: var(--manager-surface, #fff);
   border: 1px solid var(--manager-control-border, #d9e2ec);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 17px;
   color: var(--manager-ink);
   cursor: pointer;
   outline: none;
@@ -241,7 +241,7 @@
   min-width: 960px;
   border-collapse: collapse;
   text-align: left;
-  font-size: 12px;
+  font-size: 17px;
 }
 
 .staff-table th {
@@ -249,7 +249,7 @@
   background: var(--manager-raised, #f8fafc);
   color: var(--manager-secondary, #64748b);
   font-weight: 600;
-  font-size: 11px;
+  font-size: 16px;
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--manager-line);
   white-space: nowrap;
@@ -284,7 +284,7 @@
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 17px;
   flex-shrink: 0;
 }
 
@@ -299,13 +299,13 @@
 
 .staff-user-names strong {
   color: var(--manager-ink);
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 600;
 }
 
 .staff-user-names small {
   color: var(--manager-secondary, #536179);
-  font-size: 11px;
+  font-size: 16px;
   margin-top: 2px;
 }
 
@@ -316,7 +316,7 @@
   gap: 5px;
   padding: 4px 10px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 600;
   width: fit-content;
   white-space: nowrap;
@@ -353,7 +353,7 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -446,13 +446,13 @@
 
 .staff-state-box strong {
   color: var(--manager-ink);
-  font-size: 14px;
+  font-size: 19px;
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .staff-state-box p {
-  font-size: 12px;
+  font-size: 17px;
   margin-bottom: 16px;
 }
 
@@ -503,7 +503,7 @@
 }
 
 .staff-modal-header h3 {
-  font-size: 16px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--manager-ink);
   margin: 0;
@@ -511,7 +511,7 @@
 
 .staff-modal-header p {
   margin: 3px 0 0;
-  font-size: 11px;
+  font-size: 16px;
   color: var(--manager-secondary, #536179);
   line-height: 1.7;
 }
@@ -553,7 +553,7 @@
 }
 
 .staff-form-group label {
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--manager-text, #334155);
 }
@@ -566,7 +566,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--manager-control-border, #d9e2ec);
-  font-size: 13px;
+  font-size: 18px;
   color: var(--manager-ink);
   background: var(--manager-surface, #fff);
   outline: none;
@@ -580,7 +580,7 @@
 }
 
 .staff-form-group small {
-  font-size: 11px;
+  font-size: 16px;
   color: var(--manager-secondary, #536179);
   line-height: 1.6;
 }
@@ -591,7 +591,7 @@
   background: var(--manager-danger-bg, #fef2f2);
   border: 1px solid var(--manager-danger-border, #fecaca);
   color: var(--manager-danger, #b91c1c);
-  font-size: 12px;
+  font-size: 17px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -623,12 +623,12 @@
 
 .staff-deactivate-notice strong {
   display: block;
-  font-size: 13px;
+  font-size: 18px;
   margin-bottom: 4px;
 }
 
 .staff-deactivate-notice p {
-  font-size: 12px;
+  font-size: 17px;
   line-height: 1.5;
   margin: 0;
   color: var(--manager-danger, #be123c);
@@ -656,7 +656,7 @@
 }
 
 .staff-detail-item small {
-  font-size: 10px;
+  font-size: 15px;
   color: var(--manager-secondary, #536179);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -664,7 +664,7 @@
 }
 
 .staff-detail-item strong {
-  font-size: 13px;
+  font-size: 18px;
   color: var(--manager-ink);
   font-weight: 600;
   overflow-wrap: anywhere;
@@ -683,7 +683,7 @@
   border-radius: 10px;
   background: #0f172a;
   color: #fff;
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 500;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
   z-index: 1100;
@@ -693,9 +693,9 @@
 
 .staff-list-card { overflow: hidden; }
 .staff-list-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 18px 20px; }
-.staff-list-heading h3 { margin: 0; color: var(--manager-ink); font-size: 15px; }
-.staff-list-heading p { margin: 5px 0 0; color: var(--manager-secondary, #536179); font-size: 12px; line-height: 1.6; }
-.staff-result-count { padding: 6px 10px; border-radius: 7px; color: var(--manager-info, #1d4ed8); background: var(--manager-info-bg, #eff6ff); font-size: 11px; white-space: nowrap; }
+.staff-list-heading h3 { margin: 0; color: var(--manager-ink); font-size: 20px; }
+.staff-list-heading p { margin: 5px 0 0; color: var(--manager-secondary, #536179); font-size: 17px; line-height: 1.6; }
+.staff-result-count { padding: 6px 10px; border-radius: 7px; color: var(--manager-info, #1d4ed8); background: var(--manager-info-bg, #eff6ff); font-size: 16px; white-space: nowrap; }
 .staff-search-clear { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border: 0; border-radius: 5px; background: transparent; color: var(--manager-secondary, #536179); cursor: pointer; }
 .staff-search-clear:hover { background: var(--manager-raised, #f8fafc); }
 .staff-modal > form { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
@@ -749,7 +749,7 @@
   .staff-metric-card { padding: 12px; gap: 8px; }
   .staff-metric-icon { width: 28px; height: 28px; border-radius: 8px; }
   .staff-metric-icon svg { width: 17px; height: 17px; }
-  .staff-filter-select { font-size: 11px; padding-inline: 8px; }
+  .staff-filter-select { font-size: 16px; padding-inline: 8px; }
   .staff-modal-backdrop { padding: 12px; }
   .staff-modal { max-height: calc(100dvh - 24px); }
   .staff-modal-header, .staff-modal-body, .staff-modal-footer { padding: 16px; }

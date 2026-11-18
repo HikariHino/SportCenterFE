@@ -375,7 +375,7 @@ function ManagerWorkspace() {
               <button
                 type="button"
                 className="manager-text-button"
-                style={{ padding: '0 4px', fontSize: 11 }}
+                style={{ padding: '0 4px', fontSize: 16 }}
                 onClick={loadOverviewData}
                 disabled={loadingOverview}
                 title="Làm mới dữ liệu từ máy chủ"

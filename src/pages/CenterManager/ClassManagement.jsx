@@ -1451,7 +1451,7 @@ export default function ClassManagement() {
                     <button
                       type="button"
                       className="class-btn class-btn-secondary"
-                      style={{ whiteSpace: 'nowrap', fontSize: 11, padding: '0 12px' }}
+                      style={{ whiteSpace: 'nowrap', fontSize: 16, padding: '0 12px' }}
                       onClick={handleCheckRoomAvailability}
                       disabled={checkingAvailability || !sessionForm.roomId || !sessionForm.startsAt || !sessionForm.endsAt}
                       title="Kiểm tra phòng có trống vào khung giờ này không"
@@ -1633,7 +1633,7 @@ export default function ClassManagement() {
                     <button
                       type="button"
                       className="class-btn class-btn-secondary"
-                      style={{ whiteSpace: 'nowrap', fontSize: 11, padding: '0 12px' }}
+                      style={{ whiteSpace: 'nowrap', fontSize: 16, padding: '0 12px' }}
                       onClick={handleCheckRoomAvailability}
                       disabled={checkingAvailability || !sessionForm.roomId || !sessionForm.startsAt || !sessionForm.endsAt}
                       title="Kiểm tra phòng có trống vào khung giờ mới không"
@@ -1874,7 +1874,7 @@ export default function ClassManagement() {
                                 <span className="roster-avatar">{initials}</span>
                                 <div>
                                   <strong>{student.fullName}</strong>
-                                  <div style={{ fontSize: 11, color: 'var(--manager-muted)' }}>
+                                  <div style={{ fontSize: 16, color: 'var(--manager-muted)' }}>
                                     Mã HV: #{student.memberId}
                                   </div>
                                 </div>
@@ -1896,7 +1896,7 @@ export default function ClassManagement() {
                                   {formatDateTime(student.checkInTime)})
                                 </span>
                               ) : (
-                                <span style={{ color: 'var(--manager-muted)', fontSize: 11 }}>
+                                <span style={{ color: 'var(--manager-muted)', fontSize: 16 }}>
                                   Chưa điểm danh
                                 </span>
                               )}
@@ -2374,7 +2374,7 @@ export default function ClassManagement() {
               </button>
             </div>
             <div className="class-modal-body">
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: 18, lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn{' '}
                 <strong>
                   {togglingSport.isActive !== false ? 'vô hiệu hóa' : 'kích hoạt lại'}
