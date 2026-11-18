@@ -9,7 +9,7 @@
 .reception-checkout-package-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .reception-checkout-package-grid > button { position:relative; display:flex; align-items:flex-start; gap:10px; min-width:0; padding:12px; border:1px solid var(--theme-border); border-radius:10px; text-align:left; color:var(--theme-text); background:var(--theme-surface); }
 .reception-checkout-package-grid > button[aria-pressed='true'] { border-color:var(--theme-accent); box-shadow:0 0 0 1px var(--theme-accent); }
-.reception-checkout-package-grid > button:disabled { opacity:.5; cursor:not-allowed; background:var(--theme-raised); }
+.reception-checkout-package-grid > button:disabled { opacity:.5; filter:grayscale(1); cursor:not-allowed; background:var(--theme-raised); }
 .reception-checkout-package-grid > button > span { flex:1; min-width:0; display:grid; gap:5px; }
 .reception-checkout-package-grid strong { font-size:calc(17px + var(--font-size-adjustment,0px)); overflow-wrap:anywhere; }
 .reception-checkout-package-grid :is(small,em) { color:var(--theme-muted); font-size:calc(14px + var(--font-size-adjustment,0px)); line-height:1.5; font-style:normal; }
