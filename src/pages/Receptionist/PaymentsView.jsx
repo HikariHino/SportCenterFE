@@ -13,7 +13,7 @@ import { getReceptionistPaymentRows, receptionistPaymentMethods, receptionistPay
 import { exportInvoicePdf, getReportErrorMessage, triggerBlobDownload } from '../../services/reportService'
 import { formatDateTime } from './ReceptionistViewShared'
 
-export function PaymentsView({ query, showNotice }) {
+export function PaymentsView({ query, showNotice, paymentReturn }) {
   const [status, setStatus] = useState('all')
   const [method, setMethod] = useState('all')
   const [requestKey, setRequestKey] = useState(0)
@@ -39,16 +39,27 @@ export function PaymentsView({ query, showNotice }) {
   const visibleCounterCount = rows.filter(row => row.kind === 'order').length
   const counterFiltersVisible = ['all', 'pending'].includes(status) && method !== 'payos'
   const refresh = () => setRequestKey(key => key + 1)
+  useEffect(() => {
+    if (!paymentReturn?.id) return
+    setStatus('all'); setMethod('all'); setRequestKey(key => key + 1)
+  }, [paymentReturn])
   const onCreated = payment => {
+    const payosPending = String(payment.paymentMethod).toLowerCase() === 'payos' && paymentStatus(payment) === 'pending'
+    const url = payosPending ? receptionistCheckoutUrl(payment) : ''
+    if (payosPending && !url) throw new Error('Chưa có liên kết PayOS hợp lệ. Hãy tải lại trạng thái giao dịch trước khi tiếp tục.')
     paymentsQuery.setData(current => [payment, ...(current || []).filter(item => String(item.id) !== String(payment.id))])
     refresh()
+    if (url) { window.location.assign(url); return }
     setSelectedPaymentId(payment.id)
     showNotice(paymentCheckoutMessage(payment))
   }
   const summary = paymentSummary(paymentItems)
+  const returnedPayment = paymentItems.find(payment => String(payment.id) === String(paymentReturn?.id))
+  const returnStatus = returnedPayment ? ({ completed: 'success', pending: 'pending', needsreview: 'review', cancelled: 'cancelled', failed: 'failed', expired: 'failed' }[paymentStatus(returnedPayment)] || paymentReturn?.status) : paymentReturn?.status
 
   return <>
     <RefreshStatus refreshing={refreshing || ordersQuery.refreshing} />
+    {paymentReturn?.id && <div className="reception-payment-return" data-status={returnStatus} role="status">{{ success: 'Thanh toán thành công', cancelled: 'Thanh toán đã hủy', failed: 'Thanh toán không thành công', pending: 'Giao dịch đang chờ xác nhận', review: 'Giao dịch cần đối soát' }[returnStatus] || 'Đã quay lại danh sách thanh toán'}</div>}
     <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{summary.paid.toLocaleString('vi-VN')} đ</strong><p>{summary.completed} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{summary.pending + allRows.filter(row => row.kind === 'order' && !row.order.blockedReason).length}</strong><p>{summary.review} giao dịch cần đối soát</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{summary.total}</strong><p>PayOS và thanh toán tại quầy</p></div></article></section>
     <section className="reception-card reception-table-card reception-payments-card">
       <div className="reception-table-tools"><div><strong>Danh sách thanh toán</strong><small>{rows.length - visibleCounterCount} giao dịch · {visibleCounterCount} đơn chờ {(loading || pendingLoading) && '· Đang cập nhật...'}</small></div><div><button className="reception-refresh-icon" type="button" aria-label="Làm mới danh sách thanh toán" title="Làm mới" disabled={loading || pendingLoading} onClick={refresh}><RefreshCw size={17} aria-hidden="true" /></button><button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Tạo thanh toán</button></div></div>
@@ -60,7 +71,7 @@ export function PaymentsView({ query, showNotice }) {
     </section>
     {counterOrder && <CheckoutDialog counterOnly memberId={counterOrder.memberId} subscriptionId={counterOrder.id} initialPaymentMethod={method === 'banktransfer' ? 'BankTransfer' : method === 'creditcard' ? 'CreditCard' : 'Cash'} onClose={() => setCounterOrder(null)} onCreated={onCreated} />}
     {selectedPaymentId !== null && <PaymentDetailDialog paymentId={selectedPaymentId} onClose={() => setSelectedPaymentId(null)} onUpdated={() => setRequestKey(key => key + 1)} showNotice={showNotice} />}
-    {showCreateDialog && <CheckoutDialog onClose={() => setShowCreateDialog(false)} onCreated={onCreated} />}
+    {showCreateDialog && <CheckoutDialog onClose={() => setShowCreateDialog(false)} onCreated={onCreated} onOrderCreated={refresh} />}
   </>
 }
 

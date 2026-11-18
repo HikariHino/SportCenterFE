@@ -14,10 +14,11 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
-test('checkout starts with member/order selection and disables submission until the current order is loaded', () => {
+test('checkout starts with member/package selection and disables submission until purchase terms are loaded', () => {
   const html = renderToStaticMarkup(createElement(CheckoutDialog, { onClose() {}, onCreated() {} }))
   assert.match(html, /Tên, mã, email hoặc số điện thoại/)
-  assert.match(html, /Đơn đăng ký đang chờ/)
+  assert.match(html, /Chọn gói tập/)
+  assert.doesNotMatch(html, /Đơn đăng ký đang chờ/)
   assert.match(html, /value="PayOS" selected=""/)
   assert.match(html, /type="submit" disabled=""/)
   assert.doesNotMatch(html, /type="number"/)

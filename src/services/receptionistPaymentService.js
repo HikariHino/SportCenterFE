@@ -31,8 +31,9 @@ export function receptionistCheckoutUrl(payment, now = Date.now()) {
 
 /** Read the current order immediately before collecting money or requesting a PayOS link. */
 export function checkoutReceptionistSubscription(input = {}) {
-  const { subscriptionId, memberId, paymentMethod, amount, paymentReceived } = input
+  const { subscriptionId, memberId, packageId, paymentMethod, amount, paymentReceived } = input
   if (!validId(subscriptionId) || !validId(memberId)) return Promise.reject(new Error('Vui lòng chọn hội viên và đơn đăng ký hợp lệ.'))
+  if (packageId != null && !validId(packageId)) return Promise.reject(new Error('Gói tập không hợp lệ.'))
   if (!methods.includes(paymentMethod)) return Promise.reject(new Error('Phương thức thanh toán không hợp lệ.'))
   if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) return Promise.reject(new Error('Số tiền của đơn không hợp lệ.'))
   if (paymentMethod !== 'PayOS' && paymentReceived !== true) return Promise.reject(new Error('Vui lòng xác nhận đã thực nhận đủ tiền.'))
@@ -43,9 +44,10 @@ export function checkoutReceptionistSubscription(input = {}) {
   return request
 }
 
-async function checkout({ subscriptionId, memberId, paymentMethod, amount, paymentReceived }) {
+async function checkout({ subscriptionId, memberId, packageId, paymentMethod, amount, paymentReceived }) {
   const subscription = await getReceptionistSubscriptionById(subscriptionId)
   if (String(subscription?.id) !== String(subscriptionId) || String(subscription.memberId) !== String(memberId)) throw new Error('Đơn đăng ký không khớp hội viên đã chọn. Vui lòng tải lại.')
+  if (packageId != null && String(subscription.packageId) !== String(packageId)) throw new Error('Đơn đăng ký không khớp gói tập đã chọn. Vui lòng tải lại.')
   if (String(subscription.status).toLowerCase() !== 'pending') throw new Error('Đơn không còn chờ thanh toán. Vui lòng tải lại trạng thái.')
   if (Number(subscription.agreedPrice) !== Number(amount)) throw new Error('Giá đã chốt của đơn đã thay đổi. Vui lòng tải lại trước khi thu tiền.')
   if (!Array.isArray(subscription.payments)) throw new Error('Chưa tải đủ lịch sử thanh toán. Vui lòng tải lại đơn.')

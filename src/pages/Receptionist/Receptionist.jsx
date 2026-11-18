@@ -1,6 +1,6 @@
 import { ReceptionistPagination } from './ReceptionistPagination'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
   LayoutDashboard, LifeBuoy, LogOut, Menu, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, UserRound, Users, X,
@@ -75,11 +75,15 @@ export default function Receptionist() {
 }
 
 function ReceptionistWorkspace() {
+  const location = useLocation()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [activeNav, setActiveNav] = usePortalNavigation(receptionistViews, 'Tổng quan')
   const contentMotion = usePageMotion(activeNav)
   const cache = useReceptionistCache()
+  useEffect(() => {
+    if (location.state?.receptionistPaymentReturn?.id) cache.invalidate(['payments', 'pending-orders', 'members', 'checkins'])
+  }, [cache, location.key, location.state?.receptionistPaymentReturn?.id])
   const [visitedViews, setVisitedViews] = useState([activeNav])
   useEffect(() => { setVisitedViews(current => current.includes(activeNav) ? current : [...current, activeNav]) }, [activeNav])
   useEffect(() => {
@@ -206,7 +210,7 @@ function ReceptionistWorkspace() {
     if (view === 'Phòng tập') return <RoomsView onOpenSessions={session => selectNavigation('Buổi học', session)} onSelectSession={selectReceptionSession} />
     if (view === 'Check-in') return <CheckInView showNotice={showNotice} />
     if (view === 'Hội viên') return <MembersView query={queries[view] || ''} showNotice={showNotice} />
-    if (view === 'Thanh toán') return <PaymentsView query={queries[view] || ''} showNotice={showNotice} />
+    if (view === 'Thanh toán') return <PaymentsView query={queries[view] || ''} showNotice={showNotice} paymentReturn={location.state?.receptionistPaymentReturn} />
     if (view === 'Hỗ trợ') return <SupportTicketsView query={queries[view] || ''} showNotice={showNotice} />
     if (view === 'Hồ sơ') return <ReceptionistProfileView showNotice={showNotice} />
     return <Overview onNavigate={selectNavigation} />
