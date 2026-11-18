@@ -1,7 +1,7 @@
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 
-export default function ThemeToggle({ compact = false }) {
+export default function ThemeToggle({ compact = true }) {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === 'dark'
   const label = isDark ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'
