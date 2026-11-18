@@ -39,7 +39,11 @@
 .member-profile-security-heading > svg { color: var(--theme-accent); margin-top: 4px; flex-shrink: 0; }
 .member-profile-view .member-profile-security-heading h3 { font-size: 17px; margin: 0; }
 .member-profile-security-heading p { color: var(--theme-muted); font-size: 12px; margin-top: 3px; }
+.member-profile-security-heading > div { flex: 1; min-width: 0; }
+.member-profile-security-heading { flex-wrap: wrap; }
+.member-profile-security-heading > button { flex-shrink: 0; }
 .member-profile-security-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
+.member-profile-security-grid--single { grid-template-columns: minmax(0, 1fr); }
 .member-profile-security .account-email-change { padding: 24px; border-radius: 16px; }
 .member-profile-security .account-email-change header { gap: 12px; margin-bottom: 18px; }
 .member-profile-security .account-email-change header > svg { box-sizing: content-box; padding: 10px; margin-top: 0; width: 20px; height: 20px; border-radius: 12px; background: var(--theme-raised); }

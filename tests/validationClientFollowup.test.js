@@ -77,6 +77,37 @@ for (const [role, selector] of [['member', '.member-profile-form'], ['coach', '.
   }))
 }
 
+for (const role of ['member', 'coach', 'receptionist']) {
+  test(`${role} hides the email form until editing and clears its draft when editing is cancelled`, () => screen(role, async () => {
+    assert.equal(document.querySelector('.account-email-change'), null)
+    await click(role === 'member' ? 'Chỉnh sửa email' : 'Chỉnh sửa')
+    let emailForm = document.querySelector('.account-email-change')
+    assert.ok(emailForm)
+    assert.match(emailForm.textContent, /test@example.com/)
+    await change(emailForm.querySelector('input[type=email]'), 'new@fpt.edu.vn')
+    await click(role === 'member' ? 'Hủy chỉnh sửa email' : 'Hủy')
+    assert.equal(document.querySelector('.account-email-change'), null)
+    await click(role === 'member' ? 'Chỉnh sửa email' : 'Chỉnh sửa')
+    emailForm = document.querySelector('.account-email-change')
+    assert.equal(emailForm.querySelector('input[type=email]').value, '')
+    assert.equal(writes.length, 0, 'opening or closing email editing does not send an OTP')
+  }))
+}
+
+for (const [role, selector] of [['coach', '.coach-account-profile-form'], ['receptionist', '.reception-profile-form']]) {
+  test(`${role} retains the email editor on a failed profile save and closes it after a successful save`, () => screen(role, async () => {
+    await click('Chỉnh sửa')
+    holdWrite = true
+    await act(async () => document.querySelector(selector).dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+    await act(async () => { pending.fail(); pending = null })
+    assert.ok(document.querySelector('.account-email-change'))
+    holdWrite = false
+    await act(async () => document.querySelector(selector).dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+    assert.equal(document.querySelector('.account-email-change'), null)
+    assert.equal(writes.filter(write => write.url.includes('change-email')).length, 0)
+  }))
+}
+
 test('room dialog labels identify every field, Tab stays inside, and Escape closes and restores focus', () => screen('room', async () => {
   await click('Thêm phòng tập')
   const dialog = document.querySelector('.room-modal'), opener = [...document.querySelectorAll('button')].find(node => node.textContent.includes('Thêm phòng tập'))

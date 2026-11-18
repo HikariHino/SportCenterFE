@@ -69,6 +69,7 @@ export function ProfileView({ user, showNotice }) {
     confirmPassword: '',
   })
   const [passwordSaving, setPasswordSaving] = useState(false)
+  const [editingEmail, setEditingEmail] = useState(false)
   const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' })
   const [passwordFieldErrors, setPasswordFieldErrors] = useState({})
   const profileDirty = useRef(false)
@@ -384,9 +385,9 @@ export function ProfileView({ user, showNotice }) {
             </form>
           </article>
           <section className="member-profile-security" aria-labelledby="member-security-title">
-            <div className="member-profile-security-heading"><ShieldCheck size={18} /><div><h3 id="member-security-title">Bảo mật tài khoản</h3><p>Quản lý email đăng nhập và mật khẩu của bạn.</p></div></div>
-            <div className="member-profile-security-grid">
-              <ChangeEmailForm currentEmail={profile?.email || formData.email} disabled={saving || passwordSaving} allowAnyEmailDomain />
+            <div className="member-profile-security-heading"><ShieldCheck size={18} /><div><h3 id="member-security-title">Bảo mật tài khoản</h3><p>Quản lý email đăng nhập và mật khẩu của bạn.</p></div><button type="button" className="member-button" aria-expanded={editingEmail} disabled={saving || passwordSaving} onClick={() => setEditingEmail(current => !current)}>{editingEmail ? <><X size={16} /> Hủy chỉnh sửa email</> : <><Mail size={16} /> Chỉnh sửa email</>}</button></div>
+            <div className={`member-profile-security-grid${editingEmail ? '' : ' member-profile-security-grid--single'}`}>
+              {editingEmail && <ChangeEmailForm currentEmail={profile?.email || formData.email} disabled={saving || passwordSaving} allowAnyEmailDomain />}
 
               {/* Đổi mật khẩu tài khoản */}
               <article className="member-card member-profile-password" aria-labelledby="member-password-title">
