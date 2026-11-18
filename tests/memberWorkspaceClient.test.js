@@ -231,6 +231,8 @@ test('all Member business lists and nested payment/exercise tables expose all 23
     if (status !== 'All') assert.ok(visits.every(visit => visit.querySelector('.gym-checkin-status').dataset.status === status))
   }
   assert.equal(count('/GymCheckIns/my-history'), historyRequests, 'status filtering reuses the loaded date range')
+  assert.deepEqual(listRows('Lịch sử tập luyện').map(visit => visit.querySelector('.gym-record-date > span').textContent),
+    Array.from({ length: 10 }, (_, index) => `Lượt tập #${23 - index}`), 'newest check-in times appear first')
   await clickTab('Hỗ trợ khách hàng'); await checkThreePages('Phiếu hỗ trợ')
   await clickTab('Thông báo hệ thống'); await checkThreePages('Thông báo hệ thống')
   await clickTab('Lộ trình tập luyện'); await checkThreePages('Bài tập trong giáo án'); await checkThreePages('Giáo án tập luyện')
