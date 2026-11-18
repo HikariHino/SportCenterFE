@@ -155,6 +155,38 @@ test('Coach cancel action below the email form discards both profile and email d
   assert.equal(document.querySelector('.account-email-change input[type=email]').value, '')
 }))
 
+test('Coach edit/cancel morphs from the current card height while ordinary field edits do not restart the effect', () => screen('coach', async () => {
+  const panel = document.querySelector('.coach-account-profile-details')
+  const summary = document.querySelector('.coach-account-profile-summary')
+  const frames = [], complete = []
+  const overflow = panel.style.overflow
+  const originalAnimate = window.HTMLElement.prototype.animate
+  panel.getBoundingClientRect = () => ({ height: panel.style.overflow === 'hidden' ? 560 : panel.querySelector('.coach-account-profile-form') ? 720 : 300 })
+  window.HTMLElement.prototype.animate = function (keyframes) {
+    assert.notEqual(this, summary, 'the identity card does not participate in the edit morph')
+    if (this === panel) frames.push(keyframes)
+    let resolve, reject
+    const finished = new Promise((yes, no) => { resolve = yes; reject = no })
+    complete.push(resolve)
+    return { finished, cancel: () => reject(new Error('Cancelled')) }
+  }
+  try {
+    await click('Chỉnh sửa')
+    assert.deepEqual(frames[0], [{ height: '300px' }, { height: '720px' }])
+    await change(document.querySelector('.coach-account-profile-form input[name=fullName]'), 'Tên Đã Sửa')
+    assert.equal(frames.length, 1)
+    await click('Hủy thay đổi')
+    assert.deepEqual(frames[1], [{ height: '560px' }, { height: '300px' }])
+    assert.equal(document.querySelector('.coach-account-profile-details'), panel)
+    assert.equal(document.querySelector('.coach-account-profile-summary'), summary)
+    await act(async () => { complete.forEach(finish => finish()); await new Promise(resolve => setImmediate(resolve)) })
+    assert.equal(panel.style.overflow, overflow)
+    assert.equal(writes.length, 0)
+  } finally {
+    window.HTMLElement.prototype.animate = originalAnimate
+  }
+}))
+
 test('room dialog labels identify every field, Tab stays inside, and Escape closes and restores focus', () => screen('room', async () => {
   await click('Thêm phòng tập')
   const dialog = document.querySelector('.room-modal'), opener = [...document.querySelectorAll('button')].find(node => node.textContent.includes('Thêm phòng tập'))

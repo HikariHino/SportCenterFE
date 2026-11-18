@@ -20,7 +20,8 @@ import { getProfilePhoneConflict, passwordChangeErrors, profileDateLimit, profil
 import '../../style/member/ProfileValidation.css'
 import '../../style/member/MemberProfile.css'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
-import { useMemberCache, useMemberResource } from '../../contexts/MemberWorkspaceContext'
+import { useMemberCache, useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
+import useProfileMorph from '../../hooks/useProfileMorph'
 
 function formatCurrency(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} đ`
@@ -70,6 +71,8 @@ export function ProfileView({ user, showNotice }) {
   })
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [editingEmail, setEditingEmail] = useState(false)
+  const viewActive = useMemberViewActive()
+  const emailMorph = useProfileMorph(editingEmail, viewActive)
   const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' })
   const [passwordFieldErrors, setPasswordFieldErrors] = useState({})
   const profileDirty = useRef(false)
@@ -384,8 +387,8 @@ export function ProfileView({ user, showNotice }) {
               </div>
             </form>
           </article>
-          <section className="member-profile-security" aria-labelledby="member-security-title">
-            <div className="member-profile-security-heading"><ShieldCheck size={18} /><div><h3 id="member-security-title">Bảo mật tài khoản</h3><p>Quản lý email đăng nhập và mật khẩu của bạn.</p></div><button type="button" className="member-button" aria-expanded={editingEmail} disabled={saving || passwordSaving} onClick={() => setEditingEmail(current => !current)}>{editingEmail ? <><X size={16} /> Hủy chỉnh sửa email</> : <><Mail size={16} /> Chỉnh sửa email</>}</button></div>
+          <section ref={emailMorph.panel} className="member-profile-security" aria-labelledby="member-security-title">
+            <div className="member-profile-security-heading"><ShieldCheck size={18} /><div><h3 id="member-security-title">Bảo mật tài khoản</h3><p>Quản lý email đăng nhập và mật khẩu của bạn.</p></div><button type="button" className="member-button" aria-expanded={editingEmail} disabled={saving || passwordSaving} onClick={() => emailMorph.transition(() => setEditingEmail(current => !current))}>{editingEmail ? <><X size={16} /> Hủy chỉnh sửa email</> : <><Mail size={16} /> Chỉnh sửa email</>}</button></div>
             <div className={`member-profile-security-grid${editingEmail ? '' : ' member-profile-security-grid--single'}`}>
               {editingEmail && <ChangeEmailForm currentEmail={profile?.email || formData.email} disabled={saving || passwordSaving} allowAnyEmailDomain />}
 
