@@ -28,18 +28,10 @@
 .gym-checkin-details dd { margin: 0; text-align: right; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
 .gym-package-status { color: var(--theme-muted); }
 .gym-package-status[data-active='true'] { color: var(--theme-green, #096445); }
-.gym-checkin-side { display: grid; gap: 12px; min-width: 0; }
-.gym-latest { padding: 16px; }
-.gym-latest-date { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
-.gym-latest-date > strong { font-size: 18px; }
-.gym-latest-date > span { font-size: 11px; color: var(--theme-muted); }
-.gym-visit-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-top: 10px; border-top: 1px solid var(--theme-border); }
-.gym-visit-times > div > span, .gym-visit-time > span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--theme-muted); margin-bottom: 5px; }
+.gym-visit-time > span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--theme-muted); margin-bottom: 5px; }
 .gym-visit-time time { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 6px; }
 .gym-visit-time time > small { color: var(--theme-muted); font-size: 10px; }
-.gym-visit-times > div > strong, .gym-visit-times .gym-visit-time strong { font-size: 17px; line-height: 1.6; overflow-wrap: anywhere; }
 .gym-checkin-view .gym-visit-time .gym-time-missing { font-size: 12px; color: var(--theme-muted); font-weight: 500; }
-.gym-checkin-view .gym-latest-note { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--theme-gold-bg, #fff7e5); color: var(--theme-gold, #805200); font-size: 11px; line-height: 1.7; }
 .gym-checkin-guide { padding: 14px 16px 16px; border-top: 1px solid var(--theme-border); }
 .gym-checkin-guide h4 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; font-weight: 600; }
 .gym-checkin-guide h4 > svg { flex-shrink: 0; }
@@ -52,12 +44,15 @@
 .gym-checkin-state > strong { color: var(--theme-text); font-size: 15px; }
 .gym-checkin-state p { margin: 0; overflow-wrap: anywhere; }
 .gym-checkin-error { color: var(--theme-red, #b42318); }
-.gym-checkin-history { display: grid; gap: 12px; min-width: 0; }
+.gym-checkin-history { display: grid; align-content: start; gap: 12px; min-width: 0; container: gym-history / inline-size; }
 .gym-history-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .gym-history-heading > div:first-child { flex: 1; min-width: 220px; }
 .gym-checkin-view .gym-history-heading h3 { font-size: 17px; margin-bottom: 3px; }
 .gym-history-heading p { color: var(--theme-muted); font-size: 11px; line-height: 1.7; }
-.gym-checkin-history .gym-history-status { min-width: 160px; }
+.gym-checkin-history .gym-history-query { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+.gym-checkin-history .gym-history-query > label { min-width: 0; }
+.gym-checkin-history .gym-history-query > button[type='submit'] { align-self: end; }
+.gym-checkin-history .gym-history-range-error { grid-column: 1 / -1; }
 .gym-history-content { overflow: hidden; }
 .gym-history-labels, .gym-record-main { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(240px, 1.7fr) minmax(100px, 1fr) minmax(120px, 1fr); align-items: center; gap: 14px; }
 .gym-history-labels { padding: 10px 16px; background: var(--theme-raised); color: var(--theme-muted); font-size: 11px; }
@@ -83,6 +78,8 @@
   .gym-checkin-overview { grid-template-columns: minmax(0, 1fr); }
   .gym-page-heading { align-items: flex-start; }
   .gym-checkin-view .gym-page-heading h2 { font-size: 24px; }
+}
+@container gym-history (max-width: 760px) {
   .gym-history-labels { display: none; }
   .gym-record-main { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
   .gym-record-date { grid-column: 1; grid-row: 1; }
@@ -104,7 +101,7 @@
 @container gym-checkin (max-width: 500px) {
   .gym-checkin-view .gym-button, .gym-checkin-view .gym-icon-button { min-height: 40px; }
 }
-@container gym-checkin (max-width: 600px) {
+@container gym-history (max-width: 600px) {
   .gym-history-heading { display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 10px; }
   .gym-history-heading > div:first-child { grid-column: 1; grid-row: 1; min-width: 0; }
   .gym-history-heading > .gym-button { grid-column: 2; grid-row: 1; width: 40px; min-height: 40px; padding: 7px; }
@@ -113,12 +110,11 @@
 @container gym-checkin (max-width: 400px) {
   .gym-checkin-view .gym-page-heading h2 { font-size: 22px; }
   .gym-page-heading { flex-wrap: wrap; gap: 10px; }
+}
+@container gym-history (max-width: 400px) {
   .gym-history-record { padding: 12px 14px; }
   .gym-record-main { column-gap: 8px; }
   .gym-record-main strong { font-size: 12px; }
-  .gym-visit-times { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-  .gym-visit-times > div:last-child { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
-  .gym-visit-times > div:last-child > span { margin: 0; }
   .gym-checkin-pagination { padding: 14px; }
 }
 @container gym-member (max-width: 310px) {

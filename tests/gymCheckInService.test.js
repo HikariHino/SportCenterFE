@@ -98,10 +98,13 @@ test('history table distinguishes forgotten checkout and only offers checkout fo
   assert.match(renderToStaticMarkup(createElement(Status, { item: { ...row, status: 'ForgotCheckOut' } })), /data-status="ForgotCheckOut"/)
 })
 
-test('date controls expose labeled range inputs and day presets for both roles', () => {
+test('date controls expose labeled inputs and only render presets when enabled by the caller', () => {
   const html = renderToStaticMarkup(createElement(Dates, { value: range, onChange() {}, onPreset() {} }))
   assert.equal((html.match(/type="date"/g) || []).length, 2)
   for (const text of ['Từ ngày', 'Đến ngày', 'Hôm nay', '7 ngày', 'Tất cả']) assert.ok(html.includes(text))
+  const dateOnly = renderToStaticMarkup(createElement(Dates, { value: range, onChange() {} }))
+  assert.equal((dateOnly.match(/type="date"/g) || []).length, 2)
+  assert.doesNotMatch(dateOnly, /gym-history-presets|Hôm nay|7 ngày|Tất cả/)
 })
 
 test('staff attendance posts to Attendances/mark and verifies the saved member and session', async () => {
