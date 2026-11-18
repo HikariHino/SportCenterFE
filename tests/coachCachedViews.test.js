@@ -77,7 +77,7 @@ test('a different Coach workspace starts without the previous account data', () 
   assert.match(html, /Đang tải/)
 })
 
-test('Coach roster and room lists show ten numbered rows while keeping totals and pagination visible', () => {
+test('Coach roster keeps numbered rows and room cards omit ordinal labels while both paginate ten records', () => {
   const members = Array.from({ length: 23 }, (_, index) => ({ registrationId: index + 100, memberId: index + 1, fullName: 'Học viên ' + (index + 1), registrationStatus: 'Registered' }))
   const studentsHtml = renderView('StudentsView', cache => cache.setData('roster:30', members))
   assert.equal((studentsHtml.match(/data-stt=/g) || []).length, 10)
@@ -90,6 +90,8 @@ test('Coach roster and room lists show ten numbered rows while keeping totals an
   const roomsHtml = renderView('CoachRoomsView', cache => cache.setData('rooms:active', Array.from({ length: 23 }, (_, index) => ({ id: index + 1, name: 'Phòng ' + index, isActive: true }))))
   assert.equal((roomsHtml.match(/data-stt=/g) || []).length, 10)
   assert.match(roomsHtml, /1–10 \/ 23/)
+  assert.doesNotMatch(roomsHtml, /coach-numbered-item/)
+  assert.match(roomsHtml, /Phòng #1/)
 })
 
 test('Overview shows the complete daily schedule without pagination while other Coach lists stay paginated', () => {
