@@ -23,7 +23,7 @@
 .member-profile-editor-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin: 0 20px 18px; padding-top: 15px; border-top: 1px solid var(--theme-border); }
 html:has(.member-view-content:not([hidden]) .member-profile-editor) { scrollbar-width: none; }
 html:has(.member-view-content:not([hidden]) .member-profile-editor)::-webkit-scrollbar { width: 0; }
-.member-profile-view .member-profile-identity-card { position: sticky; top: 100px; padding: 24px; background: var(--theme-surface); border-color: var(--theme-border); }
+.member-profile-view .member-profile-identity-card { position: static; align-self: start; padding: 24px; background: var(--theme-surface); border-color: var(--theme-border); }
 .member-profile-id-meta { justify-content: space-between; gap: 8px; }
 .member-profile-identity-card .member-identity { flex-direction: column; text-align: center; gap: 16px; margin: 28px 0; }
 .member-profile-identity-card .member-avatar--large { width: 76px; height: 76px; border-radius: 22px; font-size: calc(32px + var(--font-size-adjustment, 0px)); }
