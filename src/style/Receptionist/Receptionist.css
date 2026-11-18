@@ -588,6 +588,10 @@
 .reception-overview-stats small { margin-top:2px; color:var(--rc-muted); font-size:12px; }
 .reception-overview-metrics+.reception-overview-grid { margin-top:12px; }
 .reception-overview-more { width:100%; min-height:38px; display:flex; align-items:center; justify-content:center; gap:4px; border:0; border-top:1px solid #edf1f5; color:var(--rc-accent); background:#fafcff; font-size:12px; font-weight:800; }
+.reception-overview-room-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:16px; }
+.reception-overview-rooms .reception-overview-room-grid>article { min-width:0; padding:12px; border:1px solid var(--rc-line); border-radius:10px; background:var(--theme-raised,#f8faff); }
+.reception-overview-room-grid :is(strong,small) { white-space:normal; overflow-wrap:anywhere; line-height:1.5; }
+@media(max-width:480px) { .reception-overview-room-grid { grid-template-columns:1fr; padding:12px; } }
 
 [data-theme='dark'] .reception-overview-focus { border-color:#34517e; background:linear-gradient(115deg,#172a49,#111e33 60%,#132138); }
 [data-theme='dark'] .reception-overview-stats { border-color:var(--theme-border); background:var(--theme-surface); }
