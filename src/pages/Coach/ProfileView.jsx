@@ -1,6 +1,6 @@
 import { useCoachResource } from '../../contexts/CoachWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { CheckCircle2, IdCard, Mail, PencilLine, Phone, UserRound, X } from 'lucide-react'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
 import { getFullNameValidationError, getProfilePhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_MAX_LENGTH, PROFILE_PHONE_MESSAGE } from '../../utils/profileValidation'
@@ -16,6 +16,7 @@ const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
 })
 
 export function CoachProfileView({ active = true, showNotice }) {
+  const profileFormId = useId()
   const [requestKey, setRequestKey] = useState(0)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -76,6 +77,21 @@ export function CoachProfileView({ active = true, showNotice }) {
   return <div className="coach-account-profile-layout">
     <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />
     <section className="coach-card coach-account-profile-summary"><div className="coach-account-profile-cover"><span>{initials}</span></div><div className="coach-account-profile-main"><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><div><span><strong>#{profile.userId}</strong><small>Mã tài khoản</small></span><span><strong>{profile.roleName}</strong><small>Vai trò</small></span></div></div></section>
-    <section className="coach-card coach-account-profile-details"><div className="coach-card-head"><div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>{editing ? <button type="button" onClick={cancelEdit} disabled={saving}><X size={15} />Hủy</button> : <button type="button" onClick={() => setEditing(true)}><PencilLine size={15} />Chỉnh sửa</button>}</div>{editing ? <form className="coach-account-profile-form" onSubmit={submitProfile}><div><label>Họ và tên<input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} name="fullName" value={form.fullName} onChange={updateField} minLength="1" maxLength={PROFILE_FULL_NAME_MAX_LENGTH} required /></label><label>Email<input name="email" type="email" value={profile.email} readOnly /></label><label>Số điện thoại<input name="phoneNumber" type="tel" inputMode="tel" title={PROFILE_PHONE_MESSAGE} value={form.phoneNumber} onChange={updateField} maxLength={PROFILE_PHONE_MAX_LENGTH} required /></label><label>Mật khẩu hiện tại<input name="currentPassword" type="password" value={form.currentPassword} onChange={updateField} placeholder="Bắt buộc khi đổi mật khẩu" /></label><label className="wide">Mật khẩu mới (không bắt buộc)<input name="password" type="password" value={form.password} onChange={updateField} minLength={form.password ? 8 : undefined} maxLength="72" placeholder="Để trống nếu không đổi mật khẩu" /></label></div>{actionError && <p role="alert">{actionError}</p>}<footer><button type="button" onClick={cancelEdit} disabled={saving}>Hủy thay đổi</button><button type="submit" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button></footer></form> : <div className="coach-account-profile-grid"><article><span><Mail size={18} /></span><div><small>Email</small><strong>{profile.email}</strong></div></article><article><span><Phone size={18} /></span><div><small>Số điện thoại</small><strong>{profile.phoneNumber || 'Chưa cập nhật'}</strong></div></article><article><span><IdCard size={18} /></span><div><small>Ngày tạo tài khoản</small><strong>{createdAt}</strong></div></article><article><span><CheckCircle2 size={18} /></span><div><small>Cập nhật gần nhất</small><strong>{updatedAt}</strong></div></article></div>}{editing && <ChangeEmailForm currentEmail={profile.email} disabled={saving} allowAnyEmailDomain />}</section>
+    <section className="coach-card coach-account-profile-details">
+      <div className="coach-card-head"><div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>{editing ? <button type="button" onClick={cancelEdit} disabled={saving}><X size={15} />Hủy</button> : <button type="button" onClick={() => setEditing(true)}><PencilLine size={15} />Chỉnh sửa</button>}</div>
+      {editing ? <form id={profileFormId} className="coach-account-profile-form" onSubmit={submitProfile}>
+        <div className="coach-account-profile-fields">
+          <label className="coach-profile-name-field">Họ và tên<input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} name="fullName" value={form.fullName} onChange={updateField} minLength="1" maxLength={PROFILE_FULL_NAME_MAX_LENGTH} required /></label>
+          <label className="coach-profile-phone-field">Số điện thoại<input name="phoneNumber" type="tel" inputMode="tel" title={PROFILE_PHONE_MESSAGE} value={form.phoneNumber} onChange={updateField} maxLength={PROFILE_PHONE_MAX_LENGTH} required /></label>
+          <label className="coach-profile-current-password-field">Mật khẩu hiện tại<input name="currentPassword" type="password" value={form.currentPassword} onChange={updateField} autoComplete="current-password" placeholder="Bắt buộc khi đổi mật khẩu" /></label>
+          <label className="coach-profile-new-password-field">Mật khẩu mới (không bắt buộc)<input name="password" type="password" value={form.password} onChange={updateField} autoComplete="new-password" minLength={form.password ? 8 : undefined} maxLength="72" placeholder="Để trống nếu không đổi mật khẩu" /></label>
+        </div>
+        {actionError && <p role="alert">{actionError}</p>}
+      </form> : <div className="coach-account-profile-grid"><article><span><Mail size={18} /></span><div><small>Email</small><strong>{profile.email}</strong></div></article><article><span><Phone size={18} /></span><div><small>Số điện thoại</small><strong>{profile.phoneNumber || 'Chưa cập nhật'}</strong></div></article><article><span><IdCard size={18} /></span><div><small>Ngày tạo tài khoản</small><strong>{createdAt}</strong></div></article><article><span><CheckCircle2 size={18} /></span><div><small>Cập nhật gần nhất</small><strong>{updatedAt}</strong></div></article></div>}
+      {editing && <>
+        <ChangeEmailForm currentEmail={profile.email} disabled={saving} allowAnyEmailDomain />
+        <footer className="coach-account-profile-actions"><button type="button" onClick={cancelEdit} disabled={saving}>Hủy thay đổi</button><button type="submit" form={profileFormId} disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button></footer>
+      </>}
+    </section>
   </div>
 }
