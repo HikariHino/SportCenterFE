@@ -1030,8 +1030,8 @@
 .reception-profile-actions button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:36px; padding:0 14px; border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text); background:var(--theme-raised); font:inherit; font-size:12px; font-weight:700; }
 .reception-profile-actions button[type='submit'] { border-color:var(--rc-accent); color:var(--theme-bg); background:var(--rc-accent); }
 .reception-profile-actions button:disabled { opacity:.6; cursor:wait; }
-html:has(.reception-view:not([hidden]) .reception-profile-form) { scrollbar-width:none; }
-html:has(.reception-view:not([hidden]) .reception-profile-form)::-webkit-scrollbar { width:0; }
+html:has(.reception-view:not([hidden]) .reception-profile-layout) { scrollbar-width:none; }
+html:has(.reception-view:not([hidden]) .reception-profile-layout)::-webkit-scrollbar { width:0; }
 @media(max-width:620px) {
   .reception-profile-form { grid-template-areas:'name' 'phone' 'current-password' 'new-password'; padding:10px 14px; }
   .reception-profile-actions { margin-inline:14px; display:grid; grid-template-columns:1fr 1fr; }
