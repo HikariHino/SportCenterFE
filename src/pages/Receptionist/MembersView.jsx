@@ -19,6 +19,7 @@ import { checkInReceptionistMemberRegistration } from '../../services/receptioni
 import { receptionistCheckInReason } from '../../utils/receptionistCheckIn'
 import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErrorMessage, sessionDateTimeFormatter, subscriptionStatusLabel, ViewLoader } from './ReceptionistViewShared'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
+import { paymentCheckoutMessage } from '../../utils/memberPayments'
 import { profileDateLimit } from '../../utils/profileValidation'
 
 function CreateMemberDialog({ onClose, onCreated }) {
@@ -255,7 +256,7 @@ function MemberSubscriptionsDialog({ memberId, onClose, showNotice }) {
       </div>
       {selectedSubscriptionId !== null && <SubscriptionDetailDialog subscriptionId={selectedSubscriptionId} onClose={() => setSelectedSubscriptionId(null)} />}
       {cancelSubscription && <CancelSubscriptionDialog subscription={cancelSubscription} onClose={() => setCancelSubscription(null)} onCancelled={updated => { setSubscriptions(current => current.map(item => item.id === updated.id ? updated : item)); showNotice(`Đã hủy đăng ký gói #${updated.id}.`) }} />}
-      {paymentSubscription && <CheckoutDialog counterOnly memberId={memberId} subscriptionId={paymentSubscription.id} onClose={() => setPaymentSubscription(null)} onCreated={receipt => { setRequestKey(key => key + 1); showNotice(`Đã xác nhận biên nhận #${receipt.id} và kích hoạt gói.`) }} />}
+      {paymentSubscription && <CheckoutDialog counterOnly memberId={memberId} subscriptionId={paymentSubscription.id} onClose={() => setPaymentSubscription(null)} onCreated={receipt => { setRequestKey(key => key + 1); showNotice(paymentCheckoutMessage(receipt)) }} />}
     </section>
   </div>
 }

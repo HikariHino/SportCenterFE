@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { RefreshCw, WalletCards, X } from 'lucide-react'
 import { getMembers } from '../../services/memberService'
 import { getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
-import { checkoutReceptionistSubscription, getReceptionistPaymentError } from '../../services/receptionistPaymentService'
+import { checkoutReceptionistSubscription, getReceptionistPaymentError, receptionistCheckoutUrl } from '../../services/receptionistPaymentService'
+import { paymentStatus } from '../../utils/memberPayments'
 import { formatDateTime } from './ReceptionistViewShared'
 import PackageCheckoutDialog from './PackageCheckoutDialog'
 
@@ -20,7 +21,7 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
   const [subscriptions, setSubscriptions] = useState([])
   const [subscriptionId, setSubscriptionId] = useState(initialSubscriptionId ? String(initialSubscriptionId) : '')
   const [detail, setDetail] = useState(null)
-  const [paymentMethod, setPaymentMethod] = useState(counterOnly ? (['Cash', 'BankTransfer', 'CreditCard'].includes(initialPaymentMethod) ? initialPaymentMethod : 'Cash') : 'PayOS')
+  const [paymentMethod, setPaymentMethod] = useState(counterOnly ? (initialPaymentMethod === 'PayOS' ? 'PayOS' : 'Cash') : 'PayOS')
   const [received, setReceived] = useState(false)
   const [loading, setLoading] = useState(true)
   const [ordersLoading, setOrdersLoading] = useState(false)
@@ -72,6 +73,7 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
   }, [subscriptionId, memberId, requestKey])
 
   const selectedOrder = String(detail?.id) === subscriptionId && String(detail?.memberId) === memberId ? detail : null
+  const payWithPayOS = paymentMethod === 'PayOS'
   const busy = saving || loading || ordersLoading || detailLoading
   const search = query.trim().toLocaleLowerCase('vi')
   const visibleMembers = members.filter(member => String(member.memberId) === memberId || !search
@@ -79,13 +81,19 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
 
   async function submit(event) {
     event.preventDefault()
-    if (lock.current || busy || requiresRefresh || !selectedOrder) return
+    if (lock.current || busy || requiresRefresh || !selectedOrder || (!payWithPayOS && !received)) return
     lock.current = true
     setSaving(true)
     setError('')
     try {
-      const payment = await checkoutReceptionistSubscription({ memberId, subscriptionId, amount: selectedOrder.agreedPrice, paymentMethod, paymentReceived: received })
-      if (mounted.current) { onCreated(payment); onClose() }
+      const payment = await checkoutReceptionistSubscription({ memberId, subscriptionId, amount: selectedOrder.agreedPrice, paymentMethod: payWithPayOS ? 'PayOS' : paymentMethod, paymentReceived: received })
+      if (mounted.current) {
+        const url = payWithPayOS && paymentStatus(payment) === 'pending' ? receptionistCheckoutUrl(payment) : ''
+        if (payWithPayOS && paymentStatus(payment) === 'pending' && !url) throw new Error('Chưa có liên kết PayOS hợp lệ. Vui lòng tải lại trạng thái trước khi trả tiền.')
+        onCreated(payment, { redirect: false })
+        if (url) window.location.assign(url)
+        onClose()
+      }
     } catch (error) {
       if (mounted.current) { setError(getReceptionistPaymentError(error)); setRequiresRefresh(true); setReceived(false) }
     } finally {
@@ -105,12 +113,12 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
           {memberId && !ordersLoading && !subscriptions.length && <p role="status">Hội viên chưa có đơn đang chờ. Hãy tạo đăng ký gói ở tab Hội viên trước.</p>}
           {detailLoading && <p role="status">Đang kiểm tra đơn và biên nhận...</p>}
           {selectedOrder && <div className="reception-checkout-summary"><WalletCards size={24} /><div><strong>{selectedOrder.packageName}</strong><small>Đơn #{selectedOrder.id} · {selectedOrder.durationInDays} ngày · {formatDateTime(selectedOrder.createdAt)}</small></div><b>{currency(selectedOrder.agreedPrice)}</b></div>}
-          <label>Phương thức<select value={paymentMethod} disabled={saving} onChange={event => { setPaymentMethod(event.target.value); setReceived(false) }}>{!counterOnly && <option value="PayOS">PayOS · QR / liên kết thanh toán</option>}<option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản tại quầy</option><option value="CreditCard">Thẻ tín dụng tại quầy</option></select></label>
+          <label>Phương thức<select value={paymentMethod} disabled={saving} onChange={event => { setPaymentMethod(event.target.value); setReceived(false) }}><option value="PayOS">Thanh toán chuyển khoản</option><option value="Cash">Tiền mặt</option></select></label>
         </div>
-        {paymentMethod === 'PayOS' ? <p className="reception-checkout-note">Gói chỉ được kích hoạt sau khi hệ thống xác nhận thanh toán thành công. Nếu đã có yêu cầu PayOS đang chờ, liên kết đó sẽ được dùng lại.</p>
-          : <label className="reception-payment-confirm"><input type="checkbox" checked={received} required disabled={saving} onChange={event => setReceived(event.target.checked)} /><span><strong>Tôi đã thực nhận đủ tiền theo giá của đơn</strong><small>Chỉ ghi nhận khoản tiền đã thu; thao tác này không tự trừ tiền ngân hàng hoặc thẻ.</small></span></label>}
+        {payWithPayOS ? <p className="reception-checkout-note">Nhấn Trả tiền để chuyển đến PayOS. Khi quay lại, hệ thống kiểm tra kết quả thanh toán và cập nhật gói. Nếu đã có yêu cầu PayOS đang chờ, liên kết đó sẽ được dùng lại.</p>
+          : <label className="reception-payment-confirm"><input type="checkbox" checked={received} required disabled={saving} onChange={event => setReceived(event.target.checked)} /><span><strong>Tôi đã thực nhận đủ tiền theo giá của đơn</strong><small>Chỉ xác nhận khoản tiền mặt đã thu đủ từ hội viên.</small></span></label>}
         {error && <p className="reception-form-error" role="alert">{error}</p>}
-        <footer><button type="button" disabled={saving} onClick={() => { setError(''); setRequestKey(key => key + 1) }}><RefreshCw size={14} />Tải lại trạng thái</button><button type="button" disabled={saving} onClick={onClose}>Đóng</button><button type="submit" disabled={busy || !selectedOrder || requiresRefresh || (paymentMethod !== 'PayOS' && !received)}>{saving ? 'Đang xử lý...' : paymentMethod === 'PayOS' ? 'Tạo / mở PayOS' : 'Xác nhận thu tiền'}</button></footer>
+        <footer><button type="button" disabled={saving} onClick={() => { setError(''); setRequestKey(key => key + 1) }}><RefreshCw size={14} />Tải lại trạng thái</button><button type="button" disabled={saving} onClick={onClose}>Đóng</button><button type="submit" disabled={busy || !selectedOrder || requiresRefresh || (!payWithPayOS && !received)}>{saving ? 'Đang xử lý...' : payWithPayOS ? 'Trả tiền' : 'Xác nhận thu tiền'}</button></footer>
       </form>
     </section>
   </div>

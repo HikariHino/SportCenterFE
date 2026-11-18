@@ -4,8 +4,9 @@ export const receptionistPaymentStatuses = [
   ['all', 'Tất cả'], ['completed', 'Thành công'], ['pending', 'Chờ thanh toán'], ['needsreview', 'Cần đối soát'],
   ['cancelled', 'Đã hủy'], ['expired', 'Hết hạn'], ['failed', 'Thất bại'], ['refunded', 'Hoàn tiền'],
 ]
-export const receptionistPaymentMethods = [['all', 'Mọi phương thức'], ['payos', 'PayOS'], ['cash', 'Tiền mặt'], ['banktransfer', 'Chuyển khoản'], ['creditcard', 'Thẻ tín dụng']]
-export const receptionistPaymentMethodLabel = method => receptionistPaymentMethods.find(([key]) => key === String(method).toLowerCase())?.[1] || method || 'Chưa có'
+export const receptionistPaymentMethods = [['all', 'Mọi phương thức'], ['payos', 'Thanh toán chuyển khoản'], ['cash', 'Tiền mặt']]
+export const receptionistPaymentMethodLabel = method => receptionistPaymentMethods.find(([key]) => key === String(method).toLowerCase())?.[1]
+  || ({ creditcard: 'Thẻ tín dụng', banktransfer: 'Thanh toán chuyển khoản' }[String(method).toLowerCase()] || method) || 'Chưa có'
 
 export function filterReceptionistPayments(payments, { query = '', status = 'all', method = 'all' } = {}) {
   const term = query.trim().replace(/^#/, '').toLocaleLowerCase('vi')
