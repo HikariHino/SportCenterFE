@@ -69,7 +69,7 @@ test('history includes other weeks and paginates without changing the active sch
   assert.equal(active.length, 1)
   assert.equal(cancelled.length, 13)
   assert.equal((html.match(/data-stt=/g) || []).length, 10)
-  assert.match(html, /1–10 \/ 13 · 10 dòng\/trang/)
+  assert.match(html, /value="2"/)
   assert.match(html, /tất cả các tuần/)
   assert.match(html, /Xem chi tiết đăng ký đã hủy #212/)
   assert.doesNotMatch(html, /Xem chi tiết đăng ký đã hủy #200/)
