@@ -135,7 +135,7 @@
     .coach-dashboard :is(
       .coach-focus-main > button, .coach-profile-actions > button,
       .coach-plan-dialog form > footer > button, .coach-account-profile-actions > button,
-      .coach-attendance-actions > button, .coach-plan-exercises-head > button,
+      .coach-attendance-actions > button, .coach-plan-exercise-actions > button,
       .coach-exercise-result-form > footer > button
     ):not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 14px #10264b1a; }
     .coach-dashboard .coach-focus-shortcuts > button:not(:disabled):hover > span:first-child { transform: translateY(-2px); }
@@ -151,7 +151,7 @@
     .coach-focus-main > button, .coach-profile-actions > button,
     .coach-plan-dialog form > footer > button, .coach-account-profile-actions > button,
     .coach-focus-shortcuts > button, .coach-attendance-actions > button,
-    .coach-plan-exercises-head > button, .coach-exercise-result-form > footer > button
+    .coach-plan-exercise-actions > button, .coach-exercise-result-form > footer > button
   ):not(:disabled):active { transform: translateY(0) scale(.98); }
 }
 
