@@ -8,6 +8,7 @@ import { ViewLoader } from './ReceptionistViewShared'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 import useProfileMorph from '../../hooks/useProfileMorph'
+import StaffProfileCard from '../../components/StaffProfileCard'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' }
@@ -75,14 +76,9 @@ export function ReceptionistProfileView({ showNotice }) {
   if (loading) return <ViewLoader />
   if (error && !profile) return <section className="reception-card reception-profile-state error"><UserRound size={28} /><strong>Không thể tải hồ sơ</strong><p>{error}</p><button type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={14} />Thử lại</button></section>
 
-  const initials = profile?.fullName?.split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toLocaleUpperCase('vi-VN') || 'LT'
-
   return <div className="reception-profile-layout">
     <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />
-    <section className="reception-card reception-profile-summary">
-      <div className="reception-profile-cover"><span>{initials}</span></div>
-      <div><h2>{profile.fullName}</h2><p>{profile.email}</p><b className={String(profile.status || '').toLowerCase()}>{profile.status || 'Chưa xác định'}</b><dl><div><dt>Mã tài khoản</dt><dd>#{profile.userId}</dd></div><div><dt>Vai trò</dt><dd>{profile.roleName || 'Receptionist'}</dd></div></dl></div>
-    </section>
+    <StaffProfileCard profile={profile} role="Receptionist" className="reception-card reception-profile-summary" />
     <section ref={morph.panel} className="reception-card reception-profile-details">
       <div className="reception-card-head">
         <div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>
