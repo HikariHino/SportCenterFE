@@ -6,7 +6,6 @@ export function NumberedPagination({ total, page = 1, onChange, label = 'Danh s�
   const range = listPage(total, page)
   if (!total) return null
   return <nav className={`${prefix}-pagination`} aria-label={`Phân trang ${label}`}>
-    <span role="status">{range.from}–{range.to} / {range.total} · {LIST_PAGE_SIZE} dòng/trang</span>
     <div><button type="button" disabled={disabled || range.page <= 1} onClick={() => onChange(range.page - 1)} aria-label={`Trang trước: ${label}`}><ChevronLeft size={15} />{!iconOnly && 'Trước'}</button>
       <label>{!iconOnly && 'Trang'}<select value={range.page} disabled={disabled} onChange={event => onChange(Number(event.target.value))} aria-label={`Chọn trang: ${label}`}>{Array.from({ length: range.pageCount }, (_, index) => <option value={index + 1} key={index}>{index + 1}</option>)}</select><span>/ {range.pageCount}</span></label>
       <button type="button" disabled={disabled || range.page >= range.pageCount} onClick={() => onChange(range.page + 1)} aria-label={`Trang sau: ${label}`}>{!iconOnly && 'Sau'}<ChevronRight size={15} /></button></div>

@@ -22,7 +22,7 @@ test('Coach controls use their own styles and show ten records per page with con
   assert.match(html, /class="coach-pagination"/)
   assert.match(html, /coach-numbered-item/)
   assert.doesNotMatch(html, /reception-pagination/)
-  assert.match(html, /1–10 \/ 23/)
+  assert.match(html, /value="3"/)
 })
 
 test('editing an exercise on page two uses its absolute form index and preserves off-page rows', () => {
@@ -51,7 +51,7 @@ test('fixed table layout places the pager outside the scrolling rows and clamps 
   }, item => h('article', { className: 'coach-attendance-row' }, h('span', null, 'Học viên #' + item.id))))
   assert.match(html, /data-stt="11"/)
   assert.match(html, /<\/article><\/div><nav class="coach-pagination"/)
-  assert.match(html, /11–11 \/ 11/)
+  assert.match(html, /value="2" selected=""/)
   assert.match(html, /disabled="" aria-label="Trang sau: Học viên"/)
   assert.equal(renderToStaticMarkup(h(Pager, { total: 0, onChange() {} })), '')
 })

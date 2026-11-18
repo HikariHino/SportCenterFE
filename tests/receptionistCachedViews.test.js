@@ -100,7 +100,7 @@ test('large cached Receptionist lists render ten rows and retain totals for pagi
   ]) {
     const html = renderView(view, cache => cache.setData(key, Array.from({ length: 23 }, (_, index) => makeItem(index + 1))))
     assert.equal((html.match(/data-stt=/g) || []).length, 10, view)
-    assert.match(html, /1–10 \/ 23/, view)
+    assert.match(html, /value="3"/, view)
     assert.match(html, /data-stt="10"/, view)
     assert.doesNotMatch(html, /data-stt="11"/, view)
   }

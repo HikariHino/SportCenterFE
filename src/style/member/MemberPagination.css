@@ -5,7 +5,7 @@
 .member-paged-list--flow > .member-list-scroll { overflow: visible; scrollbar-gutter: auto; }
 .member-list-scroll { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .member-list-heading, .member-list-scroll > table > thead { position: sticky; top: 0; z-index: 2; background: var(--theme-raised, #f5f8fc); }
-.member-pagination { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin: 0; padding: 12px 14px; border-top: 1px solid var(--theme-border, #d8e0ed); color: var(--theme-muted, #626878); background: var(--theme-surface, #fff); font-size: 12px; line-height: 1.6; box-shadow: 0 -4px 12px #10264b0a; }
+.member-pagination { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; margin: 0; padding: 12px 14px; border-top: 1px solid var(--theme-border, #d8e0ed); color: var(--theme-muted, #626878); background: var(--theme-surface, #fff); font-size: 12px; line-height: 1.6; box-shadow: 0 -4px 12px #10264b0a; }
 .member-pagination > div, .member-pagination label { display: flex; align-items: center; justify-content: center; gap: 7px; }
 .member-pagination button, .member-pagination select { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 34px; min-height: 34px; width: auto; max-width: 85px; margin: 0; padding: 6px 9px; border: 1px solid var(--theme-border, #d8e0ed); border-radius: 7px; color: var(--theme-text, #17243c); background: var(--theme-raised, #f5f8fc); font: inherit; }
 .member-pagination button:disabled { opacity: .45; cursor: not-allowed; }

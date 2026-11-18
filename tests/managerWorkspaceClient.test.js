@@ -154,16 +154,18 @@ test('FrontDesk and report lists retain all records and use their shared fixed p
   for (const label of ['Danh sách hội viên','Phiếu hỗ trợ tại quầy','Lớp học đăng ký','Lớp học điểm danh']) {
     const pager = [...document.querySelectorAll('.manager-pagination')].find(node => node.getAttribute('aria-label') === 'Phân trang ' + label)
     assert.ok(pager, label)
-    assert.match(pager.textContent, /1–10 \/ 23/, label)
+    assert.equal(pager.querySelector('select').value, '1', label)
+    assert.equal(pager.querySelector('select').options.length, 3, label)
+    assert.doesNotMatch(pager.textContent, /dòng\/trang/, label)
     await act(async () => pager.querySelector(`[aria-label="Trang sau: ${label}"]`).click())
-    assert.match(pager.textContent, /11–20 \/ 23/, label)
+    assert.equal(pager.querySelector('select').value, '2', label)
     assert.equal(pager.parentElement.querySelector('.manager-list-scroll').contains(pager), false)
   }
   await tab('Báo cáo')
   await act(async () => [...document.querySelectorAll('.report-tab-btn')].find(button => button.textContent.includes('Giao dịch')).click())
   const pager = [...document.querySelectorAll('.manager-pagination')].find(node => node.getAttribute('aria-label') === 'Phân trang Báo cáo giao dịch')
   assert.ok(pager)
-  assert.match(pager.textContent, /1–10 \/ 23/)
+  assert.equal(pager.querySelector('select').options.length, 3)
   assert.deepEqual(errors, [])
 })
 
