@@ -170,8 +170,8 @@ test('bank transfer collection hides receipt consent and pays the existing order
   await click('[aria-label="Thu tiền đơn đăng ký 28"]')
   assert.ok(document.querySelector('.reception-payment-confirm'))
   const methods = '.reception-checkout-fields label:last-child select'
-  assert.deepEqual([...document.querySelector(methods).options].map(option => option.value), ['Cash', 'BankTransfer'])
-  await choose(methods, 'BankTransfer')
+  assert.deepEqual([...document.querySelector(methods).options].map(option => [option.value, option.textContent]), [['PayOS', 'Thanh toán chuyển khoản'], ['Cash', 'Tiền mặt']])
+  await choose(methods, 'PayOS')
   assert.equal(document.querySelector('.reception-payment-confirm'), null)
   const payButton = document.querySelector('.reception-checkout-dialog [type=submit]')
   assert.equal(payButton.textContent, 'Trả tiền')
@@ -187,7 +187,7 @@ test('bank transfer collection hides receipt consent and pays the existing order
 test('switching from transfer back to cash restores receipt consent and prevents accidental cash collection', () => screen(async () => {
   await click('[aria-label="Thu tiền đơn đăng ký 28"]')
   const methods = '.reception-checkout-fields label:last-child select'
-  await choose(methods, 'BankTransfer')
+  await choose(methods, 'PayOS')
   await choose(methods, 'Cash')
   assert.ok(document.querySelector('.reception-payment-confirm'))
   assert.equal(document.querySelector('.reception-checkout-dialog [type=submit]').textContent, 'Xác nhận thu tiền')
@@ -199,7 +199,7 @@ test('switching from transfer back to cash restores receipt consent and prevents
 
 test('a failed transfer payment keeps the existing order and retries only after refreshing', () => screen(async () => {
   await click('[aria-label="Thu tiền đơn đăng ký 28"]')
-  await choose('.reception-checkout-fields label:last-child select', 'BankTransfer')
+  await choose('.reception-checkout-fields label:last-child select', 'PayOS')
   state.failPayOS = true
   await submitCounterOrder()
   assert.ok(document.querySelector('.reception-checkout-dialog [role=alert]'))

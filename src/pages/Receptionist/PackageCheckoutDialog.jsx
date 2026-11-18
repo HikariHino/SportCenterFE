@@ -167,11 +167,11 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
           {order && <small>Đã tạo đơn #SUB-{order.id}. Tiếp tục thanh toán cho đơn này.</small>}
         </div>}
         {purchase?.reason && !order && <p className="reception-form-error" role="alert">{purchase.reason}</p>}
-        <label className="reception-checkout-method">Phương thức<select value={method} disabled={saving || refreshing} onChange={event => { setMethod(event.target.value); setReceived(false) }}><option value="PayOS">PayOS · QR / liên kết thanh toán</option><option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản tại quầy</option></select></label>
-        {method === 'PayOS' ? <p className="reception-checkout-note">Nhấn Thanh toán PayOS để chuyển đến trang thanh toán. Khi quay lại, hệ thống kiểm tra kết quả và cập nhật giao dịch.</p> : <label className="reception-payment-confirm"><input type="checkbox" required checked={received} disabled={saving || refreshing} onChange={event => setReceived(event.target.checked)} /><span><strong>Tôi đã thực nhận đủ {money(amount)}</strong><small>Chỉ xác nhận sau khi đã nhận đủ tiền của hội viên.</small></span></label>}
+        <label className="reception-checkout-method">Phương thức<select value={method} disabled={saving || refreshing} onChange={event => { setMethod(event.target.value); setReceived(false) }}><option value="PayOS">Thanh toán chuyển khoản</option><option value="Cash">Tiền mặt</option></select></label>
+        {method === 'PayOS' ? <p className="reception-checkout-note">Nhấn Trả tiền để chuyển đến trang thanh toán. Khi quay lại, hệ thống kiểm tra kết quả và cập nhật giao dịch.</p> : <label className="reception-payment-confirm"><input type="checkbox" required checked={received} disabled={saving || refreshing} onChange={event => setReceived(event.target.checked)} /><span><strong>Tôi đã thực nhận đủ {money(amount)}</strong><small>Chỉ xác nhận sau khi đã nhận đủ tiền của hội viên.</small></span></label>}
         {error && <p className="reception-form-error" role="alert">{error}</p>}
         </div>
-        <footer><button type="button" disabled={busy} onClick={reload}><RefreshCw size={15} />Tải lại trạng thái</button><button type="button" disabled={saving || refreshing} onClick={onClose}>Đóng</button><button type="submit" disabled={!ready}>{saving ? 'Đang xử lý...' : method === 'PayOS' ? 'Thanh toán PayOS' : 'Xác nhận thu tiền'}</button></footer>
+        <footer><button type="button" disabled={busy} onClick={reload}><RefreshCw size={15} />Tải lại trạng thái</button><button type="button" disabled={saving || refreshing} onClick={onClose}>Đóng</button><button type="submit" disabled={!ready}>{saving ? 'Đang xử lý...' : method === 'PayOS' ? 'Trả tiền' : 'Xác nhận thu tiền'}</button></footer>
       </form>
     </section>
   </div>

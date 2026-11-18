@@ -21,7 +21,7 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
   const [subscriptions, setSubscriptions] = useState([])
   const [subscriptionId, setSubscriptionId] = useState(initialSubscriptionId ? String(initialSubscriptionId) : '')
   const [detail, setDetail] = useState(null)
-  const [paymentMethod, setPaymentMethod] = useState(counterOnly ? (['Cash', 'BankTransfer'].includes(initialPaymentMethod) ? initialPaymentMethod : 'Cash') : 'PayOS')
+  const [paymentMethod, setPaymentMethod] = useState(counterOnly ? (initialPaymentMethod === 'PayOS' ? 'PayOS' : 'Cash') : 'PayOS')
   const [received, setReceived] = useState(false)
   const [loading, setLoading] = useState(true)
   const [ordersLoading, setOrdersLoading] = useState(false)
@@ -73,7 +73,7 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
   }, [subscriptionId, memberId, requestKey])
 
   const selectedOrder = String(detail?.id) === subscriptionId && String(detail?.memberId) === memberId ? detail : null
-  const payWithPayOS = paymentMethod === 'PayOS' || paymentMethod === 'BankTransfer'
+  const payWithPayOS = paymentMethod === 'PayOS'
   const busy = saving || loading || ordersLoading || detailLoading
   const search = query.trim().toLocaleLowerCase('vi')
   const visibleMembers = members.filter(member => String(member.memberId) === memberId || !search
@@ -113,7 +113,7 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
           {memberId && !ordersLoading && !subscriptions.length && <p role="status">Hội viên chưa có đơn đang chờ. Hãy tạo đăng ký gói ở tab Hội viên trước.</p>}
           {detailLoading && <p role="status">Đang kiểm tra đơn và biên nhận...</p>}
           {selectedOrder && <div className="reception-checkout-summary"><WalletCards size={24} /><div><strong>{selectedOrder.packageName}</strong><small>Đơn #{selectedOrder.id} · {selectedOrder.durationInDays} ngày · {formatDateTime(selectedOrder.createdAt)}</small></div><b>{currency(selectedOrder.agreedPrice)}</b></div>}
-          <label>Phương thức<select value={paymentMethod} disabled={saving} onChange={event => { setPaymentMethod(event.target.value); setReceived(false) }}>{!counterOnly && <option value="PayOS">PayOS · QR / liên kết thanh toán</option>}<option value="Cash">Tiền mặt</option><option value="BankTransfer">Chuyển khoản tại quầy</option></select></label>
+          <label>Phương thức<select value={paymentMethod} disabled={saving} onChange={event => { setPaymentMethod(event.target.value); setReceived(false) }}><option value="PayOS">Thanh toán chuyển khoản</option><option value="Cash">Tiền mặt</option></select></label>
         </div>
         {payWithPayOS ? <p className="reception-checkout-note">Nhấn Trả tiền để chuyển đến PayOS. Khi quay lại, hệ thống kiểm tra kết quả thanh toán và cập nhật gói. Nếu đã có yêu cầu PayOS đang chờ, liên kết đó sẽ được dùng lại.</p>
           : <label className="reception-payment-confirm"><input type="checkbox" checked={received} required disabled={saving} onChange={event => setReceived(event.target.checked)} /><span><strong>Tôi đã thực nhận đủ tiền theo giá của đơn</strong><small>Chỉ xác nhận khoản tiền mặt đã thu đủ từ hội viên.</small></span></label>}

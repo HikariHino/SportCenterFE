@@ -16,7 +16,7 @@ export default function PaymentSuccessDialog({ paymentId, payment, onClose }) {
     <button className="reception-payment-success-close" type="button" aria-label="Đóng thông báo thanh toán thành công" onClick={onClose}><X size={19} /></button>
     <CheckCircle2 className="reception-payment-success-icon" size={54} aria-hidden="true" />
     <h2 id={titleId}>Thanh toán thành công</h2>
-    <p>Hệ thống đã xác nhận thanh toán PayOS và cập nhật trạng thái giao dịch.</p>
+    <p>Hệ thống đã xác nhận thanh toán chuyển khoản và cập nhật trạng thái giao dịch.</p>
     <strong>Giao dịch #PAY-{paymentId}</strong>
     {payment && <p className="reception-payment-success-amount">{Number(payment.amount).toLocaleString('vi-VN')} đ</p>}
     <button className="reception-payment-success-done" type="button" onClick={onClose} autoFocus>Đóng</button>

@@ -5,7 +5,7 @@ import { paymentStatus } from '../utils/memberPayments'
 import api from './api'
 
 const validId = value => /^[1-9]\d*$/.test(String(value)) && Number(value) <= 2147483647
-const methods = ['PayOS', 'Cash', 'BankTransfer']
+const methods = ['PayOS', 'Cash']
 const checkouts = new Map()
 const uncertainResult = 'Chưa xác nhận được kết quả thanh toán. Hãy tải lại đơn và biên nhận trước khi thử lại; không thu tiền lần nữa.'
 

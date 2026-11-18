@@ -71,7 +71,7 @@ export function PaymentsView({ query, showNotice, paymentReturn }) {
       <p className="reception-payment-sort-hint">Ưu tiên chờ thanh toán, sau đó theo ngày mới nhất.</p>
       <PaymentTable rows={rows} resetKey={JSON.stringify([query, status, method])} loading={loading || pendingLoading} collectingDisabled={Boolean(error || pendingError)} onCollect={setCounterOrder} onView={setSelectedPaymentId} />
     </section>
-    {counterOrder && <CheckoutDialog counterOnly memberId={counterOrder.memberId} subscriptionId={counterOrder.id} initialPaymentMethod={method === 'banktransfer' ? 'BankTransfer' : 'Cash'} onClose={() => setCounterOrder(null)} onCreated={onCreated} />}
+    {counterOrder && <CheckoutDialog counterOnly memberId={counterOrder.memberId} subscriptionId={counterOrder.id} onClose={() => setCounterOrder(null)} onCreated={onCreated} />}
     {selectedPaymentId !== null && <PaymentDetailDialog paymentId={selectedPaymentId} onClose={() => setSelectedPaymentId(null)} onUpdated={() => setRequestKey(key => key + 1)} showNotice={showNotice} />}
     {showCreateDialog && <CheckoutDialog onClose={() => setShowCreateDialog(false)} onCreated={onCreated} onOrderCreated={refresh} />}
     {viewActive && paymentReturn?.id && returnStatus === 'success' && String(dismissedSuccessId) !== String(paymentReturn.id)
