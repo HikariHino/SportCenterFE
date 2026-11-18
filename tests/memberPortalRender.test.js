@@ -59,6 +59,8 @@ test('the default Member route opens center entry and exit as the first sidebar 
   assert.match(html, /Nguyễn Văn An/)
   assert.match(html, /member-main-content/)
   assert.equal(navSections[0].items[0].id, 'checkin')
+  assert.deepEqual(navSections[0].items.map(item => item.id), ['checkin', 'classes', 'subscriptions', 'payments', 'profile'])
+  assert.equal(navSections.flatMap(group => group.items).filter(item => item.id === 'classes').length, 1)
   assert.match(html, /class="member-sidebar-item active"[^>]+>.*?Ra\/Vào trung tâm/)
   assert.match(html, /<h2>Ra\/Vào trung tâm<\/h2>/)
 })
