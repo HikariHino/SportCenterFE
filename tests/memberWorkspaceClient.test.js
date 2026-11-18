@@ -60,7 +60,7 @@ before(async () => {
       if (config.url === '/payments') data = paymentRows()
       if (config.url === '/notifications') data = rows(index => ({ id: index + 1, title: `Thông báo ${index + 1}`, content: 'Nội dung thông báo', isRead: false, sentAt: '2026-11-16T08:00:00Z' }))
       if (config.url === '/SupportTickets/my-tickets') data = rows(index => ({ id: index + 1, title: `Phiếu ${index + 1}`, description: 'Cần tư vấn', status: 'Open', createdAt: '2026-11-16T08:00:00Z' }))
-      if (config.url === '/GymCheckIns/my-history') data = rows(index => ({ id: index + 1, checkInTime: `2026-10-${String(index + 1).padStart(2, '0')}T08:00:00Z`, checkOutTime: `2026-10-${String(index + 1).padStart(2, '0')}T09:00:00Z` }))
+      if (config.url === '/GymCheckIns/my-history') data = rows(index => ({ id: index + 1, checkInTime: `2026-10-${String(index + 1).padStart(2, '0')}T08:00:00Z`, checkOutTime: index % 3 === 1 ? `2026-10-${String(index + 1).padStart(2, '0')}T09:00:00Z` : null, status: ['InGym', 'CheckedOut', 'ForgotCheckOut'][index % 3] }))
       if (config.url === '/TrainingPlans/members/9') data = rows(index => ({ id: index + 1, planName: `Giáo án ${index + 1}`, status: 'Active', exercises: rows(exercise => ({ id: exercise + 1, exerciseName: `Bài tập ${exercise + 1}`, sets: 3, reps: 12 })) }))
       if (config.url === '/classes') data = rows(index => ({ id: index + 1, className: `Lớp ${index + 1}`, sportName: 'Tennis' }))
       if (config.url === '/class-sessions' || /^\/classes\/\d+\/sessions$/.test(config.url)) data = sessionRows()
@@ -218,6 +218,19 @@ test('all Member business lists and nested payment/exercise tables expose all 23
   await checkThreePages('Danh mục gói tập')
   await clickTab('Thanh toán trực tuyến'); await checkThreePages('Lịch sử thanh toán')
   await clickTab('Ra/Vào trung tâm'); await checkThreePages('Lịch sử tập luyện')
+  const statusFilter = document.querySelector('.gym-history-status select')
+  const historyRequests = count('/GymCheckIns/my-history')
+  for (const [status, expected] of [['InGym', 8], ['CheckedOut', 8], ['ForgotCheckOut', 7], ['All', 10]]) {
+    await act(async () => {
+      statusFilter.value = status
+      statusFilter.dispatchEvent(new window.Event('change', { bubbles: true }))
+    })
+    const visits = listRows('Lịch sử tập luyện')
+    assert.equal(visits.length, expected)
+    assert.equal(visits[0].dataset.stt, '1', 'changing status returns to page one')
+    if (status !== 'All') assert.ok(visits.every(visit => visit.querySelector('.gym-checkin-status').dataset.status === status))
+  }
+  assert.equal(count('/GymCheckIns/my-history'), historyRequests, 'status filtering reuses the loaded date range')
   await clickTab('Hỗ trợ khách hàng'); await checkThreePages('Phiếu hỗ trợ')
   await clickTab('Thông báo hệ thống'); await checkThreePages('Thông báo hệ thống')
   await clickTab('Lộ trình tập luyện'); await checkThreePages('Bài tập trong giáo án'); await checkThreePages('Giáo án tập luyện')
