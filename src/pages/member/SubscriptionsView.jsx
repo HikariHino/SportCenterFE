@@ -19,6 +19,7 @@ import { canCheckoutPayOSPayment, paymentCheckoutMessage } from '../../utils/mem
 import { cancelSubscriptionOrder } from '../../services/subscriptionCancellationService'
 import { currentSubscriptionForPackage, membershipPackageType, membershipPackageTypeLabel, mergeConfirmedSubscriptionCancellations, subscriptionDisplayStatusLabel, subscriptionPackageReason, subscriptionPackageType, subscriptionPaymentState, subscriptionRegistrationReason, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
+import SubscriptionInvoiceButton from './SubscriptionInvoiceButton'
 import CatalogImage from '../../components/CatalogImage'
 import '../../style/member/SubscriptionsView.css'
 import '../../style/member/SubscriptionsLayout.css'
@@ -367,6 +368,7 @@ export function SubscriptionsView({ showNotice }) {
           <div className="member-sub-list-heading"><div><span className="member-sub-code">#SUB-{item.id}</span><h4>{item.packageName}</h4></div><span className="member-sub-status" data-status={subscriptionStatus(item, now)} data-payment-status={subscriptionPaymentState(item)}><span />{subscriptionDisplayStatusLabel(item, now)}</span></div>
           <dl className="member-sub-list-facts"><div><dt>Số tiền của đơn</dt><dd>{formatCurrency(item.agreedPrice ?? item.price)}</dd></div><div><dt>Thời hạn</dt><dd>{item.durationInDays ?? '—'} ngày · {packageTypeLabel(item)}</dd></div><div><dt>Hiệu lực</dt><dd>{formatDate(item.startDate)} – {formatDate(item.endDate)}</dd></div></dl>
           <div className="member-sub-actions">
+            <SubscriptionInvoiceButton subscription={item} disabled={payingSubId !== null || cancelLoading} />
             <button type="button" className="member-button" onClick={() => handleOpenSubDetail(item)}><Eye size={15} />Chi tiết</button>
             {subscriptionStatus(item, now) === 'pending' && <><button type="button" className="member-btn-checkout" disabled={payingSubId !== null || cancelLoading || ['completed', 'needsreview'].includes(subscriptionPaymentState(item))} onClick={() => handlePayOSCheckout(item.id)}>{payingSubId === item.id ? <LoaderCircle size={15} className="member-spin" /> : <CreditCard size={15} />}{['cancelled', 'expired', 'failed'].includes(subscriptionPaymentState(item)) ? 'Thanh toán lại' : 'Thanh toán'}</button><button type="button" className="member-button member-button--danger" disabled={cancelLoading || payingSubId !== null || ['completed', 'needsreview'].includes(subscriptionPaymentState(item))} onClick={() => handlePromptCancelSub(item)}><Trash2 size={15} />{subscriptionPaymentState(item) === 'cancelled' ? 'Hoàn tất hủy đơn' : 'Hủy đơn'}</button></>}
           </div>
@@ -807,6 +809,7 @@ export function SubscriptionsView({ showNotice }) {
             </div>
 
             <div className="member-modal-footer">
+              <SubscriptionInvoiceButton subscription={viewingSub} disabled={subDetailLoading || cancelLoading || payingSubId !== null} />
               {subscriptionStatus(viewingSub, now) === 'pending' && (
                 <>
                   <button

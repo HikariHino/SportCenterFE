@@ -101,8 +101,8 @@ function TicketImage({ imageUrl, ticketId }) {
   </div>
 }
 
-export default function SupportTicketImage({ imageUrl, ticketId }) {
-  if (!imageUrl) return null
+export default function SupportTicketImage({ imageUrl, ticketId, active = true }) {
+  if (!active || !imageUrl) return null
   if (!isCatalogImageUrl(imageUrl)) return <p className="support-image-error">Không thể mở ảnh đính kèm.</p>
   return <TicketImage key={imageUrl} imageUrl={imageUrl} ticketId={ticketId} />
 }

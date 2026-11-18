@@ -59,6 +59,7 @@ export const memberNavSections = [
         label: 'Thanh toán trực tuyến & Hóa đơn',
         subtitle: 'PaymentsController',
         icon: ReceiptText,
+        hideFromSidebar: true,
       },
       {
         id: 'profile',
@@ -336,7 +337,7 @@ function MemberWorkspace() {
           {memberNavSections.map(group => (
             <div key={group.title} className="member-sidebar-group">
               <p className="member-sidebar-group-title">{group.title}</p>
-              {group.items.map(({ id, label, icon: Icon }) => (
+              {group.items.filter(item => !item.hideFromSidebar).map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"
