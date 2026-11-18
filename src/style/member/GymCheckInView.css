@@ -8,7 +8,7 @@
 .gym-checkin-view button:disabled { opacity: .5; cursor: not-allowed; }
 .gym-checkin-view :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
 .gym-panel { min-width: 0; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-surface); }
-.gym-checkin-overview { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
+.gym-checkin-overview { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(0, 1.15fr); gap: 16px; align-items: stretch; }
 .gym-member-card { overflow: hidden; container: gym-member / inline-size; }
 .gym-card-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
 .gym-checkin-view .gym-card-heading h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: calc(19px + var(--font-size-adjustment, 0px)); }
@@ -44,7 +44,7 @@
 .gym-checkin-state > strong { color: var(--theme-text); font-size: calc(20px + var(--font-size-adjustment, 0px)); }
 .gym-checkin-state p { margin: 0; overflow-wrap: anywhere; }
 .gym-checkin-error { color: var(--theme-red, #b42318); }
-.gym-checkin-history { display: grid; align-content: start; gap: 12px; min-width: 0; container: gym-history / inline-size; }
+.gym-checkin-history { display: grid; grid-template-rows: auto auto minmax(150px, 1fr); gap: 12px; min-width: 0; container: gym-history / inline-size; }
 .gym-history-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .gym-history-heading > div:first-child { flex: 1; min-width: 220px; }
 .gym-checkin-view .gym-history-heading h3 { font-size: calc(22px + var(--font-size-adjustment, 0px)); margin-bottom: 3px; }
@@ -53,7 +53,8 @@
 .gym-checkin-history .gym-history-query > label { min-width: 0; }
 .gym-checkin-history .gym-history-query > button[type='submit'] { align-self: end; }
 .gym-checkin-history .gym-history-range-error { grid-column: 1 / -1; }
-.gym-history-content { overflow: hidden; }
+.gym-history-content { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.gym-history-content > .gym-checkin-state { flex: 1; }
 .gym-history-labels, .gym-record-main { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(240px, 1.7fr) minmax(100px, 1fr) minmax(120px, 1fr); align-items: center; gap: 14px; }
 .gym-history-labels { padding: 10px 16px; background: var(--theme-raised); color: var(--theme-muted); font-size: calc(16px + var(--font-size-adjustment, 0px)); }
 .gym-history-list { padding: 0; margin: 0; list-style: none; }
@@ -76,6 +77,7 @@
 }
 @container gym-checkin (max-width: 760px) {
   .gym-checkin-overview { grid-template-columns: minmax(0, 1fr); }
+  .gym-checkin-history { grid-template-rows: auto auto auto; }
   .gym-page-heading { align-items: flex-start; }
   .gym-checkin-view .gym-page-heading h2 { font-size: calc(29px + var(--font-size-adjustment, 0px)); }
 }

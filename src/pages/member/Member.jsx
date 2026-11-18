@@ -43,10 +43,10 @@ export const memberNavSections = [
         icon: QrCode,
       },
       {
-        id: 'profile',
-        label: 'Tài khoản & Hồ sơ cá nhân',
-        subtitle: 'AuthController, ProfileController',
-        icon: UserCheck,
+        id: 'classes',
+        label: 'Lớp học & Đặt lịch buổi học',
+        subtitle: 'ClassSessionsController',
+        icon: CalendarDays,
       },
       {
         id: 'subscriptions',
@@ -60,17 +60,17 @@ export const memberNavSections = [
         subtitle: 'PaymentsController',
         icon: ReceiptText,
       },
+      {
+        id: 'profile',
+        label: 'Tài khoản & Hồ sơ cá nhân',
+        subtitle: 'AuthController, ProfileController',
+        icon: UserCheck,
+      },
     ],
   },
   {
     title: 'TẬP LUYỆN & HỖ TRỢ',
     items: [
-      {
-        id: 'classes',
-        label: 'Lớp học & Đặt lịch buổi học',
-        subtitle: 'ClassSessionsController',
-        icon: CalendarDays,
-      },
       {
         id: 'training-plans',
         label: 'Lộ trình tập luyện cá nhân',
