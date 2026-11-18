@@ -15,14 +15,15 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
   const [members, setMembers] = useState([])
   const [query, setQuery] = useState('')
   const [memberId, setMemberId] = useState('')
-  const [packages, setPackages] = useState([])
+  const [catalog, setCatalog] = useState(null)
+  const [checkedPackages, setCheckedPackages] = useState(null)
   const [packageId, setPackageId] = useState('')
   const [purchase, setPurchase] = useState(null)
   const [order, setOrder] = useState(null)
   const [method, setMethod] = useState('PayOS')
   const [received, setReceived] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [packagesLoading, setPackagesLoading] = useState(true)
+  const [packagesLoading, setPackagesLoading] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -31,8 +32,6 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
   const lock = useRef(false)
   const attempted = useRef(false)
   const mounted = useRef(true)
-  const selectedMemberRef = useRef('')
-  selectedMemberRef.current = memberId
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
   useEffect(() => {
@@ -46,24 +45,22 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
   useEffect(() => {
     let active = true
     getMembershipPackages().then(items => {
-      if (active) setPackages(current => current.length && selectedMemberRef.current
-        ? current
-        : items.map(pkg => ({ ...pkg, disabledReason: 'Chọn hội viên để kiểm tra điều kiện gói.' })))
-    }).catch(error => { if (active) setError(getReceptionistPaymentError(error, 'Không thể tải danh mục gói tập.')) })
-      .finally(() => { if (active) setPackagesLoading(false) })
+      if (active) setCatalog(items)
+    }).catch(error => { if (active) { setCatalog([]); setError(getReceptionistPaymentError(error, 'Không thể tải danh mục gói tập.')) } })
     return () => { active = false }
   }, [])
 
   useEffect(() => {
     let active = true
     setPackageId(''); setPurchase(null); setOrder(null); setReceived(false); setRequiresRefresh(false)
+    setCheckedPackages(null)
     attempted.current = false
     if (!memberId) {
-      setPackages(current => current.map(pkg => ({ ...pkg, disabledReason: 'Chọn hội viên để kiểm tra điều kiện gói.' })))
+      setPackagesLoading(false)
       return () => { active = false }
     }
     setPackagesLoading(true)
-    loadReceptionistPackageOptions(memberId).then(items => { if (active) setPackages(items) })
+    loadReceptionistPackageOptions(memberId).then(items => { if (active) { setCatalog(items); setCheckedPackages({ memberId, items }) } })
       .catch(error => { if (active) setError(getReceptionistPaymentError(error)) })
       .finally(() => { if (active) setPackagesLoading(false) })
     return () => { active = false }
@@ -72,21 +69,23 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
   useEffect(() => {
     let active = true
     setPurchase(null); setReceived(false)
-    if (!packageId) { setPreviewLoading(false); return () => { active = false } }
+    if (!packageId || checkedPackages?.memberId !== memberId) { setPreviewLoading(false); return () => { active = false } }
     setPreviewLoading(true)
     prepareReceptionistPackageCheckout(packageId, memberId).then(result => { if (active) setPurchase(result) })
       .catch(error => { if (active) setError(getReceptionistPaymentError(error)) })
       .finally(() => { if (active) setPreviewLoading(false) })
     return () => { active = false }
-  }, [packageId, memberId])
+  }, [packageId, memberId, checkedPackages?.memberId])
 
   const busy = loading || packagesLoading || previewLoading || saving || refreshing
   const frozen = saving || refreshing || Boolean(order) || requiresRefresh
+  const packagesChecked = Boolean(memberId) && checkedPackages?.memberId === memberId
+  const packages = packagesChecked ? checkedPackages.items : (catalog || [])
   const search = query.trim().toLocaleLowerCase('vi')
   const visibleMembers = members.filter(member => String(member.memberId) === memberId || !search
     || [member.fullName, member.email, member.phone, member.memberId].some(value => String(value || '').toLocaleLowerCase('vi').includes(search)))
   const amount = order?.agreedPrice ?? purchase?.preview?.amountToPay
-  const ready = !busy && !requiresRefresh && (order || (purchase && !purchase.reason)) && (method === 'PayOS' || received)
+  const ready = !busy && !requiresRefresh && (order || (packagesChecked && purchase && !purchase.reason)) && (method === 'PayOS' || received)
 
   async function reload() {
     if (lock.current) return
@@ -104,10 +103,12 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
       } else if (memberId) {
         const options = await loadReceptionistPackageOptions(memberId)
         if (!mounted.current) return
-        setPackages(options)
+        setCatalog(options)
+        setCheckedPackages({ memberId, items: options })
         if (packageId) setPurchase(await prepareReceptionistPackageCheckout(packageId, memberId))
       } else {
-        setMembers(await getMembers())
+        const [items, packageList] = await Promise.all([getMembers(), getMembershipPackages()])
+        if (mounted.current) { setMembers(items); setCatalog(packageList) }
       }
       if (mounted.current) { setRequiresRefresh(false); setReceived(false) }
     } catch (error) { if (mounted.current) { setError(getReceptionistPaymentError(error)); setRequiresRefresh(true) } }
@@ -152,8 +153,9 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
           <label>Hội viên<select value={memberId} required disabled={frozen || loading} onChange={event => { setMemberId(event.target.value); setError('') }}><option value="">{loading ? 'Đang tải hội viên...' : 'Chọn hội viên'}</option>{visibleMembers.map(member => <option key={member.memberId} value={member.memberId}>#{member.memberId} · {member.fullName} · {member.phone || member.email}</option>)}</select></label>
         </div>
         <fieldset className="reception-checkout-packages"><legend>Chọn gói tập</legend>
-          {!packages.length ? <p>{memberId ? (packagesLoading ? 'Đang tải danh mục gói tập...' : 'Chưa có gói tập để lựa chọn. Hãy tải lại trạng thái.') : 'Chọn hội viên để kiểm tra điều kiện gói.'}</p> : <div className="reception-checkout-package-grid">{packages.map(pkg => <button type="button" key={pkg.id} aria-label={`Chọn gói ${pkg.packageName}`} aria-pressed={packageId === String(pkg.id)} disabled={frozen || Boolean(pkg.disabledReason)} title={pkg.disabledReason || undefined} onClick={() => { setPackageId(String(pkg.id)); setError('') }}>
-            <CatalogImage src={pkg.imageUrl} /><span><strong>{pkg.packageName}</strong><small>{membershipPackageTypeLabel(pkg)} · {pkg.durationInDays} ngày</small><b>{money(pkg.price)}</b>{pkg.disabledReason && <em>{pkg.disabledReason.replaceAll('Bạn', 'Hội viên')}</em>}</span>{packageId === String(pkg.id) && <Check size={18} />}
+          {packages.length > 0 && !packagesChecked && <p role="status">{!memberId ? 'Chọn hội viên để kiểm tra điều kiện gói.' : packagesLoading ? 'Đang kiểm tra gói của hội viên...' : 'Chưa kiểm tra được điều kiện gói. Hãy tải lại trạng thái.'}</p>}
+          {!packages.length ? <p>{catalog === null || packagesLoading ? 'Đang tải danh mục gói tập...' : 'Chưa có gói tập để lựa chọn. Hãy tải lại trạng thái.'}</p> : <div className="reception-checkout-package-grid">{packages.map(pkg => <button type="button" key={pkg.id} aria-label={`Chọn gói ${pkg.packageName}`} aria-pressed={packagesChecked && packageId === String(pkg.id)} disabled={frozen || !packagesChecked || Boolean(pkg.disabledReason)} title={packagesChecked ? pkg.disabledReason || undefined : undefined} onClick={() => { setPackageId(String(pkg.id)); setError('') }}>
+            <CatalogImage src={pkg.imageUrl} /><span><strong>{pkg.packageName}</strong><small>{membershipPackageTypeLabel(pkg)} · {pkg.durationInDays} ngày</small><b>{money(pkg.price)}</b>{packagesChecked && pkg.disabledReason && <em>{pkg.disabledReason.replaceAll('Bạn', 'Hội viên')}</em>}</span>{packagesChecked && packageId === String(pkg.id) && <Check size={18} />}
           </button>)}</div>}
         </fieldset>
         {previewLoading && <p role="status">Đang lấy số tiền và điều kiện nâng cấp từ trung tâm...</p>}

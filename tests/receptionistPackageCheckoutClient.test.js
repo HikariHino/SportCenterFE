@@ -120,7 +120,6 @@ const submit = () => act(async () => { const form = document.querySelector('.rec
 
 test('package tiles disable owned, lower, equal and inactive packages while allowing upgrades and independent PT', () => screen(async () => {
   await click('.reception-table-tools .reception-primary-button')
-  await act(async () => new Promise(resolve => setTimeout(resolve, 100)))
   assert.equal(document.querySelectorAll('.reception-checkout-package-grid > button').length, 6)
   assert.ok([...document.querySelectorAll('.reception-checkout-package-grid > button')].every(button => button.disabled))
   await choose('.reception-checkout-fields select', '9')
@@ -128,6 +127,12 @@ test('package tiles disable owned, lower, equal and inactive packages while allo
   for (const name of ['Gói nâng cấp', 'PT riêng']) assert.equal(document.querySelector(`[aria-label="Chọn gói ${name}"]`).disabled, false, name)
   assert.doesNotMatch(document.querySelector('.reception-package-checkout-dialog').textContent, /Đơn đăng ký đang chờ/)
   assert.equal(createCalls().length, 0)
+  await choose('.reception-checkout-fields select', '')
+  assert.equal(document.querySelectorAll('.reception-checkout-package-grid > button:disabled').length, 6)
+  state.wrongMember = true
+  await choose('.reception-checkout-fields select', '9')
+  assert.equal(document.querySelectorAll('.reception-checkout-package-grid > button:disabled').length, 6)
+  assert.match(document.querySelector('.reception-package-checkout-dialog [role=alert]').textContent, /không khớp hội viên/)
 }))
 
 test('PayOS creates one reviewed upgrade order and one payment, then redirects to the returned checkout URL', () => screen(async () => {
