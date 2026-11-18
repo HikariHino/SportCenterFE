@@ -9,7 +9,12 @@ const storageDescriptors = new Map()
 before(async () => {
   for (const key of ['localStorage', 'sessionStorage']) {
     storageDescriptors.set(key, Object.getOwnPropertyDescriptor(globalThis, key))
-    Object.defineProperty(globalThis, key, { configurable: true, value: { getItem: name => name === 'token' ? token : null } })
+    const values = new Map()
+    Object.defineProperty(globalThis, key, { configurable: true, value: {
+      getItem: name => name === 'token' ? token : values.get(name) ?? null,
+      setItem: (name, value) => values.set(name, String(value)),
+      removeItem: name => values.delete(name),
+    } })
   }
   server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), configFile: false,
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })

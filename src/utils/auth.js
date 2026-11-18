@@ -9,6 +9,7 @@ export function getUserInitials(user) {
 }
 
 const sessionKeys = ['user', 'token', 'refreshTokenKey', 'loginSessionId']
+export const SESSION_EXPIRED_EVENT = 'sportcenter:session-expired'
 
 const newLoginSessionId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
@@ -25,11 +26,31 @@ export function getLoginSessionId() {
 }
 
 function hydrateTabSession() {
-  if (sessionStorage.getItem('token') || !localStorage.getItem('token')) return
+  if (sessionStorage.getItem('token')) {
+    const loginId = sessionStorage.getItem('loginSessionId')
+    // A different login/account must never replace this tab's credentials.
+    if (loginId && loginId === localStorage.getItem('loginSessionId') && localStorage.getItem('token')) {
+      for (const key of ['token', 'refreshTokenKey']) {
+        const value = localStorage.getItem(key)
+        if (value !== null) sessionStorage.setItem(key, value)
+      }
+    }
+    return
+  }
+  if (!localStorage.getItem('token')) return
   for (const key of sessionKeys) {
     const value = localStorage.getItem(key)
     if (value !== null) sessionStorage.setItem(key, value)
   }
+}
+
+// The expiry only schedules renewal. The backend still validates the JWT.
+export function getAccessTokenExpiry(token) {
+  try {
+    const payload = String(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const { exp } = JSON.parse(globalThis.atob(payload))
+    return typeof exp === 'number' && Number.isFinite(exp) ? exp * 1000 : null
+  } catch { return null }
 }
 
 export function getToken() {
@@ -39,7 +60,7 @@ export function getToken() {
 
 export function getRefreshTokenKey() {
   hydrateTabSession()
-  return sessionStorage.getItem('refreshTokenKey') || localStorage.getItem('refreshTokenKey')
+  return sessionStorage.getItem('refreshTokenKey')
 }
 
 export function clearSession() {
