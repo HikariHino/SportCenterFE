@@ -120,6 +120,9 @@ const submit = () => act(async () => { const form = document.querySelector('.rec
 
 test('package tiles disable owned, lower, equal and inactive packages while allowing upgrades and independent PT', () => screen(async () => {
   await click('.reception-table-tools .reception-primary-button')
+  await act(async () => new Promise(resolve => setTimeout(resolve, 100)))
+  assert.equal(document.querySelectorAll('.reception-checkout-package-grid > button').length, 6)
+  assert.ok([...document.querySelectorAll('.reception-checkout-package-grid > button')].every(button => button.disabled))
   await choose('.reception-checkout-fields select', '9')
   for (const name of ['Gói đang dùng', 'Gói thấp hơn', 'Gói ngang giá', 'Gói ngừng bán']) assert.equal(document.querySelector(`[aria-label="Chọn gói ${name}"]`).disabled, true, name)
   for (const name of ['Gói nâng cấp', 'PT riêng']) assert.equal(document.querySelector(`[aria-label="Chọn gói ${name}"]`).disabled, false, name)
