@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
+import { getRefreshTokenKey, getAccessTokenExpiry } from '../src/utils/auth.js'
 import { canUsePayments, clearSession, getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getLoginRedirectPath, getLoginSessionId, getSavedUser, getToken, saveSession, updateSessionTokens } from '../src/utils/auth.js'
 
 function memoryStorage() {
@@ -114,6 +115,24 @@ test('each browser tab keeps its own account when another remembered login repla
   assert.equal(getToken(), 'coach-token')
   assert.deepEqual(getSavedUser(), coach)
   assert.equal(localStorage.getItem('token'), 'receptionist-token')
+})
+
+test('a private tab without a refresh token never borrows another remembered account refresh token', () => {
+  saveSession(authResponse, authResponse.token, true)
+  sessionStorage.setItem('token', 'private-token')
+  sessionStorage.setItem('loginSessionId', 'different-login')
+  sessionStorage.removeItem('refreshTokenKey')
+  assert.equal(getToken(), 'private-token')
+  assert.equal(getRefreshTokenKey(), null)
+  assert.equal(localStorage.getItem('refreshTokenKey'), authResponse.refreshTokenKey)
+})
+
+test('expiry metadata supports base64url JWT payloads and opaque tokens without trusting the claims for authorization', () => {
+  const token = `header.${Buffer.from(JSON.stringify({ exp: 1900000000, note: 'é🙂' })).toString('base64url')}.signature`
+  assert.equal(getAccessTokenExpiry(token), 1900000000000)
+  for (const value of [undefined, '', 'opaque-token', 'a.!invalid!.c', `a.${Buffer.from('{"exp":"1900000000"}').toString('base64url')}.c`]) {
+    assert.equal(getAccessTokenExpiry(value), null)
+  }
 })
 
 test('explicit API failure is rejected even if a token is present', () => {

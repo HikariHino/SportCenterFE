@@ -126,7 +126,7 @@ export async function refreshToken({ refreshTokenKey }) {
 
 /** POST /api/Auth/logout */
 export async function logout({ refreshTokenKey }) {
-  const response = await api.post('/Auth/logout', { refreshTokenKey })
+  const response = await api.post('/Auth/logout', { refreshTokenKey }, { skipAuth: true })
   return response.data
 }
 

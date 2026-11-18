@@ -1,12 +1,18 @@
-﻿import { createContext, useContext, useState } from 'react'
+﻿import { createContext, useContext, useEffect, useState } from 'react'
 
 import { logout as logoutApi } from '../services/authService'
-import { clearSession, getRefreshTokenKey, getSavedUser, saveSession } from '../utils/auth'
+import { clearSession, getRefreshTokenKey, getSavedUser, saveSession, SESSION_EXPIRED_EVENT } from '../utils/auth'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getSavedUser)
+
+  useEffect(() => {
+    const expired = () => setUser(null)
+    window.addEventListener(SESSION_EXPIRED_EVENT, expired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expired)
+  }, [])
 
   const login = (userData, token, remember = true) => {
     const savedUser = saveSession(userData, token, remember)
