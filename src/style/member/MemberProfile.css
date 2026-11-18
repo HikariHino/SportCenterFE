@@ -21,8 +21,8 @@
 .member-profile-view .member-profile-edit-columns > .member-profile-password { padding: 16px; background: var(--theme-bg); }
 .member-profile-editor > .account-email-change { margin: 0 20px 18px; padding: 20px; }
 .member-profile-editor-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin: 0 20px 18px; padding-top: 15px; border-top: 1px solid var(--theme-border); }
-html:has(.member-view-content:not([hidden]) .member-profile-editor[data-editing='true']) { scrollbar-width: none; }
-html:has(.member-view-content:not([hidden]) .member-profile-editor[data-editing='true'])::-webkit-scrollbar { width: 0; }
+html:has(.member-view-content:not([hidden]) .member-profile-editor) { scrollbar-width: none; }
+html:has(.member-view-content:not([hidden]) .member-profile-editor)::-webkit-scrollbar { width: 0; }
 .member-profile-view .member-profile-identity-card { position: sticky; top: 100px; padding: 24px; background: var(--theme-surface); border-color: var(--theme-border); }
 .member-profile-id-meta { justify-content: space-between; gap: 8px; }
 .member-profile-identity-card .member-identity { flex-direction: column; text-align: center; gap: 16px; margin: 28px 0; }
