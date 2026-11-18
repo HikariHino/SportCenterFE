@@ -112,7 +112,7 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
         : error ? <div className="member-notifications-state member-notifications-error" role="alert"><AlertCircle size={28} /><h3>Không thể tải thông báo</h3><p>{error}</p><button type="button" onClick={reload}>Thử lại</button></div>
           : !result.items.length ? <div className="member-notifications-state" role="status"><Bell size={36} /><h3>{unreadOnly ? 'Bạn đã đọc hết thông báo' : 'Chưa có thông báo'}</h3><p>{unreadOnly ? 'Chọn “Tất cả thông báo” để xem lại các thông báo đã đọc.' : 'Các thông báo gửi đến tài khoản của bạn sẽ xuất hiện tại đây.'}</p></div>
             : <>
-              <MemberList items={result.items} total={result.total} page={page} onPageChange={setPage} disabled={loading || actionBusy} label="Thông báo hệ thống" className="member-notifications-list">{item => <article className={`member-notifications-card ${item.isRead ? '' : 'unread'}`} key={item.id} aria-labelledby={`member-notification-${item.id}`}>
+              <MemberList items={result.items} total={result.total} page={page} onPageChange={setPage} disabled={loading || actionBusy} label="Thông báo hệ thống" className="member-notifications-list" showOrdinal={false}>{item => <article className={`member-notifications-card ${item.isRead ? '' : 'unread'}`} key={item.id} aria-labelledby={`member-notification-${item.id}`}>
                 <span className="member-notifications-icon">{isSessionUpdateNotification(item) ? <CalendarDays size={16} /> : <Bell size={16} />}</span>
                 <div className="member-notifications-content">
                   <h3 id={`member-notification-${item.id}`}>{item.title || 'Thông báo từ trung tâm'}</h3>
