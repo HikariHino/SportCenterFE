@@ -6,6 +6,8 @@ import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 
 let window, server, root, createRoot, Member, ConversationSidebar, AuthProvider, ThemeProvider, MemoryRouter, api
+let useNavigate, navigateMember
+function TestMember() { navigateMember = useNavigate(); return h(Member) }
 const descriptors = new Map(), requests = [], intervals = new Map(), errors = []
 let nextInterval = 0, offline = false, serverName = 'Nguyễn Văn An'
 let paymentStatus = 'Pending', subscriptionStatus = 'Pending'
@@ -38,6 +40,7 @@ before(async () => {
   AuthProvider = (await server.ssrLoadModule('/src/contexts/AuthContext.jsx')).AuthProvider
   ThemeProvider = (await server.ssrLoadModule('/src/contexts/ThemeContext.jsx')).ThemeProvider
   MemoryRouter = (await server.ssrLoadModule('react-router-dom')).MemoryRouter
+  useNavigate = (await server.ssrLoadModule('react-router-dom')).useNavigate
   api = (await server.ssrLoadModule('/src/services/api.js')).default
   api.defaults.adapter = async config => {
     requests.push({ url: config.url, method: config.method, params: config.params })
@@ -77,7 +80,7 @@ before(async () => {
   const container = document.createElement('div'); document.body.append(container)
   root = createRoot(container, { onUncaughtError: error => errors.push(error) })
   await act(async () => {
-    root.render(h(StrictMode, null, h(MemoryRouter, { initialEntries: ['/member'] }, h(ThemeProvider, null, h(AuthProvider, null, h(Member))))))
+    root.render(h(StrictMode, null, h(MemoryRouter, { initialEntries: ['/member'] }, h(ThemeProvider, null, h(AuthProvider, null, h(TestMember))))))
   })
 })
 
@@ -95,6 +98,11 @@ after(async () => {
 const tick = delay => act(async () => { for (const timer of [...intervals.values()]) if (timer.delay === delay) timer.callback() })
 const count = url => requests.filter(request => request.url === url).length
 const clickTab = label => act(async () => {
+  if (label === 'Thanh toán trực tuyến') {
+    assert.equal([...document.querySelectorAll('.member-sidebar-item')].some(item => item.textContent.includes(label)), false)
+    navigateMember('/member?view=payments')
+    return
+  }
   const button = [...document.querySelectorAll('.member-sidebar-item')].find(item => item.textContent.includes(label))
   assert.ok(button, label)
   button.click()
@@ -108,6 +116,7 @@ test('entry warms enabled Member tabs and skips the hidden workout view', () => 
   assert.equal(document.querySelector('.member-view-content:not([hidden]) h2').textContent, 'Ra/Vào trung tâm')
   assert.equal(document.querySelectorAll('.member-view-content').length, 9)
   assert.equal(document.querySelectorAll('.member-view-content[hidden]').length, 8)
+  assert.equal([...document.querySelectorAll('.member-sidebar-item')].some(item => item.textContent.includes('Thanh toán trực tuyến')), false)
   for (const url of ['/profile', '/member-subscriptions/mine', '/membership-packages', '/payments', '/GymCheckIns/my-qr', '/GymCheckIns/my-history', '/class-registrations/mine', '/TrainingPlans/members/9', '/SupportTickets/my-tickets', '/notifications', '/ai/chat/history']) assert.ok(count(url) > 0, url)
   assert.equal(count('/ai/workout-recommendations/history'), 0)
   assert.equal(count('/member-subscriptions/mine'), 1)
@@ -180,7 +189,7 @@ test('changing accounts creates a fresh workspace instead of reusing the previou
   sessionStorage.setItem('token', 'second-member-token')
   sessionStorage.setItem('user', JSON.stringify({ id: 10, fullName: serverName, email: 'second@example.com', role: 'member' }))
   const before = count('/payments')
-  await act(async () => root.render(h(StrictMode, null, h(MemoryRouter, null, h(ThemeProvider, null, h(AuthProvider, { key: 'second-account' }, h(Member)))))))
+  await act(async () => root.render(h(StrictMode, null, h(MemoryRouter, null, h(ThemeProvider, null, h(AuthProvider, { key: 'second-account' }, h(TestMember)))))))
   assert.equal(count('/payments'), before + 1)
   assert.equal(document.querySelector('.member-sub-current'), null)
   assert.match(document.querySelector('.member-sidebar-account').textContent, /Lê Văn Hai/)

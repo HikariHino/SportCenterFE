@@ -62,6 +62,14 @@
 .member-sub-list h4 { font-size: calc(21px + var(--font-size-adjustment, 0px)); line-height: 1.6; margin: 4px 0 0; overflow-wrap: anywhere; }
 .member-sub-list-facts { display: grid; grid-template-columns: 1fr .8fr 1.6fr; gap: 20px; margin: 0; }
 .member-sub-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.member-sub-invoice { display: grid; gap: 6px; min-width: 0; }
+.member-sub-invoice-error { max-width: 360px; margin: 0; color: var(--theme-red, #b42318); font-size: calc(15px + var(--font-size-adjustment, 0px)); line-height: 1.6; overflow-wrap: anywhere; }
+.member-sub-invoice-dialog { width: min(600px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: auto; box-sizing: border-box; padding: 20px; border: 1px solid var(--theme-border); border-radius: 14px; color: var(--theme-text); background: var(--theme-surface); }
+.member-sub-invoice-dialog::backdrop { background: #0f172a80; }
+.member-sub-invoice-dialog header, .member-sub-invoice-dialog li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.member-sub-invoice-dialog h3 { margin: 0; font-size: calc(20px + var(--font-size-adjustment, 0px)); }
+.member-sub-invoice-dialog ul { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
+.member-sub-invoice-dialog li { padding-top: 12px; border-top: 1px solid var(--theme-border); }
 .member-sub-package-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .member-sub-package { display: flex; flex-direction: column; min-width: 0; padding: 18px; border: 1px solid var(--theme-border); border-radius: 12px; background: var(--theme-surface); }
 .member-sub-package-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }

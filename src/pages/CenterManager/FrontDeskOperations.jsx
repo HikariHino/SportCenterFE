@@ -21,6 +21,7 @@ import { loadSubscriptionPackageReferences } from '../../services/subscriptionPu
 import { cancelOpenPayment } from '../../services/subscriptionCancellationService'
 import { canCancelPayOSPayment, canCheckoutPayOSPayment, canSyncPayOSPayment, paymentCheckoutMessage, paymentStatusLabel } from '../../utils/memberPayments'
 import PayOSQrImage from '../../components/PayOSQrImage'
+import SupportTicketImage from '../../components/SupportTicketImage'
 import { membershipPackageType, subscriptionPackageReason, subscriptionPackageType, subscriptionStatus, subscriptionStatusLabel } from '../../utils/memberSubscriptions'
 import SubscriptionPurchaseDialog from '../../components/SubscriptionPurchaseDialog'
 import CounterOrderCancellationDialog from '../../components/CounterOrderCancellationDialog'
@@ -1294,14 +1295,14 @@ export default function FrontDeskOperations() {
               </div>
             ) : (
               <div className="fdesk-table-scroll">
-                <ManagerList items={filteredTickets} label="Phiếu hỗ trợ tại quầy" table className="fdesk-table" resetKey={JSON.stringify([ticketSearch,ticketStatusFilter,ticketPriorityFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
+                <ManagerList items={filteredTickets} label="Phiếu hỗ trợ tại quầy" table className="fdesk-table fdesk-tickets-table" resetKey={JSON.stringify([ticketSearch,ticketStatusFilter,ticketPriorityFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                       <th>Mã</th>
-                      <th>Tiêu đề & Nội dung khiếu nại</th>
+                      <th>Phiếu hỗ trợ</th>
                       <th>Hội viên</th>
                       <th>Ưu tiên</th>
                       <th>Thời gian gửi</th>
                       <th>Trạng thái</th>
-                      <th>Người xử lý & Phản hồi</th>
+                      <th>Xử lý & Phản hồi</th>
                       <th style={{ textAlign: 'right' }}>Thao tác</th>
                     </tr>}>{(t) => {
                       const isPending = t.status === 'Pending' || t.status === 'Open'
@@ -1317,13 +1318,14 @@ export default function FrontDeskOperations() {
                           <td>
                             <strong>#{t.id}</strong>
                           </td>
-                          <td style={{ maxWidth: 300 }}>
-                            <strong style={{ display: 'block', fontSize: 'calc(18px + var(--font-size-adjustment, 0px))', color: 'var(--manager-ink, #18263e)' }}>
-                              {t.title}
-                            </strong>
-                            <p style={{ margin: '4px 0 0', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--manager-muted, #748096)', lineHeight: 1.4 }}>
-                              {t.description}
-                            </p>
+                          <td className="fdesk-ticket-content">
+                            <div className="fdesk-ticket-summary">
+                              <div className="fdesk-ticket-text">
+                                <strong className="fdesk-ticket-title">{t.title}</strong>
+                                <p className="fdesk-ticket-description">{t.description}</p>
+                              </div>
+                              <SupportTicketImage imageUrl={t.imageUrl} ticketId={t.id} active={viewActive && activeTab === 'tickets'} />
+                            </div>
                           </td>
                           <td>
                             <strong>{t.memberName || 'Hội viên'}</strong>
@@ -1333,8 +1335,11 @@ export default function FrontDeskOperations() {
                               {t.priority}
                             </span>
                           </td>
-                          <td style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))' }}>
-                            {formatDateTime(t.createdAt)}
+                          <td>
+                            <time className="fdesk-ticket-date" dateTime={t.createdAt}>
+                              <span>{formatDate(t.createdAt)}</span>
+                              <small>{t.createdAt && Number.isFinite(Date.parse(t.createdAt)) ? new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'}</small>
+                            </time>
                           </td>
                           <td>
                             {t.status === 'Resolved' ? (
@@ -1351,9 +1356,9 @@ export default function FrontDeskOperations() {
                               </span>
                             )}
                           </td>
-                          <td style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', maxWidth: 240 }}>
+                          <td className="fdesk-ticket-response">
                             {t.handledByUserName && (
-                              <div style={{ color: 'var(--manager-blue, #2463eb)', fontWeight: 600 }}>
+                              <div className="fdesk-ticket-handler">
                                 Xử lý bởi: {t.handledByUserName}
                               </div>
                             )}
@@ -1413,6 +1418,7 @@ export default function FrontDeskOperations() {
                   <div style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--manager-muted, #748096)' }}>
                     Nội dung: {ticketToResolve.description}
                   </div>
+                  <SupportTicketImage imageUrl={ticketToResolve.imageUrl} ticketId={ticketToResolve.id} active={viewActive && activeTab === 'tickets'} />
                 </div>
 
                 <div className="fdesk-input-group">

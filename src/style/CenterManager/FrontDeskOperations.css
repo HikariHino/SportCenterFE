@@ -389,6 +389,34 @@
   background: var(--manager-raised, #f8fafc);
 }
 
+.fdesk-table.fdesk-tickets-table { table-layout: fixed; min-width: 1180px; }
+.fdesk-tickets-table :is(th, td) { padding: 12px 10px; overflow-wrap: anywhere; }
+.fdesk-tickets-table th { white-space: normal; font-size: calc(14px + var(--font-size-adjustment, 0px)); line-height: 1.5; letter-spacing: .2px; }
+.fdesk-tickets-table td { vertical-align: top; font-size: calc(16px + var(--font-size-adjustment, 0px)); line-height: 1.6; }
+.fdesk-tickets-table :is(th, td):first-child { min-width: 0; width: 4%; }
+.fdesk-tickets-table th:nth-child(2) { width: 5%; }
+.fdesk-tickets-table th:nth-child(3) { width: 25%; }
+.fdesk-tickets-table th:nth-child(4) { width: 12%; }
+.fdesk-tickets-table th:nth-child(5) { width: 7%; }
+.fdesk-tickets-table th:nth-child(6) { width: 9%; }
+.fdesk-tickets-table th:nth-child(7) { width: 10%; }
+.fdesk-tickets-table th:nth-child(8) { width: 18%; }
+.fdesk-tickets-table th:nth-child(9) { width: 10%; }
+.fdesk-ticket-title { display: block; color: var(--manager-ink, #18263e); font-size: calc(17px + var(--font-size-adjustment, 0px)); line-height: 1.5; }
+.fdesk-ticket-description { margin: 4px 0 0; color: var(--manager-muted, #748096); white-space: pre-wrap; }
+.fdesk-ticket-date { display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
+.fdesk-ticket-date small { color: var(--manager-muted, #748096); font-size: inherit; }
+.fdesk-ticket-handler { color: var(--manager-blue, #2463eb); font-weight: 600; }
+.fdesk-tickets-table .fdesk-ticket-note-box { margin-top: 6px; padding: 6px 10px; font-size: inherit; line-height: 1.6; }
+.fdesk-tickets-table :is(.fdesk-badge, .fdesk-priority-pill) { font-size: calc(14px + var(--font-size-adjustment, 0px)); padding: 3px 8px; }
+.fdesk-tickets-table .fdesk-btn { padding: 8px 10px; min-height: 36px; font-size: calc(14px + var(--font-size-adjustment, 0px)); box-shadow: none; white-space: normal; }
+.fdesk-ticket-summary { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.fdesk-ticket-text { flex: 1; min-width: 0; }
+.fdesk-tickets-table .support-ticket-image { flex: 0 0 42%; max-width: 180px; margin-top: 0; }
+.fdesk-tickets-table .support-ticket-image button.support-image-thumbnail { display: inline-flex; align-items: center; gap: 8px; width: auto; max-width: 100%; padding: 4px 8px 4px 4px; border-radius: 8px; }
+.fdesk-tickets-table .support-image-thumbnail > img { width: 44px; height: 36px; flex-shrink: 0; border-radius: 4px; object-fit: cover; }
+.fdesk-tickets-table .support-image-thumbnail > span { justify-content: flex-start; gap: 6px; padding: 0; font-size: calc(14px + var(--font-size-adjustment, 0px)); }
+
 /* Badges */
 .fdesk-badge {
   display: inline-flex;

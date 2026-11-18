@@ -5,7 +5,7 @@ import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 
-let window, server, createRoot, MemberSupport, ReceptionSupport, Image, api
+let window, server, createRoot, MemberSupport, ReceptionSupport, ManagerFrontDesk, ManagerActivity, Image, api
 let tickets, writes, failCreate, failUpload, holdUpload, pendingUpload
 const descriptors = new Map(), revoked = []
 let objectCount = 0, createObjectURL, revokeObjectURL
@@ -51,6 +51,8 @@ before(async () => {
   }
   MemberSupport = (await server.ssrLoadModule('/src/pages/member/SupportTicketsView.jsx')).SupportTicketsView
   ReceptionSupport = (await server.ssrLoadModule('/src/pages/Receptionist/SupportTicketsView.jsx')).SupportTicketsView
+  ManagerFrontDesk = (await server.ssrLoadModule('/src/pages/CenterManager/FrontDeskOperations.jsx')).default
+  ManagerActivity = (await server.ssrLoadModule('/src/contexts/ManagerWorkspaceContext.jsx')).ManagerViewActivity
   Image = (await server.ssrLoadModule('/src/components/SupportTicketImage.jsx')).default
   createRoot = (await import('react-dom/client')).createRoot
 })
@@ -69,7 +71,7 @@ async function screen(component, initial, run) {
   const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
   try {
     await act(async () => root.render(component))
-    await run()
+    await run(element => act(async () => root.render(element)))
   } finally {
     if (pendingUpload) await act(async () => { pendingUpload(); pendingUpload = null })
     await act(async () => root.unmount()); container.remove()
@@ -212,4 +214,54 @@ test('missing and unsafe image URLs leave ticket content usable without requesti
   assert.equal(document.querySelector('img'), null)
   assert.equal(document.querySelector('button'), null)
   assert.match(document.body.textContent, /Không thể mở ảnh/)
+}))
+
+test('Manager can view closed-ticket evidence and Escape restores focus without updating the ticket', () => screen(h(ManagerFrontDesk), [ticket('Closed', url)], async () => {
+  await click('Hỗ trợ')
+  const opener = document.querySelector('.fdesk-table .support-image-thumbnail')
+  assert.ok(opener)
+  await act(async () => { opener.focus(); opener.click() })
+  const dialog = document.querySelector('.support-image-dialog[open]')
+  assert.equal(dialog.querySelector('img').src, url)
+  await act(async () => dialog.dispatchEvent(new window.Event('cancel', { cancelable: true })))
+  assert.equal(document.querySelector('.support-image-dialog'), null)
+  assert.equal(document.activeElement, opener)
+  assert.equal(writes.length, 0)
+}))
+
+test('Manager can enlarge evidence while editing a resolution without submitting or losing the draft', () => screen(h(ManagerFrontDesk), [ticket('Open', url)], async () => {
+  await click('Hỗ trợ')
+  await click('Xử lý ticket')
+  await change(document.querySelector('#resolve-note-input'), 'Đã kiểm tra ảnh, đang xử lý')
+  const resolution = document.querySelector('.fdesk-dialog')
+  assert.equal(resolution.querySelector('.support-image-thumbnail img').src, url)
+  await act(async () => resolution.querySelector('.support-image-thumbnail').click())
+  assert.ok(document.querySelector('.support-image-dialog[open]'))
+  await act(async () => document.querySelector('[aria-label="Đóng ảnh sự cố"]').click())
+  assert.ok(document.querySelector('.fdesk-dialog'))
+  assert.equal(document.querySelector('#resolve-note-input').value, 'Đã kiểm tra ảnh, đang xử lý')
+  assert.equal(writes.length, 0)
+}))
+
+test('Manager image failures can be retried, and tickets without attachments have no image control', () => screen(h(ManagerFrontDesk), [ticket('Open', url), { ...ticket('Closed'), id: 8 }], async () => {
+  await click('Hỗ trợ')
+  assert.equal(document.querySelectorAll('.fdesk-table .support-image-thumbnail').length, 1)
+  const table = document.querySelector('.fdesk-table .support-image-thumbnail').closest('table')
+  await act(async () => document.querySelector('.fdesk-table .support-image-thumbnail img').dispatchEvent(new window.Event('error')))
+  assert.match(table.textContent, /Không tải được ảnh/)
+  await click('Tải lại ảnh')
+  assert.equal(document.querySelector('.fdesk-table .support-image-thumbnail img').src, url)
+  assert.equal(writes.length, 0)
+}))
+
+test('Manager image dialogs close when changing tabs or leaving the FrontDesk view', () => screen(h(ManagerActivity, { active: true }, h(ManagerFrontDesk)), [ticket('Open', url)], async render => {
+  await click('Hỗ trợ'); await click('Xem ảnh sự cố')
+  await click('Hội viên')
+  assert.equal(document.querySelector('.support-image-dialog'), null)
+  assert.notEqual(document.body.style.overflow, 'hidden')
+  await click('Hỗ trợ'); await click('Xem ảnh sự cố')
+  await render(h(ManagerActivity, { active: false }, h(ManagerFrontDesk)))
+  assert.equal(document.querySelector('.support-image-dialog'), null)
+  assert.notEqual(document.body.style.overflow, 'hidden')
+  assert.equal(writes.length, 0)
 }))
