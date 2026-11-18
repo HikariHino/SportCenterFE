@@ -621,6 +621,8 @@
 .coach-profile-phone-field { grid-area: phone; }
 .coach-profile-current-password-field { grid-area: current-password; }
 .coach-profile-new-password-field { grid-area: new-password; }
+html:has(.coach-view-content:not([hidden]) .coach-account-profile-form) { scrollbar-width: none; }
+html:has(.coach-view-content:not([hidden]) .coach-account-profile-form)::-webkit-scrollbar { width: 0; }
 @media(max-width:520px) {
   .coach-account-profile-fields { grid-template-areas: 'name' 'phone' 'current-password' 'new-password'; }
   .coach-account-profile-actions { margin-inline: 14px; }
