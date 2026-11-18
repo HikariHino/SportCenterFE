@@ -2,22 +2,22 @@
 .coach-student-details-dialog { width: min(500px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--coach-line); border-radius: 15px; color: var(--coach-ink); background: var(--theme-surface, #fff); font: inherit; box-shadow: 0 24px 70px #07132759; }
 .coach-student-details-dialog::backdrop { background: #071327a8; backdrop-filter: blur(5px); }
 .coach-student-details-content > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--coach-line); }
-.coach-student-details-content > header small { color: var(--coach-blue); font-size: 16px; font-weight: 750; letter-spacing: .7px; }
-.coach-student-details-content > header h2 { margin: 4px 0 0; font-size: 25px; }
+.coach-student-details-content > header small { color: var(--coach-blue); font-size: calc(16px + var(--font-size-adjustment, 0px)); font-weight: 750; letter-spacing: .7px; }
+.coach-student-details-content > header h2 { margin: 4px 0 0; font-size: calc(25px + var(--font-size-adjustment, 0px)); }
 .coach-student-details-content > header button { width: 34px; height: 34px; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--coach-line); border-radius: 8px; color: var(--coach-ink); background: var(--theme-raised, #f2f5fa); cursor: pointer; }
 .coach-student-details-dialog .coach-profile-cover { height: 76px; min-height: 0; border-radius: 0; }
 .coach-student-details-dialog .coach-profile-cover .coach-student-avatar { left: 50%; top: auto; bottom: -25px; transform: translateX(-50%); border-color: var(--theme-surface, #fff); }
 .coach-student-details-dialog .coach-profile-main { padding: 36px 20px 20px; text-align: center; }
-.coach-student-details-dialog .coach-profile-main h3 { margin: 0; font-size: 26px; }
+.coach-student-details-dialog .coach-profile-main h3 { margin: 0; font-size: calc(26px + var(--font-size-adjustment, 0px)); }
 .coach-student-details-dialog .coach-profile-main > p, .coach-student-details-dialog .coach-profile-info small { color: var(--coach-muted); }
 .coach-student-details-dialog .coach-profile-numbers { grid-template-columns: 1fr 1fr 1.3fr; border-color: var(--coach-line); }
 .coach-student-details-dialog .coach-profile-numbers small { color: var(--coach-muted); }
-.coach-student-details-dialog .coach-profile-numbers strong { overflow-wrap: anywhere; font-size: 21px; }
+.coach-student-details-dialog .coach-profile-numbers strong { overflow-wrap: anywhere; font-size: calc(21px + var(--font-size-adjustment, 0px)); }
 .coach-student-details-dialog .coach-profile-info strong { overflow-wrap: anywhere; color: var(--coach-ink); }
 .coach-student-details-dialog .coach-profile-actions { grid-template-columns: 1fr 1fr; }
 .coach-student-details-dialog .coach-profile-actions button { padding: 9px 10px; cursor: pointer; }
 .coach-student-details-dialog .coach-profile-actions button:last-child { grid-column: 1 / -1; }
-.coach-student-details-availability { display: flex; align-items: flex-start; gap: 7px; padding: 10px; border: 1px solid var(--coach-line); border-radius: 8px; color: var(--coach-muted); background: var(--theme-raised, #f5f8fc); font-size: 17px; line-height: 1.6; text-align: left; }
+.coach-student-details-availability { display: flex; align-items: flex-start; gap: 7px; padding: 10px; border: 1px solid var(--coach-line); border-radius: 8px; color: var(--coach-muted); background: var(--theme-raised, #f5f8fc); font-size: calc(17px + var(--font-size-adjustment, 0px)); line-height: 1.6; text-align: left; }
 .coach-student-details-availability > svg { flex-shrink: 0; margin-top: 2px; }
 .coach-student-details-dialog button:focus-visible { outline: 3px solid var(--theme-accent, #82aaff); outline-offset: 2px; }
 .coach-student-details-dialog button:disabled { cursor: not-allowed; opacity: .6; }

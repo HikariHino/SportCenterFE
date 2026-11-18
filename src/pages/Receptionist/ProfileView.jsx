@@ -9,6 +9,7 @@ import ChangeEmailForm from '../../components/ChangeEmailForm'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 import useProfileMorph from '../../hooks/useProfileMorph'
 import StaffProfileCard from '../../components/StaffProfileCard'
+import FontSizeControl from '../../components/FontSizeControl'
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' }
@@ -101,5 +102,6 @@ export function ReceptionistProfileView({ showNotice }) {
         <footer className="reception-profile-actions"><button type="button" onClick={stopEditing} disabled={saving}>Hủy thay đổi</button><button type="submit" form={profileFormId} disabled={saving}>{saving ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button></footer>
       </>}
     </section>
+    <FontSizeControl />
   </div>
 }

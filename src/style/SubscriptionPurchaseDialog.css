@@ -1,10 +1,10 @@
-.subscription-purchase-dialog { position: fixed; inset: 0; margin: auto; width: min(570px, calc(100% - 24px)); max-height: calc(100dvh - 32px); overflow: auto; box-sizing: border-box; padding: 0; border: 1px solid var(--theme-border); border-radius: 18px; background: var(--theme-surface); color: var(--theme-text); font: 400 18px/1.6 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
+.subscription-purchase-dialog { position: fixed; inset: 0; margin: auto; width: min(570px, calc(100% - 24px)); max-height: calc(100dvh - 32px); overflow: auto; box-sizing: border-box; padding: 0; border: 1px solid var(--theme-border); border-radius: 18px; background: var(--theme-surface); color: var(--theme-text); font: 400 calc(18px + var(--font-size-adjustment, 0px))/1.6 'Be Vietnam Pro', 'Segoe UI', sans-serif; }
 .subscription-purchase-dialog::backdrop { background: #0d14229e; backdrop-filter: blur(4px); }
 .subscription-purchase-dialog header, .subscription-purchase-dialog footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 20px 24px; }
 .subscription-purchase-dialog header { border-bottom: 1px solid var(--theme-border); }
-.subscription-purchase-dialog header p { margin: 0 0 5px; color: var(--theme-accent); font-size: 16px; font-weight: 700; }
-.subscription-purchase-dialog h2 { margin: 0; font-size: 25px; }
-.subscription-purchase-dialog h3 { margin: 0; font-size: 23px; }
+.subscription-purchase-dialog header p { margin: 0 0 5px; color: var(--theme-accent); font-size: calc(16px + var(--font-size-adjustment, 0px)); font-weight: 700; }
+.subscription-purchase-dialog h2 { margin: 0; font-size: calc(25px + var(--font-size-adjustment, 0px)); }
+.subscription-purchase-dialog h3 { margin: 0; font-size: calc(23px + var(--font-size-adjustment, 0px)); }
 .subscription-purchase-body { display: grid; gap: 16px; padding: 22px 24px; }
 .subscription-purchase-body > p { margin: 0; }
 .subscription-purchase-body [role='status'] { display: flex; gap: 8px; align-items: center; }
@@ -15,8 +15,8 @@
 .subscription-purchase-breakdown dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
 .subscription-purchase-breakdown .subscription-purchase-total { padding-top: 14px; border-top: 1px solid var(--theme-border); }
 .subscription-purchase-total dt { color: var(--theme-text); font-weight: 600; }
-.subscription-purchase-total dd { color: var(--theme-accent); font-size: 26px; }
-.subscription-purchase-note, .subscription-purchase-error { display: flex; align-items: flex-start; gap: 8px; color: var(--theme-muted); font-size: 17px; }
+.subscription-purchase-total dd { color: var(--theme-accent); font-size: calc(26px + var(--font-size-adjustment, 0px)); }
+.subscription-purchase-note, .subscription-purchase-error { display: flex; align-items: flex-start; gap: 8px; color: var(--theme-muted); font-size: calc(17px + var(--font-size-adjustment, 0px)); }
 .subscription-purchase-dialog svg { flex-shrink: 0; }
 .subscription-purchase-error { padding: 12px; border-radius: 8px; background: var(--theme-red-bg, #fff3f2); color: var(--theme-red, #b42318); }
 .subscription-purchase-dialog footer { border-top: 1px solid var(--theme-border); justify-content: flex-end; }

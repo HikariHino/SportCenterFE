@@ -418,7 +418,7 @@ export function SubscriptionsView({ showNotice }) {
               {packageDetailLoading ? (
                 <div style={{ padding: 24, textAlign: 'center' }}>
                   <LoaderCircle className="member-spin" size={24} style={{ margin: '0 auto 8px' }} />
-                  <p style={{ fontSize: 17, color: 'var(--theme-muted, #536179)' }}>Đang tải thông tin chi tiết gói...</p>
+                  <p style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--theme-muted, #536179)' }}>Đang tải thông tin chi tiết gói...</p>
                 </div>
               ) : (
                 <>
@@ -435,19 +435,19 @@ export function SubscriptionsView({ showNotice }) {
                     }}
                   >
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16, display: 'block' }}>Giá gói</small>
-                      <strong style={{ fontSize: 23, color: 'var(--member-blue)' }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', display: 'block' }}>Giá gói</small>
+                      <strong style={{ fontSize: 'calc(23px + var(--font-size-adjustment, 0px))', color: 'var(--member-blue)' }}>
                         {formatCurrency(viewingPackage.price)}
                       </strong>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16, display: 'block' }}>Thời hạn sử dụng</small>
-                      <strong style={{ fontSize: 21, color: 'var(--theme-text, #17243c)' }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', display: 'block' }}>Thời hạn sử dụng</small>
+                      <strong style={{ fontSize: 'calc(21px + var(--font-size-adjustment, 0px))', color: 'var(--theme-text, #17243c)' }}>
                         {viewingPackage.durationInDays} ngày
                       </strong>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16, display: 'block' }}>Trạng thái mở bán</small>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', display: 'block' }}>Trạng thái mở bán</small>
                       <span className="member-status" style={{ marginTop: 4 }}>
                         <span />
                         {viewingPackage.isActive !== false ? 'Đang mở bán' : 'Tạm dừng'}
@@ -456,15 +456,15 @@ export function SubscriptionsView({ showNotice }) {
                   </div>
 
                   <div>
-                    <h4 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 6px', color: 'var(--theme-text, #17243c)' }}>Mô tả gói tập</h4>
-                    <p style={{ fontSize: 17, color: 'var(--theme-muted, #536179)', lineHeight: 1.6, background: 'var(--theme-surface, #fff)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12 }}>
+                    <h4 style={{ fontSize: 'calc(18px + var(--font-size-adjustment, 0px))', fontWeight: 700, margin: '0 0 6px', color: 'var(--theme-text, #17243c)' }}>Mô tả gói tập</h4>
+                    <p style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--theme-muted, #536179)', lineHeight: 1.6, background: 'var(--theme-surface, #fff)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12 }}>
                       {viewingPackage.description || 'Chưa có mô tả chi tiết. Vui lòng liên hệ lễ tân để biết thêm thông tin về gói tập này.'}
                     </p>
                   </div>
 
                   <div style={{ background: 'var(--theme-raised, #edf2fa)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12, display: 'flex', gap: 10 }}>
                     <Info size={18} style={{ color: 'var(--theme-accent, #1557d5)', flexShrink: 0, marginTop: 2 }} />
-                    <small style={{ color: 'var(--theme-accent, #1557d5)', fontSize: 16, lineHeight: 1.5 }}>
+                    <small style={{ color: 'var(--theme-accent, #1557d5)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', lineHeight: 1.5 }}>
                       Chọn tiếp tục để xem điều kiện, số tiền cần thanh toán và thời hạn được trung tâm xác nhận. Standard chỉ được nâng cấp lên gói cao hơn giá đầy đủ của gói hiện tại; PT được đăng ký độc lập và thanh toán nguyên giá.
                     </small>
                   </div>
@@ -538,10 +538,10 @@ export function SubscriptionsView({ showNotice }) {
                 >
                   <Award size={28} />
                 </div>
-                <h4 style={{ fontSize: 21, margin: 0, color: 'var(--theme-text, #17243c)' }}>
+                <h4 style={{ fontSize: 'calc(21px + var(--font-size-adjustment, 0px))', margin: 0, color: 'var(--theme-text, #17243c)' }}>
                   Đơn đăng ký gói của bạn đã được ghi nhận
                 </h4>
-                <p style={{ fontSize: 17, color: 'var(--theme-muted, #536179)', marginTop: 4 }}>
+                <p style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--theme-muted, #536179)', marginTop: 4 }}>
                   Gói tập đang ở trạng thái <strong>Chờ thanh toán (Pending)</strong>.{registrationSuccessSub.upgradePreview && ' Gói cũ vẫn có hiệu lực cho đến khi thanh toán nâng cấp thành công.'}
                 </p>
               </div>
@@ -557,25 +557,25 @@ export function SubscriptionsView({ showNotice }) {
                   gap: 10,
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))' }}>
                   <span style={{ color: 'var(--theme-muted, #536179)' }}>Mã đơn đăng ký:</span>
                   <strong>#SUB-{registrationSuccessSub.id}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))' }}>
                   <span style={{ color: 'var(--theme-muted, #536179)' }}>Tên gói tập:</span>
                   <strong>{registrationSuccessSub.packageName}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))' }}>
                   <span style={{ color: 'var(--theme-muted, #536179)' }}>Thời hạn:</span>
                   <span>{registrationSuccessSub.durationInDays} ngày</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))' }}>
                   <span style={{ color: 'var(--theme-muted, #536179)' }}>Số tiền cần thanh toán:</span>
-                  <strong style={{ color: 'var(--member-blue)', fontSize: 20 }}>
+                  <strong style={{ color: 'var(--member-blue)', fontSize: 'calc(20px + var(--font-size-adjustment, 0px))' }}>
                     {formatCurrency(registrationSuccessSub.agreedPrice ?? registrationSuccessSub.price)}
                   </strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 17 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))' }}>
                   <span style={{ color: 'var(--theme-muted, #536179)' }}>Trạng thái:</span>
                   <span className="member-status member-status--pending">
                     <span /> Chờ thanh toán (Pending)
@@ -584,7 +584,7 @@ export function SubscriptionsView({ showNotice }) {
               </div>
 
               <div style={{ background: 'var(--theme-gold-bg, #fff7e5)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12 }}>
-                <p style={{ margin: 0, fontSize: 16, color: 'var(--theme-gold, #805200)', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', color: 'var(--theme-gold, #805200)', lineHeight: 1.5 }}>
                   💡 <strong>Bước tiếp theo:</strong> Bạn có thể bấm <strong>"Thanh toán PayOS ngay"</strong> để quét mã QR ngân hàng và kích hoạt gói tức thì, hoặc chọn <strong>"Để sau"</strong> để thanh toán tiền mặt tại quầy lễ tân hoặc thanh toán sau tại mục Thanh toán trực tuyến.
                 </p>
               </div>
@@ -640,7 +640,7 @@ export function SubscriptionsView({ showNotice }) {
               {subDetailLoading ? (
                 <div style={{ padding: 32, textAlign: 'center' }}>
                   <LoaderCircle className="member-spin" size={26} style={{ margin: '0 auto 10px' }} />
-                  <p style={{ fontSize: 17, color: 'var(--theme-muted, #536179)' }}>Đang tải chi tiết đơn đăng ký gói...</p>
+                  <p style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--theme-muted, #536179)' }}>Đang tải chi tiết đơn đăng ký gói...</p>
                 </div>
               ) : (
                 <>
@@ -650,8 +650,8 @@ export function SubscriptionsView({ showNotice }) {
                     <div style={{ background: 'var(--theme-gold-bg, #fff7e5)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 10, padding: 14, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                       <Clock size={20} style={{ color: 'var(--theme-gold, #805200)', flexShrink: 0, marginTop: 2 }} />
                       <div>
-                        <strong style={{ color: 'var(--theme-gold, #805200)', fontSize: 18 }}>{subscriptionDisplayStatusLabel(viewingSub, now)}</strong>
-                        <p style={{ color: 'var(--theme-gold, #805200)', fontSize: 16, margin: '2px 0 0' }}>
+                        <strong style={{ color: 'var(--theme-gold, #805200)', fontSize: 'calc(18px + var(--font-size-adjustment, 0px))' }}>{subscriptionDisplayStatusLabel(viewingSub, now)}</strong>
+                        <p style={{ color: 'var(--theme-gold, #805200)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', margin: '2px 0 0' }}>
                           {subscriptionPaymentState(viewingSub) === 'cancelled' ? 'Giao dịch PayOS đã hủy. Chọn Hủy đơn đăng ký này để hoàn tất hủy đơn gói, hoặc thanh toán lại nếu bạn vẫn muốn đăng ký.' : 'Gói tập chưa được kích hoạt. Trạng thái đơn và thanh toán được cập nhật theo xác nhận của hệ thống.'}
                         </p>
                       </div>
@@ -662,8 +662,8 @@ export function SubscriptionsView({ showNotice }) {
                     <div style={{ background: 'var(--theme-green-bg, #e1f6ee)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 10, padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
                       <CheckCircle2 size={20} style={{ color: 'var(--theme-green, #096445)', flexShrink: 0 }} />
                       <div>
-                        <strong style={{ color: 'var(--theme-green, #096445)', fontSize: 18 }}>Gói tập đang có hiệu lực sử dụng</strong>
-                        <p style={{ color: 'var(--theme-green, #096445)', fontSize: 16, margin: '2px 0 0' }}>
+                        <strong style={{ color: 'var(--theme-green, #096445)', fontSize: 'calc(18px + var(--font-size-adjustment, 0px))' }}>Gói tập đang có hiệu lực sử dụng</strong>
+                        <p style={{ color: 'var(--theme-green, #096445)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', margin: '2px 0 0' }}>
                           Bạn đang sử dụng gói tập này. Kiểm tra ngày hết hạn và thông tin đăng ký bên dưới.
                         </p>
                       </div>
@@ -674,8 +674,8 @@ export function SubscriptionsView({ showNotice }) {
                     <div style={{ background: 'var(--theme-red-bg, #fef2f2)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 10, padding: 14, display: 'flex', gap: 12, alignItems: 'center' }}>
                       <Ban size={20} style={{ color: 'var(--theme-red, #b42318)', flexShrink: 0 }} />
                       <div>
-                        <strong style={{ color: 'var(--theme-red, #b42318)', fontSize: 18 }}>Đơn đăng ký đã bị hủy</strong>
-                        <p style={{ color: 'var(--theme-red, #b42318)', fontSize: 16, margin: '2px 0 0' }}>
+                        <strong style={{ color: 'var(--theme-red, #b42318)', fontSize: 'calc(18px + var(--font-size-adjustment, 0px))' }}>Đơn đăng ký đã bị hủy</strong>
+                        <p style={{ color: 'var(--theme-red, #b42318)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', margin: '2px 0 0' }}>
                           Đơn đăng ký này đã được hủy bỏ và không còn hiệu lực thanh toán hay kích hoạt.
                         </p>
                       </div>
@@ -695,49 +695,49 @@ export function SubscriptionsView({ showNotice }) {
                     }}
                   >
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16 }}>Mã đơn đăng ký</small>
-                      <strong style={{ display: 'block', fontSize: 19, color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>Mã đơn đăng ký</small>
+                      <strong style={{ display: 'block', fontSize: 'calc(19px + var(--font-size-adjustment, 0px))', color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
                         #SUB-{viewingSub.id}
                       </strong>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16 }}>Tên gói tập</small>
-                      <strong style={{ display: 'block', fontSize: 19, color: 'var(--member-blue)', marginTop: 2 }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>Tên gói tập</small>
+                      <strong style={{ display: 'block', fontSize: 'calc(19px + var(--font-size-adjustment, 0px))', color: 'var(--member-blue)', marginTop: 2 }}>
                         {viewingSub.packageName}
                       </strong>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16 }}>Số tiền thanh toán của đơn</small>
-                      <strong style={{ display: 'block', fontSize: 20, color: 'var(--theme-green, #096445)', marginTop: 2 }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>Số tiền thanh toán của đơn</small>
+                      <strong style={{ display: 'block', fontSize: 'calc(20px + var(--font-size-adjustment, 0px))', color: 'var(--theme-green, #096445)', marginTop: 2 }}>
                         {formatCurrency(viewingSub.agreedPrice ?? viewingSub.price)}
                       </strong>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16 }}>Thời hạn sử dụng</small>
-                      <strong style={{ display: 'block', fontSize: 19, color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>Thời hạn sử dụng</small>
+                      <strong style={{ display: 'block', fontSize: 'calc(19px + var(--font-size-adjustment, 0px))', color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
                         {viewingSub.durationInDays} ngày
                       </strong>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16 }}>Thời gian đăng ký</small>
-                      <span style={{ display: 'block', fontSize: 17, color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>Thời gian đăng ký</small>
+                      <span style={{ display: 'block', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
                         {formatDateTime(viewingSub.createdAt)}
                       </span>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16 }}>Ngày bắt đầu hiệu lực</small>
-                      <span style={{ display: 'block', fontSize: 17, color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>Ngày bắt đầu hiệu lực</small>
+                      <span style={{ display: 'block', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
                         {formatDate(viewingSub.startDate)}
                       </span>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16 }}>Ngày kết thúc thẻ</small>
-                      <span style={{ display: 'block', fontSize: 17, color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>Ngày kết thúc thẻ</small>
+                      <span style={{ display: 'block', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--theme-text, #17243c)', marginTop: 2 }}>
                         {formatDate(viewingSub.endDate)}
                       </span>
                     </div>
                     <div>
-                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 16 }}>Trạng thái hiện tại</small>
+                      <small style={{ color: 'var(--theme-muted, #536179)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>Trạng thái hiện tại</small>
                       <div style={{ marginTop: 4 }}>
                         <span
                           className={`member-status ${
@@ -759,7 +759,7 @@ export function SubscriptionsView({ showNotice }) {
 
                   {/* Lịch sử giao dịch thanh toán (Payments) */}
                   <div>
-                    <h4 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 10px', color: 'var(--theme-text, #17243c)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <h4 style={{ fontSize: 'calc(18px + var(--font-size-adjustment, 0px))', fontWeight: 700, margin: '0 0 10px', color: 'var(--theme-text, #17243c)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Coins size={16} style={{ color: 'var(--theme-accent, #1557d5)' }} /> Lịch sử thanh toán đính kèm
                     </h4>
 
@@ -788,7 +788,7 @@ export function SubscriptionsView({ showNotice }) {
                                 </td>
                                 <td>{formatDateTime(p.paymentDate)}</td>
                                 <td>
-                                  <code style={{ fontSize: 15, background: 'var(--theme-raised, #edf2fa)', padding: '2px 6px', borderRadius: 4 }}>
+                                  <code style={{ fontSize: 'calc(15px + var(--font-size-adjustment, 0px))', background: 'var(--theme-raised, #edf2fa)', padding: '2px 6px', borderRadius: 4 }}>
                                     {p.transactionReference || 'N/A'}
                                   </code>
                                 </td>
@@ -798,7 +798,7 @@ export function SubscriptionsView({ showNotice }) {
                     ) : (
                       <div style={{ background: 'var(--theme-bg, #f5f7fb)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 18, textAlign: 'center', color: 'var(--theme-muted, #536179)' }}>
                         <Coins size={24} style={{ margin: '0 auto 6px', opacity: 0.4 }} />
-                        <p style={{ margin: 0, fontSize: 17 }}>Chưa có bản ghi thanh toán nào cho đơn đăng ký này.</p>
+                        <p style={{ margin: 0, fontSize: 'calc(17px + var(--font-size-adjustment, 0px))' }}>Chưa có bản ghi thanh toán nào cho đơn đăng ký này.</p>
                       </div>
                     )}
                   </div>
@@ -865,14 +865,14 @@ export function SubscriptionsView({ showNotice }) {
             </div>
 
             <div className="member-modal-body">
-              <p style={{ fontSize: 18, color: 'var(--theme-text, #17243c)', margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 'calc(18px + var(--font-size-adjustment, 0px))', color: 'var(--theme-text, #17243c)', margin: 0, lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn hủy đơn đăng ký gói <strong>{cancellingSub.packageName}</strong> (Mã đơn: <strong>#SUB-{cancellingSub.id}</strong>) không?
               </p>
 
               {cancelError && <div className="member-sub-message is-error" role="alert"><AlertCircle size={18} /><p>{cancelError}</p></div>}
 
               <div style={{ background: 'var(--theme-red-bg, #fef2f2)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12 }}>
-                <p style={{ margin: 0, fontSize: 16, color: 'var(--theme-red, #b42318)', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', color: 'var(--theme-red, #b42318)', lineHeight: 1.5 }}>
                   ⚠️ <strong>Lưu ý:</strong> Thao tác này chỉ áp dụng đối với đơn đang ở trạng thái <strong>Chờ thanh toán (Pending)</strong>. Sau khi hủy, đơn đăng ký này sẽ bị đóng vĩnh viễn và không thể khôi phục.
                 </p>
               </div>

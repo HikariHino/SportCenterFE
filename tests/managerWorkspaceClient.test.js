@@ -83,7 +83,7 @@ const tick = interval => act(async () => { for (const timer of [...intervals.val
 
 test('Manager warms all primary tabs with reads and deduplicates common resources', () => {
   assert.deepEqual(errors, [])
-  assert.equal(document.querySelectorAll('.manager-view-content').length, 7)
+  assert.equal(document.querySelectorAll('.manager-view-content').length, 8)
   for (const url of ['/Reports/overview', '/Reports/revenue', '/users/staff', '/Rooms', '/sports', '/classes/manage', '/membership-packages/manage', '/payments', '/members', '/SupportTickets']) assert.ok(count(url), url)
   assert.equal(count('/users/staff'), 1)
   assert.equal(count('/payments'), 1)
@@ -94,7 +94,7 @@ test('Manager warms all primary tabs with reads and deduplicates common resource
 test('changing Manager tabs preserves their mounted views without initial reloads', async () => {
   const staff = document.querySelector('.staff-mgmt'), roomView = document.querySelector('.room-mgmt')
   const before = requests.length
-  for (const label of ['Nhân sự', 'Danh mục', 'Phòng tập', 'Gói thẻ', 'Chính sách', 'Báo cáo', 'Quầy lễ tân', 'Tổng quan']) await tab(label)
+  for (const label of ['Nhân sự', 'Danh mục', 'Phòng tập', 'Gói thẻ', 'Chính sách', 'Báo cáo', 'Quầy lễ tân', 'Hồ sơ', 'Tổng quan']) await tab(label)
   assert.equal(document.querySelector('.staff-mgmt'), staff)
   assert.equal(document.querySelector('.room-mgmt'), roomView)
   assert.equal(requests.length, before)

@@ -6,7 +6,7 @@ import {
   ArrowDownToLine, ArrowUpRight, Ban, BookOpen, CalendarDays, Check,
   ChevronRight, Clock3, CreditCard, DoorOpen, Headset,
   LayoutDashboard, LogOut, MapPin, Menu, Package, Phone, RefreshCw,
-  Search, ShieldCheck, TrendingUp, Trophy, Users, X,
+  Search, ShieldCheck, TrendingUp, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
@@ -21,6 +21,7 @@ import CancellationPolicyManagement from './CancellationPolicyManagement'
 import ReportManagement from './ReportManagement'
 import FrontDeskOperations from './FrontDeskOperations'
 import SessionCompletionSync from './SessionCompletionSync'
+import ManagerProfileView from './ProfileView'
 import {
   getDashboardOverview,
   getRevenueByYear,
@@ -54,6 +55,7 @@ const managerNavSections = [
     title: 'VẬN HÀNH DỊCH VỤ',
     items: [
       { id: 'frontdesk', label: 'Quầy lễ tân (FrontDesk)', icon: Headset },
+      { id: 'profile', label: 'Hồ sơ', icon: UserRound },
     ],
   },
 ]
@@ -352,12 +354,12 @@ function ManagerWorkspace() {
               <i style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
               Hệ thống trực tuyến
             </span>
-            <span className="manager-avatar">{initials}</span>
+            <button type="button" className="manager-avatar manager-open-profile" aria-label="Mở hồ sơ cá nhân" onClick={() => selectSection('profile')}>{initials}</button>
           </div>
         </header>
 
         <main className={`manager-main${section === 'overview' ? ' manager-overview' : ''}`} id="manager-content" ref={contentMotion}>
-          {!['rooms', 'packages', 'cancellation', 'reports'].includes(section) && <>
+          {!['rooms', 'packages', 'cancellation', 'reports', 'profile'].includes(section) && <>
           <section className="manager-welcome">
             <div>
               <p className="manager-eyebrow">VẬN HÀNH HIỆU QUẢ, KẾT NỐI ĐAM MÊ</p>
@@ -375,7 +377,7 @@ function ManagerWorkspace() {
               <button
                 type="button"
                 className="manager-text-button"
-                style={{ padding: '0 4px', fontSize: 16 }}
+                style={{ padding: '0 4px', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}
                 onClick={loadOverviewData}
                 disabled={loadingOverview}
                 title="Làm mới dữ liệu từ máy chủ"
@@ -457,6 +459,8 @@ function ManagerWorkspace() {
 
           {/* 7. Vận hành dịch vụ khách hàng - FrontDesk */}
           <div className="manager-view-content" hidden={section !== 'frontdesk'}><ManagerViewActivity active={section === 'frontdesk'}><FrontDeskOperations /></ManagerViewActivity></div>
+
+          <div className="manager-view-content" hidden={section !== 'profile'}><ManagerViewActivity active={section === 'profile'}><ManagerProfileView user={user} /></ManagerViewActivity></div>
 
           {/* Overview: Biểu đồ doanh thu 12 tháng + Cơ sở vật chất */}
           {section === 'overview' && (

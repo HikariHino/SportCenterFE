@@ -538,7 +538,7 @@ export default function CancellationPolicyManagement() {
                       </strong>
                     </td>
                     <td>
-                      <span style={{ fontSize: 17, color: 'var(--manager-secondary, #475569)' }}>
+                      <span style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--manager-secondary, #475569)' }}>
                         Hủy trước tối thiểu {policy.minimumHoursBeforeStart}h trước giờ bắt đầu
                       </span>
                     </td>
@@ -617,7 +617,7 @@ export default function CancellationPolicyManagement() {
                     autoFocus
                   />
                   <div className="policy-preset-chips">
-                    <span style={{ fontSize: 16, color: 'var(--manager-muted)', alignSelf: 'center' }}>
+                    <span style={{ fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', color: 'var(--manager-muted)', alignSelf: 'center' }}>
                       Gợi ý:
                     </span>
                     {PRESET_POLICY_NAMES.slice(0, 3).map((name) => (
@@ -675,7 +675,7 @@ export default function CancellationPolicyManagement() {
 
                 {/* Timeline Simulation */}
                 <div className="policy-timeline-preview">
-                  <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--manager-ink)' }}>
+                  <span style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', fontWeight: 600, color: 'var(--manager-ink)' }}>
                     Mô phỏng quy tắc chốt hủy:
                   </span>
                   <div className="policy-timeline-bar">
@@ -808,7 +808,7 @@ export default function CancellationPolicyManagement() {
 
                 {/* Timeline Simulation */}
                 <div className="policy-timeline-preview">
-                  <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--manager-ink)' }}>
+                  <span style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', fontWeight: 600, color: 'var(--manager-ink)' }}>
                     Mô phỏng quy tắc chốt hủy:
                   </span>
                   <div className="policy-timeline-bar">
@@ -900,7 +900,7 @@ export default function CancellationPolicyManagement() {
 
               {/* Timeline Simulation */}
               <div className="policy-timeline-preview">
-                <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--manager-ink)' }}>
+                <span style={{ fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', fontWeight: 600, color: 'var(--manager-ink)' }}>
                   Sơ đồ mốc thời gian hủy lịch:
                 </span>
                 <div className="policy-timeline-bar">
@@ -926,7 +926,7 @@ export default function CancellationPolicyManagement() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 18 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 'calc(18px + var(--font-size-adjustment, 0px))' }}>
                 <div>
                   <span style={{ color: 'var(--manager-muted)' }}>Mã chính sách: </span>
                   <strong>#{selectedPolicyForDetail.id}</strong>
@@ -996,7 +996,7 @@ export default function CancellationPolicyManagement() {
             </div>
             <div className="policy-modal-body">
               <ManagerFormError message={error} />
-              <p style={{ margin: 0, fontSize: 18, lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: 'calc(18px + var(--font-size-adjustment, 0px))', lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn{' '}
                 <strong>{togglingPolicy.isActive ? 'tạm dừng áp dụng' : 'kích hoạt lại'}</strong> chính sách{' '}
                 <strong>"{togglingPolicy.name}"</strong>?

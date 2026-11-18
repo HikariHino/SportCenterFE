@@ -22,6 +22,7 @@ import '../../style/member/MemberProfile.css'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 import { useMemberCache, useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
 import useProfileMorph from '../../hooks/useProfileMorph'
+import FontSizeControl from '../../components/FontSizeControl'
 
 function formatCurrency(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} đ`
@@ -468,6 +469,7 @@ export function ProfileView({ user, showNotice }) {
             ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Chưa cập nhật'}</dd></div>)}
           </dl>}
         </section>
+        <FontSizeControl />
       </div>
     </div>
   )
