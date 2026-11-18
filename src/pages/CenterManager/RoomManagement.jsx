@@ -788,7 +788,7 @@ export default function RoomManagement() {
                     ))}
                   </select>
                   <div className="room-type-chips">
-                    <span style={{ fontSize: 11, color: 'var(--manager-muted)', alignSelf: 'center' }}>
+                    <span style={{ fontSize: 16, color: 'var(--manager-muted)', alignSelf: 'center' }}>
                       Chọn nhanh:
                     </span>
                     {ROOM_TYPE_OPTIONS.slice(0, 5).map((opt) => (
@@ -987,7 +987,7 @@ export default function RoomManagement() {
             </div>
             <div className="room-modal-body">
               <ManagerFormError message={error} />
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: 18, lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn xóa phòng <strong>"{deletingRoom.name}"</strong> (Mã: #{deletingRoom.id})?
               </p>
               <div className="room-alert room-alert-error" style={{ margin: '10px 0 0' }}>
@@ -1042,7 +1042,7 @@ export default function RoomManagement() {
             <form onSubmit={handleCheckAvailabilitySubmit}>
               <div className="room-modal-body">
                 <ManagerFormError message={error} />
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--manager-muted)' }}>
+                <p style={{ margin: 0, fontSize: 17, color: 'var(--manager-muted)' }}>
                   Kiểm tra xem phòng có bị trùng với bất kỳ buổi học nào trong khung thời gian dự kiến hay không.
                 </p>
 
@@ -1091,7 +1091,7 @@ export default function RoomManagement() {
                           ? 'Phòng còn trống!'
                           : 'Phòng đã có lịch học trùng!'}
                       </strong>
-                      <div style={{ fontSize: 11, marginTop: 2 }}>
+                      <div style={{ fontSize: 16, marginTop: 2 }}>
                         {availResult.message}
                       </div>
                     </div>

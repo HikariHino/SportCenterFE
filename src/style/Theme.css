@@ -69,7 +69,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
   border-radius: 9px;
   background: var(--theme-surface);
   color: var(--theme-text);
-  font: 600 11px/1.4 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  font: 600 16px/1.4 'Be Vietnam Pro', 'Segoe UI', sans-serif;
   white-space: nowrap;
   cursor: pointer;
 }

@@ -2,11 +2,11 @@
 .manager-paged-list--compact { max-height: clamp(220px, 40dvh, 380px); }
 .manager-list-scroll { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .manager-list-heading, .manager-list-scroll > table > thead { position: sticky; top: 0; z-index: 2; background: var(--theme-raised, #f5f8fc); }
-.manager-pagination { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; margin: 0; padding: 12px 14px; border-top: 1px solid var(--theme-border, #d8e0ed); color: var(--theme-muted, #626878); background: var(--theme-surface, #fff); font-size: 12px; line-height: 1.6; box-shadow: 0 -4px 12px #10264b0a; }
+.manager-pagination { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; margin: 0; padding: 12px 14px; border-top: 1px solid var(--theme-border, #d8e0ed); color: var(--theme-muted, #626878); background: var(--theme-surface, #fff); font-size: 17px; line-height: 1.6; box-shadow: 0 -4px 12px #10264b0a; }
 .manager-pagination > div, .manager-pagination label { display: flex; align-items: center; justify-content: center; gap: 7px; }
 .manager-pagination button, .manager-pagination select { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 34px; min-height: 34px; width: auto; max-width: 85px; margin: 0; padding: 6px 9px; border: 1px solid var(--theme-border, #d8e0ed); border-radius: 7px; color: var(--theme-text, #17243c); background: var(--theme-raised, #f5f8fc); font: inherit; }
 .manager-pagination button:disabled { opacity: .45; cursor: not-allowed; }
-.manager-numbered-item::before { content: 'STT ' attr(data-stt); display: block; grid-column: 1 / -1; margin-bottom: 6px; color: var(--theme-muted, #626878); font-size: 11px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.manager-numbered-item::before { content: 'STT ' attr(data-stt); display: block; grid-column: 1 / -1; margin-bottom: 6px; color: var(--theme-muted, #626878); font-size: 16px; line-height: 1.6; font-variant-numeric: tabular-nums; }
 tr.manager-numbered-item::before { display: none; }
 .manager-stt { width: 46px; color: var(--theme-muted, #626878); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .manager-list-scroll > table { width: 100%; min-width: 640px; border-collapse: collapse; }

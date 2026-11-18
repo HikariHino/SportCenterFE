@@ -1,2 +1,2 @@
-.otp-countdown { margin: 8px 0 0; color: var(--theme-muted, #626879); font-size: 12px; line-height: 1.6; }
+.otp-countdown { margin: 8px 0 0; color: var(--theme-muted, #626879); font-size: 17px; line-height: 1.6; }
 .otp-countdown.is-expired { color: var(--theme-red, #b42318); }

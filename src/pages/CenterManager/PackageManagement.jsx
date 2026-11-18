@@ -726,7 +726,7 @@ export default function PackageManagement() {
                     autoFocus
                   />
                   <div className="pkg-preset-chips">
-                    <span style={{ fontSize: 11, color: 'var(--manager-muted)', alignSelf: 'center' }}>
+                    <span style={{ fontSize: 16, color: 'var(--manager-muted)', alignSelf: 'center' }}>
                       Gợi ý tên:
                     </span>
                     {PRESET_NAMES.slice(0, 4).map((name) => (
@@ -811,7 +811,7 @@ export default function PackageManagement() {
                     onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
                   />
                   <div className="pkg-benefits-wrap">
-                    <span style={{ fontSize: 11, color: 'var(--manager-muted)', width: '100%' }}>
+                    <span style={{ fontSize: 16, color: 'var(--manager-muted)', width: '100%' }}>
                       Click để thêm nhanh quyền lợi vào mô tả:
                     </span>
                     {BENEFIT_SUGGESTIONS.map((ben) => (
@@ -951,7 +951,7 @@ export default function PackageManagement() {
                     onChange={(e) => setPackageForm({ ...packageForm, description: e.target.value })}
                   />
                   <div className="pkg-benefits-wrap">
-                    <span style={{ fontSize: 11, color: 'var(--manager-muted)', width: '100%' }}>
+                    <span style={{ fontSize: 16, color: 'var(--manager-muted)', width: '100%' }}>
                       Click để thêm nhanh quyền lợi vào mô tả:
                     </span>
                     {BENEFIT_SUGGESTIONS.map((ben) => (
@@ -1027,7 +1027,7 @@ export default function PackageManagement() {
                 <span>/ {formatDuration(selectedPackageForDetail.durationInDays)}</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 18 }}>
                 <div>
                   <span style={{ color: 'var(--manager-muted)' }}>Mã gói thẻ: </span>
                   <strong>#{selectedPackageForDetail.id}</strong>
@@ -1120,7 +1120,7 @@ export default function PackageManagement() {
             </div>
             <div className="pkg-modal-body">
               <ManagerFormError message={error} />
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: 18, lineHeight: 1.6 }}>
                 Bạn có chắc chắn muốn{' '}
                 <strong>{togglingPackage.isActive ? 'tạm dừng bán' : 'mở bán lại'}</strong> gói thẻ{' '}
                 <strong>"{togglingPackage.packageName}"</strong>?
