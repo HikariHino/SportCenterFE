@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, Clock3, LoaderCircle, ReceiptText, XCircle } from 'lucide-react'
 
 import { isTemporaryPaymentError, verifyPaymentResult } from '../../services/paymentService'
@@ -19,6 +19,8 @@ const resultContent = {
 
 export default function PaymentResult() {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const isReceptionist = user?.role === 'receptionist'
   const isMember = user?.role === 'member'
   const historyTarget = isManagerRole(user?.role) ? '/manager?view=frontdesk' : '/receptionist?view=' + encodeURIComponent('Thanh toán')
   const [searchParams] = useSearchParams()
@@ -42,7 +44,10 @@ export default function PaymentResult() {
           try { subscriptionCancelled = Boolean(await completeCancelledPaymentSubscription(synced)) }
           catch (error) { cancellationError = error?.response?.data?.message || error.message || 'Chưa hoàn tất hủy đơn đăng ký gói.' }
         }
-        if (active) setState({ orderCode, status, subscriptionCancelled, cancellationError, message: synced.transactionReference || `PAY-${synced.id}` })
+        if (active) {
+          setState({ orderCode, status, subscriptionCancelled, cancellationError, message: synced.transactionReference || `PAY-${synced.id}` })
+          if (isReceptionist) navigate(historyTarget, { replace: true, state: { receptionistPaymentReturn: { id: synced.id, status } } })
+        }
       } catch (error) {
         if (active) setState({ orderCode, status: 'error', message: isTemporaryPaymentError(error)
           ? 'Kết nối xác nhận thanh toán đang gián đoạn. Vui lòng kiểm tra lại sau ít giây.'
@@ -52,7 +57,7 @@ export default function PaymentResult() {
 
     verifyPayment()
     return () => { active = false }
-  }, [orderCode, revision, isMember])
+  }, [orderCode, revision, isMember, isReceptionist, navigate, historyTarget])
 
   if (state.status === 'loading' || state.orderCode !== orderCode) {
     return <main className="payment-result-page"><section className="payment-result-card"><LoaderCircle className="payment-result-spin" size={54} /><h1>Đang kiểm tra thanh toán...</h1><p>Vui lòng giữ nguyên trang trong giây lát.</p></section></main>

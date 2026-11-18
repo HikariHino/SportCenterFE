@@ -4,10 +4,15 @@ import { getMembers } from '../../services/memberService'
 import { getReceptionistMemberSubscriptions, getReceptionistSubscriptionById } from '../../services/memberSubscriptionService'
 import { checkoutReceptionistSubscription, getReceptionistPaymentError } from '../../services/receptionistPaymentService'
 import { formatDateTime } from './ReceptionistViewShared'
+import PackageCheckoutDialog from './PackageCheckoutDialog'
 
 const currency = amount => `${Number(amount).toLocaleString('vi-VN')} đ`
 
-export default function CheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subscriptionId: initialSubscriptionId, counterOnly = false, initialPaymentMethod = 'Cash' }) {
+export default function CheckoutDialog(props) {
+  return props.subscriptionId ? <OrderCheckoutDialog {...props} /> : <PackageCheckoutDialog {...props} />
+}
+
+function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subscriptionId: initialSubscriptionId, counterOnly = false, initialPaymentMethod = 'Cash' }) {
   const titleId = useId()
   const [members, setMembers] = useState([])
   const [query, setQuery] = useState('')
