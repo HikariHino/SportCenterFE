@@ -74,12 +74,12 @@ test('the AI workout entry and shortcut are hidden, and its old URL opens center
   assert.match(oldWorkoutUrl, /class="member-sidebar-item active"[^>]+>.*?Ra\/Vào trung tâm/)
 })
 
-test('every Member navigation destination renders with one active sidebar button', () => {
+test('Member destinations render and only visible destinations have an active sidebar button', () => {
   for (const item of navSections.flatMap(group => group.items)) {
     const html = renderPortal('/member?view=' + item.id)
     assert.match(html, /member-main-content/, item.id)
     const sidebar = html.slice(html.indexOf('<nav'), html.indexOf('</nav>'))
-    assert.equal((sidebar.match(/aria-current="page"/g) || []).length, 1, item.id)
-    assert.ok(sidebar.includes(item.label.replaceAll('&', '&amp;')), item.id)
+    assert.equal((sidebar.match(/aria-current="page"/g) || []).length, item.hideFromSidebar ? 0 : 1, item.id)
+    assert.equal(sidebar.includes(item.label.replaceAll('&', '&amp;')), !item.hideFromSidebar, item.id)
   }
 })
