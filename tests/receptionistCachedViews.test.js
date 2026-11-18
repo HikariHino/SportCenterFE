@@ -65,10 +65,10 @@ test('all eight tabs render prefetched data on the first paint instead of the fu
   }
 })
 
-test('a pending background refresh keeps the member table visible while showing a small updating message', () => {
+test('a pending background refresh keeps the member table visible without an update banner', () => {
   const html = renderView('MembersView', cache => cache.load('members', () => new Promise(() => {}), { force: true }))
   assert.match(html, /Nguyễn Văn An/)
-  assert.match(html, /Đang cập nhật dữ liệu mới/)
+  assert.doesNotMatch(html, /Đang cập nhật dữ liệu mới/)
   assert.doesNotMatch(html, /aria-label="Đang tải nội dung"/)
 })
 

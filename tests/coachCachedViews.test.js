@@ -58,10 +58,10 @@ test('all Coach tabs render cached content without returning to their initial fu
   }
 })
 
-test('background refresh keeps rooms visible and displays a compact updating message', () => {
+test('background refresh keeps rooms visible without displaying an update banner', () => {
   const html = renderView('CoachRoomsView', cache => cache.load('rooms:active', () => new Promise(() => {}), { force: true }))
   assert.match(html, /Phòng Gym A/)
-  assert.match(html, /Đang cập nhật dữ liệu mới/)
+  assert.doesNotMatch(html, /Đang cập nhật dữ liệu mới/)
   assert.doesNotMatch(html, /aria-label="Đang tải nội dung"/)
 })
 
