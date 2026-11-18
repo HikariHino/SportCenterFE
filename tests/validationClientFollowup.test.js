@@ -108,6 +108,53 @@ for (const [role, selector] of [['coach', '.coach-account-profile-form'], ['rece
   }))
 }
 
+test('Coach profile actions follow the email editor and still submit only the profile form', () => screen('coach', async () => {
+  await click('Chỉnh sửa')
+  const form = document.querySelector('.coach-account-profile-form')
+  const emailEditor = document.querySelector('.account-email-change')
+  const actions = document.querySelector('.coach-account-profile-actions')
+  assert.equal(form.querySelector('input[type=email]'), null)
+  assert.deepEqual([...form.querySelectorAll('input')].map(input => input.name), ['fullName', 'phoneNumber', 'currentPassword', 'password'])
+  assert.equal(actions.previousElementSibling, emailEditor)
+  assert.equal(actions.closest('form'), null)
+  assert.equal(actions.querySelector('button[type=submit]').form, form)
+  assert.equal(emailEditor.querySelector('form').contains(form), false)
+  // The independent email editor's required/invalid draft must not block saving the profile.
+  await change(emailEditor.querySelector('input[type=email]'), 'invalid-email')
+  // Happy DOM does not apply the browser's Unicode flag to HTML patterns;
+  // the submit handler and service still validate this name independently.
+  form.querySelector('input[name=fullName]').removeAttribute('pattern')
+  assert.equal(form.checkValidity(), true, [...form.elements].filter(field => !field.checkValidity()).map(field => field.name).join(', '))
+  await click('Lưu hồ sơ')
+  assert.equal(writes.length, 1)
+  assert.equal(writes[0].url, '/profile')
+  assert.equal(writes[0].body.fullName, fullName)
+  assert.equal(Object.hasOwn(writes[0].body, 'newEmail'), false)
+  assert.equal(document.querySelector('.coach-account-profile-actions'), null)
+}))
+
+test('Coach email submission does not submit the profile when actions are placed below it', () => screen('coach', async () => {
+  await click('Chỉnh sửa')
+  await change(document.querySelector('.account-email-change input[type=email]'), 'new@fpt.edu.vn')
+  await click('Gửi mã xác nhận')
+  assert.deepEqual(writes, [{ url: '/profile/change-email/request-otp', body: { newEmail: 'new@fpt.edu.vn' } }])
+  assert.ok(document.querySelector('.account-email-change input[autocomplete=one-time-code]'))
+  assert.ok(document.querySelector('.coach-account-profile-actions'))
+}))
+
+test('Coach cancel action below the email form discards both profile and email drafts without submitting', () => screen('coach', async () => {
+  await click('Chỉnh sửa')
+  await change(document.querySelector('.coach-account-profile-form input[name=fullName]'), 'Tên Đã Sửa')
+  await change(document.querySelector('.account-email-change input[type=email]'), 'new@fpt.edu.vn')
+  await click('Hủy thay đổi')
+  assert.equal(document.querySelector('.coach-account-profile-actions'), null)
+  assert.equal(document.querySelector('.account-email-change'), null)
+  assert.equal(writes.length, 0)
+  await click('Chỉnh sửa')
+  assert.equal(document.querySelector('.coach-account-profile-form input[name=fullName]').value, fullName)
+  assert.equal(document.querySelector('.account-email-change input[type=email]').value, '')
+}))
+
 test('room dialog labels identify every field, Tab stays inside, and Escape closes and restores focus', () => screen('room', async () => {
   await click('Thêm phòng tập')
   const dialog = document.querySelector('.room-modal'), opener = [...document.querySelectorAll('button')].find(node => node.textContent.includes('Thêm phòng tập'))

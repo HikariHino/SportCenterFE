@@ -134,7 +134,7 @@
     .coach-dashboard .coach-nav button:not(:disabled):hover > svg:first-child { transform: scale(1.1); }
     .coach-dashboard :is(
       .coach-focus-main > button, .coach-profile-actions > button,
-      .coach-plan-dialog form > footer > button, .coach-account-profile-form > footer > button,
+      .coach-plan-dialog form > footer > button, .coach-account-profile-actions > button,
       .coach-attendance-actions > button, .coach-plan-exercises-head > button,
       .coach-exercise-result-form > footer > button
     ):not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 14px #10264b1a; }
@@ -149,7 +149,7 @@
 
   .coach-dashboard :is(
     .coach-focus-main > button, .coach-profile-actions > button,
-    .coach-plan-dialog form > footer > button, .coach-account-profile-form > footer > button,
+    .coach-plan-dialog form > footer > button, .coach-account-profile-actions > button,
     .coach-focus-shortcuts > button, .coach-attendance-actions > button,
     .coach-plan-exercises-head > button, .coach-exercise-result-form > footer > button
   ):not(:disabled):active { transform: translateY(0) scale(.98); }

@@ -352,8 +352,8 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-account-profile-grid article { border-color:var(--theme-border); background:var(--theme-raised); }
 [data-theme='dark'] .coach-account-profile-details>.coach-card-head>button { border-color:#3c5f9f; color:var(--theme-accent); background:var(--theme-blue-bg); }
 [data-theme='dark'] .coach-account-profile-form input { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
-[data-theme='dark'] .coach-account-profile-form>footer { border-color:var(--theme-border); }
-[data-theme='dark'] .coach-account-profile-form>footer button:not([type='submit']) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
+[data-theme='dark'] .coach-account-profile-actions { border-color:var(--theme-border); }
+[data-theme='dark'] .coach-account-profile-actions button:not([type='submit']) { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }
 [data-theme='dark'] .coach-room-filters button { border-color:var(--theme-border); color:var(--theme-muted); background:var(--theme-raised); }
 [data-theme='dark'] .coach-room-filters button.active { border-color:#3c5f9f; color:var(--theme-accent); background:var(--theme-blue-bg); }
 [data-theme='dark'] .coach-room-list article { border-color:var(--theme-border); background:var(--theme-raised); }
