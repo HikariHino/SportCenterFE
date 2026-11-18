@@ -1,6 +1,6 @@
 import { useReceptionistResource, useReceptionistViewActive } from '../../contexts/ReceptionistWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { CheckCircle2, Edit3, IdCard, LoaderCircle, Mail, Phone, RefreshCw, Save, UserRound, X } from 'lucide-react'
 import { getProfile, getProfileErrorMessage, updateProfile } from '../../services/profileService'
 import { getFullNameValidationError, getProfilePhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_MAX_LENGTH, PROFILE_PHONE_MESSAGE } from '../../utils/profileValidation'
@@ -13,6 +13,7 @@ const dateFormatter = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: 
 const emptyForm = { fullName: '', email: '', phoneNumber: '', currentPassword: '', password: '' }
 
 export function ReceptionistProfileView({ showNotice }) {
+  const profileFormId = useId()
   const [requestKey, setRequestKey] = useState(0)
   const [editing, setEditing] = useState(false)
   const viewActive = useReceptionistViewActive()
@@ -21,7 +22,7 @@ export function ReceptionistProfileView({ showNotice }) {
   const [actionError, setActionError] = useState('')
   const [form, setForm] = useState(emptyForm)
 
-  const profileQuery = useReceptionistResource('profile', getProfile, { initialData: null, refreshKey: requestKey })
+  const profileQuery = useReceptionistResource('profile', getProfile, { initialData: null, enabled: !editing && !saving, refreshKey: requestKey })
   const { data: profile, loading, refreshing, setData: setProfile } = profileQuery
   const error = profileQuery.error ? getProfileErrorMessage(profileQuery.error, 'Không thể tải hồ sơ Receptionist.') : ''
 
@@ -87,21 +88,22 @@ export function ReceptionistProfileView({ showNotice }) {
         <div><span>THÔNG TIN TÀI KHOẢN</span><h2>{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h2></div>
         {editing ? <button type="button" onClick={stopEditing} disabled={saving}><X size={16} />Hủy</button> : <button type="button" onClick={startEditing}><Edit3 size={15} />Chỉnh sửa</button>}
       </div>
-      {editing ? <form className="reception-profile-form" onSubmit={handleSubmit}>
-        <label>Họ và tên<input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} value={form.fullName} onChange={event => setForm(current => ({ ...current, fullName: event.target.value }))} maxLength={PROFILE_FULL_NAME_MAX_LENGTH} required /></label>
-        <label>Email hiện tại<input type="email" value={profile.email} readOnly /></label>
-        <label>Số điện thoại<input type="tel" inputMode="tel" title={PROFILE_PHONE_MESSAGE} value={form.phoneNumber} onChange={event => setForm(current => ({ ...current, phoneNumber: event.target.value }))} maxLength={PROFILE_PHONE_MAX_LENGTH} placeholder="0912345678" /></label>
-        <label>Mật khẩu hiện tại<input type="password" value={form.currentPassword} onChange={event => setForm(current => ({ ...current, currentPassword: event.target.value }))} autoComplete="current-password" placeholder="Chỉ nhập khi đổi mật khẩu" /></label>
-        <label className="wide">Mật khẩu mới<input type="password" value={form.password} onChange={event => setForm(current => ({ ...current, password: event.target.value }))} minLength={8} maxLength={72} autoComplete="new-password" placeholder="Để trống nếu không đổi mật khẩu" /></label>
-        {actionError && <p>{actionError}</p>}
-        <button type="submit" disabled={saving}>{saving ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+      {editing ? <form id={profileFormId} className="reception-profile-form" onSubmit={handleSubmit}>
+        <label className="reception-profile-name-field">Họ và tên<input name="fullName" pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} value={form.fullName} onChange={event => setForm(current => ({ ...current, fullName: event.target.value }))} maxLength={PROFILE_FULL_NAME_MAX_LENGTH} required /></label>
+        <label className="reception-profile-phone-field">Số điện thoại<input name="phoneNumber" type="tel" inputMode="tel" title={PROFILE_PHONE_MESSAGE} value={form.phoneNumber} onChange={event => setForm(current => ({ ...current, phoneNumber: event.target.value }))} maxLength={PROFILE_PHONE_MAX_LENGTH} placeholder="0912345678" /></label>
+        <label className="reception-profile-current-password-field">Mật khẩu hiện tại<input name="currentPassword" type="password" value={form.currentPassword} onChange={event => setForm(current => ({ ...current, currentPassword: event.target.value }))} autoComplete="current-password" placeholder="Chỉ nhập khi đổi mật khẩu" /></label>
+        <label className="reception-profile-new-password-field">Mật khẩu mới (không bắt buộc)<input name="password" type="password" value={form.password} onChange={event => setForm(current => ({ ...current, password: event.target.value }))} minLength={8} maxLength={72} autoComplete="new-password" placeholder="Để trống nếu không đổi mật khẩu" /></label>
+        {actionError && <p role="alert">{actionError}</p>}
       </form> : <div className="reception-profile-grid">
         <article><span><Mail size={18} /></span><div><small>Email</small><strong>{profile.email}</strong></div></article>
         <article><span><Phone size={18} /></span><div><small>Số điện thoại</small><strong>{profile.phoneNumber || 'Chưa cập nhật'}</strong></div></article>
         <article><span><IdCard size={18} /></span><div><small>Ngày tạo</small><strong>{profile.createdAt ? dateFormatter.format(new Date(profile.createdAt)) : 'Chưa xác định'}</strong></div></article>
         <article><span><CheckCircle2 size={18} /></span><div><small>Cập nhật gần nhất</small><strong>{profile.updatedAt ? dateFormatter.format(new Date(profile.updatedAt)) : 'Chưa cập nhật'}</strong></div></article>
       </div>}
-      {editing && <ChangeEmailForm currentEmail={profile.email} disabled={saving} allowAnyEmailDomain />}
+      {editing && <>
+        <ChangeEmailForm currentEmail={profile.email} disabled={saving} allowAnyEmailDomain />
+        <footer className="reception-profile-actions"><button type="button" onClick={stopEditing} disabled={saving}>Hủy thay đổi</button><button type="submit" form={profileFormId} disabled={saving}>{saving ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button></footer>
+      </>}
     </section>
   </div>
 }

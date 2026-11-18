@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 
 let window, server, createRoot, AuthProvider, Router
 const descriptors = new Map(), views = {}, writes = []
-let holdWrite = false, pending
+let holdWrite = false, pending, savedProfile
 const fullName = 'A'.repeat(61), phoneNumber = '+84912345678'
 before(async () => {
   window = new Window({ url: 'http://localhost:3000/member' })
@@ -22,12 +22,14 @@ before(async () => {
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   const api = (await server.ssrLoadModule('/src/services/api.js')).default
   api.defaults.adapter = async config => {
-    const profile = { userId: 1, fullName, phoneNumber, email: 'test@example.com' }
+    const profile = savedProfile || { userId: 1, fullName, phoneNumber, email: 'test@example.com' }
     const response = data => ({ data: { success: true, data }, status: 200, headers: {}, config })
     if (config.method !== 'get') {
       writes.push({ url: config.url, body: JSON.parse(config.data || '{}') })
       if (holdWrite) return new Promise((resolve, reject) => { pending = { succeed: () => resolve(response({ id: 2, ...JSON.parse(config.data) })), fail: () => reject(new Error('Lỗi thử nghiệm')) } })
-      return response({ ...profile, ...JSON.parse(config.data || '{}') })
+      const result = { ...profile, ...JSON.parse(config.data || '{}') }
+      if (config.url === '/profile') savedProfile = result
+      return response(result)
     }
     return response(config.url === '/profile' ? profile : config.url === '/members/me' ? { memberId: 1, fullName } : config.url.toLowerCase() === '/rooms' ? [{ id: 1, name: 'Phòng cũ', capacity: 30, roomType: 'General', isActive: true }] : [])
   }
@@ -48,7 +50,7 @@ after(async () => {
   }
 })
 async function screen(view, run) {
-  writes.length = 0; holdWrite = false; pending = null
+  writes.length = 0; holdWrite = false; pending = null; savedProfile = null
   const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
   try {
     await act(async () => root.render(h(Router, null, h(AuthProvider, null, h(views[view], { user: { id: 1, fullName }, showNotice() {} })))))
@@ -64,7 +66,7 @@ const change = (input, value) => act(async () => { Object.getOwnPropertyDescript
 
 for (const [role, selector] of [['member', '.member-profile-form'], ['coach', '.coach-account-profile-form'], ['receptionist', '.reception-profile-form']]) {
   test(`${role} profile can save a registered 61-character name and +84 phone without changing them`, () => screen(role, async () => {
-    if (role !== 'member') await click('Chỉnh sửa')
+    await click('Chỉnh sửa')
     const form = document.querySelector(selector), name = form.querySelector('input:not([type]), input[name="fullName"]'), phone = form.querySelector('input[type="tel"]')
     assert.equal(name.maxLength, 100)
     assert.equal(phone.value, phoneNumber)
@@ -77,24 +79,92 @@ for (const [role, selector] of [['member', '.member-profile-form'], ['coach', '.
   }))
 }
 
+for (const [role, selector, actionsSelector] of [
+  ['member', '.member-profile-form', '.member-profile-editor-actions'],
+  ['receptionist', '.reception-profile-form', '.reception-profile-actions'],
+]) {
+  test(`${role} shows a read-only profile first and saves through the actions below the independent email editor`, () => screen(role, async () => {
+    assert.equal(document.querySelector(selector), null)
+    assert.equal(document.querySelector('.account-email-change'), null)
+    assert.match(document.body.textContent, /test@example.com/)
+    await click('Chỉnh sửa')
+    const form = document.querySelector(selector), email = document.querySelector('.account-email-change'), actions = document.querySelector(actionsSelector)
+    assert.equal(form.querySelector('input[type=email]'), null)
+    assert.equal(actions.previousElementSibling, email)
+    assert.equal(actions.closest('form'), null)
+    assert.equal(actions.querySelector('button[type=submit]').form, form)
+    if (role === 'member') {
+      for (const name of ['gender', 'dateOfBirth', 'fitnessGoal', 'address', 'emergencyContact']) assert.ok(form.elements.namedItem(name), name)
+      assert.equal(document.querySelector('.member-password-form').contains(form), false)
+    }
+    await change(form.querySelector('input[name=fullName]'), 'Nguyễn Văn Bình')
+    const summary = document.querySelector(role === 'member' ? '.member-profile-identity-card' : '.reception-profile-summary')
+    assert.match(summary.textContent, new RegExp(fullName), 'identity card retains the saved name while editing')
+    await change(email.querySelector('input[type=email]'), 'invalid-email')
+    form.querySelector('input[name=fullName]').removeAttribute('pattern')
+    await click('Lưu hồ sơ')
+    assert.equal(writes.length, 1)
+    assert.equal(writes[0].url, '/profile')
+    assert.equal(writes[0].body.fullName, 'Nguyễn Văn Bình')
+    assert.equal(Object.hasOwn(writes[0].body, 'newEmail'), false)
+    assert.equal(document.querySelector(actionsSelector), null)
+    assert.equal(document.querySelector(selector), null)
+    assert.match(summary.textContent, /Nguyễn Văn Bình/)
+  }))
+
+  test(`${role} cancellation resets the profile and email editor without sending requests`, () => screen(role, async () => {
+    await click('Chỉnh sửa')
+    await change(document.querySelector(`${selector} input[name=fullName]`), 'Tên Đã Sửa')
+    await change(document.querySelector('.account-email-change input[type=email]'), 'new@fpt.edu.vn')
+    await click('Hủy thay đổi')
+    assert.equal(document.querySelector(selector), null)
+    assert.equal(document.querySelector('.account-email-change'), null)
+    assert.equal(writes.length, 0)
+    await click('Chỉnh sửa')
+    assert.equal(document.querySelector(`${selector} input[name=fullName]`).value, fullName)
+    assert.equal(document.querySelector('.account-email-change input[type=email]').value, '')
+  }))
+}
+
+test('Member profile, password and email forms keep their validation and requests independent', () => screen('member', async () => {
+  await click('Chỉnh sửa')
+  const profile = document.querySelector('.member-profile-form'), passwords = document.querySelector('.member-password-form')
+  await change(profile.querySelector('input[name=fullName]'), 'Tên Đang Soạn')
+  await change(passwords.querySelector('input[name=currentPassword]'), 'CurrentPassword!')
+  await change(passwords.querySelector('input[name=newPassword]'), 'NewPassword!')
+  await change(passwords.querySelector('input[name=confirmPassword]'), 'NewPassword!')
+  await click('Cập nhật mật khẩu')
+  assert.deepEqual(writes, [{ url: '/profile', body: { currentPassword: 'CurrentPassword!', password: 'NewPassword!' } }])
+  assert.equal(profile.querySelector('input[name=fullName]').value, 'Tên Đang Soạn')
+  await change(document.querySelector('.account-email-change input[type=email]'), 'new@fpt.edu.vn')
+  await click('Gửi mã xác nhận')
+  assert.equal(writes.length, 2)
+  assert.equal(writes[1].url, '/profile/change-email/request-otp')
+  assert.equal(profile.querySelector('input[name=fullName]').value, 'Tên Đang Soạn')
+  await click('Hủy thay đổi')
+  await click('Chỉnh sửa')
+  assert.equal(document.querySelector('.member-profile-form input[name=fullName]').value, fullName)
+  for (const input of document.querySelectorAll('.member-password-form input')) assert.equal(input.value, '')
+}))
+
 for (const role of ['member', 'coach', 'receptionist']) {
   test(`${role} hides the email form until editing and clears its draft when editing is cancelled`, () => screen(role, async () => {
     assert.equal(document.querySelector('.account-email-change'), null)
-    await click(role === 'member' ? 'Chỉnh sửa email' : 'Chỉnh sửa')
+    await click('Chỉnh sửa')
     let emailForm = document.querySelector('.account-email-change')
     assert.ok(emailForm)
     assert.match(emailForm.textContent, /test@example.com/)
     await change(emailForm.querySelector('input[type=email]'), 'new@fpt.edu.vn')
-    await click(role === 'member' ? 'Hủy chỉnh sửa email' : 'Hủy')
+    await click('Hủy')
     assert.equal(document.querySelector('.account-email-change'), null)
-    await click(role === 'member' ? 'Chỉnh sửa email' : 'Chỉnh sửa')
+    await click('Chỉnh sửa')
     emailForm = document.querySelector('.account-email-change')
     assert.equal(emailForm.querySelector('input[type=email]').value, '')
     assert.equal(writes.length, 0, 'opening or closing email editing does not send an OTP')
   }))
 }
 
-for (const [role, selector] of [['coach', '.coach-account-profile-form'], ['receptionist', '.reception-profile-form']]) {
+for (const [role, selector] of [['member', '.member-profile-form'], ['coach', '.coach-account-profile-form'], ['receptionist', '.reception-profile-form']]) {
   test(`${role} retains the email editor on a failed profile save and closes it after a successful save`, () => screen(role, async () => {
     await click('Chỉnh sửa')
     holdWrite = true

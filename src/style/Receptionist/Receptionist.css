@@ -86,7 +86,7 @@
 
 @media(max-width:520px) { .reception-payment-form-grid { grid-template-columns:1fr; } }
 
-.reception-profile-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:20px; }.reception-profile-form label { display:grid; gap:6px; color:#5b687d; font-size:12px; font-weight:750; }.reception-profile-form label.wide { grid-column:1/-1; }.reception-profile-form input { width:100%; height:42px; padding:0 11px; border:1px solid #d8e1ea; border-radius:8px; outline:0; color:var(--rc-ink); background:#f9fbfc; font-size:13px; }.reception-profile-form input:focus { border-color:#66cfc5; box-shadow:0 0 0 3px #0d948813; }.reception-profile-form>p { grid-column:1/-1; margin:0; padding:9px 11px; border:1px solid #f0b7bd; border-radius:7px; color:#a62d3a; background:#fff0f2; font-size:12px; font-weight:700; }.reception-profile-form>button { grid-column:1/-1; min-height:41px; display:flex; align-items:center; justify-content:center; gap:7px; border:0; border-radius:8px; color:#fff; background:var(--rc-accent); font-size:13px; font-weight:800; }.reception-profile-form>button:disabled { opacity:.6; cursor:wait; }
+.reception-profile-form { display:grid; grid-template-columns:1fr 1fr; grid-template-areas:'name current-password' 'phone new-password'; gap:12px; padding:14px 19px; }.reception-profile-form label { display:grid; gap:6px; color:#5b687d; font-size:12px; font-weight:750; }.reception-profile-form label.wide { grid-column:1/-1; }.reception-profile-form input { width:100%; height:42px; padding:0 11px; border:1px solid #d8e1ea; border-radius:8px; outline:0; color:var(--rc-ink); background:#f9fbfc; font-size:13px; }.reception-profile-form input:focus { border-color:#66cfc5; box-shadow:0 0 0 3px #0d948813; }.reception-profile-form>p { grid-column:1/-1; margin:0; padding:9px 11px; border:1px solid #f0b7bd; border-radius:7px; color:#a62d3a; background:#fff0f2; font-size:12px; font-weight:700; }.reception-profile-form>button { grid-column:1/-1; min-height:41px; display:flex; align-items:center; justify-content:center; gap:7px; border:0; border-radius:8px; color:#fff; background:var(--rc-accent); font-size:13px; font-weight:800; }.reception-profile-form>button:disabled { opacity:.6; cursor:wait; }
 @media(max-width:620px) { .reception-profile-form { grid-template-columns:1fr; padding:15px; }.reception-profile-form label.wide { grid-column:auto; } }
 
 .reception-room-toolbar { display:flex; align-items:center; gap:18px; margin-bottom:16px; padding:14px 18px; }.reception-room-toolbar>div:first-child { min-width:190px; display:flex; align-items:center; gap:10px; }.reception-room-toolbar>div:first-child>span { width:35px; height:35px; display:grid; place-items:center; border-radius:8px; color:#087e74; background:#ddf7f3; }.reception-room-toolbar small,.reception-room-toolbar strong { display:block; }.reception-room-toolbar small { color:var(--rc-accent); font-size:10px; font-weight:800; letter-spacing:1px; }.reception-room-toolbar strong { margin-top:3px; font-size:13px; }.reception-room-toolbar label { display:grid; flex:1; gap:5px; color:#687489; font-size:11px; font-weight:700; }.reception-room-toolbar select { width:100%; height:37px; padding:0 10px; border:1px solid #d9e1ed; border-radius:8px; outline:0; color:var(--rc-ink); background:#f9fbfe; font:600 12px 'Be Vietnam Pro',sans-serif; }
@@ -1021,3 +1021,18 @@
 .reception-refresh-status > span { flex: 1; }
 .reception-refresh-status > button { padding: 5px 9px; border: 1px solid currentColor; border-radius: 6px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
 .reception-profile-layout > .reception-refresh-status { grid-column: 1 / -1; }
+
+.reception-profile-name-field { grid-area: name; }
+.reception-profile-phone-field { grid-area: phone; }
+.reception-profile-current-password-field { grid-area: current-password; }
+.reception-profile-new-password-field { grid-area: new-password; }
+.reception-profile-actions { display:flex; justify-content:flex-end; gap:8px; margin:0 19px 18px; padding-top:15px; border-top:1px solid var(--theme-border); }
+.reception-profile-actions button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:36px; padding:0 14px; border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text); background:var(--theme-raised); font:inherit; font-size:12px; font-weight:700; }
+.reception-profile-actions button[type='submit'] { border-color:var(--rc-accent); color:var(--theme-bg); background:var(--rc-accent); }
+.reception-profile-actions button:disabled { opacity:.6; cursor:wait; }
+html:has(.reception-view:not([hidden]) .reception-profile-form) { scrollbar-width:none; }
+html:has(.reception-view:not([hidden]) .reception-profile-form)::-webkit-scrollbar { width:0; }
+@media(max-width:620px) {
+  .reception-profile-form { grid-template-areas:'name' 'phone' 'current-password' 'new-password'; padding:10px 14px; }
+  .reception-profile-actions { margin-inline:14px; display:grid; grid-template-columns:1fr 1fr; }
+}
