@@ -4,12 +4,30 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  height: 64px;
-  min-height: 64px;
-  max-height: 64px;
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
   flex-shrink: 0;
-  padding: 6px 36px 6px 12px;
+  padding: 4px 36px 4px 12px;
   line-height: 23px;
+}
+
+:is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)
+:is(.reception-nav-title, .coach-nav-title, .member-sidebar-group-title, .manager-nav-group > p) {
+  margin-inline:0;
+  padding-inline:4px;
+  font-size:calc(14px + var(--font-size-adjustment, 0px));
+  letter-spacing:.2px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+@media (max-width:1100px) {
+  :is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)
+  :is(.reception-nav-title, .coach-nav-title, .member-sidebar-group-title, .manager-nav-group > p) {
+    font-size:clamp(9px, calc(12px + var(--font-size-adjustment, 0px)), 12px);
+  }
 }
 
 :is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)

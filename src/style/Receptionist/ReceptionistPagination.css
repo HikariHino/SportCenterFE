@@ -1,4 +1,4 @@
-.reception-pagination { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; padding: 12px 16px; border-top: 1px solid var(--rc-line); color: var(--rc-muted); background: var(--theme-surface, #fff); font-size: 17px; line-height: 1.6; }
+.reception-pagination { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; padding: 12px 16px; border-top: 1px solid var(--rc-line); color: var(--rc-muted); background: var(--theme-surface, #fff); font-size: calc(17px + var(--font-size-adjustment, 0px)); line-height: 1.6; }
 .reception-paged-table { display: flex; flex-direction: column; height: clamp(260px, 60dvh, 560px); min-height: 0; }
 .reception-dashboard .reception-paged-table > .reception-table-scroll { flex: 1 1 0; height: auto; min-height: 0; }
 .reception-paged-table > .reception-pagination { position: relative; z-index: 3; flex-shrink: 0; box-shadow: 0 -4px 12px #10264b0a; }
@@ -6,12 +6,12 @@
 .reception-dashboard .reception-pagination button, .reception-dashboard .reception-pagination select { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 36px; min-height: 34px; margin: 0; padding: 6px 9px; border: 1px solid var(--rc-line); border-radius: 7px; color: var(--rc-ink); background: var(--theme-raised, #f5f8fc); font: inherit; }
 .reception-pagination button:disabled { opacity: .45; cursor: not-allowed; }
 .reception-dashboard .reception-pagination select { width: auto; max-width: 85px; }
-.reception-stt { color: var(--rc-muted); font-size: 17px; font-variant-numeric: tabular-nums; }
+.reception-stt { color: var(--rc-muted); font-size: calc(17px + var(--font-size-adjustment, 0px)); font-variant-numeric: tabular-nums; }
 .reception-dashboard .reception-table-scroll .reception-numbered-row, .reception-dashboard .reception-table-scroll .reception-numbered-heading { grid-template-columns: 45px minmax(0,.8fr) minmax(0,1.15fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr); min-width: 780px; }
 .reception-dashboard .reception-gym-today-table .reception-numbered-row, .reception-dashboard .reception-gym-today-table .reception-numbered-heading { display: grid; grid-template-columns: 45px minmax(150px,1.2fr) minmax(130px,1fr) minmax(140px,1fr) minmax(140px,1fr) minmax(110px,.8fr); min-width: 870px; }
 .reception-dashboard .reception-numbered-row > .reception-stt { display: block; }
 .reception-numbered-item { position: relative; }
-.reception-numbered-item::before { content: 'STT ' attr(data-stt); display: block; grid-column: 1 / -1; color: var(--rc-muted); font-size: 16px; line-height: 1.6; margin-bottom: 6px; }
+.reception-numbered-item::before { content: 'STT ' attr(data-stt); display: block; grid-column: 1 / -1; color: var(--rc-muted); font-size: calc(16px + var(--font-size-adjustment, 0px)); line-height: 1.6; margin-bottom: 6px; }
 .reception-support-list > .reception-numbered-item::before { content: none; }
 .reception-numbered-item > header { min-width: 0; }
 .reception-schedule-session-list > .reception-numbered-item::before, .reception-room-cancelled-list > .reception-numbered-item::before { position: absolute; top: 3px; left: 12px; pointer-events: none; }

@@ -3,11 +3,11 @@
 .payment-result-icon { width: 88px; height: 88px; display: grid; place-items: center; margin: 0 auto 22px; border-radius: 50%; color: #087f5b; background: #def8ec; }
 .payment-result-page--cancelled .payment-result-icon,.payment-result-page--failed .payment-result-icon,.payment-result-page--error .payment-result-icon { color: #c0392b; background: #fee9e7; }
 .payment-result-page--pending .payment-result-icon,.payment-result-page--review .payment-result-icon { color: #a66700; background: #fff0cc; }
-.payment-result-label { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 10px; color: #435477; font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-.payment-result-card h1 { margin: 0; font-size: calc(clamp(25px, 5vw, 34px) + 5px); }
+.payment-result-label { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 10px; color: #435477; font-size: calc(17px + var(--font-size-adjustment, 0px)); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.payment-result-card h1 { margin: 0; font-size: calc(calc(clamp(25px, 5vw, 34px) + 5px) + var(--font-size-adjustment, 0px)); }
 .payment-result-card > p:not(.payment-result-label) { margin: 12px auto 0; max-width: 360px; color: #687185; line-height: 1.65; }
-.payment-result-card strong { display: block; margin-top: 18px; color: #435477; font-size: 18px; }
-.payment-result-card > p.payment-result-order-error { padding: 12px; border-radius: 9px; color: #b42318; background: #fff0f0; font-size: 17px; }
+.payment-result-card strong { display: block; margin-top: 18px; color: #435477; font-size: calc(18px + var(--font-size-adjustment, 0px)); }
+.payment-result-card > p.payment-result-order-error { padding: 12px; border-radius: 9px; color: #b42318; background: #fff0f0; font-size: calc(17px + var(--font-size-adjustment, 0px)); }
 .payment-result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 28px; }
 .payment-result-actions a,.payment-result-actions button { display: inline-flex; align-items: center; justify-content: center; padding: 12px 20px; border: 1px solid #164cc5; border-radius: 9px; font: inherit; font-weight: 700; text-decoration: none; }
 .payment-result-actions a { color: #fff; background: #164cc5; }

@@ -2,6 +2,7 @@
 
 /* Shared theme tokens. Existing page styles remain the light palette. */
 :root {
+  --font-size-adjustment: 0px;
   color-scheme: light;
   --theme-bg: #f5f7fb;
   --theme-surface: #fff;
@@ -11,6 +12,9 @@
   --theme-border: #d8e0ed;
   --theme-accent: #1557d5;
 }
+
+:root[data-font-size='medium'] { --font-size-adjustment: -2px; }
+:root[data-font-size='small'] { --font-size-adjustment: -5px; }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -69,7 +73,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
   border-radius: 9px;
   background: var(--theme-surface);
   color: var(--theme-text);
-  font: 600 16px/1.4 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+  font: 600 calc(16px + var(--font-size-adjustment, 0px))/1.4 'Be Vietnam Pro', 'Segoe UI', sans-serif;
   white-space: nowrap;
   cursor: pointer;
 }

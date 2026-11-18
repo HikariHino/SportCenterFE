@@ -1,24 +1,24 @@
 .coach-account-profile-summary.staff-profile-card,
 .reception-profile-summary.staff-profile-card { display: flex; flex-direction: column; align-self: start; min-width: 0; height: auto; padding: 24px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); color: var(--theme-text); }
 .staff-profile-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.staff-profile-card-heading > span { padding: 5px 9px; border-radius: 6px; background: var(--theme-gold-bg, #fff1cf); color: var(--theme-gold, #805200); font-size: 15px; font-weight: 700; line-height: 1.5; }
+.staff-profile-card-heading > span { padding: 5px 9px; border-radius: 6px; background: var(--theme-gold-bg, #fff1cf); color: var(--theme-gold, #805200); font-size: calc(15px + var(--font-size-adjustment, 0px)); font-weight: 700; line-height: 1.5; }
 .staff-profile-card-heading > svg { flex-shrink: 0; color: var(--theme-gold, #996100); }
 .staff-profile-card-identity { display: flex; flex-direction: column; align-items: center; min-width: 0; margin-top: 28px; text-align: center; }
-.staff-profile-card-avatar { display: grid; place-items: center; box-sizing: border-box; flex-shrink: 0; width: 76px; height: 76px; border: 2px solid #526f96; border-radius: 22px; color: #e8eef8; background: linear-gradient(145deg, #34527b, #202e48); font-size: 32px; font-weight: 800; }
-.staff-profile-card-identity > h2 { max-width: 100%; margin: 18px 0 4px; color: var(--theme-text); font-size: 26px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
-.staff-profile-card-identity > .staff-profile-card-code { margin: 0; color: var(--theme-accent); font-size: 17px; font-weight: 700; }
-.staff-profile-card-identity > .staff-profile-card-email { max-width: 100%; margin: 8px 0 0; color: var(--theme-muted); font-size: 17px; line-height: 1.7; overflow-wrap: anywhere; }
-.staff-profile-card-state { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; color: var(--theme-muted); font-size: 15px; }
-.staff-profile-card-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 20px; background: var(--theme-raised); color: var(--theme-muted); font-size: 15px; font-weight: 600; line-height: 1.5; }
+.staff-profile-card-avatar { display: grid; place-items: center; box-sizing: border-box; flex-shrink: 0; width: 76px; height: 76px; border: 2px solid #526f96; border-radius: 22px; color: #e8eef8; background: linear-gradient(145deg, #34527b, #202e48); font-size: calc(32px + var(--font-size-adjustment, 0px)); font-weight: 800; }
+.staff-profile-card-identity > h2 { max-width: 100%; margin: 18px 0 4px; color: var(--theme-text); font-size: calc(26px + var(--font-size-adjustment, 0px)); font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+.staff-profile-card-identity > .staff-profile-card-code { margin: 0; color: var(--theme-accent); font-size: calc(17px + var(--font-size-adjustment, 0px)); font-weight: 700; }
+.staff-profile-card-identity > .staff-profile-card-email { max-width: 100%; margin: 8px 0 0; color: var(--theme-muted); font-size: calc(17px + var(--font-size-adjustment, 0px)); line-height: 1.7; overflow-wrap: anywhere; }
+.staff-profile-card-state { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; color: var(--theme-muted); font-size: calc(15px + var(--font-size-adjustment, 0px)); }
+.staff-profile-card-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 20px; background: var(--theme-raised); color: var(--theme-muted); font-size: calc(15px + var(--font-size-adjustment, 0px)); font-weight: 600; line-height: 1.5; }
 .staff-profile-card-status > i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .staff-profile-card-status.active { color: var(--theme-green, #096445); background: var(--theme-green-bg, #e1f6ee); }
 .staff-profile-card-status.inactive { color: var(--theme-red, #b42318); background: var(--theme-red-bg, #fee4e2); }
 .staff-profile-card-status.pending { color: var(--theme-gold, #805200); background: var(--theme-gold-bg, #fff1cf); }
 .staff-profile-card-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--theme-border); }
 .staff-profile-card-footer > div { min-width: 0; }
-.staff-profile-card-footer small { display: block; color: var(--theme-muted); font-size: 15px; line-height: 1.7; }
-.staff-profile-card-footer strong { display: block; margin-top: 5px; color: var(--theme-green, #096445); font-size: 25px; font-weight: 700; line-height: 1.5; }
-.staff-profile-card-footer > span { padding: 4px 7px; border-radius: 6px; background: var(--theme-raised); color: var(--theme-muted); font-size: 14px; font-weight: 600; }
+.staff-profile-card-footer small { display: block; color: var(--theme-muted); font-size: calc(15px + var(--font-size-adjustment, 0px)); line-height: 1.7; }
+.staff-profile-card-footer strong { display: block; margin-top: 5px; color: var(--theme-green, #096445); font-size: calc(25px + var(--font-size-adjustment, 0px)); font-weight: 700; line-height: 1.5; }
+.staff-profile-card-footer > span { padding: 4px 7px; border-radius: 6px; background: var(--theme-raised); color: var(--theme-muted); font-size: calc(14px + var(--font-size-adjustment, 0px)); font-weight: 600; }
 @media (max-width: 520px) {
   .coach-account-profile-summary.staff-profile-card,
   .reception-profile-summary.staff-profile-card { padding: 20px; }

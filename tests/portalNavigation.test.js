@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { getPortalView, getPortalViewSearch } from '../src/utils/portalNavigation.js'
 
-const managerViews = ['overview', 'users', 'classes', 'rooms', 'packages', 'cancellation', 'reports', 'frontdesk']
+const managerViews = ['overview', 'users', 'classes', 'rooms', 'packages', 'cancellation', 'reports', 'frontdesk', 'profile']
 const memberViews = ['checkin', 'profile', 'subscriptions', 'payments', 'classes', 'training-plans', 'support', 'notifications']
 
 test('each portal restores its selected page from the URL after a reload', () => {

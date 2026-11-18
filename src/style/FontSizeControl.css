@@ -1,0 +1,12 @@
+.font-size-settings { grid-column:1/-1; min-width:0; padding:20px; border:1px solid var(--theme-border); border-radius:14px; color:var(--theme-text); background:var(--theme-surface); }
+.font-size-settings > header { display:flex; align-items:flex-start; gap:12px; }
+.font-size-settings > header > svg { flex-shrink:0; margin-top:3px; color:var(--theme-accent); }
+.font-size-settings > header > div { min-width:0; }
+.font-size-settings > header h2 { margin:0; font-size:calc(20px + var(--font-size-adjustment, 0px)); line-height:1.5; }
+.font-size-settings > header p { margin:5px 0 0; color:var(--theme-muted); font-size:calc(16px + var(--font-size-adjustment, 0px)); line-height:1.6; }
+.font-size-options { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+.font-size-options > button { display:inline-flex; align-items:center; justify-content:center; min-width:100px; min-height:44px; padding:10px 18px; border:1px solid var(--theme-border); border-radius:9px; color:var(--theme-text); background:var(--theme-raised); font-family:inherit; font-size:calc(17px + var(--font-size-adjustment, 0px)); font-weight:700; line-height:1.4; cursor:pointer; }
+.font-size-options > button[aria-pressed='true'] { border-color:var(--theme-accent); color:var(--theme-accent); background:var(--theme-blue-bg, #edf3ff); box-shadow:0 0 0 1px var(--theme-accent); }
+.font-size-options > button:hover { border-color:var(--theme-accent); }
+.font-size-options > button:focus-visible { outline:3px solid var(--theme-accent); outline-offset:3px; }
+@media(max-width:480px) { .font-size-settings { padding:16px; }.font-size-options > button { flex:1; min-width:70px; } }

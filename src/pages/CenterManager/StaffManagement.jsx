@@ -707,7 +707,7 @@ export default function StaffManagement() {
                   <strong>
                     {selectedStaffForRole.fullName} ({selectedStaffForRole.email})
                   </strong>
-                  <span style={{ fontSize: "16px", color: "var(--manager-secondary, #64748b)", marginTop: "2px" }}>
+                  <span style={{ fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', color: "var(--manager-secondary, #64748b)", marginTop: "2px" }}>
                     Vai trò hiện tại: <strong>{roleNameVi(selectedStaffForRole.role)}</strong>
                   </span>
                 </div>

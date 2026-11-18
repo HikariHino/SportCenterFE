@@ -10,6 +10,7 @@ import { notifyCoachDataChanged } from '../../hooks/useCoachViewRefresh'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 import useProfileMorph from '../../hooks/useProfileMorph'
 import StaffProfileCard from '../../components/StaffProfileCard'
+import FontSizeControl from '../../components/FontSizeControl'
 
 const profileDateFormatter = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -95,5 +96,6 @@ export function CoachProfileView({ active = true, showNotice }) {
         <footer className="coach-account-profile-actions"><button type="button" onClick={cancelEdit} disabled={saving}>Hủy thay đổi</button><button type="submit" form={profileFormId} disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button></footer>
       </>}
     </section>
+    <FontSizeControl />
   </div>
 }

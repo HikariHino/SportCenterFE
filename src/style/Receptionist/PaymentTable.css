@@ -5,11 +5,11 @@
 }
 .reception-payment-record { cursor: default; }
 .reception-dashboard .reception-payment-table-scroll .reception-payment-record > span { white-space: normal; overflow-wrap: anywhere; }
-.reception-payment-record small { display: block; margin-top: 5px; color: var(--rc-muted); font-size: 16px; line-height: 1.6; }
+.reception-payment-record small { display: block; margin-top: 5px; color: var(--rc-muted); font-size: calc(16px + var(--font-size-adjustment, 0px)); line-height: 1.6; }
 .reception-dashboard .reception-payment-table-scroll .reception-payment-record > .reception-payment-record-state { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .reception-payment-record-state > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; padding: 7px 11px; border: 1px solid var(--theme-border); border-radius: 7px; color: var(--theme-text); background: var(--theme-raised); font: inherit; font-weight: 600; }
 .reception-payment-record-state > button.reception-primary-button { color: var(--theme-bg); background: var(--rc-accent); border-color: var(--rc-accent); }
 .reception-payment-record-state > button:disabled { opacity: .55; cursor: not-allowed; }
 .reception-payment-record-state > button:hover:not(:disabled) { border-color: var(--theme-accent); }
 .reception-payment-record-state .reception-payment-record-blocked { color: var(--theme-red, #a62d3a); margin: 0; }
-.reception-payment-sort-hint { margin: 0; padding: 10px 18px; color: var(--rc-muted); font-size: 16px; border-bottom: 1px solid var(--rc-line); }
+.reception-payment-sort-hint { margin: 0; padding: 10px 18px; color: var(--rc-muted); font-size: calc(16px + var(--font-size-adjustment, 0px)); border-bottom: 1px solid var(--rc-line); }
