@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   Award, BadgeCheck, Bell, CalendarCheck, CalendarDays, CheckCircle2,
   Clock3, Coins, CreditCard, Diamond, Dumbbell, ExternalLink, Flame,
@@ -42,7 +42,21 @@ function formatDate(value) {
 /* =========================================================================
    1. TÀI KHOẢN & HỒ SƠ CÁ NHÂN (AuthController, ProfileController)
    ========================================================================= */
+function memberProfileValues(profile, member, user) {
+  return {
+    fullName: profile?.fullName || member?.fullName || user?.fullName || '',
+    email: profile?.email || member?.email || user?.email || '',
+    phoneNumber: profile?.phoneNumber || member?.phone || '',
+    gender: profile?.gender ?? '',
+    dateOfBirth: profile?.dateOfBirth ? String(profile.dateOfBirth).slice(0, 10) : '',
+    address: profile?.address ?? '',
+    fitnessGoal: profile?.fitnessGoal ?? '',
+    emergencyContact: profile?.emergencyContact ?? '',
+  }
+}
+
 export function ProfileView({ user, showNotice }) {
+  const profileFormId = useId()
   const cache = useMemberCache()
   const profileForm = useRef(null)
   const saveLock = useRef(false)
@@ -70,9 +84,9 @@ export function ProfileView({ user, showNotice }) {
     confirmPassword: '',
   })
   const [passwordSaving, setPasswordSaving] = useState(false)
-  const [editingEmail, setEditingEmail] = useState(false)
+  const [editing, setEditing] = useState(false)
   const viewActive = useMemberViewActive()
-  const emailMorph = useProfileMorph(editingEmail, viewActive)
+  const morph = useProfileMorph(editing, viewActive)
   const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' })
   const [passwordFieldErrors, setPasswordFieldErrors] = useState({})
   const profileDirty = useRef(false)
@@ -95,18 +109,22 @@ export function ProfileView({ user, showNotice }) {
       setProfile(profData)
       setMemberInfo(memData)
       if (profileDirty.current) return
-      setFormData({
-        fullName: profData?.fullName || memData?.fullName || user?.fullName || '',
-        email: profData?.email || memData?.email || user?.email || '',
-        phoneNumber: profData?.phoneNumber || memData?.phone || '',
-        gender: profData?.gender ?? '',
-        dateOfBirth: profData?.dateOfBirth ? String(profData.dateOfBirth).slice(0, 10) : '',
-        address: profData?.address ?? '',
-        fitnessGoal: profData?.fitnessGoal ?? '',
-        emergencyContact: profData?.emergencyContact ?? '',
-      })
+      setFormData(memberProfileValues(profData, memData, user))
     }
   }, [profileRead.data, memberRead.data, user])
+
+  const resetDrafts = () => {
+    profileDirty.current = false
+    setFormData(memberProfileValues(profile, memberInfo, user))
+    setFieldErrors({})
+    setPhoneConflict(null)
+    setError('')
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    setPasswordFieldErrors({})
+    setPasswordMsg({ type: '', text: '' })
+  }
+  const startEditing = () => { resetDrafts(); morph.transition(() => setEditing(true)) }
+  const cancelEditing = () => { resetDrafts(); morph.transition(() => setEditing(false)) }
 
   const validationOptions = { requirePhone: Boolean(profile?.phoneNumber || memberInfo?.phone), requireDateOfBirth: Boolean(profile?.dateOfBirth), phoneConflict }
   const validateProfile = values => {
@@ -127,7 +145,7 @@ export function ProfileView({ user, showNotice }) {
     if (fieldErrors[name] || name === 'phoneNumber') setFieldErrors(previous => ({ ...previous, [name]: validateProfile(next)[name] }))
   }
   const profileInputProps = name => ({
-    id: `member-profile-${name}`, name, disabled: saving,
+    id: `member-profile-${name}`, name, disabled: saving || passwordSaving,
     'aria-invalid': Boolean(fieldErrors[name]),
     'aria-describedby': fieldErrors[name] ? `member-profile-${name}-error` : undefined,
     onBlur: () => setFieldErrors(previous => ({ ...previous, [name]: validateProfile(formData)[name] })),
@@ -137,7 +155,7 @@ export function ProfileView({ user, showNotice }) {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault()
-    if (saveLock.current) return
+    if (!editing || saveLock.current || passwordLock.current) return
     const validation = validateProfile(formData)
     setFieldErrors(validation)
     if (Object.keys(validation).length) { focusProfileError(validation); return }
@@ -157,6 +175,11 @@ export function ProfileView({ user, showNotice }) {
       setPhoneConflict(null)
       setProfile(result)
       profileDirty.current = false
+      profileRead.setData(current => ({ ...current, profile: result }))
+      morph.transition(() => setEditing(false))
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      setPasswordFieldErrors({})
+      setPasswordMsg({ type: '', text: '' })
       showNotice('Cập nhật hồ sơ cá nhân thành công!')
       await loadProfile()
     } catch (err) {
@@ -173,7 +196,7 @@ export function ProfileView({ user, showNotice }) {
   }
 
   const passwordInputProps = name => ({
-    id: `member-password-${name}`, name, disabled: passwordSaving,
+    id: `member-password-${name}`, name, disabled: passwordSaving || saving,
     'aria-invalid': Boolean(passwordFieldErrors[name]),
     'aria-describedby': passwordFieldErrors[name] ? `member-password-${name}-error` : undefined,
     onBlur: () => setPasswordFieldErrors(previous => ({ ...previous, [name]: passwordChangeErrors(passwordData)[name] })),
@@ -189,7 +212,7 @@ export function ProfileView({ user, showNotice }) {
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault()
-    if (passwordLock.current) return
+    if (!editing || passwordLock.current || saveLock.current) return
     const errors = passwordChangeErrors(passwordData)
     setPasswordFieldErrors(errors)
     if (Object.keys(errors).length) {
@@ -220,7 +243,7 @@ export function ProfileView({ user, showNotice }) {
     return <div className="member-card member-api-state"><LoaderCircle className="member-spin" size={26} /><strong>Đang tải hồ sơ cá nhân...</strong></div>
   }
 
-  const initials = (formData.fullName || user?.fullName || 'HV').split(/\s+/).slice(-2).map(p => p[0]).join('').toUpperCase()
+  const initials = (profile?.fullName || memberInfo?.fullName || user?.fullName || 'HV').split(/\s+/).slice(-2).map(p => p[0]).join('').toUpperCase()
 
   return (
     <div className="member-view-stack member-profile-view">
@@ -244,9 +267,9 @@ export function ProfileView({ user, showNotice }) {
           <div className="member-identity">
             <span className="member-avatar member-avatar--large">{initials}</span>
             <div>
-              <h1>{formData.fullName || user?.fullName}</h1>
+              <h1>{profile?.fullName || memberInfo?.fullName || user?.fullName}</h1>
               <p className="member-profile-id-code">#{memberInfo?.memberId ? `MEM-${memberInfo.memberId}` : `USR-${profile?.userId || user?.userId}`}</p>
-              <p>{formData.email}</p>
+              <p>{profile?.email || memberInfo?.email || user?.email}</p>
               <div className="member-identity-status">
                 <span className="member-status"><span />Đang hoạt động</span>
                 <small>{profile?.roleName || 'Member'}</small>
@@ -269,14 +292,16 @@ export function ProfileView({ user, showNotice }) {
           </div>
         </article>
 
-        {/* Biểu mẫu chỉnh sửa thông tin */}
-        <div className="member-profile-content">
-          <article className="member-card member-profile-personal" aria-labelledby="member-personal-title">
-            <header className="member-profile-panel-header">
-              <span className="member-profile-panel-icon"><User size={20} /></span>
-              <div><h3 id="member-personal-title">Thông tin cá nhân</h3><p>Cập nhật thông tin liên lạc và mục tiêu tập luyện của bạn.</p></div>
-            </header>
-            <form ref={profileForm} className="member-profile-form" noValidate onSubmit={handleUpdateProfile} aria-busy={saving}>
+        <section ref={morph.panel} className="member-card member-profile-editor" data-editing={editing} aria-labelledby="member-personal-title">
+          <header className="member-profile-panel-header member-profile-editor-heading">
+            <span className="member-profile-panel-icon"><User size={20} /></span>
+            <div><h3 id="member-personal-title">{editing ? 'Cập nhật thông tin' : 'Thông tin tài khoản'}</h3><p>Thông tin cá nhân và bảo mật tài khoản của bạn.</p></div>
+            <button type="button" className="member-button" aria-expanded={editing} disabled={saving || passwordSaving} onClick={editing ? cancelEditing : startEditing}>{editing ? <><X size={16} /> Hủy</> : <><User size={16} /> Chỉnh sửa</>}</button>
+          </header>
+          {editing ? <>
+            <div className="member-profile-edit-columns">
+              <section className="member-profile-personal" aria-label="Chỉnh sửa thông tin cá nhân">
+            <form id={profileFormId} ref={profileForm} className="member-profile-form" noValidate onSubmit={handleUpdateProfile} aria-busy={saving}>
               <div className="member-profile-fields">
                 <div>
                   <label htmlFor="member-profile-fullName">Họ và tên</label>
@@ -310,16 +335,7 @@ export function ProfileView({ user, showNotice }) {
                 </div>
               </div>
 
-              <div className="member-profile-fields">
-                <div>
-                  <label htmlFor="member-profile-email">Email tài khoản</label>
-                  <input
-                    type="email"
-                    id="member-profile-email"
-                    readOnly
-                    value={formData.email}
-                  />
-                </div>
+              <div className="member-profile-fields member-profile-fields--single">
                 <div>
                   <label htmlFor="member-profile-gender">Giới tính</label>
                   <select
@@ -380,19 +396,9 @@ export function ProfileView({ user, showNotice }) {
                 </div>
               </div>
 
-              <div className="member-profile-form-footer">
-                <button type="submit" disabled={saving || hasPhoneConflict} className="member-button member-button--primary">
-                  {saving ? <><LoaderCircle className="member-spin" size={16} /> Đang lưu...</> : <><Save size={16} /> Lưu thay đổi hồ sơ</>}
-                </button>
-              </div>
-            </form>
-          </article>
-          <section ref={emailMorph.panel} className="member-profile-security" aria-labelledby="member-security-title">
-            <div className="member-profile-security-heading"><ShieldCheck size={18} /><div><h3 id="member-security-title">Bảo mật tài khoản</h3><p>Quản lý email đăng nhập và mật khẩu của bạn.</p></div><button type="button" className="member-button" aria-expanded={editingEmail} disabled={saving || passwordSaving} onClick={() => emailMorph.transition(() => setEditingEmail(current => !current))}>{editingEmail ? <><X size={16} /> Hủy chỉnh sửa email</> : <><Mail size={16} /> Chỉnh sửa email</>}</button></div>
-            <div className={`member-profile-security-grid${editingEmail ? '' : ' member-profile-security-grid--single'}`}>
-              {editingEmail && <ChangeEmailForm currentEmail={profile?.email || formData.email} disabled={saving || passwordSaving} allowAnyEmailDomain />}
 
-              {/* Đổi mật khẩu tài khoản */}
+            </form>
+              </section>
               <article className="member-card member-profile-password" aria-labelledby="member-password-title">
                 <header className="member-profile-panel-header">
                   <span className="member-profile-panel-icon"><Lock size={20} /></span>
@@ -440,15 +446,28 @@ export function ProfileView({ user, showNotice }) {
                     {passwordFieldError('confirmPassword')}
                   </div>
                   <div className="member-profile-form-footer">
-                    <button type="submit" disabled={passwordSaving || Object.keys(passwordChangeErrors(passwordData)).length > 0} className="member-button member-button--soft">
+                    <button type="submit" disabled={saving || passwordSaving || Object.keys(passwordChangeErrors(passwordData)).length > 0} className="member-button member-button--soft">
                       {passwordSaving ? <><LoaderCircle className="member-spin" size={16} /> Đang cập nhật...</> : <><Lock size={16} /> Cập nhật mật khẩu</>}
                     </button>
                   </div>
                 </form>
               </article>
             </div>
-          </section>
-        </div>
+            <ChangeEmailForm currentEmail={profile?.email || formData.email} disabled={saving || passwordSaving} allowAnyEmailDomain />
+            <footer className="member-profile-editor-actions"><button type="button" className="member-button" disabled={saving || passwordSaving} onClick={cancelEditing}>Hủy thay đổi</button><button type="submit" form={profileFormId} disabled={saving || passwordSaving || hasPhoneConflict} className="member-button member-button--primary">{saving ? <><LoaderCircle className="member-spin" size={16} /> Đang lưu...</> : <><Save size={16} /> Lưu hồ sơ</>}</button></footer>
+          </> : <dl className="member-profile-readonly-grid">
+            {[
+              ['Họ và tên', profile?.fullName || memberInfo?.fullName || user?.fullName],
+              ['Email', profile?.email || memberInfo?.email || user?.email],
+              ['Số điện thoại', profile?.phoneNumber || memberInfo?.phone],
+              ['Giới tính', { Male: 'Nam', Female: 'Nữ', Other: 'Khác' }[profile?.gender] || profile?.gender],
+              ['Ngày sinh', profile?.dateOfBirth ? formatDate(profile.dateOfBirth) : ''],
+              ['Mục tiêu tập luyện', profile?.fitnessGoal],
+              ['Địa chỉ thường trú', profile?.address],
+              ['Liên hệ khẩn cấp', profile?.emergencyContact],
+            ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || 'Chưa cập nhật'}</dd></div>)}
+          </dl>}
+        </section>
       </div>
     </div>
   )

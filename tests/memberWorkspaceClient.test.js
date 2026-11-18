@@ -113,6 +113,7 @@ test('entry warms enabled Member tabs and skips the hidden workout view', () => 
 
 test('switching tabs reuses the same view and draft without fetching again', async () => {
   const profile = document.querySelector('.member-profile-view')
+  await act(async () => [...document.querySelectorAll('.member-profile-editor-heading button')].find(button => button.textContent.includes('Chỉnh sửa')).click())
   const input = document.querySelector('#member-profile-fullName')
   await act(async () => {
     Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, 'Nguyễn Văn Bình')
