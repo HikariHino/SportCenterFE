@@ -102,6 +102,10 @@ const clickTab = label => act(async () => {
 
 test('entry warms enabled Member tabs and skips the hidden workout view', () => {
   assert.deepEqual(errors, [])
+  const firstTab = document.querySelector('.member-sidebar-item')
+  assert.equal(firstTab.textContent, 'Ra/Vào trung tâm')
+  assert.equal(firstTab.getAttribute('aria-current'), 'page')
+  assert.equal(document.querySelector('.member-view-content:not([hidden]) h2').textContent, 'Ra/Vào trung tâm')
   assert.equal(document.querySelectorAll('.member-view-content').length, 9)
   assert.equal(document.querySelectorAll('.member-view-content[hidden]').length, 8)
   for (const url of ['/profile', '/member-subscriptions/mine', '/membership-packages', '/payments', '/GymCheckIns/my-qr', '/GymCheckIns/my-history', '/class-registrations/mine', '/TrainingPlans/members/9', '/SupportTickets/my-tickets', '/notifications', '/ai/chat/history']) assert.ok(count(url) > 0, url)
@@ -112,6 +116,7 @@ test('entry warms enabled Member tabs and skips the hidden workout view', () => 
 })
 
 test('switching tabs reuses the same view and draft without fetching again', async () => {
+  await clickTab('Tài khoản')
   const profile = document.querySelector('.member-profile-view')
   await act(async () => [...document.querySelectorAll('.member-profile-editor-heading button')].find(button => button.textContent.includes('Chỉnh sửa')).click())
   const input = document.querySelector('#member-profile-fullName')
@@ -212,7 +217,7 @@ test('all Member business lists and nested payment/exercise tables expose all 23
   await act(async () => [...document.querySelectorAll('.member-sub-tabs button')].find(button => button.textContent.includes('Khám phá')).click())
   await checkThreePages('Danh mục gói tập')
   await clickTab('Thanh toán trực tuyến'); await checkThreePages('Lịch sử thanh toán')
-  await clickTab('Ra/vào phòng gym'); await checkThreePages('Lịch sử tập luyện')
+  await clickTab('Ra/Vào trung tâm'); await checkThreePages('Lịch sử tập luyện')
   await clickTab('Hỗ trợ khách hàng'); await checkThreePages('Phiếu hỗ trợ')
   await clickTab('Thông báo hệ thống'); await checkThreePages('Thông báo hệ thống')
   await clickTab('Lộ trình tập luyện'); await checkThreePages('Bài tập trong giáo án'); await checkThreePages('Giáo án tập luyện')
