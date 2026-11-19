@@ -383,7 +383,7 @@ export function SubscriptionsView({ showNotice }) {
           <label className="member-sub-select"><span>Loại thẻ</span><select aria-label="Loại thẻ" value={packageTypeFilter} onChange={event => setPackageTypeFilter(event.target.value)}><option value="all">Tất cả loại thẻ</option><option value="Standard">Standard</option><option value="PT">PT 1-1</option></select></label>
           <label className="member-sub-select"><span>Thời hạn</span><select value={packageFilter} onChange={event => setPackageFilter(event.target.value)}><option value="all">Tất cả gói tập</option><option value="1m">Khoảng 1 tháng</option><option value="3m">Khoảng 3 tháng</option><option value="6m">Khoảng 6 tháng</option><option value="1y">Trên 6 tháng</option><option value="vip">VIP / Cao cấp</option></select></label>
         </div>
-        {filteredPackages.length ? <MemberList items={filteredPackages} label="Danh mục gói tập" className="member-sub-package-grid" resetKey={JSON.stringify([packageSearch, packageFilter, packageTypeFilter])}>{pkg => {
+        {filteredPackages.length ? <MemberList items={filteredPackages} label="Danh mục gói tập" className="member-sub-package-grid" layout="flow" showOrdinal={false} hideSinglePagePagination resetKey={JSON.stringify([packageSearch, packageFilter, packageTypeFilter])}>{pkg => {
           const reason = packageReason(pkg)
           return <article key={pkg.id} className="member-sub-package" data-package-id={pkg.id}>
             <CatalogImage src={pkg.imageUrl} fallback={<Award size={32} />} className="catalog-image--cover" />

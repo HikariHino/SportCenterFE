@@ -63,7 +63,7 @@ export function SupportImagePicker({ selection, disabled = false }) {
   </div>
 }
 
-function TicketImage({ imageUrl, ticketId }) {
+function TicketImage({ imageUrl, ticketId, variant }) {
   const [opened, setOpened] = useState(false)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -87,11 +87,11 @@ function TicketImage({ imageUrl, ticketId }) {
   }, [opened])
 
   const retry = () => { setFailed(false); setAttempt(value => value + 1) }
-  return <div className="support-ticket-image">
+  return <div className={`support-ticket-image${variant === 'full' ? ' support-ticket-image--full' : ''}`}>
     {failed ? <div className="support-image-unavailable"><p>Không tải được ảnh sự cố.</p><button type="button" onClick={retry}><RefreshCw size={15} /> Tải lại ảnh</button></div>
       : <button className="support-image-thumbnail" type="button" aria-label={`Xem ảnh sự cố phiếu #${ticketId}`} onClick={event => { opener.current = event.currentTarget; setOpened(true) }}>
         <img key={attempt} src={imageUrl} alt={alt} loading="lazy" onError={() => setFailed(true)} />
-        <span><ZoomIn size={16} /> Xem ảnh sự cố</span>
+        {variant !== 'full' && <span><ZoomIn size={16} /> Xem ảnh sự cố</span>}
       </button>}
     {opened && <dialog ref={dialog} className="support-image-dialog" aria-labelledby={titleId} onCancel={event => { event.preventDefault(); setOpened(false) }} onClick={event => { if (event.target === event.currentTarget) setOpened(false) }}>
       <header><h2 id={titleId}>Ảnh sự cố · Phiếu #{ticketId}</h2><button type="button" aria-label="Đóng ảnh sự cố" onClick={() => setOpened(false)}><X size={20} /></button></header>
@@ -101,8 +101,8 @@ function TicketImage({ imageUrl, ticketId }) {
   </div>
 }
 
-export default function SupportTicketImage({ imageUrl, ticketId, active = true }) {
+export default function SupportTicketImage({ imageUrl, ticketId, active = true, variant = 'thumbnail' }) {
   if (!active || !imageUrl) return null
   if (!isCatalogImageUrl(imageUrl)) return <p className="support-image-error">Không thể mở ảnh đính kèm.</p>
-  return <TicketImage key={imageUrl} imageUrl={imageUrl} ticketId={ticketId} />
+  return <TicketImage key={imageUrl} imageUrl={imageUrl} ticketId={ticketId} variant={variant} />
 }
