@@ -48,7 +48,8 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
   const availableKey = available.filter(item => !bookingUnavailableReason(item, false, now, planned)).map(item => String(item.id)).join('|')
   const selectAll = selectableMemberSessions([...selectedSessions, ...available.filter(item => !selectedSet.has(String(item.id)))], registrations, now)
   const allSelected = selectAll.length > 0 && selectedSessions.length === selectAll.length
-  const blocked = busy || bookingState.loading || Boolean(bookingState.error)
+  const membershipReason = bookingState.hasActiveSubscription === false ? 'Bạn cần có gói hội viên đang còn hiệu lực để đăng ký buổi học.' : ''
+  const blocked = busy || bookingState.loading || Boolean(bookingState.error) || Boolean(membershipReason)
   useEffect(() => {
     if (sessions.loading || sessions.error || bookingState.loading || bookingState.error) return
     const eligibleIds = new Set(availableKey.split('|'))
@@ -67,6 +68,8 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
     <header className="member-course-heading"><div><button type="button" className="member-course-back" onClick={() => setCourse(null)}><ArrowLeft size={16} />Danh sách lớp học</button><h3>{course.className}</h3><p className="member-classes-muted">{course.sportName || 'Lớp học'} · {course.coachName || 'Chưa phân công HLV'}</p></div><button type="button" disabled={sessions.loading || busy} onClick={sessions.reload}><RefreshCw size={16} />Làm mới buổi học</button></header>
     {bookingState.loading && <p className="member-classes-muted" role="status">Đang kiểm tra gói tập và lịch đã đăng ký...</p>}
     {bookingState.error && <div className="member-classes-error" role="alert"><p>{bookingState.error}</p><button type="button" onClick={bookingState.reload}>Thử lại</button></div>}
+    {membershipReason && <p className="member-classes-checkin-notice" role="status">{membershipReason}</p>}
+    <p className="member-classes-muted">Đặt lịch trước giờ bắt đầu; hủy theo thời hạn của từng buổi hiển thị bên dưới.</p>
     {!sessions.loading && !sessions.error && allSessions.length > 0 && <div className="member-session-selection-tools">
       <div><strong>{allSessions.length} buổi học <span>· {available.length} buổi có thể đăng ký</span></strong><p>Tích chọn những buổi bạn muốn tham gia. Lựa chọn được giữ khi chuyển trang.</p></div>
       <SelectAllCheckbox checked={allSelected} mixed={selectedSessions.length > 0 && !allSelected} disabled={blocked || !available.length} onChange={event => setSelectedIds(event.target.checked ? selectAll.map(item => String(item.id)) : [])} />

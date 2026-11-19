@@ -32,7 +32,7 @@ before(async () => {
     if (config.url === '/ai/workout-recommendations') {
       if (failAi) throw new Error('AI đang bận')
       if (holdAi) await new Promise(resolve => { pendingAi = resolve })
-      return response(recommendation)
+      return response({ ...recommendation, level: body.level, daysPerWeek: body.daysPerWeek })
     }
     return response({ id: 90, ...body })
   }
@@ -83,7 +83,10 @@ test('AI entry opens a prompt above exercises and keeps the goal editable', () =
   assert.ok(container.querySelector('.coach-plan-ai-demo').compareDocumentPosition(container.querySelector('.coach-plan-exercises')) & window.Node.DOCUMENT_POSITION_FOLLOWING)
   assert.equal(container.querySelector('.coach-plan-form-grid select').disabled, false)
   assert.equal([...container.querySelectorAll('button')].find(button => button.textContent.trim() === 'Tạo').disabled, true)
-  assert.equal(container.querySelector('.coach-plan-ai-options'), null)
+  const options = container.querySelectorAll('.coach-plan-ai-options select')
+  assert.equal(options.length, 2)
+  assert.equal(options[0].value, 'Beginner')
+  assert.equal(options[1].value, '3')
   await act(async () => container.querySelector('[aria-label="Đóng nhập yêu cầu AI"]').click())
   assert.equal(container.querySelector('textarea'), null)
   assert.equal(container.querySelector('.coach-plan-form-grid select').disabled, false)
@@ -94,6 +97,11 @@ test('AI generation sends the prompt and chosen dates, previews and maps every r
   const dates = container.querySelectorAll('.coach-plan-form-grid input[type=date]')
   await change(dates[0], '2026-11-18'); await change(dates[1], '2026-12-16')
   await click('Tạo bài tập bằng AI')
+  const options = container.querySelectorAll('.coach-plan-ai-options select')
+  await act(async () => {
+    options[0].value = 'Advanced'; options[0].dispatchEvent(new window.Event('change', { bubbles: true }))
+    options[1].value = '7'; options[1].dispatchEvent(new window.Event('change', { bubbles: true }))
+  })
   const goal = container.querySelector('.coach-plan-form-grid select')
   await act(async () => { goal.value = 'MuscleGain'; goal.dispatchEvent(new window.Event('change', { bubbles: true })) })
   await change(container.querySelector('textarea'), 'Tăng sức bền và cải thiện kỹ thuật')
@@ -101,10 +109,14 @@ test('AI generation sends the prompt and chosen dates, previews and maps every r
   await finishProgress()
   assert.equal(requests.length, 1)
   assert.equal(requests[0].url, '/ai/workout-recommendations')
+  assert.equal(requests[0].body.level, 'Advanced')
+  assert.equal(requests[0].body.daysPerWeek, 7)
   for (const text of ['Tăng sức bền và cải thiện kỹ thuật', 'Mục tiêu: Tăng cơ', '2026-11-18', '2026-12-16', 'Tennis']) assert.ok(requests[0].body.goal.includes(text))
   assert.deepEqual(Object.keys(requests[0].body).sort(), ['daysPerWeek', 'goal', 'level', 'memberId'])
   assert.ok(requests[0].body.goal.length <= 1000)
   assert.ok(container.querySelector('.coach-plan-ai-result'))
+  assert.match(container.querySelector('.coach-plan-ai-result').textContent, /Nâng cao/)
+  assert.match(container.querySelector('.coach-plan-ai-result').textContent, /7 buổi\/tuần/)
   assert.equal(container.querySelectorAll('.coach-plan-exercises article').length, 7, 'freeform results are not capped at the former five exercises')
   assert.equal(container.querySelector('.coach-plan-exercises article select').value, '1')
   await act(async () => container.querySelector('form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
@@ -117,6 +129,11 @@ test('AI generation sends the prompt and chosen dates, previews and maps every r
 
 test('reversed dates never reach AI and a failed request preserves the prompt for retry', () => screen(async container => {
   await click('Tạo bài tập bằng AI')
+  const options = container.querySelectorAll('.coach-plan-ai-options select')
+  await act(async () => {
+    options[0].value = 'Intermediate'; options[0].dispatchEvent(new window.Event('change', { bubbles: true }))
+    options[1].value = '1'; options[1].dispatchEvent(new window.Event('change', { bubbles: true }))
+  })
   await change(container.querySelector('textarea'), 'Tăng sức bền')
   const dates = container.querySelectorAll('.coach-plan-form-grid input[type=date]')
   await change(dates[0], '2026-12-16'); await change(dates[1], '2026-11-18')
@@ -132,6 +149,7 @@ test('reversed dates never reach AI and a failed request preserves the prompt fo
   await click('Tạo'); await finishProgress()
   assert.ok(container.querySelector('.coach-plan-ai-result'))
   assert.equal(requests.length, 2)
+  assert.ok(requests.every(request => request.body.level === 'Intermediate' && request.body.daysPerWeek === 1))
 }))
 
 test('stopping AI aborts the request and ignores its late response', () => screen(async container => {
@@ -139,6 +157,7 @@ test('stopping AI aborts the request and ignores its late response', () => scree
   await click('Tạo bài tập bằng AI')
   await change(container.querySelector('textarea'), 'Tăng sức bền')
   await click('Tạo')
+  assert.ok([...container.querySelectorAll('.coach-plan-ai-options select')].every(select => select.disabled))
   await click('Dừng tạo')
   assert.equal(requests[0].signal.aborted, true)
   await act(async () => pendingAi())

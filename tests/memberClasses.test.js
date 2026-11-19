@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bookingUnavailableReason, cancellationDeadline, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason, selectableMemberSessions } from '../src/utils/memberClasses.js'
+import { bookingUnavailableReason, cancellationDeadline, cancellationUnavailableReason, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason, selectableMemberSessions } from '../src/utils/memberClasses.js'
 
 const now = Date.parse('2026-10-19T10:00:00+07:00')
 const upcoming = { id: 1, status: 'Confirmed', startsAt: '2026-10-19T14:00:00+07:00', endsAt: '2026-10-19T15:00:00+07:00' }
@@ -99,10 +99,14 @@ test('select all and manual selection retain only nonoverlapping sessions in sel
 })
 
 test('cancellation uses the supplied policy including the exact cutoff and zero-hour policy', () => {
-  const policy = { ...upcoming, cancellationPolicy: { minimumHoursBeforeStart: 4 } }
+  const policy = { ...upcoming, status: 'Registered', sessionStatus: 'Scheduled', cancellationPolicy: { minimumHoursBeforeStart: 4 } }
   assert.equal(Date.parse(cancellationDeadline(policy)), now)
   assert.equal(registrationActions(policy, now - 1).cancel, true)
-  assert.equal(registrationActions(policy, now).cancel, false)
+  assert.equal(registrationActions(policy, now).cancel, true)
+  assert.equal(registrationActions(policy, now + 1).cancel, false)
+  const zeroHour = { ...policy, cancellationPolicy: { minimumHoursBeforeStart: 0 } }
+  assert.equal(registrationActions(zeroHour, Date.parse(upcoming.startsAt)).cancel, true)
+  assert.equal(registrationActions(zeroHour, Date.parse(upcoming.startsAt) + 1).cancel, false)
   assert.equal(Date.parse(cancellationDeadline({ ...upcoming, minimumHoursBeforeStart: 0 })), Date.parse(upcoming.startsAt))
   assert.equal(cancellationDeadline(upcoming), null)
   assert.equal(registrationActions({ ...upcoming, canCancel: false }, now).cancel, false)
@@ -168,6 +172,28 @@ test('actual session DTO capacity fields and invalid start times cannot offer re
 test('membership must be active now rather than pending, not started or expired', () => {
   const sub = { status: 'Active', startDate: new Date(now - 1).toISOString(), endDate: new Date(now + 1).toISOString() }
   assert.equal(hasActiveMembership([sub], now), true)
-  for (const item of [{ ...sub, status: 'Pending' }, { ...sub, startDate: new Date(now + 1).toISOString() }, { ...sub, endDate: new Date(now - 1).toISOString() }]) assert.equal(hasActiveMembership([item], now), false)
+  for (const item of [{ ...sub, status: 'Pending' }, { ...sub, startDate: new Date(now + 1).toISOString() }, { ...sub, endDate: new Date(now - 1).toISOString() },
+    { ...sub, endDate: new Date(now).toISOString() }, { ...sub, startDate: null }, { ...sub, endDate: null }]) assert.equal(hasActiveMembership([item], now), false)
   assert.equal(hasActiveMembership([], now), false)
+})
+
+test('booking remains available inside four hours and closes exactly at the start', () => {
+  const session = { ...upcoming, status: 'Scheduled' }, start = Date.parse(session.startsAt)
+  assert.equal(bookingUnavailableReason(session, false, start - 1), '')
+  assert.equal(bookingUnavailableReason(session, false, start), 'Đã đóng đăng ký')
+  assert.ok(bookingUnavailableReason({ ...session, status: 'Unknown' }, false, start - 1))
+})
+
+test('cancellation fails closed for missing deadlines, invalid policies and any recorded attendance', () => {
+  const item = { ...upcoming, status: 'Registered', sessionStatus: 'Scheduled', cancellationDeadline: upcoming.startsAt }
+  for (const changes of [{ cancellationDeadline: null }, { cancellationDeadline: 'invalid' }, { canCancel: false },
+    { sessionStatus: 'Completed' }, { sessionStatus: undefined }, { status: 'Cancelled' }, { status: 'Confirmed' },
+    ...['Present', 'Absent', 'Late', 'Excused'].map(attendanceStatus => ({ attendanceStatus }))]) {
+    assert.ok(cancellationUnavailableReason({ ...item, ...changes }, now))
+    assert.equal(registrationActions({ ...item, ...changes }, now).cancel, false)
+  }
+  for (const minimumHoursBeforeStart of [-1, Infinity, 'invalid', 1e100]) {
+    assert.equal(cancellationDeadline({ ...upcoming, minimumHoursBeforeStart }), null)
+  }
+  assert.equal(cancellationUnavailableReason(item, now), '')
 })

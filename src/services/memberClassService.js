@@ -1,5 +1,5 @@
 import api from './api'
-import { bookingUnavailableReason, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../utils/memberClasses.js'
+import { bookingUnavailableReason, cancellationUnavailableReason, checkInUnavailableReason, hasActiveMembership, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../utils/memberClasses.js'
 import { getMySubscriptions } from './memberSubscriptionService'
 
 function readPage(body, page, pageSize, fallback) {
@@ -143,7 +143,8 @@ export async function bookClassSessions({ classId, sessionIds }, onProgress = ()
     const id = ids[index]
     const session = catalog.items.find(item => String(item.id) === id && (item.classId == null || String(item.classId) === String(classId)))
     if (registered.has(id)) { result.existing.push(id); continue }
-    const reason = session ? bookingUnavailableReason(session, false, Date.now(), planned) : 'Buổi học không còn tồn tại trong lớp.'
+    const reason = !hasActiveMembership(subscriptions) ? 'Gói hội viên đã hết hiệu lực, không thể đăng ký buổi học.'
+      : session ? bookingUnavailableReason(session, false, Date.now(), planned) : 'Buổi học không còn tồn tại trong lớp.'
     if (reason) { result.skipped.push({ id, reason }); continue }
     onProgress({ completed: index, total: ids.length })
     try {
@@ -187,6 +188,12 @@ export async function cancelRegistration(registrationId, reason = 'Hội viên t
     || (expectedSessionId != null && (!Number.isSafeInteger(Number(expectedSessionId)) || Number(expectedSessionId) <= 0))) {
     throw new Error('Chưa xác định được đăng ký buổi học cần hủy. Vui lòng làm mới lịch.')
   }
+  const current = (await getAllMyRegistrations()).items.find(item => String(item.id) === String(registrationId))
+  if (!current || (expectedSessionId != null && String(current.sessionId) !== String(expectedSessionId))) {
+    throw new Error('Không tìm thấy đăng ký buổi học đã chọn. Vui lòng làm mới lịch.')
+  }
+  const unavailable = cancellationUnavailableReason(current)
+  if (unavailable) throw new Error(unavailable)
   const response = await api.post(`/class-registrations/${registrationId}/cancel`, {
     reason: reason.trim() || 'Hội viên tự hủy lịch',
   })

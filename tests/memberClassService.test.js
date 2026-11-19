@@ -165,10 +165,11 @@ test('cancelled registrations free the time slot and adjacent sessions remain bo
 const completedRegistration = { id: 101, sessionId: 10, classId: 1, status: 'Completed', sessionStatus: 'Completed', attendanceStatus: 'Present', startsAt: '2020-10-19T11:00:00Z', endsAt: '2020-10-19T12:30:00Z', hasReviewed: false }
 
 test('cancelling one date sends one registration request and leaves other sessions of that class untouched', async () => {
-  const registrations = sessions.slice(0, 3).map((session, index) => ({ ...session, id: 100 + index, sessionId: session.id, status: 'Registered' }))
+  const registrations = sessions.slice(0, 3).map((session, index) => ({ ...session, id: 100 + index, sessionId: session.id, status: 'Registered', sessionStatus: 'Scheduled', cancellationDeadline: session.startsAt }))
   const calls = []
   api.defaults.adapter = async config => {
-    calls.push({ method: config.method, url: config.url, data: JSON.parse(config.data) })
+    calls.push({ method: config.method, url: config.url, data: config.data ? JSON.parse(config.data) : undefined })
+    if (config.method === 'get') return { data: { items: registrations, total: registrations.length, page: 1, pageSize: 100 }, status: 200, headers: {}, config }
     const selected = registrations.find(item => config.url === `/class-registrations/${item.id}/cancel`)
     assert.ok(selected)
     selected.status = 'Cancelled'
@@ -176,14 +177,15 @@ test('cancelling one date sends one registration request and leaves other sessio
   }
   const cancelled = await service.cancelRegistration(101, '  Bận ngày này  ', 2)
   assert.equal(cancelled.sessionId, 2)
-  assert.deepEqual(calls, [{ method: 'post', url: '/class-registrations/101/cancel', data: { reason: 'Bận ngày này' } }])
+  assert.deepEqual(calls, [{ method: 'get', url: '/class-registrations/mine', data: undefined }, { method: 'post', url: '/class-registrations/101/cancel', data: { reason: 'Bận ngày này' } }])
   assert.deepEqual(registrations.map(item => item.status), ['Registered', 'Cancelled', 'Registered'])
 })
 
 test('cancellation never confirms another registration, another session or a still active registration', async () => {
   for (const data of [null, { id: 999, sessionId: 2, status: 'Cancelled' },
     { id: 101, sessionId: 3, status: 'Cancelled' }, { id: 101, sessionId: 2, status: 'Registered' }]) {
-    api.defaults.adapter = async config => ({ data: { success: true, data }, status: 200, headers: {}, config })
+    api.defaults.adapter = async config => ({ data: { success: true, data: config.method === 'get'
+      ? { items: [{ ...sessions[1], id: 101, sessionId: 2, status: 'Registered', sessionStatus: 'Scheduled', cancellationDeadline: sessions[1].startsAt }], total: 1, page: 1, pageSize: 100 } : data }, status: 200, headers: {}, config })
     await assert.rejects(service.cancelRegistration(101, '', 2), /Chưa xác nhận được đúng buổi/)
   }
   let calls = 0
@@ -191,6 +193,51 @@ test('cancellation never confirms another registration, another session or a sti
   await assert.rejects(service.cancelRegistration(undefined, '', 2))
   await assert.rejects(service.cancelRegistration(101, '', 0))
   assert.equal(calls, 0)
+})
+
+test('cancellation rereads the selected registration and permits exactly the saved deadline', async t => {
+  const deadline = Date.parse('2026-11-20T10:00:00+07:00')
+  const item = { ...sessions[1], id: 101, sessionId: 2, status: 'Registered', sessionStatus: 'Scheduled', cancellationDeadline: new Date(deadline).toISOString() }
+  for (const offset of [0, 1]) {
+    let writes = 0
+    t.mock.method(Date, 'now', () => deadline - 1)
+    api.defaults.adapter = async config => {
+      if (config.method === 'get') {
+        t.mock.method(Date, 'now', () => deadline + offset)
+        return { data: { items: [item], total: 1, page: 1, pageSize: 100 }, status: 200, headers: {}, config }
+      }
+      writes++
+      return { data: { data: { ...item, status: 'Cancelled' } }, status: 200, headers: {}, config }
+    }
+    if (offset === 0) assert.equal((await service.cancelRegistration(101, '', 2)).status, 'Cancelled')
+    else await assert.rejects(service.cancelRegistration(101, '', 2), /quá hạn hủy/)
+    assert.equal(writes, offset === 0 ? 1 : 0)
+  }
+})
+
+test('changed session, new attendance, missing deadline or unavailable registration reads prevent cancellation writes', async () => {
+  const item = { ...sessions[1], id: 101, sessionId: 2, status: 'Registered', sessionStatus: 'Scheduled', cancellationDeadline: sessions[1].startsAt }
+  for (const changes of [{ sessionId: 3 }, { attendanceStatus: 'Absent' }, { attendanceStatus: 'Present' },
+    { sessionStatus: 'Cancelled' }, { cancellationDeadline: null }, { id: 999 }, { readError: true }]) {
+    let writes = 0
+    api.defaults.adapter = async config => {
+      if (config.method === 'post') writes++
+      if (changes.readError) throw new Error('Registration unavailable')
+      return { data: { items: [{ ...item, ...changes }], total: 1, page: 1, pageSize: 100 }, status: 200, headers: {}, config }
+    }
+    await assert.rejects(service.cancelRegistration(101, '', 2))
+    assert.equal(writes, 0)
+  }
+})
+
+test('booking rechecks membership between sessions if the package expires during a batch', async t => {
+  let clock = Date.parse('2026-11-20T10:00:00+07:00')
+  t.mock.method(Date, 'now', () => clock)
+  const state = mockApi({ subscriptions: [{ ...activeSubscription, endDate: new Date(clock + 1).toISOString() }] })
+  const result = await service.bookClassSessions({ classId: 10, sessionIds: [1, 2] }, progress => { if (progress.completed === 0) clock++ })
+  assert.deepEqual(state.posts, [1])
+  assert.deepEqual(result.skipped.map(item => item.id), ['2'])
+  assert.match(result.skipped[0].reason, /hết hiệu lực/)
 })
 
 function mockReview(registrations, { readError = false, failPost = false } = {}) {
