@@ -38,7 +38,7 @@ export function getReceptionistPaymentRows(orders, payments, filters = {}) {
   }
   const history = filterReceptionistPayments(receipts, filters)
     .map(payment => ({ key: `payment:${payment.id}`, kind: 'payment', payment, createdAt: payment.createdAt, status: paymentStatus(payment),
-      retryOrder: ['cancelled', 'expired', 'failed'].includes(paymentStatus(payment)) && Number(payment.amountReceived || 0) === 0
+      retryOrder: ['expired', 'failed'].includes(paymentStatus(payment)) && Number(payment.amountReceived || 0) === 0
         && latestAttempts.get(String(payment.subscriptionId)) === payment.id ? collectibleOrders.get(String(payment.subscriptionId)) : undefined }))
   const pending = getReceptionistPendingCounterOrders(orders, payments, filters)
     .filter(order => !representedSubscriptions.has(String(order.id)))

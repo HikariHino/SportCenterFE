@@ -34,13 +34,16 @@ test('an order represented by an active receipt is not offered as a second colle
   assert.deepEqual(rows.map(row => row.key), ['payment:7'])
 })
 
-test('closed attempts keep their actual status and expose retry without a duplicate pending row', () => {
+test('closed attempts keep their actual status without a duplicate pending row and cancelled attempts have no retry', () => {
   for (const status of ['Cancelled', 'Failed', 'Expired']) {
     const rows = getReceptionistPaymentRows([order(48)], [payment(7, { status })])
     assert.deepEqual(rows.map(row => row.key), ['payment:7'])
     assert.equal(rows[0].status, status.toLowerCase())
-    assert.equal(rows[0].retryOrder.id, 48)
-    assert.equal(rows[0].retryOrder.blockedReason, '')
+    if (status === 'Cancelled') assert.equal(rows[0].retryOrder, undefined)
+    else {
+      assert.equal(rows[0].retryOrder.id, 48)
+      assert.equal(rows[0].retryOrder.blockedReason, '')
+    }
   }
 })
 
@@ -56,11 +59,11 @@ test('both sources respect shared status, method, subscription and member search
   assert.deepEqual(getReceptionistPaymentRows(orders, payments, { method: 'cash' }).map(row => row.key), ['payment:7'])
 })
 
-test('only the latest closed attempt permits retry and an active or paid attempt blocks it', () => {
-  const closed = [payment(7, { status: 'Cancelled' }), payment(8, { status: 'Cancelled' })]
+test('only the latest failed attempt permits retry and a cancelled, active or paid attempt blocks it', () => {
+  const closed = [payment(7, { status: 'Failed' }), payment(8, { status: 'Failed' })]
   const rows = getReceptionistPaymentRows([order(48)], closed)
   assert.deepEqual(rows.map(row => row.retryOrder?.id), [48, undefined])
-  for (const overrides of [{ status: 'Pending', paymentMethod: 'PayOS' }, { status: 'Completed' }, { status: 'NeedsReview' }, { status: 'Cancelled', amountReceived: 100 }]) {
+  for (const overrides of [{ status: 'Cancelled' }, { status: 'Pending', paymentMethod: 'PayOS' }, { status: 'Completed' }, { status: 'NeedsReview' }, { status: 'Cancelled', amountReceived: 100 }]) {
     const attempts = getReceptionistPaymentRows([order(48)], [...closed, payment(9, overrides)])
     assert.ok(attempts.every(row => !row.retryOrder || row.retryOrder.blockedReason))
   }
@@ -70,12 +73,12 @@ test('confirmed cancellation replaces the same receipt embedded as Pending in a 
   const rows = getReceptionistPaymentRows([order(48, { payments: [payment(7, { status: 'Pending', paymentMethod: 'PayOS' })] })], [payment(7, { status: 'Cancelled', paymentMethod: 'PayOS' })])
   assert.deepEqual(rows.map(row => row.key), ['payment:7'])
   assert.equal(rows[0].status, 'cancelled')
-  assert.equal(rows[0].retryOrder.id, 48)
+  assert.equal(rows[0].retryOrder, undefined)
 })
 
 test('a closed receipt cannot erase paid or review evidence embedded in the same order', () => {
   for (const overrides of [{ status: 'Completed' }, { status: 'NeedsReview' }, { status: 'Cancelled', amountReceived: 100 }]) {
-    const rows = getReceptionistPaymentRows([order(48, { payments: [payment(7, overrides)] })], [payment(7, { status: 'Cancelled' })])
+    const rows = getReceptionistPaymentRows([order(48, { payments: [payment(7, overrides)] })], [payment(7, { status: 'Failed' })])
     assert.ok(!rows[0].retryOrder || rows[0].retryOrder.blockedReason)
   }
 })
