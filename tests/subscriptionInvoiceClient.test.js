@@ -93,6 +93,7 @@ test('multiple completed receipts offer a choice of invoices', () => screen(h(Bu
   assert.deepEqual(downloads, ['hoa-don-olympus-110.pdf'])
 }))
 test('invoice export is available from the order card and its details', () => screen(h(MemoryRouter, null, h(Provider, { sessionKey: 'invoice-test' }, h(Subscriptions))), async container => {
+  await click([...container.querySelectorAll('.member-sub-tabs button')].find(button => button.textContent.includes('Gói của tôi')))
   const card = container.querySelector('.member-sub-list > li')
   assert.ok(card)
   await click(card.querySelector('[aria-label="Xuất hóa đơn PDF cho đơn SUB-63"]'))

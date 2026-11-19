@@ -88,9 +88,6 @@
 .member-sub-empty { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 40px 24px; color: var(--theme-muted); border: 1px dashed var(--theme-border); border-radius: 12px; background: var(--theme-surface); }
 .member-subscriptions-view .member-sub-empty p { font-size: calc(17px + var(--font-size-adjustment, 0px)); line-height: 1.8; }
 .member-sub-empty h4 { color: var(--theme-text); font-size: calc(20px + var(--font-size-adjustment, 0px)); margin: 0; }
-.member-sub-welcome { display: flex; align-items: center; gap: 16px; padding: 24px; border: 1px solid var(--theme-border); border-radius: 14px; background: var(--theme-surface); }
-.member-sub-welcome > div { flex: 1; }
-.member-sub-welcome p { margin-top: 6px; color: var(--theme-muted); font-size: calc(17px + var(--font-size-adjustment, 0px)); line-height: 1.8; }
 .member-subscriptions-view :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
 .member-subscriptions-view .member-modal { color: var(--theme-text); background: var(--theme-surface); border: 1px solid var(--theme-border); }
 .member-subscriptions-view :is(.member-modal-header, .member-modal-footer) { background: var(--theme-surface); border-color: var(--theme-border); }
@@ -131,7 +128,4 @@
   .member-sub-list-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .member-sub-list-facts > div:last-child { grid-column: 1 / -1; }
   .member-sub-list > li { padding: 14px; }
-  .member-sub-welcome { flex-wrap: wrap; padding: 20px; }
-  .member-sub-welcome > div { flex-basis: calc(100% - 64px); }
-  .member-sub-welcome > button { margin-left: 64px; }
 }
