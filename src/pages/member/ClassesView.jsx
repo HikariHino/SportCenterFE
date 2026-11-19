@@ -6,7 +6,7 @@ import { getSports, getCoaches } from '../../services/classCatalogService'
 import { getAllAvailableSessions, getAllMemberClasses, getAllMyRegistrations, bookClassSessions, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
 import { getMySubscriptions } from '../../services/memberSubscriptionService'
 import { getRooms } from '../../services/roomService'
-import { bookingUnavailableReason, checkInUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, isCancelledRegistration, partitionMemberRegistrations, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../../utils/memberClasses'
+import { bookingUnavailableReason, cancellationDeadline, cancellationUnavailableReason, checkInUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, isCancelledRegistration, partitionMemberRegistrations, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../../utils/memberClasses'
 import { timetableWeekStart } from '../../utils/memberTimetable'
 import MemberWeeklySchedule from './MemberWeeklySchedule'
 import CancelledMemberRegistrations from './CancelledMemberRegistrations'
@@ -44,16 +44,17 @@ function RegistrationDetailsDialog({ item, busy, now, onClose, onAction }) {
       {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {item.review?.rating ?? item.rating ?? 'Đã gửi'}{(item.review?.rating ?? item.rating) ? '/5 sao' : ' đánh giá'}</strong>{item.review?.comment && <p>{item.review.comment}</p>}</div>}
       <div className="member-classes-card-actions">
         {(allowed.checkIn || allowed.checkInReason) && <button type="button" className="primary" disabled={busy || !allowed.checkIn} onClick={() => onAction('checkIn', item)}><Check size={15} /> Điểm danh</button>}
-        {allowed.cancel && <button type="button" disabled={busy} onClick={() => onAction('cancel', item)}>Hủy đăng ký</button>}
+        {(allowed.cancel || allowed.cancelReason) && <button type="button" disabled={busy || !allowed.cancel} title={allowed.cancelReason || undefined} onClick={() => onAction('cancel', item)}>Hủy đăng ký</button>}
         {allowed.review && <button type="button" className="primary" disabled={busy} onClick={() => onAction('review', item)}><Star size={15} /> Đánh giá buổi học</button>}
       </div>
       {allowed.checkInReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.checkInReason}</p>}
+      {allowed.cancelReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.cancelReason}</p>}
       {allowed.reviewReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.reviewReason}</p>}
     </div>
   </dialog>
 }
 
-function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscription, onNavigateTab, bulkResult, bulkProgress, now, registrations }) {
+export function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscription, onNavigateTab, bulkResult, bulkProgress, now, registrations = [] }) {
   const dialogRef = useRef(null)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
@@ -73,8 +74,9 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
   const isBookBlocked = isBooking && (hasActiveSubscription !== true || Boolean(bookingReason))
   const checkInReason = action.type === 'checkIn' ? checkInUnavailableReason(action.item, now) : ''
   const reviewReason = action.type === 'review' ? reviewUnavailableReason(action.item, now) : ''
+  const cancelReason = action.type === 'cancel' ? cancellationUnavailableReason(action.item, now) : ''
   return <dialog className="member-classes-dialog" ref={dialogRef} aria-labelledby="member-class-dialog-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }}>
-    <form onSubmit={event => { event.preventDefault(); onSubmit({ rating, comment, reason }) }}>
+    <form onSubmit={event => { event.preventDefault(); if (!busy && !isBookBlocked && !checkInReason && !reviewReason && !cancelReason) onSubmit({ rating, comment, reason }) }}>
       <header><h2 id="member-class-dialog-title">{titles[action.type]}</h2><button type="button" aria-label="Đóng" disabled={busy} onClick={onClose}><X size={20} /></button></header>
       <h3>{action.item.className || `Buổi học #${action.item.sessionId || action.item.id}`}</h3>
       {action.type === 'bookClass' ? <>
@@ -85,12 +87,13 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
         {bulkProgress && <p role="status">Đang xử lý {bulkProgress.completed}/{bulkProgress.total} buổi...</p>}
       </> : <SessionDetails item={action.item} />}
       {isBooking && <>
+        <p>Đặt lịch trước giờ bắt đầu. Hạn hủy áp dụng riêng theo chính sách của từng buổi.</p>
         {bookingReason && <p className="member-classes-checkin-notice" role="alert"><AlertCircle size={17} />{bookingReason}</p>}
         {hasActiveSubscription === false ? (
           <div className="member-classes-dialog-alert" role="alert">
             <ShieldAlert size={20} />
             <div>
-              <strong>Không thể đặt lịch khi chưa đăng ký gói thành viên.</strong>
+              <strong>Cần có gói hội viên còn hiệu lực để đặt lịch.</strong>
               <p>Bạn cần có gói hội viên đang còn hiệu lực để đặt lịch giữ chỗ buổi học này.</p>
               {onNavigateTab && (
                 <button
@@ -113,9 +116,10 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
       {action.type === 'checkIn' && <><p>Chỉ điểm danh từ 30 phút trước giờ học đến trước khi buổi học kết thúc. Xác nhận bạn đã có mặt tại phòng tập để tham gia.</p>{checkInReason && <p className="member-classes-checkin-notice" role="alert"><AlertCircle size={17} />{checkInReason}</p>}</>}
       {action.type === 'cancel' && <>
         <p>Bạn đang hủy duy nhất buổi học #{action.item.sessionId}, đăng ký #{action.item.id}, vào {formatDate(action.item.startsAt)}.</p>
-        <p>Yêu cầu hủy chỉ được chấp nhận trong thời hạn theo chính sách của buổi học.</p>
+        <p>{cancellationDeadline(action.item) ? `Có thể hủy đến ${formatDate(cancellationDeadline(action.item))} (giờ Việt Nam), bao gồm đúng thời điểm hết hạn.` : 'Chưa có thông tin hạn hủy. Vui lòng làm mới lịch học.'}</p>
+        {cancelReason && <p className="member-classes-checkin-notice" role="alert"><AlertCircle size={17} />{cancelReason}</p>}
         <label htmlFor="member-class-cancel-reason">Lý do hủy (không bắt buộc)</label>
-        <textarea id="member-class-cancel-reason" rows={3} maxLength={500} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} />
+        <textarea id="member-class-cancel-reason" rows={3} maxLength={500} value={reason} disabled={busy || Boolean(cancelReason)} onChange={event => setReason(event.target.value)} />
       </>}
       {action.type === 'review' && <>
         {reviewReason && <p className="member-classes-checkin-notice" role="alert"><AlertCircle size={17} />{reviewReason}</p>}
@@ -132,7 +136,7 @@ function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscri
         <small>{comment.length}/2.000 ký tự</small>
       </>}
       {error && error !== reviewReason && <p className="member-classes-error" role="alert">{error}</p>}
-      <footer><button type="button" disabled={busy} onClick={onClose}>Đóng</button><button type="submit" className="primary" disabled={busy || isBookBlocked || Boolean(checkInReason) || Boolean(reviewReason) || (action.type === 'review' && !rating)}>{busy ? <><LoaderCircle className="member-spin" size={16} /> Đang xử lý...</> : action.type === 'review' ? 'Gửi đánh giá' : action.type === 'bookClass' && bulkResult?.remaining.length ? `Thử lại ${bulkResult.remaining.length} buổi còn lại` : 'Xác nhận'}</button></footer>
+      <footer><button type="button" disabled={busy} onClick={onClose}>Đóng</button><button type="submit" className="primary" disabled={busy || isBookBlocked || Boolean(checkInReason) || Boolean(reviewReason) || Boolean(cancelReason) || (action.type === 'review' && !rating)}>{busy ? <><LoaderCircle className="member-spin" size={16} /> Đang xử lý...</> : action.type === 'review' ? 'Gửi đánh giá' : action.type === 'bookClass' && bulkResult?.remaining.length ? `Thử lại ${bulkResult.remaining.length} buổi còn lại` : 'Xác nhận'}</button></footer>
     </form>
   </dialog>
 }
@@ -298,6 +302,20 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
   for (const [sessionId, active] of Object.entries(booked)) { if (active) registeredSessions.add(sessionId) }
   const current = tab === 'browse' ? publicClasses : mine
 
+  useEffect(() => {
+    const clock = Date.now()
+    const sessions = [...(mine.data?.items || []), ...(allSessions.data?.items || []),
+      ...(action?.type === 'bookClass' ? action.item.sessions : action ? [action.item] : [])]
+    const boundaries = sessions.flatMap(item => [Date.parse(item.startsAt), Date.parse(item.startsAt) - 30 * 60000,
+      Date.parse(item.endsAt), Date.parse(cancellationDeadline(item)) + 1])
+    boundaries.push(...(subscriptions.data || []).flatMap(item => [Date.parse(item.startDate), Date.parse(item.endDate)]))
+    const upcoming = boundaries.filter(time => Number.isFinite(time) && time > clock)
+    if (!upcoming.length) return
+    const nextBoundary = upcoming.reduce((earliest, time) => Math.min(earliest, time), Infinity)
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.min(nextBoundary - clock, 2147483647))
+    return () => window.clearTimeout(timer)
+  }, [mine.data, allSessions.data, subscriptions.data, action, now])
+
   // If a mutation removes the final item from a page, return to the last available page.
   useEffect(() => {
     if (mine.data) setMinePage(page => Math.min(page, Math.max(1, Math.ceil(activeRegistrations.length / PAGE_SIZE))))
@@ -360,7 +378,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
         const result = await bookClassSessions({ classId: item.classId, sessionIds: [item.id] })
         if (result.remaining.length || result.skipped.length) throw new Error(result.error || result.skipped[0].reason)
       } else {
-        if (!registrationActions(item)[type]) throw new Error(type === 'review' ? reviewUnavailableReason(item) : 'Thao tác không còn khả dụng. Vui lòng đóng cửa sổ và làm mới lịch đã đặt.')
+        if (!registrationActions(item)[type]) throw new Error(type === 'review' ? reviewUnavailableReason(item) : type === 'cancel' ? cancellationUnavailableReason(item) : 'Thao tác không còn khả dụng. Vui lòng đóng cửa sổ và làm mới lịch đã đặt.')
         if (type === 'cancel') cancellationResult = await cancelRegistration(item.id, values.reason, item.sessionId)
         if (type === 'checkIn') {
           const reason = checkInUnavailableReason(item, Date.now())
@@ -431,7 +449,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
     )}
 
     {tab === 'browse' && <MemberClassBrowser sports={sports} coaches={coaches} rooms={roomsList} registered={registeredSessions} registrations={registrations} busy={busy} now={now} refreshKey={browseRevision}
-      bookingState={{ loading: mine.loading || subscriptions.loading, error: mine.error || subscriptions.error, reload: () => { mine.reload(); subscriptions.reload() } }}
+      bookingState={{ loading: mine.loading || subscriptions.loading, error: mine.error || subscriptions.error, hasActiveSubscription, reload: () => { mine.reload(); subscriptions.reload() } }}
       onBookClass={course => openAction('bookClass', course)} />}
 
     {tab === 'mine' && <section className="member-my-registrations" aria-label="Các lượt đăng ký" aria-busy={mine.loading}>
@@ -448,10 +466,11 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
             {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {registration.review?.rating ?? registration.rating ?? 'Đã gửi'}{(registration.review?.rating ?? registration.rating) ? '/5 sao' : ' đánh giá'}</strong>{registration.review?.comment && <p>{registration.review.comment}</p>}</div>}
             <div className="member-classes-card-actions">
               {(allowed.checkIn || allowed.checkInReason) && <button type="button" className="primary" disabled={busy || !allowed.checkIn} onClick={() => openAction('checkIn', registration)}><Check size={15} /> Điểm danh</button>}
-              {allowed.cancel && <button type="button" disabled={busy} onClick={() => openAction('cancel', registration)}>Hủy đăng ký</button>}
+              {(allowed.cancel || allowed.cancelReason) && <button type="button" disabled={busy || !allowed.cancel} title={allowed.cancelReason || undefined} onClick={() => openAction('cancel', registration)}>Hủy đăng ký</button>}
               {allowed.review && <button type="button" className="primary" disabled={busy} onClick={() => openAction('review', registration)}><Star size={15} /> Đánh giá buổi học</button>}
             </div>
             {allowed.checkInReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.checkInReason}</p>}
+            {allowed.cancelReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.cancelReason}</p>}
             {allowed.reviewReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.reviewReason}</p>}
           </article>
         }}</MemberList>}
@@ -463,7 +482,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
 
     {viewActive && action && (
       <ActionDialog
-        action={action.type === 'review' ? { ...action, item: registrations.find(item => String(item.id) === String(action.item.id)) || action.item } : action}
+        action={['review', 'cancel'].includes(action.type) ? { ...action, item: registrations.find(item => String(item.id) === String(action.item.id)) || action.item } : action}
         busy={busy}
         now={now}
         error={actionError}

@@ -112,6 +112,8 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
   const [aiRecommendation, setAiRecommendation] = useState(null)
   const [aiPromptOpen, setAiPromptOpen] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
+  const [aiLevel, setAiLevel] = useState('Beginner')
+  const [aiDaysPerWeek, setAiDaysPerWeek] = useState('3')
   const registeredSportName = String(student.sportName || '').trim()
   const promptLimit = COACH_AI_PROMPT_MAX_LENGTH
 
@@ -163,7 +165,8 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
       setError(catalogError || 'Kho bài tập chưa sẵn sàng. Vui lòng thử lại sau khi tải xong.')
       return
     }
-    const snapshot = { prompt: aiPrompt.trim(), goal: trainingGoalLabel(form.goal), startDate: form.startDate, endDate: form.endDate, sportName: registeredSportName }
+    const snapshot = { prompt: aiPrompt.trim(), goal: trainingGoalLabel(form.goal), startDate: form.startDate, endDate: form.endDate, sportName: registeredSportName,
+      level: aiLevel, daysPerWeek: Number(aiDaysPerWeek) }
     let recommendationRequest
     try {
       buildCoachWorkoutGoalContext(snapshot)
@@ -174,8 +177,6 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
         memberId: student.memberId,
         ...snapshot,
         exerciseCatalog,
-        level: 'Beginner',
-        daysPerWeek: 3,
       }, { signal: controller.signal }).then(answer => ({ answer: { ...answer, ...snapshot } })).catch(requestError => ({ requestError }))
     } catch (requestError) {
       setError(getWorkoutRecommendationError(requestError))
@@ -294,6 +295,10 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
           <span><Sparkles size={19} /><span><strong>Tạo bài tập bằng AI</strong><small>Mô tả mục tiêu và yêu cầu bài tập để xem trước gợi ý.</small></span></span>
           <button className="coach-plan-ai-close" type="button" aria-label="Đóng nhập yêu cầu AI" disabled={aiDemoLoading || saving} onClick={() => setAiPromptOpen(false)}><X size={16} /></button>
           <label className="coach-plan-ai-prompt"><span>Yêu cầu cho AI</span><textarea value={aiPrompt} rows={3} maxLength={promptLimit} autoFocus disabled={aiDemoLoading || saving} aria-describedby={`${promptId}-hint`} onChange={event => setAiPrompt(event.target.value)} placeholder="Ví dụ: Tăng sức bền cho học viên mới, ưu tiên bài nhẹ và cải thiện kỹ thuật." /></label>
+          <div className="coach-plan-form-grid coach-plan-ai-options">
+            <label><span>Trình độ</span><select value={aiLevel} disabled={aiDemoLoading || saving} onChange={event => setAiLevel(event.target.value)}>{Object.entries(workoutLevelLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label><span>Số ngày tập mỗi tuần</span><select value={aiDaysPerWeek} disabled={aiDemoLoading || saving} onChange={event => setAiDaysPerWeek(event.target.value)}>{Array.from({ length: 7 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} ngày/tuần</option>)}</select></label>
+          </div>
           <div className="coach-plan-ai-prompt-footer"><small id={`${promptId}-hint`}>{aiPrompt.length}/{promptLimit} ký tự · Dùng mục tiêu và thời gian đã chọn.</small><button type="button" disabled={saving || aiDemoLoading || !aiPrompt.trim() || catalogLoading || !exerciseCatalog.length || !registeredSportName || student.isDemo} onClick={applyAiDemo}><Sparkles size={15} />{aiDemoLoading ? 'Đang tạo...' : 'Tạo'}</button></div>
         </div>}
         {aiDemoMessage && <p className="coach-plan-ai-message" role="status" aria-live="polite">{aiDemoMessage}</p>}

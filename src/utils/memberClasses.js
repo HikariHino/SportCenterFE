@@ -55,11 +55,22 @@ export function registrationAttendance(item) {
 }
 
 export function cancellationDeadline(item) {
-  if (item.cancellationDeadline) return item.cancellationDeadline
+  if (item.cancellationDeadline) return Number.isFinite(Date.parse(item.cancellationDeadline)) ? item.cancellationDeadline : null
   const hours = item.cancellationPolicy?.minimumHoursBeforeStart ?? item.minimumHoursBeforeStart
   const start = Date.parse(item.startsAt)
-  if (hours == null || !Number.isFinite(Number(hours)) || !Number.isFinite(start)) return null
-  return new Date(start - Number(hours) * 3600000).toISOString()
+  if (hours == null || !Number.isFinite(Number(hours)) || Number(hours) < 0 || !Number.isFinite(start)) return null
+  const deadline = new Date(start - Number(hours) * 3600000)
+  return Number.isFinite(deadline.getTime()) ? deadline.toISOString() : null
+}
+
+export function cancellationUnavailableReason(item, now = Date.now()) {
+  if (cancelled(item.status) || cancelled(item.sessionStatus)) return 'Buổi học hoặc đăng ký đã bị hủy.'
+  if (normalized(item.status) !== 'registered' || normalized(item.sessionStatus) !== 'scheduled') return 'Chỉ hủy đăng ký của buổi học đang được lên lịch.'
+  if (item.attendanceStatus || item.checkInTime || item.checkedInAt) return 'Buổi học đã có kết quả điểm danh, không thể hủy đăng ký.'
+  const deadline = Date.parse(cancellationDeadline(item))
+  if (!Number.isFinite(deadline) || !Number.isFinite(now)) return 'Chưa xác định được hạn hủy. Vui lòng làm mới lịch học.'
+  if (now > deadline) return 'Đã quá hạn hủy theo chính sách của buổi học.'
+  return item.canCancel === false ? 'Buổi học hiện không cho phép hủy đăng ký. Vui lòng làm mới lịch học.' : ''
 }
 
 export function checkInUnavailableReason(item, now = Date.now()) {
@@ -99,15 +110,14 @@ export function registrationActions(item, now = Date.now()) {
     || ['present', 'late', 'checkedin', 'attended'].includes(normalized(item.attendanceStatus))
   const reviewed = Boolean(item.hasReviewed || item.review || item.reviewedAt || item.rating)
   const active = ['registered', 'confirmed', 'booked'].includes(status)
-  const deadline = cancellationDeadline(item)
-  const beforeDeadline = !deadline || !(Date.parse(deadline) <= now)
-  const beforeStart = !(Date.parse(item.startsAt) <= now)
+  const cancelReason = cancellationUnavailableReason(item, now)
   const checkInEligible = !isCancelled && active && !checkedIn && !ended && item.canCheckIn !== false
   const checkInReason = checkInEligible ? checkInUnavailableReason(item, now) : ''
   const reviewReason = reviewUnavailableReason(item, now)
   return {
     checkedIn, reviewed, ended,
-    cancel: !isCancelled && active && !checkedIn && !ended && beforeStart && beforeDeadline && item.canCancel !== false,
+    cancel: !cancelReason,
+    cancelReason: !isCancelled && !ended && active ? cancelReason : '',
     checkIn: checkInEligible && !checkInReason,
     checkInReason,
     review: !reviewReason,
@@ -118,6 +128,7 @@ export function registrationActions(item, now = Date.now()) {
 export function bookingUnavailableReason(session, registered = false, now = Date.now(), registrations = []) {
   if (cancelled(session.status)) return 'Buổi học đã hủy'
   if (normalized(session.status) === 'completed' || !Number.isFinite(Date.parse(session.startsAt)) || Date.parse(session.startsAt) <= now) return 'Đã đóng đăng ký'
+  if (normalized(session.status) !== 'scheduled') return 'Buổi học không còn nhận đăng ký'
   if (registered || session.isRegistered) return 'Đã đăng ký'
   const count = session.currentEnrollment ?? session.enrolledCount ?? session.registeredCount
   if (Number(session.availableSlots ?? session.availableSeats ?? NaN) === 0 || (session.capacity != null && count != null && Number(count) >= Number(session.capacity))) return 'Đã hết chỗ'
@@ -147,8 +158,8 @@ export function registeredSessionIds(registrations) {
 
 export function hasActiveMembership(subscriptions, now = Date.now()) {
   return subscriptions.some(item => normalized(item.status) === 'active'
-    && (!item.startDate || Date.parse(item.startDate) <= now)
-    && (!item.endDate || Date.parse(item.endDate) >= now))
+    && Date.parse(item.startDate) <= now
+    && Date.parse(item.endDate) > now)
 }
 
 /**
