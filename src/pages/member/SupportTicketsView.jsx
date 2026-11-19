@@ -124,7 +124,7 @@ function TicketCard({ ticket, onAttach, className = '', ...rowProps }) {
     <div className="member-support-ticket-content">
     <h3 id={`member-support-ticket-${ticket.id}`}>{ticket.title || 'Yêu cầu hỗ trợ'}</h3>
     <p className="member-support-description">{ticket.description || 'Chưa có nội dung'}</p>
-    <SupportTicketImage imageUrl={ticket.imageUrl} ticketId={ticket.id} />
+    <SupportTicketImage imageUrl={ticket.imageUrl} ticketId={ticket.id} variant="full" />
     {canAttachImage(ticket) && <button className="member-support-image-action" type="button" onClick={() => onAttach(ticket)}><ImagePlus size={16} /> {ticket.imageUrl ? 'Thay ảnh sự cố' : 'Bổ sung ảnh sự cố'}</button>}
     <dl className="member-support-meta">
       <div><dt>Mức độ ưu tiên</dt><dd>{priority}</dd></div>
@@ -243,7 +243,7 @@ function TicketImageDialog({ ticket, onClose, onUploaded }) {
     <form onSubmit={submit} aria-busy={saving}>
       <header className="member-support-dialog-header"><div><h2 id="member-support-image-title">Ảnh sự cố · Phiếu #{ticket.id}</h2><p className="member-support-muted">{ticket.title}</p></div><button type="button" aria-label="Đóng biểu mẫu ảnh" disabled={saving} onClick={onClose}><X size={20} /></button></header>
       <div className="member-support-dialog-body">
-        <SupportTicketImage imageUrl={ticket.imageUrl} ticketId={ticket.id} />
+        <SupportTicketImage imageUrl={ticket.imageUrl} ticketId={ticket.id} variant="full" />
         {!editable && <p role="alert" className="member-support-error">Phiếu đã giải quyết hoặc đóng, không thể thay ảnh.</p>}
         <SupportImagePicker selection={image} disabled={saving || !editable} />
         {error && <p role="alert" className="member-support-error">{error}</p>}

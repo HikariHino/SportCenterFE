@@ -178,6 +178,15 @@ for (const status of ['Resolved', 'Closed']) {
   test(`Member can view ${status} ticket evidence but cannot change it`, () => screen(h(MemberSupport), [ticket(status, url)], async () => {
     assert.equal(document.querySelector('.member-support-image-action'), null)
     assert.ok(document.querySelector('.support-image-thumbnail'))
+    const opener = document.querySelector('.support-image-thumbnail')
+    assert.equal(opener.textContent.trim(), '')
+    assert.ok(opener.closest('.support-ticket-image--full'))
+    await act(async () => { opener.focus(); opener.click() })
+    assert.equal(document.querySelector('.support-image-dialog').open, true)
+    assert.equal(document.querySelector('.support-image-dialog img').src, url)
+    await act(async () => document.querySelector('.support-image-dialog [aria-label="Đóng ảnh sự cố"]').click())
+    assert.equal(document.querySelector('.support-image-dialog'), null)
+    assert.equal(document.activeElement, opener)
   }))
 }
 
