@@ -132,6 +132,27 @@ test('entry warms enabled Member tabs and skips the hidden workout view', () => 
   assert.equal(document.querySelector('[aria-label="Phân trang Danh mục gói tập"]'), null)
   assert.equal(document.querySelector('.member-sub-stats'), null)
   assert.equal(document.querySelector('.member-sub-welcome'), null)
+  const refresh = document.querySelector('.gym-page-heading > button')
+  assert.equal(refresh.textContent.trim(), '')
+  assert.equal(refresh.getAttribute('aria-label'), 'Làm mới thẻ và lịch sử ra/vào')
+  assert.ok(refresh.querySelector('svg'))
+})
+
+test('the mobile sidebar close button closes the menu and returns focus to its toggle without reloading data', async () => {
+  const before = requests.length
+  const toggle = document.querySelector('.member-menu-btn')
+  await act(async () => toggle.click())
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true')
+  assert.equal(toggle.getAttribute('aria-controls'), 'member-sidebar')
+  assert.ok(document.querySelector('#member-sidebar.is-open'))
+  const close = document.querySelector('.member-sidebar-close')
+  assert.equal(close.getAttribute('aria-label'), 'Đóng menu hội viên')
+  await act(async () => close.click())
+  assert.equal(document.querySelector('#member-sidebar.is-open'), null)
+  assert.equal(document.querySelector('.member-sidebar-close'), null)
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  assert.equal(document.activeElement, toggle)
+  assert.equal(requests.length, before)
 })
 
 test('switching tabs reuses the same view and draft without fetching again', async () => {

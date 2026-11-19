@@ -349,6 +349,8 @@
   transition: transform 0.25s ease;
 }
 
+.member-sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.member-sidebar-close { display: none; }
 .member-sidebar .member-brand {
   display: flex;
   align-items: center;
@@ -599,6 +601,11 @@
   .member-sidebar.is-open {
     display: flex;
   }
+  .member-sidebar-heading .member-brand { min-width: 0; gap: 8px; padding: 0; }
+  .member-sidebar-heading .member-brand > span { flex-shrink: 0; }
+  .member-sidebar-heading .member-brand > div { min-width: 0; }
+  .member-sidebar-close { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; padding: 0; border: 1px solid #ffffff26; border-radius: 8px; color: #e8eef8; background: #ffffff0d; cursor: pointer; }
+  .member-sidebar-close:hover { background: #ffffff1a; }
   .member-menu-btn {
     display: grid;
     place-items: center;

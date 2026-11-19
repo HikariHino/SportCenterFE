@@ -123,6 +123,7 @@ function MemberWorkspace() {
   const [activeNav, setActiveNav] = usePortalNavigation(memberViewIds, 'checkin', paymentReturnView)
   const contentMotion = usePageMotion(activeNav)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const menuButton = useRef(null)
   const sidebarPill = useSlidingPill(activeNav, sidebarOpen)
   const [notice, setNotice] = useState('')
   const [noticeTone, setNoticeTone] = useState('success')
@@ -319,14 +320,17 @@ function MemberWorkspace() {
     <MemberScheduleReviewGate key={user?.userId ?? user?.id ?? user?.email} refreshKey={notificationRevision} reopenRequest={scheduleReviewRequest} onConfirmed={refreshNotifications}>
     <div className="member-page member-dashboard">
       {/* Sidebar role Member */}
-      <aside className={`member-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
-        <Link to="/" className="member-brand">
-          <span><Trophy size={24} /></span>
-          <div>
-            <strong>SportPulse<span>.</span></strong>
-            <small>MEMBER PORTAL</small>
-          </div>
-        </Link>
+      <aside id="member-sidebar" className={`member-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
+        <div className="member-sidebar-heading">
+          <Link to="/" className="member-brand">
+            <span><Trophy size={24} /></span>
+            <div>
+              <strong>SportPulse<span>.</span></strong>
+              <small>MEMBER PORTAL</small>
+            </div>
+          </Link>
+        {sidebarOpen && <button type="button" className="member-sidebar-close" aria-label="Đóng menu hội viên" title="Đóng menu" onClick={() => { setSidebarOpen(false); menuButton.current?.focus({ preventScroll: true }) }}><X size={22} aria-hidden="true" /></button>}
+        </div>
 
         <div className="member-portal-tag">
           <ShieldCheck size={14} /> Cổng thông tin hội viên
@@ -374,9 +378,12 @@ function MemberWorkspace() {
         <header className="member-topbar">
           <div className="member-topbar-left">
             <button
+              ref={menuButton}
               type="button"
               className="member-menu-btn"
               aria-label={sidebarOpen ? 'Đóng menu' : 'Mở menu'}
+              aria-expanded={sidebarOpen}
+              aria-controls="member-sidebar"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               {sidebarOpen ? <X size={22} /> : <Menu size={22} />}

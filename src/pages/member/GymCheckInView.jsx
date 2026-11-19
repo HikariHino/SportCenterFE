@@ -100,8 +100,8 @@ export function GymCheckInView() {
           <h2>Ra/Vào trung tâm</h2>
           <p>Thẻ QR cá nhân và lịch sử tập luyện của bạn, ngay tại đây.</p>
         </div>
-        <button type="button" className="gym-button" disabled={qr.loading || history.loading} onClick={() => { qr.reload(); reloadHistory() }}>
-          <RefreshCw size={16} /> Làm mới
+        <button type="button" className="gym-icon-button" aria-label="Làm mới thẻ và lịch sử ra/vào" title="Làm mới" disabled={qr.loading || history.loading} onClick={() => { qr.reload(); reloadHistory() }}>
+          <RefreshCw size={18} aria-hidden="true" />
         </button>
       </header>
 
