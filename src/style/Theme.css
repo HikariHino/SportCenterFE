@@ -279,14 +279,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-plan-ai-demo { border-color:#4c56a4; background:linear-gradient(135deg,#1d2540,#202c4d); }
 [data-theme='dark'] .coach-plan-ai-demo strong { color:var(--theme-text); }
 [data-theme='dark'] .coach-plan-ai-message { color:#c8bdff; background:#292349; }
-[data-theme='dark'] .coach-plan-ai-result { border-color:#4c56a4; background:var(--theme-raised); }
-[data-theme='dark'] .coach-plan-ai-result>header { border-color:#4c56a4; background:#292349; }
-[data-theme='dark'] .coach-plan-ai-summary { border-color:var(--theme-border); background:var(--theme-border); }
-[data-theme='dark'] .coach-plan-ai-summary>span,[data-theme='dark'] .coach-plan-ai-sessions>article { background:var(--theme-raised); }
-[data-theme='dark'] .coach-plan-ai-summary strong,[data-theme='dark'] .coach-plan-ai-sessions li strong { color:var(--theme-text); }
-[data-theme='dark'] .coach-plan-ai-sessions>article,[data-theme='dark'] .coach-plan-ai-sessions>article>header,[data-theme='dark'] .coach-plan-ai-sessions li { border-color:var(--theme-border); }
-[data-theme='dark'] .coach-plan-ai-sessions>article>header { background:var(--theme-surface); }
-[data-theme='dark'] .coach-plan-ai-warnings { border-color:#6e5625; color:#f1ca74; background:#332a18; }
+[data-theme='dark'] .coach-plan-exercise-ai-tag { border-color:#62519e; color:#d5c9ff; background:#32264f; }
 [data-theme='dark'] .coach-ai-progress-dialog { border-color:#4c56a4; background:var(--theme-surface); }
 [data-theme='dark'] .coach-ai-progress-dialog h3 { color:var(--theme-text); }
 [data-theme='dark'] .coach-ai-progress-dialog>p,[data-theme='dark'] .coach-ai-progress-dialog>small { color:var(--theme-muted); }
