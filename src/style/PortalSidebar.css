@@ -1,3 +1,96 @@
+/* All role sidebars follow the saved website theme, including mobile drawers. */
+:root[data-theme='light'] :is(.coach-sidebar, .reception-sidebar, .member-sidebar, .manager-sidebar) {
+  color-scheme: light;
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-right: 1px solid var(--theme-border);
+  scrollbar-color: #a6b6ce var(--theme-surface);
+}
+
+:root[data-theme='light'] :is(.coach-sidebar, .reception-sidebar, .member-sidebar, .manager-sidebar)
+:is(.coach-brand, .reception-brand, .member-brand, .manager-brand,
+  .coach-brand strong, .reception-brand strong, .member-brand strong, .manager-brand strong,
+  .coach-sidebar-user strong, .reception-user strong, .member-sidebar-account strong, .manager-account strong) {
+  color: var(--theme-text);
+}
+
+:root[data-theme='light'] :is(.coach-sidebar, .reception-sidebar, .member-sidebar, .manager-sidebar)
+:is(.coach-brand small, .reception-brand small, .member-brand small, .manager-brand small,
+  .coach-nav-title, .reception-nav-title, .member-sidebar-group-title, .manager-nav-group > p,
+  .coach-sidebar-user small, .reception-user small, .member-sidebar-account small, .manager-account small) {
+  color: var(--theme-muted);
+}
+
+:root[data-theme='light'] :is(.coach-brand, .reception-brand, .member-sidebar .member-brand, .manager-brand) strong span {
+  color: var(--theme-accent);
+}
+
+:root[data-theme='light'] :is(.coach-portal-tag, .reception-portal-tag, .member-portal-tag, .manager-portal) {
+  border-color: #cbdcfa;
+  color: #174da8;
+  background: #edf4ff;
+}
+
+:root[data-theme='light'] :is(.coach-nav, .reception-nav, .member-sidebar-nav, .manager-nav) button:not(.active) {
+  color: var(--theme-muted);
+}
+
+:root[data-theme='light'] :is(.coach-nav, .reception-nav, .member-sidebar-nav, .manager-nav) button:not(.active):hover {
+  color: var(--theme-accent);
+  background: #edf4ff;
+}
+
+:root[data-theme='light'] :is(.coach-sidebar, .reception-sidebar, .member-sidebar, .manager-sidebar)
+:is(button, a):focus-visible {
+  outline: 3px solid var(--theme-accent);
+  outline-offset: 3px;
+}
+
+:root[data-theme='light'] :is(.coach-sidebar-bottom, .reception-sidebar-bottom, .member-sidebar-bottom, .manager-account) {
+  border-color: var(--theme-border);
+}
+
+:root[data-theme='light'] :is(.coach-sidebar-user, .reception-user, .member-sidebar-account, .manager-account) > button {
+  color: var(--theme-muted);
+}
+
+:root[data-theme='light'] :is(.coach-sidebar-user, .reception-user, .member-sidebar-account, .manager-account) > button:hover {
+  color: #b42335;
+  background: #fff0f2;
+}
+
+:root[data-theme='light'] :is(.coach-sidebar-close, .member-sidebar-close) {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-surface);
+}
+
+:root[data-theme='light'] :is(.coach-sidebar-close, .member-sidebar-close):hover {
+  color: var(--theme-accent);
+  background: var(--theme-raised);
+}
+
+:root[data-theme='light'] :is(.coach-sidebar .coach-avatar, .reception-sidebar .reception-avatar,
+  .member-sidebar .member-avatar, .manager-sidebar .manager-avatar) {
+  border-color: #c5d6f1;
+  color: #174da8;
+  background: #e8f0ff;
+}
+
+:root[data-theme='light'] .manager-center {
+  border-color: var(--theme-border);
+  background: #f3f7fe;
+}
+:root[data-theme='light'] .manager-center-icon {
+  color: var(--theme-accent);
+  background: #e2edff;
+}
+:root[data-theme='light'] .manager-center small,
+:root[data-theme='light'] .manager-home { color: var(--theme-muted); }
+:root[data-theme='light'] .manager-center strong { color: var(--theme-text); }
+:root[data-theme='light'] .manager-center p { color: #087450; }
+:root[data-theme='light'] .manager-home:hover { color: var(--theme-accent); }
+
 /* Keep the moving selection the same size, including when labels wrap. */
 :is(.reception-dashboard, .coach-dashboard, .member-dashboard, .manager-dashboard)
 :is(.reception-sliding-nav, .coach-sliding-nav, .member-sliding-nav, .manager-sliding-nav) button {
