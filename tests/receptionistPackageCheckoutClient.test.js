@@ -61,7 +61,7 @@ before(async () => {
       return response(state.wrongMember ? state.subscriptions.map(item => ({ ...item, memberId: 8 })) : state.subscriptions)
     }
     if (config.url === '/member-subscriptions/28') return response(state.subscriptions.find(item => item.id === 28))
-    if (config.url === '/payments' && config.method === 'get') return response(state.payments)
+    if (config.url === '/payments' && config.method === 'get') return response(state.staleHistory ? [receipt()] : state.payments)
     if (config.url === '/payments' && config.method === 'post') {
       if (state.failPayOS) throw Object.assign(new Error('PayOS unavailable'), { response: { status: 400, data: { message: 'PayOS chưa sẵn sàng' } } })
       const payment = receipt(); state.payments = [payment]; state.subscriptions.find(item => item.id === 28).payments = [payment]
@@ -77,6 +77,10 @@ before(async () => {
     if (config.url === '/payments/90/sync') {
       state.payments = [receipt(state.syncStatus)]
       if (state.syncStatus === 'Completed') state.subscriptions = []
+      return response(state.payments[0])
+    }
+    if (config.url === '/payments/90/cancel') {
+      state.payments = [receipt('Cancelled')]
       return response(state.payments[0])
     }
     if (config.url === '/payments/90') return response(state.payments[0])
@@ -103,7 +107,7 @@ async function screen(run, route = '/receptionist?view=Thanh+to%C3%A1n', setup =
   }
   try {
     await act(async () => root.render(h(StrictMode, null, h(Router, { initialEntries: [route] }, h(Auth, null,
-      h(Routes, null, h(Route, { path: '/receptionist', element: h(History) }), h(Route, { path: '/payment/success', element: h(Result) })))))))
+      h(Routes, null, h(Route, { path: '/receptionist', element: h(History) }), h(Route, { path: '/payment/success', element: h(Result) }), h(Route, { path: '/payment/cancel', element: h(Result) })))))))
     await run(container)
   } finally { await act(async () => root.unmount()); container.remove() }
 }
@@ -271,9 +275,24 @@ test('verified PayOS completion returns to Receptionist history with success and
 }, '/payment/success?orderCode=1090&status=PAID', state => { state.payments = [receipt()] }))
 
 test('a PAID query string cannot turn a cancelled backend transaction into a success message', () => screen(async () => {
-  assert.match(document.querySelector('.reception-payment-return').textContent, /Thanh toán đã hủy/)
+  assert.match(document.querySelector('.reception-payment-return').textContent, /Giao dịch đã hủy/)
   assert.doesNotMatch(document.querySelector('.reception-payment-return').textContent, /Thanh toán thành công/)
   assert.equal(createCalls().length, 0)
   assert.equal(paymentCalls().length, 0)
   assert.equal(document.querySelector('.reception-payment-success-dialog'), null)
 }, '/payment/success?orderCode=1090&status=PAID', state => { state.payments = [receipt('Cancelled')] }))
+
+for (const staleHistory of [false, true]) test(`PayOS cancellation stays cancelled without a pending duplicate, stale history: ${staleHistory}`, () => screen(async () => {
+  assert.match(document.querySelector('.reception-payment-return').textContent, /Giao dịch đã hủy/)
+  assert.match(document.querySelector('[data-payment-id="90"]').textContent, /Giao dịch đã hủy/)
+  assert.equal(document.querySelector('[data-order-id="28"]'), null)
+  assert.ok(document.querySelector('[aria-label="Thanh toán lại đơn đăng ký 28"]'))
+  assert.equal(document.querySelector('.reception-payment-success-dialog'), null)
+  assert.equal(state.calls.filter(call => call.url === '/payments/90/cancel').length, 1)
+  assert.equal(paymentCalls().length, 0)
+  assert.equal(createCalls().length, 0)
+}, '/payment/cancel?orderCode=1090&cancel=true&status=CANCELLED', state => {
+  state.staleHistory = staleHistory
+  state.syncStatus = 'Pending'; state.payments = [receipt()]
+  state.subscriptions.push({ ...active, id: 28, packageId: 2, status: 'Pending', agreedPrice: 500000, payments: [receipt()] })
+}))

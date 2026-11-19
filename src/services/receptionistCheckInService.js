@@ -1,4 +1,4 @@
-import api from './api'
+import { markReceptionistAttendance } from './receptionistAttendanceService'
 import { receptionistCheckInReason } from '../utils/receptionistCheckIn'
 import { getReceptionistMemberRegistrations } from './receptionistClassService'
 
@@ -17,8 +17,5 @@ export async function checkInReceptionistMemberRegistration(memberId, registrati
   const reason = receptionistCheckInReason(registration)
   if (reason) throw new Error(reason)
 
-  const response = await api.post(`/class-registrations/${registrationId}/check-in`)
-  const body = response.data
-  if (body?.success === false) throw new Error(body.message || 'Không thể check-in hội viên.')
-  return body?.data ?? body
+  return markReceptionistAttendance({ memberId, sessionId: registration.sessionId, status: 'Present' })
 }

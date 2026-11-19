@@ -90,18 +90,28 @@ export async function markCoachAttendance({ memberId, sessionId, status }) {
   // Read the saved schedule immediately before writing, including after a tab
   // has stayed open or another staff member has moved/cancelled the session.
   await getCoachSessionForAttendance(sessionId)
+  return saveCoachAttendance({ memberId, sessionId, status })
+}
+
+async function saveCoachAttendance({ memberId, sessionId, status }) {
+  if (![memberId, sessionId].every(value => Number.isSafeInteger(Number(value)) && Number(value) > 0)
+    || !['Present', 'Absent', 'Late', 'Excused'].includes(status)) throw new Error('Thông tin điểm danh không hợp lệ.')
   const response = await api.post('/Attendances/mark', {
-    memberId,
-    sessionId,
+    memberId: Number(memberId),
+    sessionId: Number(sessionId),
     status,
   })
   const body = response.data
 
-  if (body?.success === false) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
     throw new Error(body.message || 'Không thể cập nhật trạng thái điểm danh.')
   }
 
-  return body?.data ?? body
+  const attendance = body?.data ?? body
+  if (String(attendance?.memberId) !== String(memberId) || String(attendance?.sessionId) !== String(sessionId) || attendance?.status !== status) {
+    throw new Error('Kết quả không khớp học viên và buổi học đã điểm danh. Vui lòng tải lại danh sách.')
+  }
+  return attendance
 }
 
 export async function completeCoachSession(sessionId) {
@@ -138,18 +148,11 @@ export async function checkInCoachRegistration(registrationId, { sessionId } = {
   const session = await getCoachSessionForAttendance(sessionId)
   const roster = await getCoachSessionRoster(sessionId)
   const student = roster.find(item => String(item.registrationId) === String(registrationId))
-  if (!student || String(student.registrationStatus).toLowerCase() !== 'registered') {
+  if (!student || !['registered', 'completed'].includes(String(student.registrationStatus).trim().toLowerCase())) {
     throw new Error('Không tìm thấy lượt đăng ký hợp lệ trong buổi huấn luyện đã chọn.')
   }
   if (student.attendanceStatus || student.checkInTime) throw new Error('Học viên đã có kết quả điểm danh cho buổi học này.')
   const availability = getCoachAttendanceAvailability(session)
   if (!availability.open) throw new Error(availability.message)
-  const response = await api.post(`/class-registrations/${registrationId}/check-in`)
-  const body = response.data
-
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể điểm danh học viên.')
-  }
-
-  return body?.data ?? body
+  return saveCoachAttendance({ memberId: student.memberId, sessionId: session.id, status: 'Present' })
 }

@@ -31,10 +31,11 @@ export default function PaymentTable({ rows, loading = false, collectingDisabled
       <span>{record.packageName || (record.subscriptionId ? `#SUB-${record.subscriptionId}` : 'Không có')}
         {order ? <small>{order.durationInDays} ngày</small> : record.packageName && record.subscriptionId && <small>Đơn #SUB-{record.subscriptionId}</small>}</span>
       <span>{Number((order ? order.agreedPrice : record.amount) || 0).toLocaleString('vi-VN')} đ<small>{order ? 'Chọn phương thức khi thu tiền' : receptionistPaymentMethodLabel(record.paymentMethod)}</small></span>
-      <span className="reception-payment-record-state"><b className={`reception-payment-status ${row.status}`}>{order ? 'Chờ thanh toán tại quầy' : paymentStatusLabel(record)}</b>
+      <span className="reception-payment-record-state"><b className={`reception-payment-status ${row.status}`}>{order ? 'Chờ thanh toán tại quầy' : row.status === 'cancelled' ? 'Giao dịch đã hủy' : paymentStatusLabel(record)}</b>
         {order ? (order.blockedReason ? <small className="reception-payment-record-blocked">{order.blockedReason}</small>
           : <button type="button" className="reception-primary-button" disabled={collectingDisabled || loading} onClick={() => onCollect(order)} aria-label={`Thu tiền đơn đăng ký ${order.id}`}><WalletCards size={14} />Thu tiền</button>)
           : <button type="button" onClick={() => onView(record.id)} aria-label={`Xem thanh toán ${record.id}`}><Eye size={14} />Chi tiết</button>}
+        {row.retryOrder && !row.retryOrder.blockedReason && <button type="button" disabled={collectingDisabled || loading} onClick={() => onCollect(row.retryOrder)} aria-label={`Thanh toán lại đơn đăng ký ${row.retryOrder.id}`}><WalletCards size={14} />Thanh toán lại</button>}
       </span>
     </div>
   }}</ReceptionistList>
