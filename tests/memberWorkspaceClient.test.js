@@ -122,6 +122,13 @@ test('entry warms enabled Member tabs and skips the hidden workout view', () => 
   assert.equal(count('/member-subscriptions/mine'), 1)
   assert.equal(count('/members/me'), 1)
   assert.ok(requests.every(request => request.method === 'get'))
+  const packageTabs = [...document.querySelectorAll('.member-sub-tabs button')]
+  assert.match(packageTabs[0].textContent, /Khám phá gói tập/)
+  assert.equal(packageTabs[0].getAttribute('aria-pressed'), 'true')
+  assert.match(packageTabs[1].textContent, /Gói của tôi/)
+  assert.ok(document.querySelector('.member-sub-catalog'))
+  assert.equal(document.querySelector('.member-sub-stats'), null)
+  assert.equal(document.querySelector('.member-sub-welcome'), null)
 })
 
 test('switching tabs reuses the same view and draft without fetching again', async () => {
@@ -178,6 +185,7 @@ test('payment synchronization updates the already mounted subscription tab immed
   await act(async () => [...document.querySelectorAll('.mpay-dialog button')].find(button => button.textContent.includes('Đồng bộ trạng thái')).click())
   assert.ok(count('/member-subscriptions/mine') > subscriptionsBefore)
   await clickTab('Gói tập & Thẻ hội viên')
+  await act(async () => [...document.querySelectorAll('.member-sub-tabs button')].find(button => button.textContent.includes('Gói của tôi')).click())
   assert.equal(document.querySelector('.mpay-dialog[open]'), null, 'inactive tabs cannot keep native dialogs open')
   assert.match(document.querySelector('.member-view-content:not([hidden])').textContent, /Đang hiệu lực/)
   assert.match(document.querySelector('.member-sub-current').textContent, /Gói tải sẵn/)
@@ -218,6 +226,11 @@ test('all Member business lists and nested payment/exercise tables expose all 23
   largeLists = true
   await tick(10000); await tick(30000)
   await clickTab('Gói tập & Thẻ hội viên')
+  await act(async () => [...document.querySelectorAll('.member-sub-tabs button')].find(button => button.textContent.includes('Gói của tôi')).click())
+  const stats = document.querySelector('.member-sub-panel .member-sub-stats')
+  assert.ok(stats)
+  assert.equal(stats.nextElementSibling.className, 'member-sub-toolbar')
+  assert.equal(document.querySelector('.member-sub-welcome'), null)
   await checkThreePages('Thẻ đang sử dụng')
   await checkThreePages('Đơn đăng ký gói tập')
   assert.ok(listRows('Đơn đăng ký gói tập').every(row => !row.classList.contains('member-numbered-item')), 'subscription cards have no STT label')
