@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, Clock3, LoaderCircle, ReceiptText, XCircle } from 'lucide-react'
 
 import { isTemporaryPaymentError, verifyPaymentResult } from '../../services/paymentService'
@@ -24,7 +24,10 @@ export default function PaymentResult() {
   const isMember = user?.role === 'member'
   const historyTarget = isManagerRole(user?.role) ? '/manager?view=frontdesk' : '/receptionist?view=' + encodeURIComponent('Thanh toán')
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const orderCode = searchParams.get('orderCode')
+  const cancelRequested = location.pathname === '/payment/cancel' || searchParams.get('cancel') === 'true'
+    || ['CANCELLED', 'CANCELED'].includes(String(searchParams.get('status')).toUpperCase())
   const [revision, setRevision] = useState(0)
   const [state, setState] = useState({ status: 'loading', message: '' })
 
@@ -34,7 +37,7 @@ export default function PaymentResult() {
 
     async function verifyPayment() {
       try {
-        const synced = await verifyPaymentResult(orderCode, { refresh: revision > 0 })
+        const synced = await verifyPaymentResult(orderCode, { refresh: revision > 0, cancelRequested })
         if (!active) return
         const normalizedStatus = String(synced.status || '').trim().toLowerCase()
         const status = { completed: 'success', cancelled: 'cancelled', canceled: 'cancelled', expired: 'failed', failed: 'failed', needsreview: 'review' }[normalizedStatus] || 'pending'
@@ -46,7 +49,7 @@ export default function PaymentResult() {
         }
         if (active) {
           setState({ orderCode, status, subscriptionCancelled, cancellationError, message: synced.transactionReference || `PAY-${synced.id}` })
-          if (isReceptionist) navigate(historyTarget, { replace: true, state: { receptionistPaymentReturn: { id: synced.id, status } } })
+          if (isReceptionist) navigate(historyTarget, { replace: true, state: { receptionistPaymentReturn: { id: synced.id, status, payment: synced } } })
         }
       } catch (error) {
         if (active) setState({ orderCode, status: 'error', message: isTemporaryPaymentError(error)
@@ -57,7 +60,7 @@ export default function PaymentResult() {
 
     verifyPayment()
     return () => { active = false }
-  }, [orderCode, revision, isMember, isReceptionist, navigate, historyTarget])
+  }, [orderCode, cancelRequested, revision, isMember, isReceptionist, navigate, historyTarget])
 
   if (state.status === 'loading' || state.orderCode !== orderCode) {
     return <main className="payment-result-page"><section className="payment-result-card"><LoaderCircle className="payment-result-spin" size={54} /><h1>Đang kiểm tra thanh toán...</h1><p>Vui lòng giữ nguyên trang trong giây lát.</p></section></main>

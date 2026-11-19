@@ -64,22 +64,25 @@ const isSettled = payment => settledStatuses.has(String(payment.status || '').tr
 const pendingVerifications = new Map()
 
 /** Verify the return page against BE state; URL status/cancel flags are not proof of payment. */
-export function verifyPaymentResult(orderCode, { refresh = false } = {}) {
+export function verifyPaymentResult(orderCode, { refresh = false, cancelRequested = false } = {}) {
   if (!/^[1-9]\d*$/.test(String(orderCode || ''))) return Promise.reject(new Error('Đường dẫn thiếu mã đơn thanh toán hợp lệ.'))
-  const key = JSON.stringify([getToken(), String(orderCode), refresh])
+  const key = JSON.stringify([getToken(), String(orderCode), refresh, cancelRequested])
   if (pendingVerifications.has(key)) return pendingVerifications.get(key)
-  const request = verifyPayment(orderCode, refresh).finally(() => pendingVerifications.delete(key))
+  const request = verifyPayment(orderCode, refresh, cancelRequested).finally(() => pendingVerifications.delete(key))
   pendingVerifications.set(key, request)
   return request
 }
 
-async function verifyPayment(orderCode, refresh) {
+async function verifyPayment(orderCode, refresh, cancelRequested) {
   const payments = await getMyPayments()
   let payment = payments.find(item => String(item.payOSOrderCode) === String(orderCode))
   if (!payment || !Number.isSafeInteger(Number(payment.id)) || Number(payment.id) <= 0) throw new Error('Không tìm thấy giao dịch PayOS vừa thực hiện.')
   const id = payment.id
+  const { memberId, subscriptionId } = payment
   const validate = result => {
-    if (!result || String(result.id) !== String(id) || String(result.payOSOrderCode) !== String(orderCode) || !result.status) {
+    if (!result || String(result.id) !== String(id) || String(result.payOSOrderCode) !== String(orderCode) || !result.status
+      || (memberId != null && String(result.memberId) !== String(memberId))
+      || (subscriptionId != null && String(result.subscriptionId) !== String(subscriptionId))) {
       throw new Error('Thông tin xác nhận không khớp giao dịch. Vui lòng kiểm tra lịch sử thanh toán.')
     }
     return result
@@ -95,6 +98,9 @@ async function verifyPayment(orderCode, refresh) {
     } catch (error) {
       if (!isTemporaryPaymentError(error)) throw error
     }
+    // A cancel return is a request, not proof. Persist it through BE and use
+    // the confirmed result, including a payment that completed during the race.
+    if (cancelRequested) return confirmCancelledReturn(payment, validate)
     if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)))
     try {
       payment = validate(await getPaymentById(id))
@@ -105,6 +111,23 @@ async function verifyPayment(orderCode, refresh) {
   }
   // A pending payment remains unconfirmed even if the redirect claims PAID.
   return payment
+}
+
+async function confirmCancelledReturn(payment, validate) {
+  if (String(payment.paymentMethod).toLowerCase() !== 'payos' || Number(payment.amountReceived || 0) !== 0) {
+    throw new Error('Giao dịch cần kiểm tra trước khi hủy. Vui lòng đồng bộ trạng thái thanh toán.')
+  }
+  let updated
+  try { updated = await cancelPayment(payment.id, 'Người dùng hủy giao dịch trên trang thanh toán') }
+  catch (error) {
+    // The cancel may have committed even when its response was lost.
+    try { updated = validate(await getPaymentById(payment.id)) } catch { throw error }
+    if (!isSettled(updated)) throw error
+  }
+  updated = validate(updated)
+  if (!isSettled(updated)) updated = validate(await getPaymentById(payment.id))
+  if (!isSettled(updated)) throw new Error('Chưa xác nhận được giao dịch đã hủy. Vui lòng nhấn Kiểm tra lại.')
+  return updated
 }
 
 /** POST /api/payments/{id}/cancel - Hủy giao dịch PayOS đang chờ. */

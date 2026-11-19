@@ -239,3 +239,60 @@ test('temporary error classification retries only transport and concurrency fail
   for (const status of [400, 401, 403, 404]) assert.equal(service.isTemporaryPaymentError({ response: { status, data: { message: 'Invalid payment' } } }), false)
   assert.equal(service.isTemporaryPaymentError(new Error('Invalid data')), false)
 })
+
+test('a PayOS cancel request confirms cancellation through BE once across StrictMode effects', async () => {
+  const calls = []
+  api.defaults.adapter = async config => {
+    calls.push(`${config.method} ${config.url}`)
+    return response(config, config.url === '/payments' ? [pending] : config.url.endsWith('/cancel') ? { ...pending, status: 'Cancelled' } : pending)
+  }
+  const first = service.verifyPaymentResult('14', { cancelRequested: true })
+  const second = service.verifyPaymentResult('14', { cancelRequested: true })
+  assert.equal(first, second)
+  assert.equal((await first).status, 'Cancelled')
+  await second
+  assert.deepEqual(calls, ['get /payments', 'post /payments/14/sync', 'post /payments/14/cancel'])
+})
+
+test('cancellation preserves a payment that completed in the gateway race', async () => {
+  for (const completesOn of ['/payments', '/payments/14/sync', '/payments/14/cancel']) {
+    const calls = []
+    api.defaults.adapter = async config => {
+      calls.push(config.url)
+      const result = config.url === completesOn ? completed : pending
+      return response(config, config.url === '/payments' ? [result] : result)
+    }
+    assert.equal((await service.verifyPaymentResult('14', { cancelRequested: true })).status, 'Completed')
+    if (completesOn !== '/payments/14/cancel') assert.equal(calls.includes('/payments/14/cancel'), false)
+  }
+})
+
+test('a lost cancel response reads back the persisted result, while an unconfirmed cancel never reports success', async () => {
+  for (const readStatus of ['Cancelled', 'Pending']) {
+    api.defaults.adapter = async config => {
+      if (config.url === '/payments') return response(config, [pending])
+      if (config.url.endsWith('/cancel')) throw Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' })
+      return response(config, config.method === 'get' ? { ...pending, status: readStatus } : pending)
+    }
+    if (readStatus === 'Cancelled') assert.equal((await service.verifyPaymentResult('14', { cancelRequested: true })).status, 'Cancelled')
+    else await assert.rejects(service.verifyPaymentResult('14', { cancelRequested: true }), /Network Error/)
+  }
+  api.defaults.adapter = async config => response(config, config.url === '/payments' ? [pending] : pending)
+  await assert.rejects(service.verifyPaymentResult('14', { cancelRequested: true }), /Chưa xác nhận/)
+})
+
+test('cancel returns reject mismatched identities and never cancel received money or cash receipts', async () => {
+  for (const changes of [{ paymentMethod: 'Cash' }, { amountReceived: 500 }]) {
+    const calls = []
+    api.defaults.adapter = async config => {
+      calls.push(config.url)
+      return response(config, config.url === '/payments' ? [{ ...pending, ...changes }] : { ...pending, ...changes })
+    }
+    await assert.rejects(service.verifyPaymentResult('14', { cancelRequested: true }), /kiểm tra/)
+    assert.equal(calls.includes('/payments/14/cancel'), false)
+  }
+  for (const wrong of [{ ...pending, id: 99, status: 'Cancelled' }, { ...pending, payOSOrderCode: 99, status: 'Cancelled' }]) {
+    api.defaults.adapter = async config => response(config, config.url === '/payments' ? [pending] : config.url.endsWith('/cancel') ? wrong : pending)
+    await assert.rejects(service.verifyPaymentResult('14', { cancelRequested: true }), /không khớp/)
+  }
+})

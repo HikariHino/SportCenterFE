@@ -47,19 +47,19 @@ test('check-in rereads all needed registration pages and posts only the chosen r
   assert.equal((await checkIn(20, 10)).status, 'Present')
   assert.deepEqual(calls.map(call => [call.method, call.url, call.page]), [
     ['get', '/class-registrations/members/20', 1], ['get', '/class-registrations/members/20', 2],
-    ['post', '/class-registrations/10/check-in', undefined],
+    ['post', '/Attendances/mark', undefined],
   ])
 })
 
 test('a stale dialog cannot post a session rescheduled to November 2', async t => {
   const calls = mockApi(t, [{ ...registration, startsAt: '2026-11-02T15:00:00+07:00', endsAt: '2026-11-02T16:30:00+07:00' }])
-  await assert.rejects(checkIn(20, 10), /trong ngày/)
+  await assert.rejects(checkIn(20, 10), /30 phút/)
   assert.ok(calls.every(call => call.method === 'get'))
 })
 
 test('too-early, finished, cancelled and already recorded registrations never send a write', async t => {
   for (const changes of [
-    { startsAt: '2026-10-31T15:01:00+07:00' }, { endsAt: '2026-10-31T14:30:00+07:00', startsAt: '2026-10-31T13:00:00+07:00' },
+    { startsAt: '2026-10-31T15:01:00+07:00' }, { endsAt: '2026-10-31T02:29:59+07:00', startsAt: '2026-10-31T01:00:00+07:00' },
     { status: 'Cancelled' }, { sessionStatus: 'Cancelled' }, { attendanceStatus: 'Present' },
   ]) {
     const calls = mockApi(t, [{ ...registration, ...changes }])
@@ -79,4 +79,11 @@ test('missing or foreign registrations and failed reads do not write attendance'
 test('server check-in failures are propagated without reporting success', async t => {
   mockApi(t, [registration], { postError: true })
   await assert.rejects(checkIn(20, 10), /rejected by server/)
+})
+
+test('completed registrations use staff attendance through the end of the 12-hour window', async t => {
+  const calls = mockApi(t, [{ ...registration, status: 'Completed', sessionStatus: 'Completed' }])
+  t.mock.method(Date, 'now', () => Date.parse(registration.endsAt) + 12 * 60 * 60_000)
+  assert.equal((await checkIn(20, 10)).status, 'Present')
+  assert.equal(calls.at(-1).url, '/Attendances/mark')
 })

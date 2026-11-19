@@ -23,7 +23,16 @@ export function PaymentsView({ query, showNotice, paymentReturn }) {
   const [dismissedSuccessId, setDismissedSuccessId] = useState(null)
 
   const paymentsQuery = useReceptionistResource('payments', getPayments, { initialData: [], refreshKey: requestKey })
-  const { data: paymentItems, loading, refreshing } = paymentsQuery
+  const { data: loadedPayments, loading, refreshing } = paymentsQuery
+  const paymentItems = useMemo(() => {
+    const verified = paymentReturn?.payment
+    if (!verified || String(verified.id) !== String(paymentReturn.id)) return loadedPayments
+    const existing = loadedPayments.find(item => String(item.id) === String(verified.id))
+    // A cached Pending read must not replace the confirmed result on return.
+    if (!existing) return [verified, ...loadedPayments]
+    return paymentStatus(existing) === 'pending' && paymentStatus(verified) !== 'pending'
+      ? loadedPayments.map(item => String(item.id) === String(verified.id) ? verified : item) : loadedPayments
+  }, [loadedPayments, paymentReturn])
   const error = paymentsQuery.error ? getReceptionistPaymentError(paymentsQuery.error, 'Không thể tải danh sách thanh toán.') : ''
   const ordersQuery = useReceptionistResource('pending-orders', getReceptionistPendingOrders, { initialData: { orders: [], failedMembers: [] }, refreshKey: requestKey })
   const pendingOrders = ordersQuery.data.orders
@@ -60,7 +69,7 @@ export function PaymentsView({ query, showNotice, paymentReturn }) {
 
   return <>
     <RefreshStatus refreshing={refreshing || ordersQuery.refreshing} />
-    {paymentReturn?.id && <div className="reception-payment-return" data-status={returnStatus} role="status">{{ success: 'Thanh toán thành công', cancelled: 'Thanh toán đã hủy', failed: 'Thanh toán không thành công', pending: 'Giao dịch đang chờ xác nhận', review: 'Giao dịch cần đối soát' }[returnStatus] || 'Đã quay lại danh sách thanh toán'}</div>}
+    {paymentReturn?.id && <div className="reception-payment-return" data-status={returnStatus} role="status">{{ success: 'Thanh toán thành công', cancelled: 'Giao dịch đã hủy', failed: 'Thanh toán không thành công', pending: 'Giao dịch đang chờ xác nhận', review: 'Giao dịch cần đối soát' }[returnStatus] || 'Đã quay lại danh sách thanh toán'}</div>}
     <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{summary.paid.toLocaleString('vi-VN')} đ</strong><p>{summary.completed} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{summary.pending + allRows.filter(row => row.kind === 'order' && !row.order.blockedReason).length}</strong><p>{summary.review} giao dịch cần đối soát</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{summary.total}</strong><p>PayOS và thanh toán tại quầy</p></div></article></section>
     <section className="reception-card reception-table-card reception-payments-card">
       <div className="reception-table-tools"><div><strong>Danh sách thanh toán</strong><small>{rows.length - visibleCounterCount} giao dịch · {visibleCounterCount} đơn chờ {(loading || pendingLoading) && '· Đang cập nhật...'}</small></div><div><button className="reception-refresh-icon" type="button" aria-label="Làm mới danh sách thanh toán" title="Làm mới" disabled={loading || pendingLoading} onClick={refresh}><RefreshCw size={17} aria-hidden="true" /></button><button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Tạo thanh toán</button></div></div>

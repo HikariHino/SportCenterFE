@@ -44,7 +44,7 @@ function mockApi(t, { sessions = [session], roster = [student], readError, write
     }
     return { config, status: 200, headers: {}, data: writeError
       ? { success: false, message: 'Server rejected attendance' }
-      : { data: { ...payload, id: 50 } } }
+      : { data: { ...JSON.parse(config.data), id: 50 } } }
   }
   return calls
 }
@@ -62,12 +62,12 @@ test('Coach attendance rereads saved session pages before marking or updating an
   }
 })
 
-test('rescheduled, cancelled, completed, early and finished sessions cannot send either Coach attendance write', async t => {
+test('rescheduled, cancelled, early and expired sessions cannot send either Coach attendance write', async t => {
   for (const changes of [
     { startsAt: '2026-11-06T15:00:00+07:00', endsAt: '2026-11-06T16:30:00+07:00' },
     { startsAt: '2026-11-02T15:00:00+07:00', endsAt: '2026-11-02T16:30:00+07:00' },
-    { startsAt: '2026-11-04T15:01:00+07:00' }, { endsAt: '2026-11-04T14:30:00+07:00', startsAt: '2026-11-04T13:00:00+07:00' },
-    { status: 'Cancelled' }, { status: 'Completed' }, { endsAt: 'invalid' },
+    { startsAt: '2026-11-04T15:01:00+07:00' }, { endsAt: '2026-11-04T02:29:59+07:00', startsAt: '2026-11-04T01:00:00+07:00' },
+    { status: 'Cancelled' }, { endsAt: 'invalid' },
   ]) {
     const calls = mockApi(t, { sessions: [{ ...session, ...changes }] })
     await assert.rejects(service.markCoachAttendance(payload))
@@ -96,7 +96,7 @@ test('a missing session, failed read, malformed response or backend rejection ca
 test('registration check-in verifies the chosen session roster and posts only the chosen registration', async t => {
   const calls = mockApi(t)
   assert.equal((await service.checkInCoachRegistration(10, { sessionId: 30 })).id, 50)
-  assert.deepEqual(calls.map(call => call.url), ['/class-sessions/mine', '/class-sessions/30/roster', '/class-registrations/10/check-in'])
+  assert.deepEqual(calls.map(call => call.url), ['/class-sessions/mine', '/class-sessions/30/roster', '/Attendances/mark'])
 })
 
 test('foreign, cancelled and already recorded registrations cannot use another session window', async t => {
@@ -109,7 +109,7 @@ test('foreign, cancelled and already recorded registrations cannot use another s
 })
 
 test('a roster request finishing after the window closes does not post check-in', async t => {
-  const calls = mockApi(t, { afterRoster: () => t.mock.method(Date, 'now', () => Date.parse(session.endsAt)) })
+  const calls = mockApi(t, { afterRoster: () => t.mock.method(Date, 'now', () => Date.parse(session.endsAt) + 12 * 60 * 60_000 + 1) })
   await assert.rejects(service.checkInCoachRegistration(10, { sessionId: 30 }), /kết thúc/)
   assert.ok(calls.every(call => call.method === 'get'))
 })
@@ -127,4 +127,22 @@ test('server errors after valid schedule checks still reject both attendance act
   mockApi(t, { writeError: true })
   await assert.rejects(service.markCoachAttendance(payload), /Server rejected attendance/)
   await assert.rejects(service.checkInCoachRegistration(10, { sessionId: 30 }), /Server rejected attendance/)
+})
+
+test('completed sessions and registrations use the staff mark endpoint after session end', async t => {
+  const calls = mockApi(t, { sessions: [{ ...session, status: 'Completed' }], roster: [{ ...student, registrationStatus: 'Completed' }] })
+  t.mock.method(Date, 'now', () => Date.parse(session.endsAt) + 12 * 60 * 60_000)
+  assert.equal((await service.checkInCoachRegistration(10, { sessionId: 30 })).status, 'Present')
+  assert.deepEqual(calls.at(-1), { url: '/Attendances/mark', method: 'post', data: payload })
+})
+
+test('both attendance actions reject a result for the wrong member, session or status', async t => {
+  for (const changes of [{ memberId: 999 }, { sessionId: 999 }, { status: 'Absent' }]) {
+    mockApi(t)
+    const original = api.defaults.adapter
+    api.defaults.adapter = config => config.method === 'post'
+      ? Promise.resolve({ config, status: 200, headers: {}, data: { data: { ...payload, ...changes } } }) : original(config)
+    await assert.rejects(service.markCoachAttendance(payload), /không khớp/)
+    await assert.rejects(service.checkInCoachRegistration(10, { sessionId: 30 }), /không khớp/)
+  }
 })

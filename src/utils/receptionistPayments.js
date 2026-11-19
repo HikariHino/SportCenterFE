@@ -30,13 +30,18 @@ export function getReceptionistPaymentRows(orders, payments, filters = {}) {
       memberPhone: payment.memberPhone || order.memberPhone, memberEmail: payment.memberEmail || order.memberEmail,
       packageName: payment.packageName || order.packageName }
   })
-  const activeSubscriptions = new Set(payments.filter(payment =>
-    !['cancelled', 'expired', 'failed'].includes(paymentStatus(payment)) || Number(payment.amountReceived) > 0)
-    .map(payment => String(payment.subscriptionId)))
+  const representedSubscriptions = new Set(payments.map(payment => String(payment.subscriptionId)))
+  const collectibleOrders = new Map(getReceptionistPendingCounterOrders(orders, payments).map(order => [String(order.id), order]))
+  const latestAttempts = new Map()
+  for (const payment of filterReceptionistPayments(receipts)) {
+    if (!latestAttempts.has(String(payment.subscriptionId))) latestAttempts.set(String(payment.subscriptionId), payment.id)
+  }
   const history = filterReceptionistPayments(receipts, filters)
-    .map(payment => ({ key: `payment:${payment.id}`, kind: 'payment', payment, createdAt: payment.createdAt, status: paymentStatus(payment) }))
+    .map(payment => ({ key: `payment:${payment.id}`, kind: 'payment', payment, createdAt: payment.createdAt, status: paymentStatus(payment),
+      retryOrder: ['cancelled', 'expired', 'failed'].includes(paymentStatus(payment)) && Number(payment.amountReceived || 0) === 0
+        && latestAttempts.get(String(payment.subscriptionId)) === payment.id ? collectibleOrders.get(String(payment.subscriptionId)) : undefined }))
   const pending = getReceptionistPendingCounterOrders(orders, payments, filters)
-    .filter(order => !activeSubscriptions.has(String(order.id)))
+    .filter(order => !representedSubscriptions.has(String(order.id)))
     .map(order => ({ key: `order:${order.id}`, kind: 'order', order, createdAt: order.createdAt, status: 'pending' }))
   return [...pending, ...history].sort((a, b) => Number(b.status === 'pending') - Number(a.status === 'pending')
     || (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)
@@ -51,7 +56,20 @@ export function getReceptionistPendingCounterOrders(orders, payments = [], { que
   const term = query.trim().replace(/^#(?:sub-)?/i, '').toLocaleLowerCase('vi')
   return orders.filter(order => String(order.status).toLowerCase() === 'pending')
     .flatMap(order => {
+      const receiptsById = new Map()
       const receipts = [...(Array.isArray(order.payments) ? order.payments : []), ...payments.filter(payment => String(payment.subscriptionId) === String(order.id))]
+        .reduce((items, payment) => {
+          if (payment.id == null) items.push(payment)
+          else {
+            const previous = receiptsById.get(String(payment.id))
+            // Replace a cached Pending receipt, while retaining any evidence
+            // of received money or review that must block another collection.
+            const blocksCollection = receipt => !['pending', 'cancelled', 'expired', 'failed'].includes(paymentStatus(receipt)) || Number(receipt.amountReceived) > 0
+            if (!previous || !blocksCollection(previous) || blocksCollection(payment)) receiptsById.set(String(payment.id), payment)
+          }
+          return items
+        }, [])
+      receipts.push(...receiptsById.values())
       // Active gateway requests belong to payment history; never offer an alternative collection.
       if (receipts.some(receipt => ['completed', 'paid'].includes(paymentStatus(receipt))
         || (paymentStatus(receipt) === 'pending' && String(receipt.paymentMethod).toLowerCase() === 'payos'))) return []

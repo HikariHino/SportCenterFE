@@ -11,17 +11,16 @@ const end = Date.parse(registration.endsAt)
 
 test('October 31 cannot check in a registration for November 2 or an earlier date', () => {
   for (const date of ['2026-11-02', '2026-10-30']) {
-    assert.match(receptionistCheckInReason({ ...registration, startsAt: `${date}T15:00:00+07:00`, endsAt: `${date}T16:30:00+07:00` }, start), /trong ngày/)
+    assert.match(receptionistCheckInReason({ ...registration, startsAt: `${date}T15:00:00+07:00`, endsAt: `${date}T16:30:00+07:00` }, start), /30 phút|12 giờ/)
   }
 })
 
-test('same-day check-in opens exactly 30 minutes before the start and closes at the end', () => {
+test('staff check-in opens 30 minutes before start through 12 hours after end', () => {
   assert.match(receptionistCheckInReason(registration, start - 30 * 60_000 - 1), /30 phút/)
-  for (const now of [start - 30 * 60_000, start, start + 1, end - 1]) {
+  for (const now of [start - 30 * 60_000, start, start + 1, end, end + 12 * 60 * 60_000]) {
     assert.equal(receptionistCheckInReason(registration, now), '')
   }
-  assert.match(receptionistCheckInReason(registration, end), /kết thúc/)
-  assert.match(receptionistCheckInReason(registration, end + 1), /kết thúc/)
+  assert.match(receptionistCheckInReason(registration, end + 12 * 60 * 60_000 + 1), /12 giờ/)
 })
 
 test('the session day follows Vietnam time even when UTC is still the previous day', () => {
@@ -29,22 +28,22 @@ test('the session day follows Vietnam time even when UTC is still the previous d
   assert.equal(receptionistCheckInReason(early, Date.parse('2026-10-31T00:30:00+07:00')), '')
 })
 
-test('an early-morning session cannot be checked in on the previous Vietnam calendar day', () => {
+test('an early-morning session can be checked in during its opening window on the previous date', () => {
   const midnight = { ...registration, startsAt: '2026-11-01T00:15:00+07:00', endsAt: '2026-11-01T01:00:00+07:00' }
-  assert.match(receptionistCheckInReason(midnight, Date.parse('2026-10-31T23:55:00+07:00')), /trong ngày/)
+  assert.equal(receptionistCheckInReason(midnight, Date.parse('2026-10-31T23:55:00+07:00')), '')
   assert.equal(receptionistCheckInReason(midnight, Date.parse('2026-11-01T00:00:00+07:00')), '')
 })
 
-test('an overnight session stops accepting check-in after its scheduled start date', () => {
+test('an overnight session permits check-in across midnight', () => {
   const overnight = { ...registration, startsAt: '2026-10-31T23:00:00+07:00', endsAt: '2026-11-01T01:00:00+07:00' }
   assert.equal(receptionistCheckInReason(overnight, Date.parse('2026-10-31T23:30:00+07:00')), '')
-  assert.match(receptionistCheckInReason(overnight, Date.parse('2026-11-01T00:00:00+07:00')), /trong ngày/)
+  assert.equal(receptionistCheckInReason(overnight, Date.parse('2026-11-01T00:00:00+07:00')), '')
 })
 
-test('cancelled, completed, missing and invalid session data cannot enable check-in', () => {
+test('cancelled, missing and invalid session data cannot enable check-in', () => {
   for (const changes of [
-    { sessionId: null }, { status: 'Cancelled' }, { status: 'Completed' },
-    { sessionStatus: 'Cancelled' }, { sessionStatus: 'Completed' }, { sessionStatus: undefined },
+    { sessionId: null }, { status: 'Cancelled' },
+    { sessionStatus: 'Cancelled' },  { sessionStatus: undefined },
     { startsAt: null }, { endsAt: 'invalid' }, { endsAt: registration.startsAt },
     { endsAt: '2026-10-31T14:00:00+07:00' },
   ]) assert.ok(receptionistCheckInReason({ ...registration, ...changes }, start))
@@ -57,4 +56,8 @@ test('an existing attendance never exposes another check-in action', () => {
   }
   assert.ok(receptionistCheckInReason({ ...registration, checkInTime: registration.startsAt }, start))
   assert.equal(receptionistCheckInReason({ ...registration, status: ' REGISTERED ', sessionStatus: ' scheduled ' }, start), '')
+})
+
+test('completed registrations allow missing attendance within the staff window', () => {
+  assert.equal(receptionistCheckInReason({ ...registration, status: 'Completed', sessionStatus: 'Completed' }, end + 1), '')
 })

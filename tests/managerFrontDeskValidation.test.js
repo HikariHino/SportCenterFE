@@ -84,11 +84,11 @@ test('Manager attendance rereads all session pages and the current roster before
   assert.deepEqual(calls.at(-1), { method: 'post', url: '/Attendances/mark', data: { memberId: 20, sessionId: 30, status: 'Present' } })
 })
 
-test('stale, rescheduled, cancelled, completed and ended sessions cannot write Manager attendance', async t => {
+test('stale, rescheduled, cancelled and expired sessions cannot write Manager attendance', async t => {
   for (const changes of [
     { startsAt: '2026-11-06T15:00:00+07:00', endsAt: '2026-11-06T16:30:00+07:00' },
-    { startsAt: '2026-11-04T15:01:00+07:00' }, { startsAt: '2026-11-04T13:00:00+07:00', endsAt: '2026-11-04T14:30:00+07:00' },
-    { status: 'Cancelled' }, { status: 'Completed' }, { endsAt: 'invalid' },
+    { startsAt: '2026-11-04T15:01:00+07:00' }, { startsAt: '2026-11-04T01:00:00+07:00', endsAt: '2026-11-04T02:29:59+07:00' },
+    { status: 'Cancelled' }, { endsAt: 'invalid' },
   ]) {
     const calls = mockApi(t, { sessions: [{ ...session, ...changes }] })
     await assert.rejects(manager.markManagerAttendance(attendanceInput))
@@ -107,7 +107,7 @@ test('missing or foreign registrations, existing attendance and failed reads can
 })
 
 test('attendance checks the clock after the last read finishes', async t => {
-  const calls = mockApi(t, { afterRead: () => t.mock.method(Date, 'now', () => Date.parse(session.endsAt)) })
+  const calls = mockApi(t, { afterRead: () => t.mock.method(Date, 'now', () => Date.parse(session.endsAt) + 12 * 60 * 60_000 + 1) })
   await assert.rejects(manager.markManagerAttendance(attendanceInput), /kết thúc/)
   assert.ok(calls.every(call => call.method === 'get'))
 })
