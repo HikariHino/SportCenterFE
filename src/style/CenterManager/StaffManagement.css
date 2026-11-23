@@ -579,6 +579,10 @@
   box-shadow: 0 0 0 3px rgba(36, 99, 235, 0.1);
 }
 
+.staff-form-group .staff-field-error { color: var(--manager-danger, #b42318); line-height: 1.5; }
+.staff-create-body :is(input, select)[aria-invalid='true'] { border-color: var(--manager-danger, #b42318); }
+.staff-create-body :is(input, select):disabled { opacity: .65; cursor: not-allowed; }
+
 .staff-form-group small {
   font-size: calc(16px + var(--font-size-adjustment, 0px));
   color: var(--manager-secondary, #536179);

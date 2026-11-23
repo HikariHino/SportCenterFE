@@ -1225,6 +1225,8 @@
 .class-scheduling-note strong { color: var(--theme-text); font-weight: 600; }
 .class-course-error { margin: 0; color: var(--theme-red, #b42318); font-size: calc(17px + var(--font-size-adjustment, 0px)); }
 .class-form-error { margin: 0 0 12px; color: var(--theme-red, #b42318); font-size: calc(17px + var(--font-size-adjustment, 0px)); }
+.class-field-error { margin: 4px 0 0; color: var(--theme-red, #b42318); font-size: calc(15px + var(--font-size-adjustment, 0px)); line-height: 1.5; }
+.class-modal :is(input, select)[aria-invalid='true'] { border-color: var(--theme-red, #b42318); }
 
 .class-session-groups { display: grid; gap: 18px; }
 .class-session-group { min-width: 0; }

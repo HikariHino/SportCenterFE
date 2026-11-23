@@ -20,15 +20,33 @@ function classDate(value, endOfDay = false) {
   return text
 }
 
-export function buildClassPayload(data, now = Date.now()) {
-  const className = String(data.className || '').trim()
-  if (!className || className.length > 200) throw new Error('Tên lớp học phải có từ 1 đến 200 ký tự.')
-  const sportId = Number(data.sportId)
-  const coachId = Number(data.coachId)
-  const maxCapacity = Number(data.maxCapacity)
-  if (!Number.isInteger(sportId) || sportId < 1) throw new Error('Vui lòng chọn môn thể thao.')
-  if (!Number.isInteger(coachId) || coachId < 1) throw new Error('Vui lòng chọn huấn luyện viên phụ trách.')
-  if (!Number.isInteger(maxCapacity) || maxCapacity < 1 || maxCapacity > 10000) throw new Error('Sĩ số tối đa phải là số nguyên từ 1 đến 10.000.')
+export function classFormValidationErrors(data, now = Date.now(), { allowPastStart = true } = {}) {
+  const errors = {}
+  if (typeof data.className !== 'string' || !data.className.trim()) errors.className = 'Vui lòng nhập tên lớp học, không chỉ gồm khoảng trắng.'
+  else if (data.className.trim().length > 200) errors.className = 'Tên lớp học phải có từ 1 đến 200 ký tự.'
+  const positiveInteger = value => ['string', 'number'].includes(typeof value) && String(value).trim() !== '' && Number.isSafeInteger(Number(value)) && Number(value) > 0
+  if (!positiveInteger(data.sportId)) errors.sportId = 'Vui lòng chọn môn thể thao.'
+  if (!positiveInteger(data.coachId)) errors.coachId = 'Vui lòng chọn huấn luyện viên phụ trách.'
+  if (!positiveInteger(data.maxCapacity) || Number(data.maxCapacity) > 10000) errors.maxCapacity = 'Sĩ số tối đa phải là số nguyên từ 1 đến 10.000.'
+  let start, end
+  for (const field of ['startDate', 'endDate']) {
+    if (!data[field] || !String(data[field]).trim()) errors[field] = field === 'startDate' ? 'Vui lòng nhập ngày bắt đầu khóa.' : 'Vui lòng nhập ngày kết thúc khóa.'
+    else {
+      try { if (field === 'startDate') start = classDate(data[field]); else end = classDate(data[field], true) }
+      catch (error) { errors[field] = error.message }
+    }
+  }
+  if (start && !allowPastStart && timetableDateKey(start) < timetableDateKey(now)) errors.startDate = 'Ngày bắt đầu khóa không được trước hôm nay (giờ Việt Nam).'
+  if (start && end && Date.parse(start) >= Date.parse(end)) errors.endDate = 'Ngày kết thúc phải sau ngày bắt đầu khóa học.'
+  else if (end && Date.parse(end) <= now) errors.endDate = 'Ngày kết thúc khóa học phải sau thời điểm hiện tại.'
+  return errors
+}
+
+export function buildClassPayload(data, now = Date.now(), options = {}) {
+  const fieldErrors = classFormValidationErrors(data, now, options)
+  if (Object.keys(fieldErrors).length) throw Object.assign(new Error(Object.values(fieldErrors)[0]), { fieldErrors })
+  const className = data.className.trim()
+  const sportId = Number(data.sportId), coachId = Number(data.coachId), maxCapacity = Number(data.maxCapacity)
 
   const startDate = classDate(data.startDate)
   const endDate = classDate(data.endDate, true)

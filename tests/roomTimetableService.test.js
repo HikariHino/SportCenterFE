@@ -827,6 +827,13 @@ test('a stale coach and conflicts for a substitute coach block the update', asyn
   assert.equal(conflict.puts.length, 0)
 })
 
+test('class creation rejects a past start date before any API request', async () => {
+  let requests = 0
+  api.defaults.adapter = async () => { requests++; throw new Error('Unexpected request') }
+  await assert.rejects(classService.createSportClass({ className: 'Yoga', sportId: 1, coachId: 5, maxCapacity: 20, startDate: '2000-01-01', endDate: '2099-12-31' }), /không được trước hôm nay/)
+  assert.equal(requests, 0)
+})
+
 test('class creation sends course dates and omits the retired fee field', async () => {
   let payload
   api.defaults.adapter = async config => {

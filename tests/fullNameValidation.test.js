@@ -69,6 +69,7 @@ for (const [name, save, url] of [
   test(`${name} retains valid accented names in the request`, async () => {
     const calls = []
     api.defaults.adapter = async config => {
+      if (config.method === 'get') return { config, status: 200, headers: {}, data: { success: true, data: [] } }
       calls.push({ url: config.url, data: JSON.parse(config.data) })
       return { config, status: 200, headers: {}, data: { success: true, data: { id: 1 } } }
     }

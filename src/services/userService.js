@@ -84,8 +84,8 @@ export async function createStaffUser({ email, password, fullName, phone, role }
   })
   const body = response.data
 
-  if (body?.success === false) {
-    throw new Error(body.message || 'Không thể tạo tài khoản nhân viên.')
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
+    throw Object.assign(new Error(body.message || 'Không thể tạo tài khoản nhân viên.'), { response })
   }
 
   return body?.data ?? body

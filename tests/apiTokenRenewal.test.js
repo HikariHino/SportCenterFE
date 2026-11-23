@@ -191,3 +191,29 @@ test('a delayed denied response from a previous login cannot log out or retry as
   assert.equal(auth.getToken(), 'second-token')
   assert.equal(window.location.href, '')
 })
+
+test('a successful late response from a previous login is discarded', async () => {
+  login(jwt(900))
+  const pending = deferred()
+  api.defaults.adapter = async config => { await pending.promise; return response(config, { privateData: 'old-account' }) }
+  const assertion = assert.rejects(api.get('/members/me'), error => error.code === 'ERR_CANCELED')
+  await tick()
+  auth.saveSession({ userId: 2, role: 'Member', token: 'second-token' }, 'second-token', true)
+  pending.resolve()
+  await assertion
+  assert.equal(auth.getToken(), 'second-token')
+})
+
+test('an evicted tab cannot send protected requests or overwrite the new remembered login with a late refresh', async () => {
+  login(jwt(900), true)
+  remembered.set(auth.ACTIVE_LOGIN_KEY, 'new-login')
+  remembered.set('loginSessionId', 'new-login')
+  remembered.set('token', 'new-token')
+  remembered.set('refreshTokenKey', 'new-refresh')
+  api.defaults.adapter = () => assert.fail('Evicted tab sent a protected request')
+  await assert.rejects(api.get('/payments'), error => error.code === 'ERR_CANCELED')
+  assert.equal(auth.updateSessionTokens('late-token', 'late-refresh'), false)
+  auth.clearSession()
+  assert.equal(remembered.get('token'), 'new-token')
+  assert.equal(remembered.get('refreshTokenKey'), 'new-refresh')
+})

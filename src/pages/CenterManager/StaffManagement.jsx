@@ -1,6 +1,6 @@
 import { ManagerList } from './ManagerPagination'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import {
   AlertCircle,
   Ban,
@@ -26,7 +26,7 @@ import {
   updateStaffRole,
 } from "../../services/userService"
 import { createManagerStaff } from "../../services/managerAccountService"
-import { getManagerStaffValidationError, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN, STAFF_ASSIGNABLE_ROLES } from "../../utils/managerAccountValidation"
+import { getManagerStaffValidationErrors, getManagerStaffFieldErrors, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN, STAFF_ASSIGNABLE_ROLES } from "../../utils/managerAccountValidation"
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from "../../utils/passwordValidation"
 import "../../style/CenterManager/StaffManagement.css"
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from "../../utils/fullNameValidation"
@@ -103,7 +103,9 @@ export default function StaffManagement() {
   })
   const [createSubmitting, setCreateSubmitting] = useState(false)
   const [createError, setCreateError] = useState("")
-  const [createInvalidField, setCreateInvalidField] = useState("")
+  const [createFieldErrors, setCreateFieldErrors] = useState({})
+  const createFormRef = useRef(null)
+  const createLock = useRef(false)
 
   const [updateRoleForm, setUpdateRoleForm] = useState("")
   const [updateRoleSubmitting, setUpdateRoleSubmitting] = useState(false)
@@ -176,29 +178,37 @@ export default function StaffManagement() {
       role: "Coach",
     })
     setCreateError("")
-    setCreateInvalidField("")
+    setCreateFieldErrors({})
     setShowCreateModal(true)
   }
 
   const changeCreateField = (field, value) => {
-    setCreateForm(current => ({ ...current, [field]: value }))
+    const next = { ...createForm, [field]: value }
+    setCreateForm(next)
     setCreateError("")
-    setCreateInvalidField("")
+    if (createFieldErrors[field]) setCreateFieldErrors(previous => ({ ...previous, [field]: getManagerStaffValidationErrors(next, staffList)[field] }))
   }
+  const createFieldProps = field => ({
+    disabled: createSubmitting,
+    'aria-invalid': Boolean(createFieldErrors[field]),
+    'aria-describedby': createFieldErrors[field] ? `staff-create-${field}-error` : undefined,
+    onBlur: () => setCreateFieldErrors(previous => ({ ...previous, [field]: getManagerStaffValidationErrors(createForm, staffList)[field] })),
+  })
+  const createFieldError = field => createFieldErrors[field] ? <small id={`staff-create-${field}-error`} className="staff-field-error" role="alert">{createFieldErrors[field]}</small> : null
+  const focusCreateError = errors => createFormRef.current?.elements.namedItem(Object.keys(errors)[0])?.focus()
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault()
-    if (createSubmitting) return
+    if (createLock.current) return
     setCreateError("")
-    setCreateInvalidField("")
-    const validationError = getManagerStaffValidationError(createForm)
-    if (validationError) {
-      setCreateError(validationError.message)
-      setCreateInvalidField(validationError.field)
-      e.currentTarget.elements.namedItem(validationError.field)?.focus()
+    const errors = getManagerStaffValidationErrors(createForm)
+    setCreateFieldErrors(errors)
+    if (Object.keys(errors).length) {
+      focusCreateError(errors)
       return
     }
 
+    createLock.current = true
     setCreateSubmitting(true)
     try {
       const newStaff = await createManagerStaff(createForm)
@@ -206,8 +216,14 @@ export default function StaffManagement() {
       setShowCreateModal(false)
       fetchStaff()
     } catch (err) {
-      setCreateError(getUserErrorMessage(err, "Không thể tạo nhân viên."))
+      const fields = getManagerStaffFieldErrors(err)
+      if (Object.keys(fields).length) {
+        setCreateFieldErrors(fields)
+        window.requestAnimationFrame(() => focusCreateError(fields))
+      }
+      else setCreateError(getUserErrorMessage(err, "Không thể tạo nhân viên."))
     } finally {
+      createLock.current = false
       setCreateSubmitting(false)
     }
   }
@@ -539,11 +555,11 @@ export default function StaffManagement() {
 
       {/* Modal 1: Create Staff */}
       {viewActive && showCreateModal && (
-        <div className="staff-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowCreateModal(false)}>
-          <div className="staff-modal">
+        <div className="staff-modal-backdrop" onClick={(e) => e.target === e.currentTarget && !createLock.current && setShowCreateModal(false)}>
+          <div className="staff-modal" role="dialog" aria-modal="true" aria-labelledby="staff-create-title">
             <div className="staff-modal-header">
               <div>
-                <h3>Tạo mới tài khoản nhân viên</h3>
+                <h3 id="staff-create-title">Tạo mới tài khoản nhân viên</h3>
                 <p>Khởi tạo thông tin đăng nhập và chỉ định vai trò ban đầu.</p>
               </div>
               <button
@@ -557,7 +573,7 @@ export default function StaffManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit}>
+            <form ref={createFormRef} noValidate onSubmit={handleCreateSubmit} aria-busy={createSubmitting}>
               <div className="staff-modal-body staff-create-body">
                 {createError && (
                   <div id="staff-create-error" className="staff-form-error" role="alert">
@@ -572,14 +588,14 @@ export default function StaffManagement() {
                     id="staff-fullname"
                     name="fullName"
                     maxLength={MANAGER_ACCOUNT_LIMITS.fullName}
-                    aria-invalid={createInvalidField === "fullName" || undefined}
-                    aria-describedby={createInvalidField === "fullName" ? "staff-create-error" : undefined}
+                    {...createFieldProps("fullName")}
                     type="text"
                     placeholder="Ví dụ: Nguyễn Văn An"
                     value={createForm.fullName}
                     onChange={(e) => changeCreateField("fullName", e.target.value)}
                     required
                   />
+                  {createFieldError("fullName")}
                 </div>
 
                 <div className="staff-form-group">
@@ -588,14 +604,14 @@ export default function StaffManagement() {
                     id="staff-email"
                     name="email"
                     maxLength={MANAGER_ACCOUNT_LIMITS.email}
-                    aria-invalid={createInvalidField === "email" || undefined}
-                    aria-describedby={createInvalidField === "email" ? "staff-create-error" : undefined}
+                    {...createFieldProps("email")}
                     type="email"
                     placeholder="email@sportcenter.com"
                     value={createForm.email}
                     onChange={(e) => changeCreateField("email", e.target.value)}
                     required
                   />
+                  {createFieldError("email")}
                 </div>
 
                 <div className="staff-form-group">
@@ -603,8 +619,7 @@ export default function StaffManagement() {
                   <input
                     id="staff-password"
                     name="password"
-                    aria-invalid={createInvalidField === "password" || undefined}
-                    aria-describedby={createInvalidField === "password" ? "staff-create-error" : undefined}
+                    {...createFieldProps("password")}
                     type="password"
                     placeholder="Từ 8 đến 72 ký tự"
                     value={createForm.password}
@@ -613,26 +628,28 @@ export default function StaffManagement() {
                     maxLength={NEW_PASSWORD_MAX_LENGTH}
                     required
                   />
+                  {createFieldError("password")}
                   <small>Nhân viên có thể đổi lại mật khẩu sau khi đăng nhập.</small>
                 </div>
 
                 <div className="staff-form-group">
-                  <label htmlFor="staff-phone">Số điện thoại</label>
+                  <label htmlFor="staff-phone">Số điện thoại *</label>
                   <input
                     id="staff-phone"
                     name="phone"
+                    required
                     inputMode="numeric"
                     pattern={MANAGER_PHONE_PATTERN}
                     title={MANAGER_PHONE_MESSAGE}
                     minLength={MANAGER_ACCOUNT_LIMITS.phone}
                     maxLength={MANAGER_ACCOUNT_LIMITS.phone}
-                    aria-invalid={createInvalidField === "phone" || undefined}
-                    aria-describedby={createInvalidField === "phone" ? "staff-create-error" : undefined}
+                    {...createFieldProps("phone")}
                     type="tel"
                     placeholder="0912345678"
                     value={createForm.phone}
                     onChange={(e) => changeCreateField("phone", e.target.value)}
                   />
+                  {createFieldError("phone")}
                 </div>
 
                 <div className="staff-form-group">
@@ -640,14 +657,14 @@ export default function StaffManagement() {
                   <select
                     id="staff-role"
                     name="role"
-                    aria-invalid={createInvalidField === "role" || undefined}
-                    aria-describedby={createInvalidField === "role" ? "staff-create-error" : undefined}
+                    {...createFieldProps("role")}
                     value={createForm.role}
                     onChange={(e) => changeCreateField("role", e.target.value)}
                     required
                   >
                     {STAFF_ASSIGNABLE_ROLES.map(role => <option key={role} value={role}>{roleNameVi(role)} ({role})</option>)}
                   </select>
+                  {createFieldError("role")}
                   <small>{ROLE_DESCRIPTIONS[createForm.role]}</small>
                 </div>
               </div>
