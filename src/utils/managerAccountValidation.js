@@ -1,7 +1,8 @@
 import { getNewPasswordValidationError } from './passwordValidation.js'
-import { getVietnamPhoneValidationError, profileDateLimit } from './profileValidation.js'
+import { getVietnamPhoneValidationError, getFullNameValidationError, profileDateLimit } from './profileValidation.js'
 import { getTextLengthValidationError } from './textLengthValidation.js'
 import { getFullNameCharactersError } from './fullNameValidation.js'
+import { getAccountEmailValidationError } from './emailValidation.js'
 
 export const MANAGER_ACCOUNT_LIMITS = { fullName: 100, email: 256, phone: 10, address: 200, fitnessGoal: 100 }
 export const STAFF_ASSIGNABLE_ROLES = ['Coach', 'Receptionist']
@@ -46,7 +47,47 @@ export function getManagerMemberValidationError(form = {}, now = Date.now()) {
 }
 
 export function getManagerStaffValidationError(form = {}) {
-  const error = accountError(form, false)
-  if (error) return error
-  return STAFF_ASSIGNABLE_ROLES.includes(form.role) ? null : { field: 'role', message: 'Vui lòng chọn vai trò Huấn luyện viên hoặc Lễ tân.' }
+  const first = Object.entries(getManagerStaffValidationErrors(form))[0]
+  return first ? { field: first[0], message: first[1] } : null
+}
+
+export function getManagerStaffValidationErrors(form = {}, accounts = []) {
+  const errors = {}
+  const nameError = getFullNameValidationError(form.fullName)
+  if (nameError) errors.fullName = nameError
+  let emailError = getAccountEmailValidationError(form.email)
+  if (!emailError) {
+    const [local, domain] = form.email.trim().split('@')
+    if (local.length > 64 || local.startsWith('.') || local.endsWith('.') || local.includes('..') || !domain.includes('.')
+      || !/^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/i.test(domain.split('.').at(-1))) emailError = 'Email không hợp lệ. Vui lòng nhập đầy đủ tên và tên miền, ví dụ: ten@example.com.'
+  }
+  if (emailError) errors.email = emailError
+  const passwordError = getNewPasswordValidationError(form.password)
+  if (passwordError) errors.password = passwordError
+  const phoneError = form.phone != null && typeof form.phone !== 'string' ? MANAGER_PHONE_MESSAGE : getVietnamPhoneValidationError(form.phone, { required: true })
+  if (phoneError) errors.phone = phoneError
+  if (!STAFF_ASSIGNABLE_ROLES.includes(form.role)) errors.role = 'Vui lòng chọn vai trò Huấn luyện viên hoặc Lễ tân.'
+  const emailKey = value => typeof value === 'string' ? value.trim().toLowerCase() : ''
+  const phoneKey = value => typeof value === 'string' ? value.trim().replace(/[\s().-]/g, '').replace(/^\+84/, '0') : ''
+  if (!errors.email && accounts.some(account => emailKey(account.email) === emailKey(form.email))) errors.email = 'Email đã được sử dụng. Vui lòng nhập email khác.'
+  if (!errors.phone && accounts.some(account => phoneKey(account.phone ?? account.phoneNumber) === phoneKey(form.phone))) errors.phone = 'Số điện thoại đã được sử dụng. Vui lòng nhập số khác.'
+  return errors
+}
+
+export function getManagerStaffFieldErrors(error) {
+  const fields = ['fullName', 'email', 'password', 'phone', 'role']
+  const result = {}
+  for (const [key, value] of Object.entries(error?.fieldErrors || error?.response?.data?.errors || {})) {
+    const name = key.split('.').at(-1).toLowerCase()
+    const field = name === 'phonenumber' ? 'phone' : fields.find(item => item.toLowerCase() === name)
+    const message = (Array.isArray(value) ? value : [value]).find(item => typeof item === 'string' && item.trim())
+    if (field && message) result[field] = message
+  }
+  if (fields.includes(error?.field)) result[error.field] = error.message
+  if (!Object.keys(result).length) {
+    const message = error?.response?.data?.message || ''
+    if (/email/i.test(message)) result.email = message
+    else if (/số điện thoại|phone/i.test(message)) result.phone = message
+  }
+  return result
 }

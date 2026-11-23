@@ -44,6 +44,7 @@ test('an expired session without a refresh token retains 401 and stops protected
 })
 
 test('permission errors preserve the active session and do not trigger token refresh', async () => {
+  session.clear(); remembered.clear()
   session.set('token', 'valid-test-token')
   let calls = 0
   api.defaults.adapter = async config => {

@@ -94,7 +94,7 @@ export async function getClassById(id) {
  * Quản lý tạo lớp học mới
  */
 export async function createSportClass(data) {
-  const payload = buildClassPayload(data)
+  const payload = buildClassPayload(data, Date.now(), { allowPastStart: false })
   const response = await api.post('/classes', payload)
   const body = response.data
   if (body?.success === false) {

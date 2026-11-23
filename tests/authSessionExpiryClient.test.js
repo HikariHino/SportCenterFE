@@ -53,3 +53,85 @@ test('an unrecoverable API 401 clears the React auth state and stops mounted por
     assert.equal(mounts, 1); assert.equal(stops, 1)
   } finally { await act(async () => root.unmount()); container.remove() }
 })
+
+for (const signal of ['storage', 'focus', 'visibilitychange']) {
+  test(`another tab login unmounts the old account on ${signal}, preserving the new login`, async () => {
+    auth.saveSession({ userId: 1, role: 'Member', token: 'old-token' }, 'old-token', true)
+    let stopped = 0
+    function Portal() { useEffect(() => () => { stopped++ }, []); return h('p', { id: 'portal' }, 'Account 1') }
+    function Route() { return useAuth().user ? h(Portal) : h('p', { id: 'login' }, 'Đăng nhập lại') }
+    const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
+    try {
+      await act(async () => root.render(h(AuthProvider, null, h(Route))))
+      // A remote tab publishes its identity after saving its own credentials.
+      localStorage.setItem('user', JSON.stringify({ userId: 2, role: 'member' }))
+      localStorage.setItem('token', 'new-token')
+      localStorage.setItem('refreshTokenKey', 'new-refresh')
+      localStorage.setItem('loginSessionId', 'remote-login')
+      localStorage.setItem(auth.ACTIVE_LOGIN_KEY, 'remote-login')
+      await act(async () => {
+        if (signal === 'storage') window.dispatchEvent(new window.StorageEvent('storage', { key: auth.ACTIVE_LOGIN_KEY, newValue: 'remote-login' }))
+        else if (signal === 'focus') window.dispatchEvent(new window.Event('focus'))
+        else document.dispatchEvent(new window.Event('visibilitychange'))
+      })
+      assert.equal(container.querySelector('#portal'), null)
+      assert.ok(container.querySelector('#login'))
+      assert.equal(stopped, 1, 'account workspace and its polling are unmounted')
+      assert.equal(auth.getToken(), null)
+      assert.equal(localStorage.getItem('token'), 'new-token')
+      api.defaults.adapter = () => assert.fail('A superseded tab must not send protected requests')
+      await assert.rejects(api.get('/payments'), error => error.code === 'ERR_CANCELED')
+    } finally { await act(async () => root.unmount()); container.remove() }
+  })
+}
+
+for (const remember of [false, true]) {
+  test(`logout in another tab unmounts this session and stops API access, remember=${remember}`, async () => {
+    auth.saveSession({ userId: 1, role: 'Member', token: 'shared-token', refreshTokenKey: 'shared-refresh' }, 'shared-token', remember)
+    let stopped = 0
+    function Portal() { useEffect(() => () => { stopped++ }, []); return h('p', { id: 'portal' }, 'Account 1') }
+    function Route() { return useAuth().user ? h(Portal) : h('p', { id: 'login' }, 'Đăng nhập lại') }
+    const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
+    try {
+      await act(async () => root.render(h(AuthProvider, null, h(Route))))
+      const original = globalThis.sessionStorage
+      const values = new Map(['user', 'token', 'refreshTokenKey', 'loginSessionId'].map(key => [key, original.getItem(key)]))
+      const remote = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) }
+      // Remote tab shares localStorage but owns a separate sessionStorage.
+      Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: remote })
+      try { auth.clearSession() }
+      finally { Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: original }) }
+      await act(async () => window.dispatchEvent(new window.StorageEvent('storage', { key: auth.ACTIVE_LOGIN_KEY, newValue: localStorage.getItem(auth.ACTIVE_LOGIN_KEY) })))
+      assert.equal(container.querySelector('#portal'), null)
+      assert.ok(container.querySelector('#login'))
+      assert.equal(stopped, 1)
+      assert.equal(auth.getToken(), null)
+      assert.equal(auth.getRefreshTokenKey(), null)
+      api.defaults.adapter = () => assert.fail('Logged-out tab sent a protected request')
+      await assert.rejects(api.get('/payments'), error => error.code === 'ERR_CANCELED')
+    } finally { await act(async () => root.unmount()); container.remove() }
+  })
+}
+
+test('logout clears the local session before the server responds and its failure preserves a later login', async () => {
+  auth.saveSession({ userId: 1, role: 'Member', token: 'old-token', refreshTokenKey: 'old-refresh' }, 'old-token', true)
+  let controls, rejectLogout
+  function Probe() { controls = useAuth(); return h('p', null, controls.user?.userId || 'logged-out') }
+  const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
+  api.defaults.adapter = config => {
+    assert.equal(config.url, '/Auth/logout')
+    return new Promise((resolve, reject) => { rejectLogout = reject })
+  }
+  try {
+    await act(async () => root.render(h(AuthProvider, null, h(Probe))))
+    let pending
+    await act(async () => { pending = controls.logout(); await Promise.resolve() })
+    assert.equal(controls.user, null)
+    assert.equal(auth.getToken(), null)
+    assert.match(localStorage.getItem(auth.ACTIVE_LOGIN_KEY), /^signed-out:/)
+    await act(async () => controls.login({ userId: 2, role: 'Member', token: 'new-token' }, 'new-token', true))
+    await act(async () => { rejectLogout(new Error('offline')); await pending })
+    assert.equal(controls.user.userId, 2)
+    assert.equal(auth.getToken(), 'new-token')
+  } finally { await act(async () => root.unmount()); container.remove() }
+})

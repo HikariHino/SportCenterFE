@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import { clearSession, getAccessTokenExpiry, getLoginRedirectPath, getLoginSessionId, getRefreshTokenKey, getToken, SESSION_EXPIRED_EVENT, updateSessionTokens } from '../utils/auth'
+import { clearSession, getAccessTokenExpiry, getLoginRedirectPath, getLoginSessionId, getRefreshTokenKey, getToken, reconcileBrowserSession, SESSION_EXPIRED_EVENT, updateSessionTokens } from '../utils/auth'
 import { isCoachDemoLocation } from '../utils/coachDemoAccess'
 
 const baseURL = import.meta.env.VITE_API_BASE || '/api'
@@ -16,7 +16,7 @@ const changedSession = config => new axios.CanceledError('Phiên đăng nhập �
 const isTerminalRefreshError = error => [400, 401, 403].includes(error.response?.status) || error.sessionInvalid
 
 function expireSession(id) {
-  if (getToken() && id && !isCurrentSession(id)) return
+  if (id && !isCurrentSession(id)) return
   clearSession()
   if (typeof window.dispatchEvent === 'function' && typeof window.Event === 'function') {
     window.dispatchEvent(new window.Event(SESSION_EXPIRED_EVENT))
@@ -68,6 +68,7 @@ function refreshAccessToken(sessionId, rejectedToken) {
 
 api.interceptors.request.use(async config => {
   if (config.skipAuth) return config
+  if (!reconcileBrowserSession()) throw changedSession(config)
   let token = getToken()
   if (!token) return config
   const sessionId = getLoginSessionId()
@@ -92,12 +93,16 @@ api.interceptors.request.use(async config => {
   return config
 }, error => Promise.reject(error))
 
-api.interceptors.response.use(response => response, async error => {
+api.interceptors.response.use(response => {
+  if (response.config?._authSessionId && !isCurrentSession(response.config._authSessionId)) throw changedSession(response.config)
+  return response
+}, async error => {
   const config = error.config
+  if (error.code === 'ERR_SESSION_EXPIRED') return Promise.reject(error)
   if (error.response?.status !== 401 || config?.skipAuth) return Promise.reject(error)
   if (isCoachDemoLocation(globalThis.window?.location, import.meta.env.DEV)) return Promise.reject(error)
   const sessionId = config?._authSessionId
-  if (sessionId && getToken() && !isCurrentSession(sessionId)) return Promise.reject(changedSession(config))
+  if (sessionId && !isCurrentSession(sessionId)) return Promise.reject(changedSession(config))
   if (!config || config._retry || !getToken()) {
     expireSession(sessionId)
     return Promise.reject(error)

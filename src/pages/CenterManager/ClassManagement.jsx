@@ -3,7 +3,7 @@ import ManagerFormError from './ManagerFormError'
 import { ManagerList } from './ManagerPagination'
 import { useManagerCache, useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { getAllManagerClasses } from '../../services/managerWorkspaceReads'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, AlertTriangle, Ban, BookOpen, Calendar, CalendarX2, CheckCircle2, Clock, DoorOpen, Dumbbell, Edit, Edit2, Flame, ImageIcon, Plus, Power, RefreshCw, Search, ShieldCheck, Trophy, UserCheck, Users, X, Zap } from "lucide-react"
 import {
   createSport,
@@ -20,7 +20,7 @@ import { getCancellationPolicies } from '../../services/cancellationPolicyServic
 import { assignClassToRoom } from '../../services/roomTimetableService'
 import { SESSION_COMPLETION_EVENT } from '../../services/sessionCompletionService'
 import { getClassSessionDateRange } from '../../utils/classSessionDates'
-import { classDateInput } from '../../utils/classForm'
+import { classDateInput, classFormValidationErrors } from '../../utils/classForm'
 import { isCatalogImageUrl } from '../../utils/catalogImages'
 import { shiftTimetableDate, timetableDateKey } from '../../utils/memberTimetable'
 import ClassCourseFields from './ClassCourseFields'
@@ -193,6 +193,8 @@ export default function ClassManagement() {
   const [submittingClass, setSubmittingClass] = useState(false)
 
   // Class Form
+  const createClassRef = useRef(null)
+  const [createClassErrors, setCreateClassErrors] = useState({})
   const [classForm, setClassForm] = useState({
     className: '',
     sportId: '',
@@ -452,6 +454,7 @@ export default function ClassManagement() {
   }, [classes, classSearch, classSportFilter, classCoachFilter, classStatusFilter])
 
   const handleOpenCreateClass = () => {
+    setCreateClassErrors({})
     const startDate = timetableDateKey()
     setClassForm({
       className: '',
@@ -482,16 +485,11 @@ export default function ClassManagement() {
 
   const handleCreateClassSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
-    if (!classForm.className.trim()) {
-      setError('Vui lòng nhập tên lớp học.')
-      return
-    }
-    if (!classForm.sportId) {
-      setError('Vui lòng chọn bộ môn thể thao.')
-      return
-    }
-    if (!classForm.coachId) {
-      setError('Vui lòng chọn huấn luyện viên phụ trách.')
+    const fields = classFormValidationErrors(classForm, Date.now(), { allowPastStart: false })
+    setCreateClassErrors(fields)
+    setError('')
+    if (Object.keys(fields).length) {
+      createClassRef.current?.elements.namedItem(Object.keys(fields)[0])?.focus()
       return
     }
 
@@ -508,6 +506,21 @@ export default function ClassManagement() {
       setSubmittingClass(false)
     }
   })
+
+  const changeCreateClass = update => {
+    const next = typeof update === 'function' ? update(classForm) : update
+    setClassForm(next)
+    setError('')
+    const fields = classFormValidationErrors(next, Date.now(), { allowPastStart: false })
+    setCreateClassErrors(previous => Object.fromEntries(Object.keys(previous).map(field => [field, fields[field]])))
+  }
+  const createClassFieldProps = field => ({
+    id: `create-class-${field}`, name: field, disabled: submittingClass,
+    'aria-invalid': Boolean(createClassErrors[field]),
+    'aria-describedby': createClassErrors[field] ? `create-class-${field}-error` : undefined,
+    onBlur: () => setCreateClassErrors(previous => ({ ...previous, [field]: classFormValidationErrors(classForm, Date.now(), { allowPastStart: false })[field] })),
+  })
+  const createClassFieldError = field => createClassErrors[field] ? <p className="class-field-error" id={`create-class-${field}-error`} role="alert">{createClassErrors[field]}</p> : null
 
   const handleEditClassSubmit = exclusiveAction(async (e) => {
     e.preventDefault()
@@ -1936,7 +1949,7 @@ export default function ClassManagement() {
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleCreateClassSubmit}>
+            <form ref={createClassRef} noValidate onSubmit={handleCreateClassSubmit} aria-busy={submittingClass}>
               <div className="class-modal-body">
                 <ManagerFormError message={error} />
                 <div className="class-form-group">
@@ -1946,12 +1959,15 @@ export default function ClassManagement() {
                   <input
                     type="text"
                     className="class-form-input"
+                    maxLength={200}
                     placeholder="Ví dụ: Lớp Yoga Cơ Bản Khóa 01, Boxing Cường Độ Cao..."
+                    {...createClassFieldProps("className")}
                     value={classForm.className}
-                    onChange={(e) => setClassForm({ ...classForm, className: e.target.value })}
+                    onChange={(e) => changeCreateClass({ ...classForm, className: e.target.value })}
                     required
                     autoFocus
                   />
+                  {createClassFieldError("className")}
                 </div>
 
                 <div className="class-form-grid-2">
@@ -1961,8 +1977,9 @@ export default function ClassManagement() {
                     </label>
                     <select
                       className="class-form-select"
-                      value={classForm.sportId}
-                      onChange={(e) => setClassForm({ ...classForm, sportId: e.target.value })}
+                      {...createClassFieldProps("sportId")}
+                    value={classForm.sportId}
+                      onChange={(e) => changeCreateClass({ ...classForm, sportId: e.target.value })}
                       required
                     >
                       <option value="">-- Chọn môn thể thao --</option>
@@ -1972,6 +1989,7 @@ export default function ClassManagement() {
                         </option>
                       ))}
                     </select>
+                  {createClassFieldError("sportId")}
                   </div>
 
                   <div className="class-form-group">
@@ -1980,8 +1998,9 @@ export default function ClassManagement() {
                     </label>
                     <select
                       className="class-form-select"
-                      value={classForm.coachId}
-                      onChange={(e) => setClassForm({ ...classForm, coachId: e.target.value })}
+                      {...createClassFieldProps("coachId")}
+                    value={classForm.coachId}
+                      onChange={(e) => changeCreateClass({ ...classForm, coachId: e.target.value })}
                       required
                     >
                       <option value="">-- Gán Huấn luyện viên --</option>
@@ -1991,6 +2010,7 @@ export default function ClassManagement() {
                         </option>
                       ))}
                     </select>
+                  {createClassFieldError("coachId")}
                   </div>
                 </div>
 
@@ -2003,24 +2023,26 @@ export default function ClassManagement() {
                   <input
                     type="number"
                     min="1"
-                    max="1000"
+                    max="10000"
                     className="class-form-input"
+                    {...createClassFieldProps("maxCapacity")}
                     value={classForm.maxCapacity}
                     onChange={(e) =>
-                      setClassForm({ ...classForm, maxCapacity: Number(e.target.value) })
+                      changeCreateClass({ ...classForm, maxCapacity: e.target.value })
                     }
                     required
                   />
+                  {createClassFieldError("maxCapacity")}
                 </div>
 
-                <ClassCourseFields values={classForm} onChange={setClassForm} />
+                <ClassCourseFields allowPastStart={false} values={classForm} onChange={changeCreateClass} fieldErrors={createClassErrors} disabled={submittingClass} onBlur={field => setCreateClassErrors(previous => ({ ...previous, [field]: classFormValidationErrors(classForm, Date.now(), { allowPastStart: false })[field] }))} />
 
                 <div className="class-form-group">
                   <label className="class-form-checkbox">
                     <input
                       type="checkbox"
                       checked={classForm.isActive}
-                      onChange={(e) => setClassForm({ ...classForm, isActive: e.target.checked })}
+                      onChange={(e) => changeCreateClass({ ...classForm, isActive: e.target.checked })}
                     />
                     <span>Kích hoạt và mở đăng ký cho lớp học ngay</span>
                   </label>

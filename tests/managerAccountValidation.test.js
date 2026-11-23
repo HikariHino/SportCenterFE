@@ -10,6 +10,13 @@ const now = Date.parse('2026-11-04T10:00:00+07:00')
 const member = { fullName: 'Nguyễn Thế Anh', email: 'anh@fpt.edu.vn', password: 'Password123!', phone: '0912345678', dateOfBirth: '2000-01-01', gender: 'Male', address: 'Hà Nội', fitnessGoal: 'Tăng sức bền' }
 const staff = { fullName: 'Nguyễn An', email: 'coach@example.com', password: 'Password123!', phone: '0912345678', role: 'Coach' }
 
+test('staff emails reject invalid dot syntax, missing domain suffixes and local parts over 64 characters', () => {
+  for (const email of ['.coach@example.com', 'coach.@example.com', 'co..ach@example.com', 'coach@localhost', 'min@gmail.c', 'a'.repeat(65) + '@example.com']) {
+    assert.equal(getManagerStaffValidationError({ ...staff, email })?.field, 'email', email)
+  }
+  assert.equal(getManagerStaffValidationError({ ...staff, email: ' coach+gym@fpt.edu.vn ' }), null)
+})
+
 before(async () => {
   for (const key of ['localStorage', 'sessionStorage']) {
     descriptors.set(key, Object.getOwnPropertyDescriptor(globalThis, key))
@@ -33,6 +40,7 @@ function mockApi(t, body = { success: true, data: { memberId: 1, userId: 2 } }) 
   t.mock.method(Date, 'now', () => now)
   const calls = []
   api.defaults.adapter = async config => {
+    if (config.method === 'get') return { config, status: 200, headers: {}, data: body.success === false ? body : { success: true, data: [] } }
     calls.push({ url: config.url, method: config.method, data: JSON.parse(config.data) })
     return { config, status: 200, headers: {}, data: body }
   }
@@ -59,7 +67,7 @@ for (const [name, form, validation, create] of [
       await assert.rejects(create({ ...form, email }), error => error.field === 'email')
     }
     assert.equal(calls.length, 0)
-    for (const email of ['anh@fpt.edu.vn', 'new+account@example.org', 'a'.repeat(244) + '@example.com']) assert.equal(validation({ ...form, email }), null)
+    for (const email of ['anh@fpt.edu.vn', 'new+account@example.org', 'a'.repeat(name === 'staff' ? 64 : 244) + '@example.com']) assert.equal(validation({ ...form, email }), null)
   })
 
   test(`Manager ${name} blocks six/seven-character, blank and oversized passwords before any request`, async t => {
@@ -81,15 +89,13 @@ for (const [name, form, validation, create] of [
   })
 }
 
-test('Manager member creation requires a phone while staff creation keeps it optional', async t => {
+test('Manager member and staff creation require a phone before sending requests', async t => {
   const calls = mockApi(t)
   for (const phone of [undefined, null, '', '   ']) {
     await assert.rejects(service.createManagerMember({ ...member, phone }), error => error.field === 'phone')
-    await service.createManagerStaff({ ...staff, phone })
-    assert.equal(calls.at(-1).url, '/users/staff')
-    assert.equal(calls.at(-1).data.phone, null)
+    await assert.rejects(service.createManagerStaff({ ...staff, phone }), error => error.field === 'phone')
   }
-  assert.equal(calls.length, 4)
+  assert.equal(calls.length, 0)
 })
 
 test('member birth dates reject future and impossible dates before any request', async t => {

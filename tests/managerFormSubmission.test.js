@@ -94,7 +94,7 @@ for (const scenario of scenarios) {
     assert.ok(error, 'validation feedback must be inside the open modal')
     assert.equal(document.querySelectorAll('[role="alert"]').length, 1, 'no duplicate error behind the overlay')
     assert.match(error.textContent, /tên|bộ môn/i)
-    assert.equal(document.activeElement, error, 'feedback is reachable without leaving the modal')
+    assert.equal(document.activeElement, scenario.view === 'ClassManagement' && scenario.url === '/classes' ? document.querySelector(scenario.name) : error, 'feedback is reachable without leaving the modal')
     await change(document.querySelector(scenario.name))('Tên đã sửa')
     await act(async () => document.querySelector(scenario.modal + ' form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
     assert.equal(writes.length, 1, 'client validation releases the lock so corrected input can be saved')
@@ -138,3 +138,60 @@ for (const scenario of [
     assert.equal(document.querySelector(scenario.modal), null)
   }))
 }
+
+const createClassScenario = { view: 'ClassManagement', open: 'Tạo lớp học', modal: '.class-modal' }
+test('create class shows every missing required field and focuses the first without sending a request', () => screen(createClassScenario, async () => {
+  const form = document.querySelector('.class-modal form')
+  for (const field of ['className', 'maxCapacity', 'startDate', 'endDate']) await change(form.elements.namedItem(field))('')
+  for (const field of ['sportId', 'coachId']) await act(async () => {
+    const select = form.elements.namedItem(field)
+    select.value = ''; select.dispatchEvent(new window.Event('change', { bubbles: true }))
+  })
+  await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+  assert.equal(writes.length, 0)
+  assert.equal(form.elements.namedItem('maxCapacity').value, '', 'clearing capacity does not turn into zero')
+  for (const field of ['className', 'sportId', 'coachId', 'maxCapacity', 'startDate', 'endDate']) {
+    const input = form.elements.namedItem(field)
+    assert.equal(input.getAttribute('aria-invalid'), 'true', field)
+    assert.ok(document.getElementById(input.getAttribute('aria-describedby'))?.textContent, field)
+  }
+  assert.equal(document.activeElement, form.elements.namedItem('className'))
+}))
+
+test('correcting a missing class name and invalid end date permits one successful create', () => screen(createClassScenario, async () => {
+  const form = document.querySelector('.class-modal form')
+  await change(form.elements.namedItem('className'))('   ')
+  await change(form.elements.namedItem('startDate'))('2099-02-02')
+  await change(form.elements.namedItem('endDate'))('2099-02-01')
+  await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+  assert.equal(writes.length, 0)
+  assert.match(document.querySelector('[id$="end-error"]').textContent, /sau ngày bắt đầu/)
+  await change(form.elements.namedItem('className'))('Lớp Yoga mới')
+  await change(form.elements.namedItem('endDate'))('2099-03-01')
+  await act(async () => {
+    form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }))
+    form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }))
+  })
+  assert.equal(writes.filter(write => write.url === '/classes').length, 1)
+  await act(async () => pending.splice(0).forEach(request => request.succeed()))
+  assert.equal(document.querySelector('.class-modal'), null)
+}))
+
+test('create class rejects yesterday even when typed manually and accepts today in Vietnam', () => screen(createClassScenario, async () => {
+  const form = document.querySelector('.class-modal form')
+  const { timetableDateKey, shiftTimetableDate } = await server.ssrLoadModule('/src/utils/memberTimetable.js')
+  const today = timetableDateKey()
+  assert.equal(form.elements.namedItem('startDate').min, today)
+  await change(form.elements.namedItem('className'))('Lớp Yoga hôm nay')
+  await change(form.elements.namedItem('startDate'))(shiftTimetableDate(today, -1))
+  await change(form.elements.namedItem('endDate'))('2099-12-31')
+  await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+  assert.equal(writes.length, 0)
+  assert.match(document.querySelector('[id$="start-error"]').textContent, /không được trước hôm nay/)
+  assert.equal(document.activeElement, form.elements.namedItem('startDate'))
+  await change(form.elements.namedItem('startDate'))(today)
+  await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+  assert.equal(writes.filter(write => write.url === '/classes').length, 1)
+  await act(async () => pending.splice(0).forEach(request => request.succeed()))
+  assert.equal(document.querySelector('.class-modal'), null)
+}))
