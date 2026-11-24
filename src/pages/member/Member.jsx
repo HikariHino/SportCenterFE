@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
   AlertCircle, Bell, CalendarDays, CheckCircle2, ChevronRight, CreditCard,
-  Dumbbell, Headset, LogOut, Menu, QrCode, ReceiptText, ShieldCheck,
+  Dumbbell, Headset, History, LogOut, Menu, QrCode, ReceiptText, ShieldCheck,
   Sparkles, Trophy, UserCheck, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -77,6 +77,11 @@ export const memberNavSections = [
         label: 'Lộ trình tập luyện cá nhân',
         subtitle: 'TrainingPlansController',
         icon: Dumbbell,
+      },
+      {
+        id: 'training-plan-history',
+        label: 'Lịch sử giáo án đã hoàn thành',
+        icon: History,
       },
       {
         id: 'ai-workout',
@@ -303,6 +308,8 @@ function MemberWorkspace() {
         return <ClassesView initialTab={new URLSearchParams(location.search).get('browse') === '1' ? 'browse' : 'mine'} showNotice={showNotice} onNavigateTab={selectNav} notificationSessionId={scheduleRequest?.sessionId} notificationRequestKey={scheduleRequest?.revision} />
       case 'training-plans':
         return <TrainingPlansView user={user} showNotice={showNotice} />
+      case 'training-plan-history':
+        return <TrainingPlansView user={user} completedOnly />
       case 'ai-chat':
         return <MemberAiChat active={activeNav === 'ai-chat'} onNavigate={selectNav} showWorkoutShortcut={memberViewIds.includes('ai-workout')} />
       case 'ai-workout':

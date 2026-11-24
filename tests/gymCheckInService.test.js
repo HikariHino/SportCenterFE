@@ -4,6 +4,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
+import { gymDateKey } from '../src/utils/gymCheckInHistory.js'
 
 let server, api, service, attendance, Table, Status, Dates
 const descriptors = new Map()
@@ -98,9 +99,20 @@ test('history table distinguishes forgotten checkout and only offers checkout fo
   assert.match(renderToStaticMarkup(createElement(Status, { item: { ...row, status: 'ForgotCheckOut' } })), /data-status="ForgotCheckOut"/)
 })
 
+test('future dates never request detailed, summary or member history', async () => {
+  const calls = mock([])
+  for (const read of [service.getGymCheckInHistory, service.getGymCheckInSummaryByMember, service.getMyGymCheckInHistory]) {
+    for (const filters of [{ fromDate: '9999-12-31' }, { toDate: '9999-12-31' }]) {
+      await assert.rejects(read(filters), /tương lai/)
+    }
+  }
+  assert.equal(calls.length, 0)
+})
+
 test('date controls expose labeled inputs and only render presets when enabled by the caller', () => {
   const html = renderToStaticMarkup(createElement(Dates, { value: range, onChange() {}, onPreset() {} }))
   assert.equal((html.match(/type="date"/g) || []).length, 2)
+  assert.equal((html.match(new RegExp(`max="${gymDateKey()}"`, 'g')) || []).length, 2)
   for (const text of ['Từ ngày', 'Đến ngày', 'Hôm nay', '7 ngày', 'Tất cả']) assert.ok(html.includes(text))
   const dateOnly = renderToStaticMarkup(createElement(Dates, { value: range, onChange() {} }))
   assert.equal((dateOnly.match(/type="date"/g) || []).length, 2)

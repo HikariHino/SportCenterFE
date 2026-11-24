@@ -68,6 +68,16 @@ test('malformed OTPs never reach the API', async () => {
   assert.equal(calls, 0)
 })
 
+test('malformed emails cannot request or verify OTP even when the form is bypassed', async () => {
+  let calls = 0
+  api.defaults.adapter = async () => { calls++; throw new Error('Unexpected request') }
+  for (const email of ['', null, 'no-at-sign', 'a@@example.com', 'a@-example.com', 'a@example..com', '.a@example.com', 'a..b@example.com']) {
+    await assert.rejects(service.requestChangeEmailOtp(email), /[Ee]mail/)
+    await assert.rejects(service.verifyChangeEmailOtp(email, '123456'), /[Ee]mail/)
+  }
+  assert.equal(calls, 0)
+})
+
 test('OTP expiry, attempt limits, duplicate email and profile errors propagate without reporting success', async () => {
   for (const message of ['Email này đã được sử dụng.', 'Mã xác nhận đã hết hạn.', 'Bạn đã nhập sai mã quá 5 lần.']) {
     api.defaults.adapter = async config => ({ data: { success: false, message }, status: 200, headers: {}, config })

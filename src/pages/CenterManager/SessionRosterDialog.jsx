@@ -51,7 +51,7 @@ export default function SessionRosterDialog({ session, onClose }) {
                 </tr>}</ManagerList>
             </div>}
     </div>
-    <SessionReviewsSection key={session.id} coachId={session.coachId} students={state.items} />
+    <SessionReviewsSection key={session.id} sessionId={session.id} students={state.items} />
     <div className="room-session-roster-actions"><button type="button" onClick={onClose}>Đóng</button></div>
   </dialog>
 }

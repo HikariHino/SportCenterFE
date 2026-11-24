@@ -9,7 +9,7 @@ import '../style/CoachReviews.css'
 const formatDate = value => Number.isFinite(Date.parse(value))
   ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật ngày gửi'
 
-function ReviewDetails({ coach, active }) {
+export function CoachReviewDetails({ coach, active = true }) {
   const [page, setPage] = useState(1)
   const [revision, setRevision] = useState(0)
   const [state, setState] = useState({ loading: true })
@@ -73,7 +73,7 @@ export default function CoachReviewsView({ own = false, active = true }) {
         : !state.coaches.length ? <p role="status">Chưa có huấn luyện viên.</p>
           : <>
             {!own && <div className="coach-reviews-picker"><label htmlFor={selectId}>Chọn huấn luyện viên</label><select id={selectId} value={selectedId} onChange={event => setSelectedId(event.target.value)}>{state.coaches.map(coach => <option key={coach.id} value={coach.id}>{coach.fullName} · #{coach.id}</option>)}</select></div>}
-            {coach && <ReviewDetails key={`${own}:${coach.id}`} coach={coach} active={active} />}
+            {coach && <CoachReviewDetails key={`${own}:${coach.id}`} coach={coach} active={active} />}
           </>}
   </div>
 }

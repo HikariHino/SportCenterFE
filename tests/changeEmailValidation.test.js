@@ -37,7 +37,8 @@ test('duplicate errors are distinguished from OTP expiry, rate limits and networ
   for (const error of [
     { response: { status: 409, data: { message: 'Email này đã được sử dụng bởi một tài khoản khác.' } } },
     { response: { status: 200, data: { statusCode: 409, message: 'Conflict' } } },
-    new Error('Email đã được đăng ký.'), new Error('Email already in use.'),
+    new Error('Email đã được đăng ký.'), new Error('Email already in use.'), new Error('Email bị trùng.'),
+    { response: { status: 400, data: { errors: { NewEmail: ['Đã tồn tại.'] } } } },
   ]) assert.equal(isChangeEmailConflict(error), true)
   for (const error of [
     new Error('Network Error'), new Error('Mã xác nhận đã hết hạn.'),

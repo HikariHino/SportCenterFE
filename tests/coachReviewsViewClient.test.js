@@ -5,7 +5,7 @@ import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 
-let window, server, createRoot, View, api, calls, failure, profile, sessions, coaches, hold, release
+let window, server, createRoot, View, StaffRating, api, calls, failure, profile, sessions, coaches, hold, release
 const descriptors = new Map()
 before(async () => {
   window = new Window({ url: 'http://localhost/coach' })
@@ -19,6 +19,7 @@ before(async () => {
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   api = (await server.ssrLoadModule('/src/services/api.js')).default
   View = (await server.ssrLoadModule('/src/components/CoachReviewsView.jsx')).default
+  StaffRating = (await server.ssrLoadModule('/src/pages/CenterManager/StaffCoachRating.jsx')).default
   createRoot = (await import('react-dom/client')).createRoot
 })
 after(async () => {
@@ -28,7 +29,7 @@ after(async () => {
     else delete globalThis[key]
   }
 })
-async function screen(props, run, setup = () => {}) {
+async function screen(props, run, setup = () => {}, Component = View) {
   calls = []; failure = false; hold = false; release = null
   profile = { userId: 99, coachId: 7, fullName: 'Coach An', email: 'an@example.com' }
   sessions = [{ id: 30, coachId: 7 }]
@@ -48,14 +49,14 @@ async function screen(props, run, setup = () => {}) {
       const items = coachId === 8 ? [] : Array.from({ length: 11 }, (_, i) => ({ id: i + 1, coachId, memberId: i + 50,
         memberName: `Hội viên ${i + 1}`, rating: 5, comment: i ? null : '<script>Nhận xét dài</script>\nHướng dẫn tốt', createdAt: '2026-11-24T01:00:00Z' }))
       data = { coachId, averageRating: items.length ? 4.5 : null, reviewCount: items.length, total: items.length, page,
-        items: items.slice((page - 1) * 10, page * 10) }
+        items: items.slice((page - 1) * config.params.pageSize, page * config.params.pageSize) }
       if (hold && coachId === 7) await new Promise(resolve => { release = resolve })
     }
     return { config, data: { success: true, data }, status: 200, headers: {} }
   }
   const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
   try {
-    await act(async () => root.render(h(View, props)))
+    await act(async () => root.render(h(Component, props)))
     await run(container, root)
   } finally {
     if (release) await act(async () => release())
@@ -131,3 +132,15 @@ test('an inactive reviews tab does not request data until opened', () => screen(
   await act(async () => root.render(h(View, { active: true })))
   assert.match(container.textContent, /11 lượt đánh giá/)
 }))
+
+test('staff rating delegates opening the coach reviews dialog without expanding inline', () => {
+  let opened = 0
+  return screen({ coachId: 7, onViewReviews: () => { opened++ } }, async container => {
+    const toggle = container.querySelector('.staff-coach-reviews-toggle')
+    assert.equal(toggle.getAttribute('aria-haspopup'), 'dialog')
+    await click(toggle)
+    assert.equal(opened, 1)
+    assert.equal(container.querySelector('.coach-reviews-details'), null)
+    assert.equal(calls.length, 1, 'opening is handled by the staff profile')
+  }, undefined, StaffRating)
+})

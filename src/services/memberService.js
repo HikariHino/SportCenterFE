@@ -44,7 +44,7 @@ export async function createMember({ email, password, fullName, phone, dateOfBir
   const body = response.data
 
   if (body?.success === false) {
-    throw new Error(body.message || 'Không thể tạo hội viên.')
+    throw Object.assign(new Error(body.message || 'Không thể tạo hội viên.'), { response })
   }
 
   return body?.data ?? body

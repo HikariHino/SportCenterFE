@@ -114,8 +114,8 @@ test('entry warms enabled Member tabs and skips the hidden workout view', () => 
   assert.equal(firstTab.textContent, 'Ra/Vào trung tâm')
   assert.equal(firstTab.getAttribute('aria-current'), 'page')
   assert.equal(document.querySelector('.member-view-content:not([hidden]) h2').textContent, 'Ra/Vào trung tâm')
-  assert.equal(document.querySelectorAll('.member-view-content').length, 9)
-  assert.equal(document.querySelectorAll('.member-view-content[hidden]').length, 8)
+  assert.equal(document.querySelectorAll('.member-view-content').length, 10)
+  assert.equal(document.querySelectorAll('.member-view-content[hidden]').length, 9)
   assert.equal([...document.querySelectorAll('.member-sidebar-item')].some(item => item.textContent.includes('Thanh toán trực tuyến')), false)
   for (const url of ['/profile', '/member-subscriptions/mine', '/membership-packages', '/payments', '/GymCheckIns/my-qr', '/GymCheckIns/my-history', '/class-registrations/mine', '/TrainingPlans/members/9', '/SupportTickets/my-tickets', '/notifications', '/ai/chat/history']) assert.ok(count(url) > 0, url)
   assert.equal(count('/ai/workout-recommendations/history'), 0)
@@ -136,6 +136,17 @@ test('entry warms enabled Member tabs and skips the hidden workout view', () => 
   assert.equal(refresh.textContent.trim(), '')
   assert.equal(refresh.getAttribute('aria-label'), 'Làm mới thẻ và lịch sử ra/vào')
   assert.ok(refresh.querySelector('svg'))
+})
+
+test('completed training history is reachable from the sidebar and shares the member plan read', async () => {
+  const before = count('/TrainingPlans/members/9')
+  await clickTab('Lịch sử giáo án đã hoàn thành')
+  const view = document.querySelector('.member-view-content:not([hidden])')
+  assert.match(view.querySelector('h2').textContent, /Lịch sử giáo án đã hoàn thành/)
+  assert.match(view.textContent, /Chưa có giáo án đã hoàn thành/)
+  assert.equal(view.querySelector('.training-plans-card'), null)
+  assert.equal(count('/TrainingPlans/members/9'), before)
+  await clickTab('Ra/Vào trung tâm')
 })
 
 test('the mobile sidebar close button closes the menu and returns focus to its toggle without reloading data', async () => {
@@ -324,6 +335,62 @@ test('class pages use ten records and keep selected sessions when moving between
   assert.equal(document.querySelector('.member-session-choice input').checked, true)
   await nextPage('Buổi học của lớp'); assert.equal(listRows('Buổi học của lớp').length, 3)
   assert.deepEqual(errors, [])
+})
+
+test('member profile blocks invalid contacts and birth dates and remembers server contact conflicts', async () => {
+  await clickTab('Tài khoản')
+  if (!document.querySelector('#member-profile-phoneNumber')) {
+    await act(async () => document.querySelector('.member-profile-editor-heading button').click())
+  }
+  const profileForm = document.querySelector('.member-profile-form')
+  const emailForm = document.querySelector('.account-email-change form')
+  const change = (input, value) => act(async () => {
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value)
+    input.dispatchEvent(new window.Event('input', { bubbles: true }))
+  })
+  const submit = form => act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+  const phone = profileForm.elements.namedItem('phoneNumber'), birth = profileForm.elements.namedItem('dateOfBirth')
+  const { profileBirthDateLimit } = await import('../src/utils/profileValidation.js')
+  assert.equal(birth.min, '1950-01-01')
+  assert.equal(birth.max, profileBirthDateLimit())
+  const previousAdapter = api.defaults.adapter
+  const writes = []
+  api.defaults.adapter = async config => {
+    if (config.method === 'get') return previousAdapter(config)
+    writes.push(config.url)
+    throw { response: { status: 400, data: { errors: config.url === '/profile'
+      ? { Phone: ['Số điện thoại đã tồn tại.'] } : { NewEmail: ['Email bị trùng.'] } } } }
+  }
+  try {
+    await change(phone, '0256894585')
+    for (const value of ['', '1949-12-31', '2020-01-01']) {
+      await change(birth, value); await submit(profileForm)
+      assert.equal(birth.getAttribute('aria-invalid'), 'true')
+    }
+    await change(birth, '1950-01-01')
+    for (const value of ['', '025689458', '1256894585', '02568945ab']) {
+      await change(phone, value); await submit(profileForm)
+      assert.equal(phone.getAttribute('aria-invalid'), 'true')
+    }
+    assert.equal(writes.length, 0)
+    await change(phone, '0256894585'); await submit(profileForm)
+    assert.match(document.querySelector('#member-profile-phoneNumber-error').textContent, /tồn tại/)
+    await change(phone, '+84 256 894 585'); await submit(profileForm)
+    assert.equal(writes.length, 1, 'equivalent duplicate phone cannot be submitted again')
+    await change(phone, '0987654321')
+    assert.equal(phone.getAttribute('aria-invalid'), 'false')
+    const email = emailForm.querySelector('input[type="email"]')
+    await change(email, 'a@-example.com'); await submit(emailForm)
+    assert.equal(writes.length, 1)
+    await change(email, 'used@example.com'); await submit(emailForm)
+    assert.match(emailForm.textContent, /Email bị trùng/)
+    await change(email, 'USED@EXAMPLE.COM'); await submit(emailForm)
+    assert.equal(writes.length, 2, 'duplicate email stays blocked after case changes')
+    assert.equal(emailForm.querySelector('input[autocomplete="one-time-code"]'), null)
+  } finally {
+    api.defaults.adapter = previousAdapter
+    await act(async () => document.querySelector('.member-profile-editor-heading button').click())
+  }
 })
 
 test('AI conversation pages show ten conversations and keep older imported history reachable', async () => {

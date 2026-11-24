@@ -18,9 +18,22 @@ test('date ranges validate leap days, impossible months, reverse ranges and open
     assert.ok(gymDateRangeReason(range))
     assert.throws(() => gymHistoryParams(range))
   }
-  assert.equal(gymDateRangeReason({ fromDate: '2028-02-29' }), '')
+  assert.equal(gymDateRangeReason({ fromDate: '2024-02-29' }), '')
   assert.deepEqual(gymHistoryParams({ toDate: '2026-10-31' }), { toDate: '2026-10-31' })
   assert.deepEqual(gymHistoryParams({}), {})
+})
+
+test('history allows past dates and today, rejecting either future bound using the Vietnam day', () => {
+  const now = Date.parse('2026-11-23T17:00:00Z')
+  for (const range of [{}, { fromDate: '2026-11-01' }, { toDate: '2026-11-24' },
+    { fromDate: '2026-11-24', toDate: '2026-11-24' }]) {
+    assert.equal(gymDateRangeReason(range, now), '')
+  }
+  for (const range of [{ fromDate: '2026-11-25' }, { toDate: '2026-11-25' },
+    { fromDate: '2026-11-24', toDate: '2026-11-25' }]) {
+    assert.match(gymDateRangeReason(range, now), /tương lai/)
+  }
+  assert.match(gymDateRangeReason({ toDate: '2026-11-24' }, now - 1), /tương lai/)
 })
 
 test('UTC timestamps without suffixes are displayed as Vietnam time rather than browser local time', () => {
