@@ -125,7 +125,8 @@ test('review requires a completed registration and session with confirmed partic
   assert.equal(registrationActions(upcoming, now).review, false)
   assert.equal(registrationActions(ended, now).review, true)
   assert.equal(registrationActions({ ...ended, attendanceStatus: 'Late' }, now).review, true)
-  assert.equal(registrationActions({ ...ended, status: ' completed ', sessionStatus: ' COMPLETED ', attendanceStatus: ' late ' }, now).review, true)
+  assert.equal(registrationActions({ ...ended, attendanceStatus: ' late ' }, now).review, true)
+  assert.equal(registrationActions({ ...ended, status: ' completed ', sessionStatus: ' COMPLETED ', attendanceStatus: ' present ' }, now).review, true)
   for (const overrides of [{ hasReviewed: true }, { review: { rating: 4 } }, { rating: 3 }, { attendanceStatus: 'Absent' }, { status: 'Cancelled' }, { canReview: false }]) {
     assert.equal(registrationActions({ ...ended, ...overrides }, now).review, false)
   }
@@ -147,7 +148,7 @@ test('elapsed time, completed status, a check-in timestamp or canReview cannot r
     assert.ok(actions.reviewReason)
   }
   assert.match(reviewUnavailableReason({ ...ended, attendanceStatus: 'Absent' }, now), /không tham gia/)
-  assert.match(reviewUnavailableReason(ended, now), /Chưa có điểm danh/)
+  assert.match(reviewUnavailableReason(ended, now), /điểm danh Có mặt/)
 })
 
 test('recorded participation alone cannot bypass incomplete statuses or an invalid or future ending time', () => {

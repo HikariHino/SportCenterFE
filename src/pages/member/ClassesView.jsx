@@ -3,10 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
 import { AlertCircle, CalendarDays, Check, CreditCard, List, LoaderCircle, RefreshCw, Search, ShieldAlert, Star, X } from 'lucide-react'
 import { getSports, getCoaches } from '../../services/classCatalogService'
-import { getAllAvailableSessions, getAllMemberClasses, getAllMyRegistrations, bookClassSessions, cancelRegistration, checkInRegistration, reviewRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
+import { getAllAvailableSessions, getAllMemberClasses, getAllMyRegistrations, bookClassSessions, cancelRegistration, checkInRegistration, getMemberClassErrorMessage } from '../../services/memberClassService'
 import { getMySubscriptions } from '../../services/memberSubscriptionService'
 import { getRooms } from '../../services/roomService'
-import { bookingUnavailableReason, cancellationDeadline, cancellationUnavailableReason, checkInUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, isCancelledRegistration, partitionMemberRegistrations, registeredSessionIds, registrationActions, reviewUnavailableReason } from '../../utils/memberClasses'
+import { bookingUnavailableReason, cancellationDeadline, cancellationUnavailableReason, checkInUnavailableReason, classStatusLabel, getRoomForClass, hasActiveMembership, isCancelledRegistration, partitionMemberRegistrations, registeredSessionIds, registrationActions } from '../../utils/memberClasses'
 import { timetableWeekStart } from '../../utils/memberTimetable'
 import MemberWeeklySchedule from './MemberWeeklySchedule'
 import CancelledMemberRegistrations from './CancelledMemberRegistrations'
@@ -15,6 +15,8 @@ import useResource from '../../hooks/useClassResource'
 import SessionDetails, { formatClassDateTime as formatDate } from './MemberSessionDetails'
 import MemberClassBrowser from './MemberClassBrowser'
 import AttendanceStatus from '../../components/AttendanceStatus'
+import MemberCoachReviewDialog from './MemberCoachReviewDialog'
+import { coachReviewUnavailableReason } from '../../utils/memberClasses'
 
 import { LIST_PAGE_SIZE as PAGE_SIZE } from '../../utils/listPagination'
 
@@ -41,30 +43,27 @@ function RegistrationDetailsDialog({ item, busy, now, onClose, onAction }) {
       {isCancelledRegistration(item) && <p className="member-classes-error">Lý do hủy: {item.cancellationReason?.trim() || 'Chưa cập nhật'}</p>}
       <AttendanceStatus item={item} />
       {item.checkInTime && <p className="member-classes-muted">Giờ điểm danh: {formatDate(item.checkInTime)}</p>}
-      {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {item.review?.rating ?? item.rating ?? 'Đã gửi'}{(item.review?.rating ?? item.rating) ? '/5 sao' : ' đánh giá'}</strong>{item.review?.comment && <p>{item.review.comment}</p>}</div>}
       <div className="member-classes-card-actions">
         {(allowed.checkIn || allowed.checkInReason) && <button type="button" className="primary" disabled={busy || !allowed.checkIn} onClick={() => onAction('checkIn', item)}><Check size={15} /> Điểm danh</button>}
         {(allowed.cancel || allowed.cancelReason) && <button type="button" disabled={busy || !allowed.cancel} title={allowed.cancelReason || undefined} onClick={() => onAction('cancel', item)}>Hủy đăng ký</button>}
-        {allowed.review && <button type="button" className="primary" disabled={busy} onClick={() => onAction('review', item)}><Star size={15} /> Đánh giá buổi học</button>}
+        {!coachReviewUnavailableReason(item, now) && <button type="button" className="primary" disabled={busy} onClick={() => onAction('review', item)}><Star size={15} /> Đánh giá coach / buổi học</button>}
       </div>
       {allowed.checkInReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.checkInReason}</p>}
       {allowed.cancelReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.cancelReason}</p>}
-      {allowed.reviewReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.reviewReason}</p>}
+      {allowed.ended && !isCancelledRegistration(item) && coachReviewUnavailableReason(item, now) && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{coachReviewUnavailableReason(item, now)}</p>}
     </div>
   </dialog>
 }
 
 export function ActionDialog({ action, busy, error, onClose, onSubmit, hasActiveSubscription, onNavigateTab, bulkResult, bulkProgress, now, registrations = [] }) {
   const dialogRef = useRef(null)
-  const [rating, setRating] = useState(0)
-  const [comment, setComment] = useState('')
   const [reason, setReason] = useState('')
   useEffect(() => {
     const dialog = dialogRef.current
     dialog.showModal()
     return () => dialog.close()
   }, [])
-  const titles = { book: 'Xác nhận đặt lịch', bookClass: 'Đăng ký các buổi đã chọn', cancel: 'Hủy đăng ký buổi học', checkIn: 'Điểm danh buổi học', review: 'Đánh giá buổi học' }
+  const titles = { book: 'Xác nhận đặt lịch', bookClass: 'Đăng ký các buổi đã chọn', cancel: 'Hủy đăng ký buổi học', checkIn: 'Điểm danh buổi học' }
   const isBooking = action.type === 'book' || action.type === 'bookClass'
   const pendingSessions = action.type === 'bookClass'
     ? action.item.sessions.filter(item => !bulkResult?.remaining.length || bulkResult.remaining.includes(String(item.id)))
@@ -73,10 +72,9 @@ export function ActionDialog({ action, busy, error, onClose, onSubmit, hasActive
   const bookingReason = pendingSessions.map(item => bookingUnavailableReason(item, registered.has(String(item.id)), now, registrations)).find(Boolean) || ''
   const isBookBlocked = isBooking && (hasActiveSubscription !== true || Boolean(bookingReason))
   const checkInReason = action.type === 'checkIn' ? checkInUnavailableReason(action.item, now) : ''
-  const reviewReason = action.type === 'review' ? reviewUnavailableReason(action.item, now) : ''
   const cancelReason = action.type === 'cancel' ? cancellationUnavailableReason(action.item, now) : ''
   return <dialog className="member-classes-dialog" ref={dialogRef} aria-labelledby="member-class-dialog-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }}>
-    <form onSubmit={event => { event.preventDefault(); if (!busy && !isBookBlocked && !checkInReason && !reviewReason && !cancelReason) onSubmit({ rating, comment, reason }) }}>
+    <form onSubmit={event => { event.preventDefault(); if (!busy && !isBookBlocked && !checkInReason && !cancelReason) onSubmit({ reason }) }}>
       <header><h2 id="member-class-dialog-title">{titles[action.type]}</h2><button type="button" aria-label="Đóng" disabled={busy} onClick={onClose}><X size={20} /></button></header>
       <h3>{action.item.className || `Buổi học #${action.item.sessionId || action.item.id}`}</h3>
       {action.type === 'bookClass' ? <>
@@ -121,22 +119,8 @@ export function ActionDialog({ action, busy, error, onClose, onSubmit, hasActive
         <label htmlFor="member-class-cancel-reason">Lý do hủy (không bắt buộc)</label>
         <textarea id="member-class-cancel-reason" rows={3} maxLength={500} value={reason} disabled={busy || Boolean(cancelReason)} onChange={event => setReason(event.target.value)} />
       </>}
-      {action.type === 'review' && <>
-        {reviewReason && <p className="member-classes-checkin-notice" role="alert"><AlertCircle size={17} />{reviewReason}</p>}
-        <fieldset className="member-classes-stars" disabled={busy || Boolean(reviewReason)}>
-          <legend>Chất lượng buổi học</legend>
-          {[1, 2, 3, 4, 5].map(value => <label key={value} className={value <= rating ? 'selected' : ''}>
-            <input type="radio" name="class-rating" value={value} checked={rating === value} onChange={() => setRating(value)} required aria-label={`${value} sao`} />
-            <Star size={30} fill={value <= rating ? 'currentColor' : 'none'} aria-hidden="true" />
-            <span>{value}</span>
-          </label>)}
-        </fieldset>
-        <label htmlFor="member-class-comment">Nhận xét (không bắt buộc)</label>
-        <textarea id="member-class-comment" rows={4} maxLength={2000} value={comment} disabled={busy} onChange={event => setComment(event.target.value)} placeholder="Chia sẻ trải nghiệm về nội dung buổi học, HLV và phòng tập..." />
-        <small>{comment.length}/2.000 ký tự</small>
-      </>}
-      {error && error !== reviewReason && <p className="member-classes-error" role="alert">{error}</p>}
-      <footer><button type="button" disabled={busy} onClick={onClose}>Đóng</button><button type="submit" className="primary" disabled={busy || isBookBlocked || Boolean(checkInReason) || Boolean(reviewReason) || Boolean(cancelReason) || (action.type === 'review' && !rating)}>{busy ? <><LoaderCircle className="member-spin" size={16} /> Đang xử lý...</> : action.type === 'review' ? 'Gửi đánh giá' : action.type === 'bookClass' && bulkResult?.remaining.length ? `Thử lại ${bulkResult.remaining.length} buổi còn lại` : 'Xác nhận'}</button></footer>
+      {error && <p className="member-classes-error" role="alert">{error}</p>}
+      <footer><button type="button" disabled={busy} onClick={onClose}>Đóng</button><button type="submit" className="primary" disabled={busy || isBookBlocked || Boolean(checkInReason) || Boolean(cancelReason)}>{busy ? <><LoaderCircle className="member-spin" size={16} /> Đang xử lý...</> : action.type === 'bookClass' && bulkResult?.remaining.length ? `Thử lại ${bulkResult.remaining.length} buổi còn lại` : 'Xác nhận'}</button></footer>
     </form>
   </dialog>
 }
@@ -341,6 +325,16 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
     rooms.reload()
   }
 
+  const selectRegistration = id => {
+    if (actionLock.current) return
+    const registration = registrations.find(item => String(item.id) === String(id))
+    if (registration && !coachReviewUnavailableReason(registration, Date.now())) {
+      openAction('review', registration)
+    } else {
+      setSelectedRegistrationId(id)
+    }
+  }
+
   const submitAction = async values => {
     if (actionLock.current || !action) return
     actionLock.current = true
@@ -378,14 +372,13 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
         const result = await bookClassSessions({ classId: item.classId, sessionIds: [item.id] })
         if (result.remaining.length || result.skipped.length) throw new Error(result.error || result.skipped[0].reason)
       } else {
-        if (!registrationActions(item)[type]) throw new Error(type === 'review' ? reviewUnavailableReason(item) : type === 'cancel' ? cancellationUnavailableReason(item) : 'Thao tác không còn khả dụng. Vui lòng đóng cửa sổ và làm mới lịch đã đặt.')
+        if (!registrationActions(item)[type]) throw new Error(type === 'cancel' ? cancellationUnavailableReason(item) : 'Thao tác không còn khả dụng. Vui lòng đóng cửa sổ và làm mới lịch đã đặt.')
         if (type === 'cancel') cancellationResult = await cancelRegistration(item.id, values.reason, item.sessionId)
         if (type === 'checkIn') {
           const reason = checkInUnavailableReason(item, Date.now())
           if (reason) throw new Error(reason)
           attendanceResult = await checkInRegistration(item.id, item.sessionId)
         }
-        if (type === 'review') await reviewRegistration(item.id, values)
       }
       if (!mounted.current) return
       if (type === 'book') {
@@ -393,16 +386,16 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
         setMinePage(1)
         setWeekStart(timetableWeekStart(item.startsAt))
       } else {
-        const patch = type === 'cancel' ? { status: 'Cancelled', cancellationReason: cancellationResult.cancellationReason || values.reason.trim() || 'Hội viên tự hủy lịch' } : type === 'checkIn' ? { attendanceStatus: attendanceResult?.status || 'CheckedIn', checkInTime: attendanceResult?.checkInTime || null } : { hasReviewed: true, review: { rating: values.rating, comment: values.comment.trim() } }
+        const patch = type === 'cancel' ? { status: 'Cancelled', cancellationReason: cancellationResult.cancellationReason || values.reason.trim() || 'Hội viên tự hủy lịch' } : { attendanceStatus: attendanceResult?.status || 'CheckedIn', checkInTime: attendanceResult?.checkInTime || null }
         setPatches(previous => ({ ...previous, [item.id]: { ...previous[item.id], ...patch } }))
         if (type === 'cancel') setBooked(previous => ({ ...previous, [item.sessionId]: false }))
       }
-      setNotice({ book: 'Đặt lịch buổi học thành công.', cancel: 'Đã hủy đăng ký buổi học.', checkIn: 'Điểm danh thành công.', review: 'Đã gửi đánh giá. Cảm ơn bạn đã chia sẻ!' }[type])
+      setNotice({ book: 'Đặt lịch buổi học thành công.', cancel: 'Đã hủy đăng ký buổi học.', checkIn: 'Điểm danh thành công.' }[type])
       setAction(null)
       refreshBookingData()
     } catch (error) {
       if (mounted.current) setActionError(getMemberClassErrorMessage(error))
-      if (type === 'review' || type === 'cancel') mine.reload()
+      if (type === 'cancel') mine.reload()
     } finally {
       actionLock.current = false
       if (mounted.current) { setBusy(false); setBulkProgress(null) }
@@ -455,7 +448,7 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
     {tab === 'mine' && <section className="member-my-registrations" aria-label="Các lượt đăng ký" aria-busy={mine.loading}>
       {mineLayout === 'list' && <header className="member-schedule-list-heading"><h3>Lịch đã đặt</h3><p>Xem thông tin, điểm danh và quản lý từng buổi học bạn đã đăng ký.</p></header>}
       {mine.backgroundError && <p className="member-classes-checkin-notice" role="status">Chưa thể đồng bộ điểm danh mới: {mine.backgroundError} Dữ liệu đang hiển thị là lần tải gần nhất.</p>}
-      {mineLayout === 'timetable' && !mine.loading && !mine.error ? <MemberWeeklySchedule items={activeRegistrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={setSelectedRegistrationId} now={now} onBrowse={() => setTab('browse')} /> : mine.loading || mine.error || !activeRegistrations.length ? <ResourceState resource={mine} emptyText={'Bạn chưa có buổi học nào trong lịch đã đặt.'} /> : <MemberList items={listedRegistrations} total={activeRegistrations.length} page={minePage} onPageChange={setMinePage} label="Lịch đã đặt" className="member-classes-grid">{registration => {
+      {mineLayout === 'timetable' && !mine.loading && !mine.error ? <MemberWeeklySchedule items={activeRegistrations} weekStart={weekStart} onWeekChange={setWeekStart} onSelect={selectRegistration} now={now} onBrowse={() => setTab('browse')} /> : mine.loading || mine.error || !activeRegistrations.length ? <ResourceState resource={mine} emptyText={'Bạn chưa có buổi học nào trong lịch đã đặt.'} /> : <MemberList items={listedRegistrations} total={activeRegistrations.length} page={minePage} onPageChange={setMinePage} label="Lịch đã đặt" className="member-classes-grid">{registration => {
           const allowed = registrationActions(registration, now)
           return <article className="member-classes-card" key={registration.id}>
             <div className="member-classes-card-top"><span className="member-classes-badge">{classStatusLabel(registration.status)}</span><small>Đăng ký #{registration.id}</small></div>
@@ -463,15 +456,14 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
             <SessionDetails item={registration} />
             <AttendanceStatus item={registration} />
             {registration.checkInTime && <p className="member-classes-muted">Giờ điểm danh: {formatDate(registration.checkInTime)}</p>}
-            {allowed.reviewed && <div className="member-classes-review"><strong><Star size={16} /> {registration.review?.rating ?? registration.rating ?? 'Đã gửi'}{(registration.review?.rating ?? registration.rating) ? '/5 sao' : ' đánh giá'}</strong>{registration.review?.comment && <p>{registration.review.comment}</p>}</div>}
             <div className="member-classes-card-actions">
               {(allowed.checkIn || allowed.checkInReason) && <button type="button" className="primary" disabled={busy || !allowed.checkIn} onClick={() => openAction('checkIn', registration)}><Check size={15} /> Điểm danh</button>}
               {(allowed.cancel || allowed.cancelReason) && <button type="button" disabled={busy || !allowed.cancel} title={allowed.cancelReason || undefined} onClick={() => openAction('cancel', registration)}>Hủy đăng ký</button>}
-              {allowed.review && <button type="button" className="primary" disabled={busy} onClick={() => openAction('review', registration)}><Star size={15} /> Đánh giá buổi học</button>}
+              {!coachReviewUnavailableReason(registration, now) && <button type="button" className="primary" disabled={busy} onClick={() => openAction('review', registration)}><Star size={15} /> Đánh giá coach / buổi học</button>}
             </div>
             {allowed.checkInReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.checkInReason}</p>}
             {allowed.cancelReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.cancelReason}</p>}
-            {allowed.reviewReason && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{allowed.reviewReason}</p>}
+            {allowed.ended && coachReviewUnavailableReason(registration, now) && <p className="member-classes-checkin-notice" role="status"><AlertCircle size={17} />{coachReviewUnavailableReason(registration, now)}</p>}
           </article>
         }}</MemberList>}
 
@@ -480,7 +472,9 @@ export function ClassesView({ showNotice, onNavigateTab, initialTab = 'mine', no
 
     {viewActive && selectedRegistration && <RegistrationDetailsDialog item={selectedRegistration} busy={busy} now={now} onClose={() => setSelectedRegistrationId(null)} onAction={openAction} />}
 
-    {viewActive && action && (
+    {viewActive && action?.type === 'review' && <MemberCoachReviewDialog key={action.item.id} item={action.item} onClose={() => setAction(null)} onSessionReviewed={() => mine.reload()} />}
+
+    {viewActive && action && action.type !== 'review' && (
       <ActionDialog
         action={['review', 'cancel'].includes(action.type) ? { ...action, item: registrations.find(item => String(item.id) === String(action.item.id)) || action.item } : action}
         busy={busy}

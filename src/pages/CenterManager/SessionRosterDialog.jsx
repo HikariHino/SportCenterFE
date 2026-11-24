@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { AlertCircle, RefreshCw, Users, X } from 'lucide-react'
 import { getClassErrorMessage, getSessionRoster } from '../../services/sportClassService'
 import { classStatusLabel } from '../../utils/memberClasses'
+import SessionReviewsSection from './SessionReviewsSection'
 
 const formatDateTime = value => Number.isFinite(Date.parse(value))
   ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật'
@@ -50,6 +51,7 @@ export default function SessionRosterDialog({ session, onClose }) {
                 </tr>}</ManagerList>
             </div>}
     </div>
+    <SessionReviewsSection key={session.id} coachId={session.coachId} students={state.items} />
     <div className="room-session-roster-actions"><button type="button" onClick={onClose}>Đóng</button></div>
   </dialog>
 }

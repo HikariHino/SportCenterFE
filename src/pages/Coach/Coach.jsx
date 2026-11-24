@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
 import {
   Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
-  LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Trophy, UserRound, Users, X,
+  LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Star, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import usePortalNavigation from '../../hooks/usePortalNavigation'
@@ -20,6 +20,7 @@ import '../../style/Coach/CoachMotion.css'
 import '../../style/PortalSidebar.css'
 
 const viewLoaders = {
+  'Đánh giá coach': () => import('../../components/CoachReviewsView'),
   'Tổng quan': () => import('./OverviewView'), 'Lịch huấn luyện': () => import('./AttendanceView'),
   'Phòng tập': () => import('./RoomsView'), 'Học viên': () => import('./StudentsView'), 'Hồ sơ': () => import('./ProfileView'),
 }
@@ -28,6 +29,7 @@ const CoachProfileView = lazy(() => viewLoaders['Hồ sơ']().then(module => ({ 
 const CoachRoomsView = lazy(() => viewLoaders['Phòng tập']().then(module => ({ default: module.CoachRoomsView })))
 const OverviewView = lazy(() => viewLoaders['Tổng quan']().then(module => ({ default: module.OverviewView })))
 const StudentsView = lazy(() => viewLoaders['Học viên']().then(module => ({ default: module.StudentsView })))
+const CoachReviewsView = lazy(viewLoaders['Đánh giá coach'])
 const preloadView = view => viewLoaders[view]?.().catch(() => {})
 
 const navigation = [
@@ -35,11 +37,13 @@ const navigation = [
   [CalendarDays, 'Lịch huấn luyện'],
   [DoorOpen, 'Phòng tập'],
   [Users, 'Học viên'],
+  [Star, 'Đánh giá coach'],
   [UserRound, 'Hồ sơ'],
 ]
 const coachViews = navigation.map(([, label]) => label)
 
 const pageMeta = {
+  'Đánh giá coach': { eyebrow: 'PHẢN HỒI TỪ HỘI VIÊN', title: 'Đánh giá của tôi', description: 'Xem điểm đánh giá và nhận xét hội viên dành cho bạn.' },
   'Lịch huấn luyện': { eyebrow: 'LỊCH & CHUYÊN CẦN', title: 'Lịch huấn luyện', description: 'Chọn buổi trên thời khóa biểu để xem học viên và cập nhật điểm danh.' },
   'Phòng tập': { eyebrow: 'CƠ SỞ VẬT CHẤT', title: 'Phòng tập', description: 'Xem danh sách phòng và tình trạng phục vụ huấn luyện.' },
   'Học viên': { eyebrow: 'HỌC VIÊN THEO BUỔI', title: 'Danh sách học viên', description: 'Chọn một buổi huấn luyện để xem đăng ký và trạng thái điểm danh.' },
@@ -210,6 +214,7 @@ function CoachWorkspace() {
 
   const renderView = view => {
     const active = activeNav === view
+    if (view === 'Đánh giá coach') return <CoachReviewsView own active={active} />
     if (view === 'Lịch huấn luyện') return <AttendanceView active={active} query={queries[view] || ''} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
     if (view === 'Phòng tập') return <CoachRoomsView active={active} />
     if (view === 'Học viên') return <StudentsView active={active} query={queries[view] || ''} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />

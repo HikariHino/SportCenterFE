@@ -2,13 +2,31 @@ import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
-import { getManagerMemberValidationError, getManagerStaffValidationError, managerBirthDateLimit } from '../src/utils/managerAccountValidation.js'
+import { getManagerMemberValidationError, getManagerMemberValidationErrors, getManagerStaffValidationError, managerBirthDateLimit } from '../src/utils/managerAccountValidation.js'
 
 let server, api, service, userService
 const descriptors = new Map()
 const now = Date.parse('2026-11-04T10:00:00+07:00')
 const member = { fullName: 'Nguyễn Thế Anh', email: 'anh@fpt.edu.vn', password: 'Password123!', phone: '0912345678', dateOfBirth: '2000-01-01', gender: 'Male', address: 'Hà Nội', fitnessGoal: 'Tăng sức bền' }
 const staff = { fullName: 'Nguyễn An', email: 'coach@example.com', password: 'Password123!', phone: '0912345678', role: 'Coach' }
+
+test('member form reports all missing required fields together', () => {
+  assert.deepEqual(Object.keys(getManagerMemberValidationErrors({}, now)), ['fullName', 'email', 'password', 'phone', 'dateOfBirth', 'gender'])
+})
+
+test('member email, mobile prefixes, gender and whitespace-only details are rejected before writes', async t => {
+  const calls = mockApi(t)
+  for (const [field, values] of [
+    ['email', ['.an@example.com', 'an.@example.com', 'a..n@example.com', 'an@localhost', 'an@gmail.c', 'a'.repeat(65) + '@example.com']],
+    ['phone', ['0112345678', '0212345678', '0412345678', '0612345678', '0012345678']],
+    ['gender', ['', null, undefined, 'male', 'Unknown', {}]],
+    ['address', ['   ', '\t\n', {}]], ['fitnessGoal', ['   ', '\t\n', 123]],
+  ]) {
+    for (const value of values) await assert.rejects(service.createManagerMember({ ...member, [field]: value }), error => error.field === field)
+  }
+  assert.equal(calls.length, 0)
+  for (const prefix of ['03', '05', '07', '08', '09']) assert.equal(getManagerMemberValidationError({ ...member, phone: prefix + '12345678' }, now), null)
+})
 
 test('staff emails reject invalid dot syntax, missing domain suffixes and local parts over 64 characters', () => {
   for (const email of ['.coach@example.com', 'coach.@example.com', 'co..ach@example.com', 'coach@localhost', 'min@gmail.c', 'a'.repeat(65) + '@example.com']) {
@@ -67,7 +85,7 @@ for (const [name, form, validation, create] of [
       await assert.rejects(create({ ...form, email }), error => error.field === 'email')
     }
     assert.equal(calls.length, 0)
-    for (const email of ['anh@fpt.edu.vn', 'new+account@example.org', 'a'.repeat(name === 'staff' ? 64 : 244) + '@example.com']) assert.equal(validation({ ...form, email }), null)
+    for (const email of ['anh@fpt.edu.vn', 'new+account@example.org', 'a'.repeat(64) + '@example.com']) assert.equal(validation({ ...form, email }), null)
   })
 
   test(`Manager ${name} blocks six/seven-character, blank and oversized passwords before any request`, async t => {
@@ -100,18 +118,18 @@ test('Manager member and staff creation require a phone before sending requests'
 
 test('member birth dates reject future and impossible dates before any request', async t => {
   const calls = mockApi(t)
-  for (const dateOfBirth of ['2026-11-05', '2099-01-01', '2025-02-29', '2000-02-30', '2000-13-01', '0000-01-01', '2026-11-04T00:00:00Z', 'invalid', 20000101, {}]) {
+  for (const dateOfBirth of ['', null, undefined, '1900-01-01', '1949-12-31', '2010-11-05', '2026-11-05', '2099-01-01', '2025-02-29', '2000-02-30', '2000-13-01', '0000-01-01', '2026-11-04T00:00:00Z', 'invalid', 20000101, {}]) {
     await assert.rejects(service.createManagerMember({ ...member, dateOfBirth }), error => error.field === 'dateOfBirth')
   }
   assert.equal(calls.length, 0)
-  for (const dateOfBirth of ['', null, undefined, '2000-02-29', '2026-11-04']) assert.equal(getManagerMemberValidationError({ ...member, dateOfBirth }, now), null)
+  for (const dateOfBirth of ['1950-01-01', '2000-02-29', '2010-11-04']) assert.equal(getManagerMemberValidationError({ ...member, dateOfBirth }, now), null)
 })
 
-test('birth date limits follow the Vietnam calendar at midnight without inventing an age limit', () => {
+test('member age is checked at midnight on the Vietnam calendar', () => {
   const midnight = Date.parse('2026-11-03T17:05:00Z')
   assert.equal(managerBirthDateLimit(midnight), '2026-11-04')
-  assert.equal(getManagerMemberValidationError({ ...member, dateOfBirth: '2026-11-04' }, midnight), null)
-  assert.equal(getManagerMemberValidationError({ ...member, dateOfBirth: '2026-11-05' }, midnight).field, 'dateOfBirth')
+  assert.equal(getManagerMemberValidationError({ ...member, dateOfBirth: '2010-11-04' }, midnight), null)
+  assert.equal(getManagerMemberValidationError({ ...member, dateOfBirth: '2010-11-05' }, midnight).field, 'dateOfBirth')
 })
 
 test('optional member text is bounded and staff creation only accepts Coach and Receptionist', async t => {
@@ -139,10 +157,10 @@ test('valid member payloads trim profile text, preserve the password and convert
   assert.deepEqual(calls, [{ url: '/members', method: 'post', data: { ...member, email: 'Anh@FPT.EDU.VN', password: ' pass12 ', dateOfBirth: '2000-01-01T00:00:00.000Z' } }])
 })
 
-test('missing optional birth dates remain unset instead of assigning a fabricated date', async t => {
+test('optional address and fitness goal remain unset', async t => {
   const calls = mockApi(t)
-  await service.createManagerMember({ ...member, dateOfBirth: '', address: '', fitnessGoal: '' })
-  assert.equal(calls[0].data.dateOfBirth, null)
+  await service.createManagerMember({ ...member, address: '', fitnessGoal: '' })
+  assert.equal(calls[0].data.dateOfBirth, '2000-01-01T00:00:00.000Z')
   assert.equal(calls[0].data.address, null)
   assert.equal(calls[0].data.fitnessGoal, null)
 })

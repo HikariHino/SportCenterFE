@@ -63,7 +63,7 @@ for (const [label, send] of [['registration', form => auth.register(form)], ['re
   test(`${label} rejects malformed emails and impossible or future birth dates before the API`, async () => {
     const calls = mockApi()
     for (const email of ['', 'abc', 'an@@example.com', 'an@-domain.com']) await assert.rejects(send({ ...account, email }), error => error.field === 'email')
-    for (const dateOfBirth of ['2030-01-01', '2001-02-29', '2026-02-30', 'bad-date', true]) await assert.rejects(send({ ...account, dateOfBirth }), error => error.field === 'dateOfBirth')
+    for (const dateOfBirth of ['1900-01-01', '1949-12-31', '2015-01-01', '2030-01-01', '2001-02-29', '2026-02-30', 'bad-date', true]) await assert.rejects(send({ ...account, dateOfBirth }), error => error.field === 'dateOfBirth')
     await assert.rejects(send({ ...account, gender: 'invalid' }), error => error.field === 'gender')
     assert.equal(calls.length, 0)
     await send(account)
@@ -71,6 +71,16 @@ for (const [label, send] of [['registration', form => auth.register(form)], ['re
     assert.equal(calls[0].body.email, account.email)
   })
 }
+
+test('registration and OTP services block under-sixteen or missing birth dates before the API', async () => {
+  const calls = mockApi()
+  for (const send of [form => auth.register(form), form => auth.sendRegisterOtp(form)]) {
+    for (const dateOfBirth of ['2020-01-01', '2020-01-01T00:00:00.000Z', '', null, undefined]) {
+      await assert.rejects(send({ ...account, dateOfBirth }), error => error.field === 'dateOfBirth')
+    }
+  }
+  assert.equal(calls.length, 0)
+})
 
 test('registration service rejects invalid phone numbers and preserves supported international numbers', async () => {
   const calls = mockApi()

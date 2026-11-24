@@ -25,7 +25,7 @@ after(async () => {
 
 test('profile updates send all supported member fields and never send the retired email field', async () => {
   const dto = { fullName: 'Nguyễn An', phoneNumber: '0901234567', dateOfBirth: '2000-01-01T00:00:00.000Z',
-    gender: 'Female', address: 'Hà Nội', fitnessGoal: 'Tăng sức bền', emergencyContact: 'Người thân 0912345678' }
+    gender: 'Female', address: 'Hà Nội', fitnessGoal: 'Tăng sức bền', emergencyContact: '0912345678' }
   api.defaults.adapter = async config => {
     assert.equal(config.method, 'put')
     assert.equal(config.url, '/profile')
@@ -82,8 +82,8 @@ test('invalid profile fields are rejected before PUT, including bypassed HTML le
   api.defaults.adapter = async () => { calls += 1; throw new Error('Unexpected write') }
   for (const dto of [
     { fullName: '   ' }, { fullName: 'a'.repeat(201) }, { phoneNumber: 'abc123' }, { phoneNumber: '091234567' },
-    { dateOfBirth: '2025-02-29' }, { dateOfBirth: '2099-10-25' }, { gender: 'Invalid' },
-    { address: 'a'.repeat(501) }, { fitnessGoal: 'a'.repeat(101) }, { emergencyContact: 'a'.repeat(101) },
+    { dateOfBirth: '2015-01-01' }, { dateOfBirth: '1900-01-01' }, { dateOfBirth: '2025-02-29' }, { dateOfBirth: '2099-10-25' }, { gender: 'Invalid' },
+    { address: 'a'.repeat(501) }, { fitnessGoal: 'a'.repeat(101) }, { emergencyContact: 'a'.repeat(101) }, { emergencyContact: 'Mẹ - 0901234567' }, { emergencyContact: '1'.repeat(7) }, { emergencyContact: '1'.repeat(31) },
     { password: 'a'.repeat(73), currentPassword: 'old' },
     { password: 'SamePassword!', currentPassword: 'SamePassword!' },
   ]) {
@@ -98,8 +98,8 @@ test('profile payloads normalize whitespace and phone separators, while keeping 
     payload = JSON.parse(config.data)
     return { data: { ...payload, userId: 1 }, status: 200, headers: {}, config }
   }
-  await service.updateProfile({ fullName: '  Nguyễn Văn An  ', phoneNumber: '+84 912 345 678', emergencyContact: '  Mẹ: 0912 345 678  ' })
-  assert.deepEqual(payload, { fullName: 'Nguyễn Văn An', phoneNumber: '+84912345678', emergencyContact: 'Mẹ: 0912 345 678' })
+  await service.updateProfile({ fullName: '  Nguyễn Văn An  ', phoneNumber: '+84 912 345 678', emergencyContact: '  0912 345 678  ' })
+  assert.deepEqual(payload, { fullName: 'Nguyễn Văn An', phoneNumber: '+84912345678', emergencyContact: '0912 345 678' })
 })
 
 test('profile validation errors returned in a success HTTP envelope retain their field details', async () => {

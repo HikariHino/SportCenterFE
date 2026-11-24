@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { normalizeProfilePhone, normalizeProfileUpdate, passwordChangeErrors, profileDateLimit, profileFieldErrors, profileValidationErrors } from '../src/utils/profileValidation.js'
 
 const now = Date.parse('2026-10-24T06:00:00Z')
-const valid = { fullName: 'Phạm Thị Hồng Vy', phoneNumber: '0326541256', gender: 'Female', dateOfBirth: '2004-05-29', address: 'Hà Nội', fitnessGoal: 'Tăng 5 kg', emergencyContact: 'Nguyễn An - 0912 345 678' }
+const valid = { fullName: 'Phạm Thị Hồng Vy', phoneNumber: '0326541256', gender: 'Female', dateOfBirth: '2004-05-29', address: 'Hà Nội', fitnessGoal: 'Tăng 5 kg', emergencyContact: '0912 345 678' }
 const errors = (changes = {}, options = {}) => profileValidationErrors({ ...valid, ...changes }, { now, ...options })
 
 test('names preserve Unicode letters and single-character names while digits and punctuation are blocked', () => {
@@ -24,23 +24,23 @@ test('optional missing values remain allowed, while persisted phone and date can
   assert.ok(errors({ dateOfBirth: '' }, { requireDateOfBirth: true }).dateOfBirth)
 })
 
-test('birth dates reject impossible dates, invalid years and future days without inventing a minimum age', () => {
-  for (const dateOfBirth of ['2000-02-29', '2026-10-24', '1900-01-01', '2004-05-29T00:00:00.000Z']) assert.deepEqual(errors({ dateOfBirth }), {})
-  for (const dateOfBirth of ['2001-02-29', '2026-02-30', '2026-13-01', '2026-10-25', '29/05/2004', '0000-01-01', '2004-05-29junk', '2004-05-29T99:00:00Z']) assert.ok(errors({ dateOfBirth }).dateOfBirth)
+test('birth dates reject impossible dates, invalid years and future days with the backend minimum year and age', () => {
+  for (const dateOfBirth of ['2000-02-29', '1950-01-01', '2010-10-24', '2004-05-29T00:00:00.000Z']) assert.deepEqual(errors({ dateOfBirth }), {})
+  for (const dateOfBirth of ['1900-01-01', '1949-12-31', '2010-10-25', '2015-01-01', '2026-10-24', '2001-02-29', '2026-02-30', '2026-13-01', '2026-10-25', '29/05/2004', '0000-01-01', '2004-05-29junk', '2004-05-29T99:00:00Z']) assert.ok(errors({ dateOfBirth }).dateOfBirth)
   const beforeUtcMidnight = Date.parse('2026-10-24T18:00:00Z')
   assert.equal(profileDateLimit(beforeUtcMidnight), '2026-10-25')
-  assert.deepEqual(errors({ dateOfBirth: '2026-10-25' }, { now: beforeUtcMidnight }), {})
+  assert.deepEqual(errors({ dateOfBirth: '2010-10-25' }, { now: beforeUtcMidnight }), {})
   assert.ok(errors({ dateOfBirth: '2026-10-26' }, { now: beforeUtcMidnight }).dateOfBirth)
 })
 
 test('only supported gender values are accepted, and optional text is checked against backend lengths after trimming', () => {
   for (const gender of ['', 'Male', 'Female', 'Other']) assert.deepEqual(errors({ gender }), {})
   assert.ok(errors({ gender: 'unknown' }).gender)
-  for (const [field, limit] of [['address', 500], ['fitnessGoal', 100], ['emergencyContact', 100]]) {
+  for (const [field, limit] of [['address', 500], ['fitnessGoal', 100]]) {
     assert.deepEqual(errors({ [field]: `  ${'x'.repeat(limit)}  ` }), {})
     assert.ok(errors({ [field]: 'x'.repeat(limit + 1) })[field])
   }
-  for (const emergencyContact of ['Nguyễn Văn An - 0912345678', '0912345678', 'Mẹ: +84 912 345 678']) assert.deepEqual(errors({ emergencyContact }), {})
+  for (const emergencyContact of ['0912345678', '+84 912 345 678', '(090) 123-4567', '1'.repeat(8), '1'.repeat(30)]) assert.deepEqual(errors({ emergencyContact }), {})
 })
 
 test('partial profile writes omit unrelated fields and preserve exact passwords', () => {
@@ -50,9 +50,16 @@ test('partial profile writes omit unrelated fields and preserve exact passwords'
   assert.ok(profileValidationErrors({ password: 'x'.repeat(73), currentPassword: 'old' }, { partial: true }).password)
   assert.ok(profileValidationErrors({ password: '12345678' }, { partial: true }).currentPassword)
   assert.ok(profileValidationErrors({ dateOfBirth: '' }, { partial: true }).dateOfBirth)
-  const payload = normalizeProfileUpdate({ fullName: ' An ', phoneNumber: ' 0912 345 678 ', address: ' Hà Nội ', emergencyContact: ' Mẹ: 0912345678 ', password: ' NewPassword! ', currentPassword: ' old ', dateOfBirth: undefined, email: 'ignored@example.test', role: 'Manager' })
-  assert.deepEqual(payload, { fullName: 'An', phoneNumber: '0912345678', address: 'Hà Nội', emergencyContact: 'Mẹ: 0912345678', password: ' NewPassword! ', currentPassword: ' old ' })
+  const payload = normalizeProfileUpdate({ fullName: ' An ', phoneNumber: ' 0912 345 678 ', address: ' Hà Nội ', emergencyContact: ' 0912345678 ', password: ' NewPassword! ', currentPassword: ' old ', dateOfBirth: undefined, email: 'ignored@example.test', role: 'Manager' })
+  assert.deepEqual(payload, { fullName: 'An', phoneNumber: '0912345678', address: 'Hà Nội', emergencyContact: '0912345678', password: ' NewPassword! ', currentPassword: ' old ' })
   assert.deepEqual(normalizeProfileUpdate({ phoneNumber: '' }), { phoneNumber: null })
+})
+
+test('emergency contacts reject names, forbidden symbols and numbers outside 8–30 characters', () => {
+  for (const emergencyContact of ['Mẹ - 0901234567', 'Nguyễn An 0912345678', '0901234', '1'.repeat(31), '0901234567/ext', '0901234567@', 901234567]) {
+    assert.ok(errors({ emergencyContact }).emergencyContact, String(emergencyContact))
+  }
+  for (const emergencyContact of ['', null, undefined, '  +84 (912) 345-678  ', '090.123.4567']) assert.deepEqual(errors({ emergencyContact }), {})
 })
 
 test('API validation fields and phone uniqueness errors map to inline feedback', () => {

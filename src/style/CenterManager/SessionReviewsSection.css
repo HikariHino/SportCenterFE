@@ -1,0 +1,19 @@
+.session-reviews-section { min-width: 0; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--theme-border); }
+.session-reviews-section .session-reviews-toggle { display: flex; align-items: center; gap: 8px; max-width: 100%; padding: 10px 14px; border: 1px solid var(--theme-border); border-radius: 10px; color: var(--theme-accent); background: var(--theme-surface); font: inherit; text-align: left; cursor: pointer; }
+.session-reviews-toggle > span { min-width: 0; overflow-wrap: anywhere; }
+.session-reviews-toggle > svg { flex-shrink: 0; }
+.session-reviews-toggle > svg:last-child { transition: transform .15s; }
+.session-reviews-toggle[aria-expanded='true'] > svg:last-child { transform: rotate(180deg); }
+.session-reviews-section :focus-visible { outline: 3px solid var(--theme-accent); outline-offset: 3px; }
+.session-reviews-content { min-width: 0; margin-top: 14px; }
+.session-reviews-content > p, .session-reviews-content > [role='alert'] { margin: 0; padding: 12px; border-radius: 8px; background: var(--theme-bg); color: var(--theme-muted); overflow-wrap: anywhere; }
+.session-reviews-content > [role='alert'] { color: var(--theme-red, #b42318); }
+.session-reviews-content .session-reviews-count { margin-bottom: 12px; }
+.session-reviews-content .manager-list-scroll { max-height: min(360px, 45dvh); overflow-y: auto; overscroll-behavior: contain; }
+.session-reviews-list { display: grid; gap: 12px; min-width: 0; }
+.session-review-item { min-width: 0; padding: 16px; border: 1px solid var(--theme-border); border-radius: 10px; background: var(--theme-surface); }
+.session-review-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.session-review-heading strong { min-width: 0; overflow-wrap: anywhere; }
+.session-review-rating { display: inline-flex; align-items: center; gap: 6px; color: var(--theme-gold, #805200); white-space: nowrap; }
+.session-review-item small { display: block; margin-top: 6px; color: var(--theme-muted); }
+.session-review-item .session-review-comment { margin: 12px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }

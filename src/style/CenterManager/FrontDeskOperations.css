@@ -860,3 +860,14 @@
 
 .fdesk-order-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 .fdesk-order-actions .fdesk-btn { padding: 6px 12px; font-size: calc(17px + var(--font-size-adjustment, 0px)); }
+.fdesk-field-error {
+  display: block;
+  color: var(--manager-danger, #dc2626);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.fdesk-dialog .fdesk-input[aria-invalid="true"],
+.fdesk-dialog .fdesk-select[aria-invalid="true"] {
+  border-color: var(--manager-danger, #dc2626);
+}

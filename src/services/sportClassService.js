@@ -322,6 +322,18 @@ export async function getSessionRoster(sessionId, { signal } = {}) {
   return payload
 }
 
+/** Đọc đánh giá theo buổi học, chỉ tải khi người dùng mở mục đánh giá. */
+export async function getSessionReviews(sessionId, { page = 1, pageSize = 10, signal } = {}) {
+  const response = await api.get(`/class-sessions/${sessionId}/reviews`, { params: { page, pageSize }, signal })
+  const body = response.data
+  if (body?.success === false) throw new Error(body.message || 'Không thể tải đánh giá của học viên.')
+  const payload = body?.data ?? body
+  if (!Array.isArray(payload?.items) || !Number.isSafeInteger(payload.total) || payload.total < 0) {
+    throw new Error('Dữ liệu đánh giá không hợp lệ. Vui lòng thử lại.')
+  }
+  return { items: payload.items, total: payload.total }
+}
+
 /**
  * 3. HỖ TRỢ PHÒNG TẬP (RoomsController)
  */

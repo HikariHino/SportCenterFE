@@ -9,11 +9,11 @@ import { getGoogleRegistrationErrorMessage } from '../utils/googleAuth'
 import { getAuthDestination, getAuthErrorMessage } from '../utils/auth'
 import { getRegistrationError } from '../utils/registration'
 import { getOtpValidationError, OTP_FORMAT_MESSAGE, OTP_LENGTH, OTP_PATTERN } from '../utils/otpValidation'
-import { AUTH_REGISTRATION_LIMITS, getAuthRegistrationValidationError } from '../utils/authRegistrationValidation'
+import { AUTH_REGISTRATION_LIMITS, getAuthRegistrationValidationError, getRegistrationBirthDateError, registrationBirthDateLimit, REGISTRATION_AGE_NOTICE } from '../utils/authRegistrationValidation'
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../utils/passwordValidation'
 import '../style/Register.css'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../utils/fullNameValidation'
-import { profileDateLimit } from '../utils/profileValidation'
+import { profileDateLimit, PROFILE_BIRTH_DATE_MIN } from '../utils/profileValidation'
 import useOtpCountdown from '../hooks/useOtpCountdown'
 import OtpCountdown from '../components/OtpCountdown'
 
@@ -24,8 +24,8 @@ const benefits = [
   [Bell, 'Nhận nhắc nhở lịch tập', 'thông minh đa kênh qua Zalo/SMS'],
 ]
 
-function Field({ id, label, icon: Icon, error, ...props }) {
-  return <div className="register-field"><label htmlFor={id}>{label} <span>*</span></label><div className={`register-input${error ? ' register-input-error' : ''}`}><Icon size={18} /><input id={id} name={id} required aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} {...props} /></div>{error && <p id={`${id}-error`} className="register-field-error" role="alert">{error}</p>}</div>
+function Field({ id, label, icon: Icon, error, hint, ...props }) {
+  return <div className="register-field"><label htmlFor={id}>{label} <span>*</span></label><div className={`register-input${error ? ' register-input-error' : ''}`}><Icon size={18} /><input id={id} name={id} required aria-invalid={error ? true : undefined} aria-describedby={[hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined} {...props} /></div>{hint && <p id={`${id}-hint`} className="register-field-hint">{hint}</p>}{error && <p id={`${id}-error`} className="register-field-error" role="alert">{error}</p>}</div>
 }
 
 function PasswordField({ id, label, ...props }) {
@@ -49,6 +49,7 @@ export default function Register() {
   const [otp, setOtp] = useState('')
   const [message, setMessage] = useState('')
   const [emailError, setEmailError] = useState('')
+  const [birthDateError, setBirthDateError] = useState('')
   const [pendingRegistration, setPendingRegistration] = useState(null)
   const otpClock = useOtpCountdown()
   const strength = password ? [password.length >= 8, /[a-z]/.test(password) && /[A-Z]/.test(password), /\d/.test(password), /[^\w\s]/.test(password)].filter(Boolean).length : 0
@@ -105,6 +106,7 @@ export default function Register() {
     event.preventDefault()
     if (submitting.current || emailError) return
     const form = event.currentTarget
+    if (!validateBirthDate(form)) return
     if (!pendingRegistration) {
       setMessage('Vui lòng nhấn Gửi OTP để nhận mã xác minh trước khi đăng ký.')
       form.elements.namedItem('send-otp')?.focus()
@@ -142,9 +144,18 @@ export default function Register() {
     }
   }
 
+  function validateBirthDate(form) {
+    const field = form.elements.namedItem('dateOfBirth')
+    const error = getRegistrationBirthDateError(field.value)
+    setBirthDateError(error)
+    if (error) { field.focus(); setMessage(error); return false }
+    return true
+  }
+
   async function handleSendOtp(event) {
     if (submitting.current || emailError || !otpClock.canResend()) return
     const form = event.currentTarget.form
+    if (!validateBirthDate(form)) return
     // Sending a code needs the registration details, but not the code itself.
     for (const field of Array.from(form.elements)) {
       if (field.name && !['otp', 'terms'].includes(field.name) && !field.reportValidity()) return
@@ -244,7 +255,7 @@ export default function Register() {
           <Field pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} id="fullname" label="Họ và tên đầy đủ" icon={UserRound} maxLength={AUTH_REGISTRATION_LIMITS.fullName} autoComplete="name" placeholder="Ví dụ: Nguyễn Văn Hùng" />
           <div className="register-row"><Field id="phone" label="Số điện thoại" icon={Phone} type="tel" autoComplete="tel" placeholder="0912 345 678" /><Field id="email" label="Địa chỉ Email" icon={Mail} type="email" maxLength={AUTH_REGISTRATION_LIMITS.email} autoComplete="email" placeholder="name@olympus.vn" error={emailError} /></div>
           <div className="register-row">
-            <Field id="dateOfBirth" label="Ngày sinh" icon={CalendarCheck} type="date" autoComplete="bday" max={profileDateLimit()} />
+            <Field id="dateOfBirth" label="Ngày sinh" icon={CalendarCheck} type="date" autoComplete="bday" min={PROFILE_BIRTH_DATE_MIN} max={registrationBirthDateLimit()} error={birthDateError} hint={REGISTRATION_AGE_NOTICE} onChange={event => setBirthDateError(event.target.value ? getRegistrationBirthDateError(event.target.value) : '')} onBlur={event => setBirthDateError(getRegistrationBirthDateError(event.target.value))} />
             <div className="register-field"><label htmlFor="gender">Giới tính <span>*</span></label><div className="register-input"><UserRound size={18} /><select id="gender" name="gender" autoComplete="sex" required defaultValue=""><option value="" disabled>Chọn giới tính</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></div></div>
           </div>
           <Field id="address" label="Địa chỉ" icon={MapPin} maxLength={AUTH_REGISTRATION_LIMITS.address} autoComplete="street-address" placeholder="Địa chỉ của bạn" />

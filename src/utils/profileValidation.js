@@ -5,7 +5,9 @@ import { timetableDateKey } from './memberTimetable.js'
 export const PROFILE_FULL_NAME_MAX_LENGTH = 100
 export const PROFILE_PHONE_MAX_LENGTH = 30
 export const PROFILE_PHONE_MESSAGE = 'Số điện thoại cần 10 chữ số bắt đầu bằng 0 hoặc dùng mã +84.'
-export const PROFILE_LIMITS = { fullName: PROFILE_FULL_NAME_MAX_LENGTH, phoneNumber: PROFILE_PHONE_MAX_LENGTH, gender: 10, address: 500, fitnessGoal: 100, emergencyContact: 100 }
+export const PROFILE_BIRTH_DATE_MIN = '1950-01-01'
+export const PROFILE_EMERGENCY_CONTACT_MAX_LENGTH = 30
+export const PROFILE_LIMITS = { fullName: PROFILE_FULL_NAME_MAX_LENGTH, phoneNumber: PROFILE_PHONE_MAX_LENGTH, gender: 10, address: 500, fitnessGoal: 100, emergencyContact: PROFILE_EMERGENCY_CONTACT_MAX_LENGTH }
 const labels = { fullName: 'Họ và tên', phoneNumber: 'Số điện thoại', gender: 'Giới tính', address: 'Địa chỉ thường trú', fitnessGoal: 'Mục tiêu tập luyện', emergencyContact: 'Liên hệ khẩn cấp' }
 const fields = [...Object.keys(PROFILE_LIMITS), 'dateOfBirth', 'password', 'currentPassword']
 
@@ -17,6 +19,13 @@ export function getProfilePhoneConflict(value, conflict) {
 }
 // Calendar limits use the center's day, regardless of the browser's timezone.
 export const profileDateLimit = (now = Date.now()) => timetableDateKey(now)
+
+export function profileBirthDateLimit(now = Date.now()) {
+  const [year, month, day] = profileDateLimit(now).split('-').map(Number)
+  const birthYear = year - 16
+  const lastDay = new Date(Date.UTC(birthYear, month, 0)).getUTCDate()
+  return `${birthYear}-${String(month).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`
+}
 
 export function profileValidationErrors(values, { partial = false, requirePhone = false, requireDateOfBirth = false, phoneConflict = null, now = Date.now() } = {}) {
   const errors = {}
@@ -36,6 +45,10 @@ export function profileValidationErrors(values, { partial = false, requirePhone 
     if (phoneError) errors.phoneNumber = phoneError
   }
   if (!errors.phoneNumber && getProfilePhoneConflict(phone, phoneConflict)) errors.phoneNumber = getProfilePhoneConflict(phone, phoneConflict)
+  if (!errors.emergencyContact && typeof values.emergencyContact === 'string' && values.emergencyContact.trim()
+    && !/^[0-9+\-().\s]{8,30}$/.test(values.emergencyContact.trim())) {
+    errors.emergencyContact = 'Liên hệ khẩn cấp phải là số điện thoại dài 8–30 ký tự, chỉ gồm chữ số, + - ( ) . và khoảng trắng.'
+  }
   if (values.gender != null && !['', 'Male', 'Female', 'Other'].includes(String(values.gender).trim())) errors.gender = 'Vui lòng chọn giới tính trong danh sách.'
   const dob = values.dateOfBirth
   if (requireDateOfBirth && !dob) errors.dateOfBirth = 'Vui lòng nhập ngày sinh.'
@@ -47,6 +60,8 @@ export function profileValidationErrors(values, { partial = false, requirePhone 
       || Number(key.slice(0, 4)) < 1 || !Number.isFinite(parsed)
       || new Date(parsed).toISOString().slice(0, 10) !== key || !Number.isFinite(Date.parse(dob))) errors.dateOfBirth = 'Ngày sinh không hợp lệ.'
     else if (key > profileDateLimit(now)) errors.dateOfBirth = 'Ngày sinh không được ở tương lai.'
+    else if (key < PROFILE_BIRTH_DATE_MIN) errors.dateOfBirth = 'Ngày sinh phải từ ngày 01/01/1950 trở đi.'
+    else if (key > profileBirthDateLimit(now)) errors.dateOfBirth = 'Bạn chưa đủ 16 tuổi.'
   }
   if (values.password != null) {
     const passwordError = getNewPasswordValidationError(values.password)

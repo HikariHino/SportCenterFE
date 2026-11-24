@@ -68,7 +68,7 @@ async function screen(view, run) {
   try {
     await act(async () => root.render(h(Router, null, h(Theme, null, h(Auth, null, h(views[view]))))))
     if (view === 'register') {
-      for (const [field, value] of Object.entries({ fullname: 'Nguyễn Văn An', phone: '0912345678', email: 'an@example.com', dateOfBirth: '2026-11-17', address: 'Hà Nội', fitnessGoal: 'Tăng sức bền', password: 'Password123!', 'confirm-password': 'Password123!' })) await change('#' + field, value)
+      for (const [field, value] of Object.entries({ fullname: 'Nguyễn Văn An', phone: '0912345678', email: 'an@example.com', dateOfBirth: '2010-11-17', address: 'Hà Nội', fitnessGoal: 'Tăng sức bền', password: 'Password123!', 'confirm-password': 'Password123!' })) await change('#' + field, value)
       await act(async () => { const gender = document.querySelector('#gender'); gender.value = 'Male'; gender.dispatchEvent(new window.Event('change', { bubbles: true })); document.querySelector('[name="terms"]').click() })
       const invalid = [...document.querySelector('form').elements].filter(field => field.name && !['otp', 'terms'].includes(field.name) && !field.checkValidity()).map(field => ({ name: field.name, value: field.value, reason: field.validationMessage }))
       assert.deepEqual(invalid, [])
@@ -80,8 +80,22 @@ async function screen(view, run) {
   }
 }
 
+test('registration blocks under-sixteen users with an inline notice before sending OTP', () => screen('register', async () => {
+  assert.match(document.querySelector('#dateOfBirth-hint').textContent, /đủ 16 tuổi trở lên/)
+  assert.match(document.querySelector('#dateOfBirth').getAttribute('aria-describedby'), /dateOfBirth-hint/)
+  await change('#dateOfBirth', '2010-11-18')
+  await click('[name="send-otp"]')
+  assert.equal(requests.length, 0)
+  assert.equal(document.querySelector('#dateOfBirth').getAttribute('aria-invalid'), 'true')
+  assert.match(document.querySelector('#dateOfBirth-error').textContent, /chưa đủ 16 tuổi/)
+  await change('#dateOfBirth', '2010-11-17')
+  assert.equal(document.querySelector('#dateOfBirth-error'), null)
+  await click('[name="send-otp"]')
+  assert.equal(requests.length, 1)
+}))
+
 test('registration uses the Vietnam date limit and starts a five-minute timer only after successful sending', () => screen('register', async () => {
-  assert.equal(document.querySelector('#dateOfBirth').max, '2026-11-17')
+  assert.equal(document.querySelector('#dateOfBirth').max, '2010-11-17')
   failSend = true
   await click('[name="send-otp"]')
   assert.equal(document.querySelector('.otp-countdown'), null)

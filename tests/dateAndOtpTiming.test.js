@@ -13,7 +13,7 @@ test('all account date limits follow midnight in Vietnam before UTC changes day'
   }
   const now = Date.parse('2026-11-17T01:00:00+07:00')
   const account = { fullName: 'Nguyễn Văn An', email: 'an@example.com', password: 'Password123!', phone: '0912345678' }
-  for (const dateOfBirth of ['2026-11-17', '2026-11-17T00:00:00.000Z']) {
+  for (const dateOfBirth of ['2010-11-17', '2010-11-17T00:00:00.000Z']) {
     assert.deepEqual(profileValidationErrors({ dateOfBirth }, { partial: true, now }), {})
     assert.equal(getAuthRegistrationValidationError({ ...account, dateOfBirth }, now), null)
     assert.equal(getReceptionistMemberValidationError({ ...account, dateOfBirth }, now), null)

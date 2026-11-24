@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, AlertTriangle, Ban, CalendarDays, CheckCircle2, Clock3, CreditCard, DoorOpen, ExternalLink, Headset, LifeBuoy, LogIn, Mail, MessageSquare, Package, Phone, Plus, QrCode, ReceiptText, RefreshCw, ScanLine, Search, ShieldAlert, UserCheck, UserPlus, Users, Wallet, X } from "lucide-react"
 import { deactivateMember, getMembers } from "../../services/memberService"
 import { createManagerMember } from '../../services/managerAccountService'
-import { getManagerMemberValidationError, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN, managerBirthDateLimit } from '../../utils/managerAccountValidation'
+import { getManagerMemberValidationErrors, MANAGER_ACCOUNT_LIMITS, MEMBER_PHONE_MESSAGE, MEMBER_PHONE_PATTERN } from '../../utils/managerAccountValidation'
+import { registrationBirthDateLimit } from '../../utils/authRegistrationValidation'
+import { PROFILE_BIRTH_DATE_MIN } from '../../utils/profileValidation'
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../../utils/passwordValidation'
 import {
   checkOutGymMember,
@@ -103,6 +105,7 @@ export default function FrontDeskOperations() {
   // Modals - Members
   const [showCreateMemberModal, setShowCreateMemberModal] = useState(false)
   const [memberCreateError, setMemberCreateError] = useState(null)
+  const [memberFieldErrors, setMemberFieldErrors] = useState({})
   const [manualCheckInError, setManualCheckInError] = useState('')
   const [ticketResolveError, setTicketResolveError] = useState('')
   const [memberForm, setMemberForm] = useState(emptyMemberForm)
@@ -234,16 +237,17 @@ export default function FrontDeskOperations() {
   // Create member at counter
   const changeMemberField = (field, value) => {
     setMemberForm(current => ({ ...current, [field]: value }))
+    setMemberFieldErrors(current => { const next = { ...current }; delete next[field]; return next })
     setMemberCreateError(null)
   }
 
   async function handleCreateMember(e) {
     e.preventDefault()
     if (submitting) return
-    const validationError = getManagerMemberValidationError(memberForm)
-    if (validationError) {
-      setMemberCreateError(validationError)
-      e.currentTarget.elements.namedItem(validationError.field)?.focus()
+    const errors = getManagerMemberValidationErrors(memberForm)
+    setMemberFieldErrors(errors)
+    if (Object.keys(errors).length) {
+      e.currentTarget.elements.namedItem(Object.keys(errors)[0])?.focus()
       return
     }
     setMemberCreateError(null)
@@ -257,7 +261,8 @@ export default function FrontDeskOperations() {
       setMemberForm(emptyMemberForm)
       await loadMembersData(false)
     } catch (err) {
-      setMemberCreateError({ field: err.field || '', message: err.message || 'Không thể đăng ký hội viên.' })
+      if (err.field) setMemberFieldErrors({ [err.field]: err.message })
+      else setMemberCreateError({ message: err.message || 'Không thể đăng ký hội viên.' })
     } finally {
       setSubmitting(false)
     }
@@ -590,7 +595,7 @@ export default function FrontDeskOperations() {
           <button
             type="button"
             className="fdesk-btn fdesk-btn-primary"
-            onClick={() => { setMemberCreateError(null); setShowCreateMemberModal(true) }}
+            onClick={() => { setMemberCreateError(null); setMemberFieldErrors({}); setShowCreateMemberModal(true) }}
           >
             <UserPlus size={16} />
             Thêm hội viên
@@ -1584,7 +1589,7 @@ export default function FrontDeskOperations() {
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleCreateMember}>
+            <form onSubmit={handleCreateMember} noValidate>
               <div className="fdesk-dialog-body">
                 {memberCreateError && <div id="manager-member-create-error" className="fdesk-alert fdesk-alert-danger" role="alert"><AlertCircle size={16} /><span>{memberCreateError.message}</span></div>}
                 <div className="fdesk-input-group">
@@ -1596,11 +1601,12 @@ export default function FrontDeskOperations() {
                     placeholder="Nguyễn Văn A"
                     name="fullName"
                     maxLength={MANAGER_ACCOUNT_LIMITS.fullName}
-                    aria-invalid={memberCreateError?.field === 'fullName' || undefined}
-                    aria-describedby={memberCreateError?.field === 'fullName' ? 'manager-member-create-error' : undefined}
+                    aria-invalid={!!memberFieldErrors.fullName}
+                    aria-describedby={memberFieldErrors.fullName ? 'manager-member-fullName-error' : undefined}
                     value={memberForm.fullName}
                     onChange={(e) => changeMemberField('fullName', e.target.value)}
                   />
+                  {memberFieldErrors.fullName && <small className="fdesk-field-error" id="manager-member-fullName-error" role="alert">{memberFieldErrors.fullName}</small>}
                 </div>
 
                 <div className="fdesk-input-group">
@@ -1612,11 +1618,12 @@ export default function FrontDeskOperations() {
                     placeholder="nguyenvana@gmail.com"
                     name="email"
                     maxLength={MANAGER_ACCOUNT_LIMITS.email}
-                    aria-invalid={memberCreateError?.field === 'email' || undefined}
-                    aria-describedby={memberCreateError?.field === 'email' ? 'manager-member-create-error' : undefined}
+                    aria-invalid={!!memberFieldErrors.email}
+                    aria-describedby={memberFieldErrors.email ? 'manager-member-email-error' : undefined}
                     value={memberForm.email}
                     onChange={(e) => changeMemberField('email', e.target.value)}
                   />
+                  {memberFieldErrors.email && <small className="fdesk-field-error" id="manager-member-email-error" role="alert">{memberFieldErrors.email}</small>}
                 </div>
 
                 <div className="fdesk-input-group">
@@ -1630,11 +1637,12 @@ export default function FrontDeskOperations() {
                     minLength={NEW_PASSWORD_MIN_LENGTH}
                     maxLength={NEW_PASSWORD_MAX_LENGTH}
                     autoComplete="new-password"
-                    aria-invalid={memberCreateError?.field === 'password' || undefined}
-                    aria-describedby={memberCreateError?.field === 'password' ? 'manager-member-create-error' : undefined}
+                    aria-invalid={!!memberFieldErrors.password}
+                    aria-describedby={memberFieldErrors.password ? 'manager-member-password-error' : undefined}
                     value={memberForm.password}
                     onChange={(e) => changeMemberField('password', e.target.value)}
                   />
+                  {memberFieldErrors.password && <small className="fdesk-field-error" id="manager-member-password-error" role="alert">{memberFieldErrors.password}</small>}
                 </div>
 
                 <div className="fdesk-input-group">
@@ -1646,35 +1654,43 @@ export default function FrontDeskOperations() {
                     placeholder="0987654321"
                     name="phone"
                     inputMode="numeric"
-                    pattern={MANAGER_PHONE_PATTERN}
-                    title={MANAGER_PHONE_MESSAGE}
+                    pattern={MEMBER_PHONE_PATTERN}
+                    title={MEMBER_PHONE_MESSAGE}
                     minLength={MANAGER_ACCOUNT_LIMITS.phone}
                     maxLength={MANAGER_ACCOUNT_LIMITS.phone}
-                    aria-invalid={memberCreateError?.field === 'phone' || undefined}
-                    aria-describedby={memberCreateError?.field === 'phone' ? 'manager-member-create-error' : undefined}
+                    aria-invalid={!!memberFieldErrors.phone}
+                    aria-describedby={memberFieldErrors.phone ? 'manager-member-phone-error' : undefined}
                     value={memberForm.phone}
                     onChange={(e) => changeMemberField('phone', e.target.value)}
                   />
+                  {memberFieldErrors.phone && <small className="fdesk-field-error" id="manager-member-phone-error" role="alert">{memberFieldErrors.phone}</small>}
                 </div>
 
                 <div className="fdesk-form-grid">
                   <div className="fdesk-input-group">
-                    <label>Ngày sinh:</label>
+                    <label>Ngày sinh (*):</label>
+                    <small>Từ 01/01/1950 và đủ 16 tuổi trở lên.</small>
                     <input
                       type="date"
                       className="fdesk-input"
                       name="dateOfBirth"
-                      max={managerBirthDateLimit()}
-                      aria-invalid={memberCreateError?.field === 'dateOfBirth' || undefined}
-                      aria-describedby={memberCreateError?.field === 'dateOfBirth' ? 'manager-member-create-error' : undefined}
+                      required
+                      min={PROFILE_BIRTH_DATE_MIN}
+                      max={registrationBirthDateLimit()}
+                      aria-invalid={!!memberFieldErrors.dateOfBirth}
+                      aria-describedby={memberFieldErrors.dateOfBirth ? 'manager-member-dateOfBirth-error' : undefined}
                       value={memberForm.dateOfBirth}
                       onChange={(e) => changeMemberField('dateOfBirth', e.target.value)}
                     />
+                    {memberFieldErrors.dateOfBirth && <small className="fdesk-field-error" id="manager-member-dateOfBirth-error" role="alert">{memberFieldErrors.dateOfBirth}</small>}
                   </div>
                   <div className="fdesk-input-group">
                     <label>Giới tính:</label>
                     <select
                       className="fdesk-select"
+                      name="gender"
+                      aria-invalid={!!memberFieldErrors.gender}
+                      aria-describedby={memberFieldErrors.gender ? 'manager-member-gender-error' : undefined}
                       value={memberForm.gender}
                       onChange={(e) => changeMemberField('gender', e.target.value)}
                     >
@@ -1682,6 +1698,7 @@ export default function FrontDeskOperations() {
                       <option value="Female">Nữ</option>
                       <option value="Other">Khác</option>
                     </select>
+                    {memberFieldErrors.gender && <small className="fdesk-field-error" id="manager-member-gender-error" role="alert">{memberFieldErrors.gender}</small>}
                   </div>
                 </div>
 
@@ -1693,11 +1710,12 @@ export default function FrontDeskOperations() {
                     placeholder="Số nhà, đường, quận/huyện..."
                     name="address"
                     maxLength={MANAGER_ACCOUNT_LIMITS.address}
-                    aria-invalid={memberCreateError?.field === 'address' || undefined}
-                    aria-describedby={memberCreateError?.field === 'address' ? 'manager-member-create-error' : undefined}
+                    aria-invalid={!!memberFieldErrors.address}
+                    aria-describedby={memberFieldErrors.address ? 'manager-member-address-error' : undefined}
                     value={memberForm.address}
                     onChange={(e) => changeMemberField('address', e.target.value)}
                   />
+                  {memberFieldErrors.address && <small className="fdesk-field-error" id="manager-member-address-error" role="alert">{memberFieldErrors.address}</small>}
                 </div>
 
                 <div className="fdesk-input-group">
@@ -1708,11 +1726,12 @@ export default function FrontDeskOperations() {
                     placeholder="Giảm cân, Tăng cơ, Thể lực, Yoga..."
                     name="fitnessGoal"
                     maxLength={MANAGER_ACCOUNT_LIMITS.fitnessGoal}
-                    aria-invalid={memberCreateError?.field === 'fitnessGoal' || undefined}
-                    aria-describedby={memberCreateError?.field === 'fitnessGoal' ? 'manager-member-create-error' : undefined}
+                    aria-invalid={!!memberFieldErrors.fitnessGoal}
+                    aria-describedby={memberFieldErrors.fitnessGoal ? 'manager-member-fitnessGoal-error' : undefined}
                     value={memberForm.fitnessGoal}
                     onChange={(e) => changeMemberField('fitnessGoal', e.target.value)}
                   />
+                  {memberFieldErrors.fitnessGoal && <small className="fdesk-field-error" id="manager-member-fitnessGoal-error" role="alert">{memberFieldErrors.fitnessGoal}</small>}
                 </div>
               </div>
 

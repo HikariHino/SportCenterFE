@@ -1,49 +1,53 @@
 import { getNewPasswordValidationError } from './passwordValidation.js'
 import { getVietnamPhoneValidationError, getFullNameValidationError, profileDateLimit } from './profileValidation.js'
 import { getTextLengthValidationError } from './textLengthValidation.js'
-import { getFullNameCharactersError } from './fullNameValidation.js'
 import { getAccountEmailValidationError } from './emailValidation.js'
+import { getRegistrationBirthDateError } from './authRegistrationValidation.js'
 
 export const MANAGER_ACCOUNT_LIMITS = { fullName: 100, email: 256, phone: 10, address: 200, fitnessGoal: 100 }
 export const STAFF_ASSIGNABLE_ROLES = ['Coach', 'Receptionist']
 export const MANAGER_PHONE_PATTERN = '0[0-9]{9}'
 export const MANAGER_PHONE_MESSAGE = 'Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0.'
 export const managerBirthDateLimit = profileDateLimit
+export const MEMBER_PHONE_PATTERN = '0[35789][0-9]{8}'
+export const MEMBER_PHONE_MESSAGE = 'Số di động Việt Nam phải gồm 10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09.'
 
-function accountError({ fullName, email, password, phone }, requirePhone) {
-  if (typeof fullName !== 'string' || !fullName.trim()) return { field: 'fullName', message: 'Vui lòng nhập họ và tên, không chỉ gồm khoảng trắng.' }
-  if (fullName.length > MANAGER_ACCOUNT_LIMITS.fullName) return { field: 'fullName', message: 'Họ và tên không được vượt quá 100 ký tự.' }
-  const nameError = getFullNameCharactersError(fullName)
-  if (nameError) return { field: 'fullName', message: nameError }
-  if (typeof email !== 'string' || !email.trim()) return { field: 'email', message: 'Vui lòng nhập email.' }
-  if (email.length > MANAGER_ACCOUNT_LIMITS.email) return { field: 'email', message: 'Email không được vượt quá 256 ký tự.' }
-  if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(email.trim())) {
-    return { field: 'email', message: 'Email không hợp lệ.' }
+function getStrictAccountEmailError(value) {
+  const error = getAccountEmailValidationError(value)
+  if (error) return error
+  const [local, domain] = value.trim().split('@')
+  if (local.length > 64 || local.startsWith('.') || local.endsWith('.') || local.includes('..') || !domain.includes('.')
+    || !/^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/i.test(domain.split('.').at(-1))) {
+    return 'Email không hợp lệ. Vui lòng nhập đầy đủ tên và tên miền, ví dụ: ten@example.com.'
   }
-  const passwordError = getNewPasswordValidationError(password)
-  if (passwordError) return { field: 'password', message: passwordError }
-  if (phone != null && typeof phone !== 'string') return { field: 'phone', message: MANAGER_PHONE_MESSAGE }
-  const phoneError = getVietnamPhoneValidationError(phone, { required: requirePhone })
-  return phoneError ? { field: 'phone', message: phoneError } : null
+  return ''
 }
 
 export function getManagerMemberValidationError(form = {}, now = Date.now()) {
-  const error = accountError(form, true)
-  if (error) return error
-  if (form.dateOfBirth != null && form.dateOfBirth !== '') {
-    const date = form.dateOfBirth
-    const parsed = typeof date === 'string' ? Date.parse(`${date}T00:00:00.000Z`) : NaN
-    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number(date.slice(0, 4)) < 1
-      || !Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== date) {
-      return { field: 'dateOfBirth', message: 'Ngày sinh không hợp lệ.' }
-    }
-    if (date > managerBirthDateLimit(now)) return { field: 'dateOfBirth', message: 'Ngày sinh không được ở tương lai.' }
-  }
+  const first = Object.entries(getManagerMemberValidationErrors(form, now))[0]
+  return first ? { field: first[0], message: first[1] } : null
+}
+
+export function getManagerMemberValidationErrors(form = {}, now = Date.now()) {
+  const errors = {}
+  const nameError = getFullNameValidationError(form.fullName)
+  if (nameError) errors.fullName = nameError
+  const emailError = getStrictAccountEmailError(form.email)
+  if (emailError) errors.email = emailError
+  const passwordError = getNewPasswordValidationError(form.password)
+  if (passwordError) errors.password = passwordError
+  if (typeof form.phone !== 'string' || !form.phone.trim()) errors.phone = 'Vui lòng nhập số điện thoại.'
+  else if (!new RegExp(`^${MEMBER_PHONE_PATTERN}$`).test(form.phone.trim())) errors.phone = MEMBER_PHONE_MESSAGE
+  const birthError = getRegistrationBirthDateError(form.dateOfBirth, now)
+  if (birthError) errors.dateOfBirth = birthError
+  else if (!/^\d{4}-\d{2}-\d{2}$/.test(form.dateOfBirth)) errors.dateOfBirth = 'Ngày sinh không hợp lệ.'
+  if (!['Male', 'Female', 'Other'].includes(form.gender)) errors.gender = 'Vui lòng chọn giới tính trong danh sách.'
   for (const [field, label] of [['address', 'Địa chỉ'], ['fitnessGoal', 'Mục tiêu tập luyện']]) {
     const message = getTextLengthValidationError(form[field], label, MANAGER_ACCOUNT_LIMITS[field])
-    if (message) return { field, message }
+    if (message) errors[field] = message
+    else if (typeof form[field] === 'string' && form[field].length && !form[field].trim()) errors[field] = `${label} không được chỉ gồm khoảng trắng.`
   }
-  return null
+  return errors
 }
 
 export function getManagerStaffValidationError(form = {}) {
@@ -55,12 +59,7 @@ export function getManagerStaffValidationErrors(form = {}, accounts = []) {
   const errors = {}
   const nameError = getFullNameValidationError(form.fullName)
   if (nameError) errors.fullName = nameError
-  let emailError = getAccountEmailValidationError(form.email)
-  if (!emailError) {
-    const [local, domain] = form.email.trim().split('@')
-    if (local.length > 64 || local.startsWith('.') || local.endsWith('.') || local.includes('..') || !domain.includes('.')
-      || !/^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/i.test(domain.split('.').at(-1))) emailError = 'Email không hợp lệ. Vui lòng nhập đầy đủ tên và tên miền, ví dụ: ten@example.com.'
-  }
+  const emailError = getStrictAccountEmailError(form.email)
   if (emailError) errors.email = emailError
   const passwordError = getNewPasswordValidationError(form.password)
   if (passwordError) errors.password = passwordError

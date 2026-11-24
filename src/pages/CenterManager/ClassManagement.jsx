@@ -1,5 +1,6 @@
 import useExclusiveAction from '../../hooks/useExclusiveAction'
 import ManagerFormError from './ManagerFormError'
+import SessionReviewsSection from './SessionReviewsSection'
 import { ManagerList } from './ManagerPagination'
 import { useManagerCache, useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { getAllManagerClasses } from '../../services/managerWorkspaceReads'
@@ -1253,14 +1254,6 @@ export default function ClassManagement() {
                     <strong>{selectedClassForSessions.coachName || 'Chưa gán'}</strong>
                   </p>
                 </div>
-                <button type="button" className="class-btn class-btn-danger" disabled={sessionsLoading || submittingSession} onClick={() => setCancellingClass(selectedClassForSessions)}><Ban size={15} />Hủy buổi theo lớp</button>
-                <button
-                  type="button"
-                  className="class-btn class-btn-primary"
-                  onClick={handleOpenAddSession}
-                >
-                  <Plus size={15} /> Thêm buổi học
-                </button>
               </div>
 
               {/* Sessions List */}
@@ -1273,7 +1266,7 @@ export default function ClassManagement() {
                 <div className="class-empty">
                   <Calendar size={36} />
                   <strong>Chưa có buổi học nào được tạo</strong>
-                  <p>Bấm nút "Thêm buổi học" để tạo buổi đầu tiên cho khóa này.</p>
+                  <p>Vào Phòng tập / Cơ sở vật chất → chọn phòng → Thêm buổi học để xếp lịch cho lớp này.</p>
                 </div>
               ) : (
                 <ClassSessionGroups items={sessionsList}>
@@ -1919,6 +1912,7 @@ export default function ClassManagement() {
                       }}</ManagerList>
                 </div>
               )}
+              <SessionReviewsSection key={rosterSession.id} coachId={rosterSession.coachId} students={rosterList} />
             </div>
             <div className="class-modal-footer">
               <button

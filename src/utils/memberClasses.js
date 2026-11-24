@@ -93,7 +93,7 @@ export function reviewUnavailableReason(item, now = Date.now()) {
     if (['absent', 'excused', 'noshow'].includes(attendance) || ['absent', 'excused', 'noshow'].includes(normalized(item.status))) {
       return 'Bạn không tham gia buổi học này nên không thể đánh giá.'
     }
-    return 'Chưa có điểm danh Có mặt hoặc Đi trễ. Bạn chưa thể đánh giá buổi học này.'
+    return 'Chỉ hội viên được điểm danh Có mặt hoặc Đi trễ mới có thể đánh giá huấn luyện viên.'
   }
   const end = Date.parse(item.endsAt)
   if (!Number.isSafeInteger(Number(item.sessionId)) || Number(item.sessionId) <= 0
@@ -123,6 +123,11 @@ export function registrationActions(item, now = Date.now()) {
     review: !reviewReason,
     reviewReason: ended && !reviewed && !isCancelled ? reviewReason : '',
   }
+}
+
+// CoachReviews is separate from the legacy per-registration ClassReviews data.
+export function coachReviewUnavailableReason(item, now = Date.now()) {
+  return reviewUnavailableReason({ ...item, hasReviewed: false, review: null, reviewedAt: null, rating: null, canReview: undefined }, now)
 }
 
 export function bookingUnavailableReason(session, registered = false, now = Date.now(), registrations = []) {
