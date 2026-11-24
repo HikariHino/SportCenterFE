@@ -1,4 +1,5 @@
 import { ManagerList } from './ManagerPagination'
+import StaffCoachRating from './StaffCoachRating'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useMemo, useRef, useState } from "react"
 import {
@@ -74,6 +75,13 @@ const formatDate = (dateStr) => {
         hour: "2-digit",
         minute: "2-digit",
       }).format(date)
+}
+
+const formatBirthDate = value => {
+  const key = typeof value === 'string' ? value.slice(0, 10) : ''
+  const date = new Date(`${key}T00:00:00Z`)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== key) return 'Chưa cập nhật'
+  return `${key.slice(8, 10)}/${key.slice(5, 7)}/${key.slice(0, 4)}`
 }
 
 export default function StaffManagement() {
@@ -906,6 +914,19 @@ export default function StaffManagement() {
                     <small>Mã hồ sơ Huấn luyện viên</small>
                     <strong>Coach #{selectedStaffForDetail.coachId}</strong>
                   </div>
+                )}
+
+                {String(selectedStaffForDetail.role).toLowerCase() === 'coach' && selectedStaffForDetail.coachId > 0 && (
+                  <StaffCoachRating key={selectedStaffForDetail.coachId} coachId={selectedStaffForDetail.coachId} />
+                )}
+
+                {String(selectedStaffForDetail.role).toLowerCase() === 'coach' && <div className="staff-detail-item staff-coach-birthdate">
+                  <small>Ngày sinh</small>
+                  <strong>{formatBirthDate(selectedStaffForDetail.dateOfBirth)}</strong>
+                </div>}
+
+                {String(selectedStaffForDetail.role).toLowerCase() === 'coach' && selectedStaffForDetail.coachId > 0 && (
+                  <StaffCoachRating key={`sessions-${selectedStaffForDetail.coachId}`} coachId={selectedStaffForDetail.coachId} sessionQuality />
                 )}
 
                 <div className="staff-detail-item">

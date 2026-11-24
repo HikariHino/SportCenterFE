@@ -676,6 +676,10 @@
 }
 
 /* Toast Alert */
+.staff-rating-card .staff-coach-rating-score { display: flex; align-items: center; gap: 8px; color: var(--theme-gold, #805200); }
+.staff-rating-card > span { color: var(--manager-secondary, #536179); font-size: calc(16px + var(--font-size-adjustment, 0px)); }
+.staff-rating-card [role='alert'] p { margin: 0 0 8px; color: var(--theme-red, #b42318); }
+
 .staff-toast {
   position: fixed;
   top: 24px;

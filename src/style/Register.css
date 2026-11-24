@@ -58,6 +58,7 @@
 .register-input.register-input-error { border-color: var(--theme-red, #b42318); }
 .register-input.register-input-error:focus-within { box-shadow: 0 0 0 3px var(--theme-red-bg, #fef2f2); }
 .register-field-error { margin: 7px 0 0; color: var(--theme-red, #b42318); font-size: calc(16px + var(--font-size-adjustment, 0px)); line-height: 1.6; }
+.register-field-hint { margin: 7px 0 0; color: var(--theme-muted); font-size: calc(16px + var(--font-size-adjustment, 0px)); line-height: 1.6; }
 .register-input > svg { flex-shrink: 0; }
 .register-input input, .register-input select { width: 100%; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: #131b2e; font-size: calc(17px + var(--font-size-adjustment, 0px)); }
 .register-input button { border: 0; background: transparent; color: #737686; display: flex; padding: 7px 0; }

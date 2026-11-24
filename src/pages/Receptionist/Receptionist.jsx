@@ -3,7 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, DoorOpen,
-  LayoutDashboard, LifeBuoy, LogOut, Menu, ReceiptText, ScanLine, Search, ShieldCheck, Trophy, UserRound, Users, X,
+  LayoutDashboard, LifeBuoy, LogOut, Menu, ReceiptText, ScanLine, Search, ShieldCheck, Star, Trophy, UserRound, Users, X,
 } from 'lucide-react'
 import ThemeToggle from '../../components/ThemeToggle'
 import { useAuth } from '../../contexts/AuthContext'
@@ -20,6 +20,7 @@ import '../../style/Receptionist/ReceptionistMotion.css'
 import '../../style/PortalSidebar.css'
 
 const viewLoaders = {
+  'Đánh giá coach': () => import('../../components/CoachReviewsView'),
   'Tổng quan': () => import('./OverviewView'), 'Buổi học': () => import('./ScheduleView'),
   'Phòng tập': () => import('./RoomsView'), 'Check-in': () => import('./CheckInView'),
   'Hội viên': () => import('./MembersView'), 'Thanh toán': () => import('./PaymentsView'),
@@ -33,6 +34,7 @@ const ReceptionistProfileView = lazy(() => viewLoaders['Hồ sơ']().then(module
 const RoomsView = lazy(() => viewLoaders['Phòng tập']().then(module => ({ default: module.RoomsView })))
 const SessionsView = lazy(() => viewLoaders['Buổi học']().then(module => ({ default: module.ReceptionistScheduleView })))
 const SupportTicketsView = lazy(() => viewLoaders['Hỗ trợ']().then(module => ({ default: module.SupportTicketsView })))
+const CoachReviewsView = lazy(viewLoaders['Đánh giá coach'])
 const preloadView = view => viewLoaders[view]?.().catch(() => {})
 
 const navigation = [
@@ -41,6 +43,7 @@ const navigation = [
   [DoorOpen, 'Phòng tập'],
   [ScanLine, 'Check-in'],
   [Users, 'Hội viên'],
+  [Star, 'Đánh giá coach'],
   [ReceiptText, 'Thanh toán'],
   [LifeBuoy, 'Hỗ trợ'],
   [UserRound, 'Hồ sơ'],
@@ -59,6 +62,7 @@ const storedSelectedSession = () => {
 }
 
 const pageMeta = {
+  'Đánh giá coach': ['PHẢN HỒI TỪ HỘI VIÊN', 'Đánh giá coach', 'Chọn huấn luyện viên để xem điểm đánh giá và nhận xét của hội viên.'],
   'Buổi học': ['QUẢN LÝ LỊCH HỌC', 'Buổi học', 'Chọn môn thể thao và huấn luyện viên để theo dõi lịch, lớp và hội viên.'],
   'Phòng tập': ['VẬN HÀNH CƠ SỞ', 'Phòng tập', 'Theo dõi phòng, sức chứa và lịch sử dụng tại trung tâm.'],
   'Check-in': ['TIẾP NHẬN KHÁCH', 'Check-in tại quầy', 'Xác minh mã đặt sân hoặc tài khoản hội viên trước khi sử dụng dịch vụ.'],
@@ -206,6 +210,7 @@ function ReceptionistWorkspace() {
   }
 
   const renderView = view => {
+    if (view === 'Đánh giá coach') return <CoachReviewsView active={activeNav === view} />
     if (view === 'Buổi học') return <SessionsView showNotice={showNotice} selectedSession={selectedReceptionSession} onSelectSession={selectReceptionSession} />
     if (view === 'Phòng tập') return <RoomsView onOpenSessions={session => selectNavigation('Buổi học', session)} onSelectSession={selectReceptionSession} />
     if (view === 'Check-in') return <CheckInView showNotice={showNotice} />

@@ -16,7 +16,7 @@ import { getMyPayments, createPayment, cancelPayment, syncPayment } from '../../
 import { exportInvoicePdf, triggerBlobDownload } from '../../services/reportService'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
 import { getFullNameValidationError, getProfilePhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_MAX_LENGTH, PROFILE_PHONE_MESSAGE } from '../../utils/profileValidation'
-import { getProfilePhoneConflict, passwordChangeErrors, profileDateLimit, profileFieldErrors, profileValidationErrors } from '../../utils/profileValidation'
+import { getProfilePhoneConflict, passwordChangeErrors, profileBirthDateLimit, PROFILE_BIRTH_DATE_MIN, PROFILE_EMERGENCY_CONTACT_MAX_LENGTH, profileFieldErrors, profileValidationErrors } from '../../utils/profileValidation'
 import '../../style/member/ProfileValidation.css'
 import '../../style/member/MemberProfile.css'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
@@ -357,7 +357,8 @@ export function ProfileView({ user, showNotice }) {
                   <label htmlFor="member-profile-dateOfBirth">Ngày sinh</label>
                   <input
                     type="date"
-                    max={profileDateLimit()}
+                    min={PROFILE_BIRTH_DATE_MIN}
+                    max={profileBirthDateLimit()}
                     required={Boolean(profile?.dateOfBirth)}
                     {...profileInputProps('dateOfBirth')}
                     value={formData.dateOfBirth}
@@ -392,7 +393,7 @@ export function ProfileView({ user, showNotice }) {
 
                 <div>
                   <label htmlFor="member-profile-emergencyContact">Liên hệ khẩn cấp</label>
-                  <input {...profileInputProps('emergencyContact')} type="text" maxLength={100} placeholder="Tên và số điện thoại người liên hệ" value={formData.emergencyContact} />
+                  <input {...profileInputProps('emergencyContact')} type="tel" inputMode="tel" minLength={8} maxLength={PROFILE_EMERGENCY_CONTACT_MAX_LENGTH} placeholder="Số điện thoại người liên hệ, VD: 0901234567" value={formData.emergencyContact} />
                   {fieldError('emergencyContact')}
                 </div>
               </div>

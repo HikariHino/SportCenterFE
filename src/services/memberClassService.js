@@ -247,7 +247,12 @@ export async function reviewRegistration(registrationId, { rating, comment = '' 
   })
   const body = response.data
   if (body?.success === false) throw new Error(body.message || 'Không thể gửi đánh giá buổi học.')
-  return body?.data ?? body
+  const review = body?.data ?? body
+  if (!Number.isSafeInteger(Number(review?.id)) || Number(review.id) <= 0
+    || String(review.registrationId) !== String(registrationId) || review.rating !== rating) {
+    throw new Error('Chưa xác nhận được đánh giá buổi học đã lưu. Vui lòng mở lại để kiểm tra.')
+  }
+  return review
 }
 
 export default {

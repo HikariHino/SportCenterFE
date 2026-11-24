@@ -1,5 +1,6 @@
 import api from './api'
 import { getManagerFormTextError } from '../utils/managerFormValidation.js'
+import { getCoachReviews } from './coachReviewService'
 
 /**
  * GET /api/sports returns the public list of active sports.
@@ -86,13 +87,13 @@ export async function getCoaches() {
   return Array.isArray(payload) ? payload : []
 }
 
-/**
- * PUT /api/coaches/{id}/profile (requires authentication).
- * @param {number} id Coach ID (int32).
- * @param {{ specialization: string, bio: string, yearsOfExperience: number }} profile
- * @returns {Promise<{ id: number, specialization: string, bio: string, yearsOfExperience: number }>}
- * HTTP errors propagate with the backend body at error.response.data.
- */
+/** Read the server's CoachReviews summary, including ratings outside the visible page. */
+export async function getCoachRatingSummary(coachId, { signal } = {}) {
+  const data = await getCoachReviews(coachId, { pageSize: 1, signal })
+  return { averageRating: data.reviewCount ? data.averageRating : null, reviewCount: data.reviewCount }
+}
+
+/** PUT /api/coaches/{id}/profile */
 export async function updateCoachProfile(id, { specialization, bio, yearsOfExperience }) {
   const response = await api.put(`/coaches/${id}/profile`, {
     specialization,

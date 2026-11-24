@@ -64,6 +64,33 @@ const click = text => act(async () => { const button = [...document.querySelecto
 const escape = () => act(async () => document.activeElement.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
 const change = (input, value) => act(async () => { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new window.Event('input', { bubbles: true })) })
 
+test('member profile blocks named emergency contacts and birth dates outside backend bounds with inline errors', t => {
+  t.mock.method(Date, 'now', () => Date.parse('2026-11-24T10:00:00+07:00'))
+  return screen('member', async () => {
+    await click('Chỉnh sửa')
+    const form = document.querySelector('.member-profile-form'), dob = form.elements.namedItem('dateOfBirth'), contact = form.elements.namedItem('emergencyContact')
+    assert.equal(dob.min, '1950-01-01')
+    assert.equal(dob.max, '2010-11-24')
+    assert.equal(contact.maxLength, 30)
+    assert.equal(contact.type, 'tel')
+    await change(contact, 'Mẹ - 0901234567')
+    for (const value of ['2015-01-01', '1900-01-01']) {
+      await change(dob, value)
+      await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+      for (const input of [dob, contact]) {
+        assert.equal(input.getAttribute('aria-invalid'), 'true')
+        assert.ok(document.getElementById(input.getAttribute('aria-describedby'))?.textContent)
+      }
+      assert.equal(writes.length, 0)
+    }
+    await change(contact, '+84 (912) 345-678')
+    await change(dob, '2010-11-24')
+    await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+    assert.equal(writes.length, 1)
+    assert.equal(writes[0].body.emergencyContact, '+84 (912) 345-678')
+  })
+})
+
 for (const [role, selector] of [['member', '.member-profile-form'], ['coach', '.coach-account-profile-form'], ['receptionist', '.reception-profile-form']]) {
   test(`${role} profile can save a registered 61-character name and +84 phone without changing them`, () => screen(role, async () => {
     await click('Chỉnh sửa')

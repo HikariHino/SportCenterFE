@@ -53,6 +53,10 @@
 .member-classes-dialog { position: fixed; inset: 0; margin: auto; box-sizing: border-box; width: min(540px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: auto; padding: 24px; border: 1px solid var(--theme-border); border-radius: 16px; color: var(--theme-text); background: var(--theme-surface); font: 400 calc(18px + var(--font-size-adjustment, 0px))/1.65 'Be Vietnam Pro', sans-serif; }
 .member-classes-dialog::backdrop { background: #0d1422a8; }
 .member-classes-dialog form { display: grid; gap: 14px; }
+.member-classes-dialog .member-review-panel[hidden] { display: none; }
+.member-review-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.member-review-tabs button { flex: 1 1 160px; }
+.member-review-tabs button[aria-pressed='true'] { color: var(--theme-accent); border-color: var(--theme-accent); background: var(--theme-raised); }
 .member-classes-dialog header, .member-classes-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .member-classes-dialog form > footer { justify-content: flex-end; flex-wrap: wrap; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--theme-border); background: transparent; color: inherit; }
 .member-classes-dialog h2 { font-size: calc(24px + var(--font-size-adjustment, 0px)); margin: 0; }

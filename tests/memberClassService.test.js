@@ -260,7 +260,7 @@ function mockReview(registrations, { readError = false, failPost = false } = {})
   return { calls, posts }
 }
 
-test('review validates fresh participation on later pages before posting a rating, including Late attendance', async () => {
+test('review validates fresh Present or Late attendance on later pages before posting a rating', async () => {
   for (const attendanceStatus of ['Present', 'Late']) {
     const state = mockReview([{ ...completedRegistration, id: 99, attendanceStatus: 'Absent' }, { ...completedRegistration, attendanceStatus }])
     const saved = await service.reviewRegistration(101, { rating: 5, comment: '  Buổi học tốt  ' })

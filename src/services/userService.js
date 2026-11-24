@@ -10,6 +10,7 @@ import { STAFF_ASSIGNABLE_ROLES } from '../utils/managerAccountValidation.js'
  * @property {'Manager'|'Receptionist'|'Coach'} role
  * @property {boolean} isActive
  * @property {number|null} coachId
+ * @property {string|null} dateOfBirth
  * @property {string} createdAt
  * @property {string|null} updatedAt
  */
