@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { normalizeProfilePhone, normalizeProfileUpdate, passwordChangeErrors, profileDateLimit, profileFieldErrors, profileValidationErrors } from '../src/utils/profileValidation.js'
+import { isProfilePhoneConflict, normalizeProfilePhone, normalizeProfileUpdate, passwordChangeErrors, profileDateLimit, profileFieldErrors, profileValidationErrors } from '../src/utils/profileValidation.js'
 
 const now = Date.parse('2026-10-24T06:00:00Z')
 const valid = { fullName: 'Phạm Thị Hồng Vy', phoneNumber: '0326541256', gender: 'Female', dateOfBirth: '2004-05-29', address: 'Hà Nội', fitnessGoal: 'Tăng 5 kg', emergencyContact: '0912 345 678' }
@@ -79,6 +79,19 @@ test('a rejected duplicate phone remains invalid across formatting changes but d
   assert.equal(errors({ phoneNumber: '0912345678' }, { phoneConflict: { ...phoneConflict, phoneNumber: '+84912345678' } }).phoneNumber, phoneConflict.message)
 })
 
+test('duplicate phone validation errors map aliases and remain recognizable without HTTP 409', () => {
+  for (const error of [
+    { response: { status: 400, data: { errors: { 'dto.Phone': ['Số điện thoại bị trùng.'] } } } },
+    { response: { status: 200, data: { success: false, message: 'Phone already exists.' } } },
+    { response: { status: 422, data: { errors: { PhoneNumber: ['Already in use.'] } } } },
+  ]) {
+    assert.ok(profileFieldErrors(error).phoneNumber)
+    assert.equal(isProfilePhoneConflict(error), true)
+  }
+  assert.equal(isProfilePhoneConflict(new Error('Network Error')), false)
+  assert.equal(isProfilePhoneConflict({ response: { status: 400, data: { errors: { Phone: ['Sai định dạng.'] } } } }), false)
+})
+
 test('password changes require a different new password and matching confirmation', () => {
   assert.deepEqual(passwordChangeErrors({ currentPassword: 'OldPassword!', newPassword: 'NewPassword!', confirmPassword: 'NewPassword!' }), {})
   const same = passwordChangeErrors({ currentPassword: 'OldPassword!', newPassword: 'OldPassword!', confirmPassword: 'OldPassword!' })
@@ -117,7 +130,7 @@ test('Vietnam phone number uses exactly ten digits and starts with zero', () => 
 
 test('account email contains one domain separator and ends in dot com', () => {
   for (const email of ['member@example.com', 'coach@sub.example.com']) assert.equal(getEmailValidationError(email), '')
-  for (const email of ['', 'member.example.com', 'member@example.vn', 'member@example.com.vn', 'member@@example.com']) {
+  for (const email of ['', 'member.example.com', 'member@example.vn', 'member@example.com.vn', 'member@@example.com', '.member@example.com', 'member..new@example.com', 'member@-example.com', 'member@example..com']) {
     assert.notEqual(getEmailValidationError(email), '')
   }
 })

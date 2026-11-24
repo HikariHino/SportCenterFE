@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertCircle, AlertTriangle, Ban, CalendarDays, CheckCircle2, Clock3, CreditCard, DoorOpen, ExternalLink, Headset, LifeBuoy, LogIn, Mail, MessageSquare, Package, Phone, Plus, QrCode, ReceiptText, RefreshCw, ScanLine, Search, ShieldAlert, UserCheck, UserPlus, Users, Wallet, X } from "lucide-react"
 import { deactivateMember, getMembers } from "../../services/memberService"
 import { createManagerMember } from '../../services/managerAccountService'
+import { getMemberRegistrationFieldErrors } from '../../utils/memberRegistrationErrors'
 import { getManagerMemberValidationErrors, MANAGER_ACCOUNT_LIMITS, MEMBER_PHONE_MESSAGE, MEMBER_PHONE_PATTERN } from '../../utils/managerAccountValidation'
 import { registrationBirthDateLimit } from '../../utils/authRegistrationValidation'
 import { PROFILE_BIRTH_DATE_MIN } from '../../utils/profileValidation'
@@ -244,6 +245,7 @@ export default function FrontDeskOperations() {
   async function handleCreateMember(e) {
     e.preventDefault()
     if (submitting) return
+    const formElement = e.currentTarget
     const errors = getManagerMemberValidationErrors(memberForm)
     setMemberFieldErrors(errors)
     if (Object.keys(errors).length) {
@@ -261,8 +263,11 @@ export default function FrontDeskOperations() {
       setMemberForm(emptyMemberForm)
       await loadMembersData(false)
     } catch (err) {
-      if (err.field) setMemberFieldErrors({ [err.field]: err.message })
-      else setMemberCreateError({ message: err.message || 'Không thể đăng ký hội viên.' })
+      const fieldErrors = getMemberRegistrationFieldErrors(err)
+      if (Object.keys(fieldErrors).length) {
+        setMemberFieldErrors(fieldErrors)
+        formElement.elements.namedItem(Object.keys(fieldErrors)[0])?.focus()
+      } else setMemberCreateError({ message: err.response?.data?.message || err.message || 'Không thể đăng ký hội viên.' })
     } finally {
       setSubmitting(false)
     }
@@ -1666,10 +1671,9 @@ export default function FrontDeskOperations() {
                   {memberFieldErrors.phone && <small className="fdesk-field-error" id="manager-member-phone-error" role="alert">{memberFieldErrors.phone}</small>}
                 </div>
 
-                <div className="fdesk-form-grid">
+                <div className="fdesk-form-grid fdesk-member-demographics">
                   <div className="fdesk-input-group">
                     <label>Ngày sinh (*):</label>
-                    <small>Từ 01/01/1950 và đủ 16 tuổi trở lên.</small>
                     <input
                       type="date"
                       className="fdesk-input"
@@ -1682,6 +1686,7 @@ export default function FrontDeskOperations() {
                       value={memberForm.dateOfBirth}
                       onChange={(e) => changeMemberField('dateOfBirth', e.target.value)}
                     />
+                    <small>Từ 01/01/1950 và đủ 16 tuổi trở lên.</small>
                     {memberFieldErrors.dateOfBirth && <small className="fdesk-field-error" id="manager-member-dateOfBirth-error" role="alert">{memberFieldErrors.dateOfBirth}</small>}
                   </div>
                   <div className="fdesk-input-group">

@@ -8,7 +8,7 @@ import StudentDetailsDialog from './StudentDetailsDialog'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, Clock3, PencilLine, Plus, Sparkles, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
 import { checkInCoachRegistration, getCoachSessionRoster } from '../../services/coachService'
-import { createTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
+import { completeTrainingPlan, createTrainingPlan, deleteTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, getTrainingPlanErrorMessage, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { getWorkoutRecommendation, getWorkoutRecommendationError } from '../../services/aiService'
 import { aiTrainingPlanDemoSteps } from '../../utils/aiTrainingPlanDemo'
 import { buildCoachWorkoutGoalContext, COACH_AI_PROMPT_MAX_LENGTH, mapWorkoutRecommendationToPlanExercises } from '../../utils/aiWorkoutRecommendation'
@@ -306,7 +306,7 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
   </div>
 }
 
-function TrainingPlanListDialog({ student, onClose }) {
+export function TrainingPlanListDialog({ student, onClose }) {
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -316,6 +316,42 @@ function TrainingPlanListDialog({ student, onClose }) {
   const [savingExerciseId, setSavingExerciseId] = useState(null)
   const [exerciseError, setExerciseError] = useState('')
   const [updatedExerciseId, setUpdatedExerciseId] = useState(null)
+  const [planAction, setPlanAction] = useState(null)
+  const [actionBusy, setActionBusy] = useState(false)
+  const [actionError, setActionError] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
+  const actionLock = useRef(false)
+  const actionHeading = useRef(null)
+
+  useEffect(() => {
+    if (planAction) actionHeading.current?.focus()
+  }, [planAction])
+
+  const confirmPlanAction = async () => {
+    if (!planAction || actionLock.current || savingExerciseId !== null) return
+    actionLock.current = true
+    setActionBusy(true)
+    setActionError('')
+    try {
+      const { plan, type } = planAction
+      if (type === 'delete') {
+        await deleteTrainingPlan(plan.id)
+        setPlans(current => current.filter(item => item.id !== plan.id))
+      } else {
+        await completeTrainingPlan(plan.id)
+        setPlans(current => current.map(item => item.id === plan.id ? { ...item, status: 'Completed' } : item))
+      }
+      cancelExerciseResult()
+      setActionMessage(type === 'delete' ? `Đã xóa giáo án “${plan.planName}”.` : `Đã đánh dấu hoàn thành giáo án “${plan.planName}”.`)
+      setPlanAction(null)
+      notifyCoachDataChanged('students')
+    } catch (requestError) {
+      setActionError(getTrainingPlanErrorMessage(requestError))
+    } finally {
+      actionLock.current = false
+      setActionBusy(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -384,17 +420,29 @@ function TrainingPlanListDialog({ student, onClose }) {
     }
   }
 
-  return <div className="coach-plan-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+  return <div className="coach-plan-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !actionLock.current && savingExerciseId === null) onClose() }}>
     <section className="coach-plan-dialog coach-plan-list-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-plan-list-title">
-      <header><div><span>GIÁO ÁN HỌC VIÊN</span><h2 id="coach-plan-list-title">{student.name}</h2><p>Member #{student.memberId} · {plans.length} giáo án</p></div><button type="button" aria-label="Đóng danh sách giáo án" onClick={onClose}><X size={19} /></button></header>
+      <header><div><span>GIÁO ÁN HỌC VIÊN</span><h2 id="coach-plan-list-title">{student.name}</h2><p>Member #{student.memberId} · {plans.length} giáo án</p></div><button type="button" aria-label="Đóng danh sách giáo án" disabled={actionBusy || savingExerciseId !== null} onClick={onClose}><X size={19} /></button></header>
       <div className="coach-plan-list-body">
+        {actionMessage && <p role="status" className="coach-plan-action-message">{actionMessage}</p>}
+        {planAction && <section className="coach-plan-action-confirm" role="group" aria-label={planAction.type === 'delete' ? 'Xác nhận xóa giáo án' : 'Xác nhận hoàn thành giáo án'}>
+          <h3 ref={actionHeading} tabIndex={-1}>{planAction.type === 'delete' ? 'Xóa giáo án?' : 'Đánh dấu hoàn thành giáo án?'}</h3>
+          <p>Giáo án “{planAction.plan.planName}” của học viên {student.name}.</p>
+          <p>{planAction.type === 'delete' ? 'Giáo án và toàn bộ bài tập bên trong sẽ bị xóa. Không thể hoàn tác.' : 'Giáo án sẽ xuất hiện trong lịch sử giáo án đã hoàn thành của học viên.'}</p>
+          {actionError && <p role="alert">{actionError}</p>}
+          <div><button type="button" disabled={actionBusy} onClick={() => { setPlanAction(null); setActionError('') }}>Hủy</button><button type="button" className={planAction.type === 'delete' ? 'coach-plan-delete' : ''} disabled={actionBusy} onClick={confirmPlanAction}>{actionBusy ? 'Đang xử lý...' : planAction.type === 'delete' ? 'Xác nhận xóa' : 'Xác nhận hoàn thành'}</button></div>
+        </section>}
         {loading ? <div className="coach-plan-list-state"><BookOpen size={26} /><strong>Đang tải giáo án</strong><span>Dữ liệu giáo án đang được đồng bộ từ hệ thống.</span></div> : error ? <div className="coach-plan-list-state error"><BookOpen size={26} /><strong>Không thể tải giáo án</strong><span>{error}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : plans.length ? <div className="coach-member-plan-list">
           {<CoachList items={plans} label="Giáo án học viên" resetKey={student.memberId}>{plan => <article className="coach-member-plan" key={plan.id}>
-            <header><div><span>{trainingGoalLabel(plan.goal)}</span><h3>{plan.planName}</h3></div><b className={String(plan.status || '').toLowerCase()}>{plan.status || 'Chưa xác định'}</b></header>
+            <header><div><span>{trainingGoalLabel(plan.goal)}</span><h3>{plan.planName}</h3></div><b className={String(plan.status || '').toLowerCase()}>{({ active: 'Đang áp dụng', completed: 'Đã hoàn thành' })[String(plan.status || '').toLowerCase()] || plan.status || 'Chưa xác định'}</b></header>
+            <div className="coach-member-plan-actions">
+              {String(plan.status || '').toLowerCase() === 'active' && <button type="button" disabled={!!planAction || editingExerciseId !== null || savingExerciseId !== null} onClick={() => { setPlanAction({ type: 'complete', plan }); setActionError(''); setActionMessage('') }}><CheckCircle2 size={15} />Đánh dấu hoàn thành</button>}
+              <button type="button" className="coach-plan-delete" disabled={!!planAction || editingExerciseId !== null || savingExerciseId !== null} onClick={() => { setPlanAction({ type: 'delete', plan }); setActionError(''); setActionMessage('') }}><Trash2 size={15} />Xóa giáo án</button>
+            </div>
             <div className="coach-member-plan-meta"><span><CalendarDays size={14} /><span><small>Bắt đầu</small><strong>{planDateFormatter.format(new Date(plan.startDate))}</strong></span></span><span><CalendarDays size={14} /><span><small>Kết thúc</small><strong>{planDateFormatter.format(new Date(plan.endDate))}</strong></span></span></div>
             {Array.isArray(plan.exercises) && plan.exercises.length ? <div className="coach-member-plan-exercises">
               {<CoachList items={plan.exercises} label="Bài tập của giáo án" resetKey={plan.id}>{exercise => <div key={exercise.id}>
-                <div className="coach-member-exercise-head"><span><strong>{exercise.exerciseName}</strong><small>{exercise.sets} hiệp × {exercise.reps} lần{exercise.durationInMinutes ? ` · ${exercise.durationInMinutes} phút` : ''}</small></span><button type="button" onClick={() => editExerciseResult(exercise)} disabled={savingExerciseId !== null}><PencilLine size={13} />{exercise.notes ? 'Sửa kết quả' : 'Cập nhật kết quả'}</button></div>
+                <div className="coach-member-exercise-head"><span><strong>{exercise.exerciseName}</strong><small>{exercise.sets} hiệp × {exercise.reps} lần{exercise.durationInMinutes ? ` · ${exercise.durationInMinutes} phút` : ''}</small></span><button type="button" onClick={() => editExerciseResult(exercise)} disabled={savingExerciseId !== null || !!planAction}><PencilLine size={13} />{exercise.notes ? 'Sửa kết quả' : 'Cập nhật kết quả'}</button></div>
                 {editingExerciseId === exercise.id ? <form className="coach-exercise-result-form" onSubmit={event => saveExerciseResult(event, exercise.id)}><label htmlFor={`coach-exercise-result-${exercise.id}`}>Kết quả / ghi chú thực hiện</label><textarea id={`coach-exercise-result-${exercise.id}`} rows="3" maxLength={EXERCISE_NOTES_MAX_LENGTH} value={resultDraft} onChange={event => setResultDraft(event.target.value)} placeholder="Ví dụ: Hoàn thành đủ 3 hiệp, kỹ thuật ổn định..." disabled={savingExerciseId === exercise.id} autoFocus />{exerciseError && <p role="alert">{exerciseError}</p>}<footer><button type="button" onClick={cancelExerciseResult} disabled={savingExerciseId === exercise.id}>Hủy</button><button type="submit" disabled={savingExerciseId === exercise.id}>{savingExerciseId === exercise.id ? 'Đang lưu...' : 'Lưu kết quả'}</button></footer></form> : <p className={exercise.notes ? '' : 'coach-exercise-result-empty'}>{exercise.notes || 'Chưa cập nhật kết quả thực hiện.'}</p>}
                 {updatedExerciseId === exercise.id && editingExerciseId !== exercise.id && <span className="coach-exercise-result-saved"><CheckCircle2 size={12} />Đã lưu kết quả</span>}
               </div>}</CoachList>}
@@ -554,7 +602,7 @@ export function StudentsView({ active = true, query, showNotice, selectedSession
       }}
       onViewPlans={student => { setPlansStudent(student); setStudentSelection(null) }} />}
     {planStudent && <TrainingPlanDialog student={planStudent} onClose={() => setPlanStudent(null)} onCreated={plan => showNotice?.(`Đã tạo giáo án “${plan.planName}” cho ${planStudent.name}.`)} />}
-    {plansStudent && <TrainingPlanListDialog student={plansStudent} onClose={() => setPlansStudent(null)} />}
+    {plansStudent && <TrainingPlanListDialog key={plansStudent.memberId} student={plansStudent} onClose={() => setPlansStudent(null)} />}
   </div>
 }
 

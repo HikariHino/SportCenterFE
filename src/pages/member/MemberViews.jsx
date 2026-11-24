@@ -16,7 +16,7 @@ import { getMyPayments, createPayment, cancelPayment, syncPayment } from '../../
 import { exportInvoicePdf, triggerBlobDownload } from '../../services/reportService'
 import ChangeEmailForm from '../../components/ChangeEmailForm'
 import { getFullNameValidationError, getProfilePhoneValidationError, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_MAX_LENGTH, PROFILE_PHONE_MESSAGE } from '../../utils/profileValidation'
-import { getProfilePhoneConflict, passwordChangeErrors, profileBirthDateLimit, PROFILE_BIRTH_DATE_MIN, PROFILE_EMERGENCY_CONTACT_MAX_LENGTH, profileFieldErrors, profileValidationErrors } from '../../utils/profileValidation'
+import { getProfilePhoneConflict, isProfilePhoneConflict, passwordChangeErrors, profileBirthDateLimit, PROFILE_BIRTH_DATE_MIN, PROFILE_EMERGENCY_CONTACT_MAX_LENGTH, profileFieldErrors, profileValidationErrors } from '../../utils/profileValidation'
 import '../../style/member/ProfileValidation.css'
 import '../../style/member/MemberProfile.css'
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
@@ -127,7 +127,7 @@ export function ProfileView({ user, showNotice }) {
   const startEditing = () => { resetDrafts(); morph.transition(() => setEditing(true)) }
   const cancelEditing = () => { resetDrafts(); morph.transition(() => setEditing(false)) }
 
-  const validationOptions = { requirePhone: Boolean(profile?.phoneNumber || memberInfo?.phone), requireDateOfBirth: Boolean(profile?.dateOfBirth), phoneConflict }
+  const validationOptions = { requirePhone: true, requireDateOfBirth: true, phoneConflict }
   const validateProfile = values => {
     const errors = profileValidationErrors(values, validationOptions)
     const nameError = getFullNameValidationError(values.fullName)
@@ -143,7 +143,7 @@ export function ProfileView({ user, showNotice }) {
     const next = { ...formData, [name]: value }
     setFormData(next)
     setError('')
-    if (fieldErrors[name] || name === 'phoneNumber') setFieldErrors(previous => ({ ...previous, [name]: validateProfile(next)[name] }))
+    if (fieldErrors[name] || name === 'phoneNumber' || name === 'dateOfBirth') setFieldErrors(previous => ({ ...previous, [name]: validateProfile(next)[name] }))
   }
   const profileInputProps = name => ({
     id: `member-profile-${name}`, name, disabled: saving || passwordSaving,
@@ -185,7 +185,7 @@ export function ProfileView({ user, showNotice }) {
       await loadProfile()
     } catch (err) {
       const fields = profileFieldErrors(err)
-      if (fields.phoneNumber && (Number(err.response?.status) === 409 || Number(err.response?.data?.statusCode) === 409)) {
+      if (isProfilePhoneConflict(err)) {
         setPhoneConflict({ phoneNumber: formData.phoneNumber, message: fields.phoneNumber })
       }
       if (Object.keys(fields).length) { setFieldErrors(fields); focusProfileError(fields) }
@@ -359,10 +359,11 @@ export function ProfileView({ user, showNotice }) {
                     type="date"
                     min={PROFILE_BIRTH_DATE_MIN}
                     max={profileBirthDateLimit()}
-                    required={Boolean(profile?.dateOfBirth)}
+                    required
                     {...profileInputProps('dateOfBirth')}
                     value={formData.dateOfBirth}
                   />
+                  <small className="member-profile-field-hint">Từ 01/01/1950 và đủ 16 tuổi trở lên.</small>
                   {fieldError('dateOfBirth')}
                 </div>
                 <div>

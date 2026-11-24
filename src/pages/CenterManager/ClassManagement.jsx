@@ -1912,7 +1912,7 @@ export default function ClassManagement() {
                       }}</ManagerList>
                 </div>
               )}
-              <SessionReviewsSection key={rosterSession.id} coachId={rosterSession.coachId} students={rosterList} />
+              <SessionReviewsSection key={rosterSession.id} sessionId={rosterSession.id} students={rosterList} />
             </div>
             <div className="class-modal-footer">
               <button

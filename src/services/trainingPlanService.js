@@ -94,3 +94,17 @@ export async function updateTrainingPlanExerciseResult(planExerciseId, notes) {
 
   return body
 }
+
+const validPlanId = id => Number.isSafeInteger(Number(id)) && Number(id) > 0
+
+export async function deleteTrainingPlan(planId) {
+  if (!validPlanId(planId)) throw new Error('Không xác định được giáo án cần xóa.')
+  const response = await api.delete(`/TrainingPlans/${Number(planId)}`)
+  if (response.data?.success === false) throw new Error(response.data.message || 'Không thể xóa giáo án.')
+}
+
+export async function completeTrainingPlan(planId) {
+  if (!validPlanId(planId)) throw new Error('Không xác định được giáo án cần hoàn thành.')
+  const response = await api.put(`/TrainingPlans/${Number(planId)}/status`, null, { params: { status: 'Completed' } })
+  if (response.data?.success === false) throw new Error(response.data.message || 'Không thể hoàn thành giáo án.')
+}

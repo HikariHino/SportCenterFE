@@ -1,51 +1,56 @@
 import { useEffect, useId, useState } from 'react'
 import { ChevronDown, Star } from 'lucide-react'
-import { getClassErrorMessage } from '../../services/sportClassService'
-import { getAllCoachReviews } from '../../services/coachReviewService'
+import { getClassErrorMessage, getSessionReviews } from '../../services/sportClassService'
 import { ManagerList } from './ManagerPagination'
 import '../../style/CenterManager/SessionReviewsSection.css'
 
 const formatDate = value => Number.isFinite(Date.parse(value))
   ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật ngày gửi'
 
-export default function SessionReviewsSection({ coachId, students = [] }) {
+export default function SessionReviewsSection({ sessionId, students = [] }) {
   const id = useId()
   const [open, setOpen] = useState(false)
   const [revision, setRevision] = useState(0)
+  const [page, setPage] = useState(1)
   const [state, setState] = useState({ loading: false, items: [], total: 0, error: '' })
 
   useEffect(() => {
     if (!open) return
     const controller = new AbortController()
     setState({ loading: true, items: [], total: 0, error: '' })
-    getAllCoachReviews(coachId, { signal: controller.signal }).then(items => {
+    getSessionReviews(sessionId, { page, pageSize: 10, signal: controller.signal }).then(result => {
       if (controller.signal.aborted) return
-      setState({ items, loading: false, error: '' })
+      const lastPage = Math.max(1, Math.ceil(result.total / 10))
+      if (page > lastPage) setPage(lastPage)
+      else setState({ ...result, loading: false, error: '' })
     }).catch(error => {
       if (!controller.signal.aborted) setState({ loading: false, items: [], total: 0,
-        error: getClassErrorMessage(error, 'Không thể tải đánh giá của học viên.') })
+        error: getClassErrorMessage(error, 'Không thể tải đánh giá buổi học.') })
     })
     return () => controller.abort()
-  }, [open, coachId, revision])
+  }, [open, sessionId, page, revision])
 
-  const items = state.items.filter(review => students.some(student => String(student.memberId) === String(review.memberId)))
+  const items = state.items
 
   return <section className="session-reviews-section">
     <button type="button" className="session-reviews-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}>
-      <Star size={18} /><span>{open ? 'Ẩn đánh giá của học viên' : 'Xem đánh giá của học viên'}</span><ChevronDown size={17} />
+      <Star size={18} /><span>{open ? 'Ẩn đánh giá buổi học' : 'Xem đánh giá buổi học'}</span><ChevronDown size={17} />
     </button>
     {open && <div id={id} className="session-reviews-content" aria-busy={state.loading}>
-      {state.loading ? <p role="status">Đang tải đánh giá của học viên...</p>
+      {state.loading ? <p role="status">Đang tải đánh giá buổi học...</p>
         : state.error ? <div role="alert"><p>{state.error}</p><button type="button" onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>
-          : !items.length ? <p role="status">Học viên trong buổi này chưa có đánh giá coach.</p>
+          : !items.length ? <p role="status">Buổi học này chưa có đánh giá.</p>
             : <>
-              <p className="session-reviews-count">{items.length} đánh giá coach từ học viên trong buổi này. Mỗi học viên có một đánh giá cho coach.</p>
-              <ManagerList items={items} resetKey={String(coachId)} label="Đánh giá của học viên" className="session-reviews-list">
+              <p className="session-reviews-count">{state.total} đánh giá từ học viên cho buổi học #{sessionId}.</p>
+              <ManagerList items={items} page={page} total={state.total} onPageChange={setPage} disabled={state.loading} resetKey={String(sessionId)} label="Đánh giá buổi học" className="session-reviews-list">
                 {review => {
-                  const student = students.find(item => String(item.memberId) === String(review.memberId))
+                  const student = students.find(item => review.registrationId != null
+                    ? String(item.registrationId) === String(review.registrationId)
+                    : review.memberId != null && String(item.memberId) === String(review.memberId))
+                  const memberId = student?.memberId ?? review.memberId
                   return <article key={review.id} className="session-review-item">
-                    <div className="session-review-heading"><strong>{student?.fullName || review.memberName || `Hội viên #${review.memberId}`}</strong><span className="session-review-rating"><Star size={16} fill="currentColor" />{review.rating}/5 sao</span></div>
-                    <small>{formatDate(review.updatedAt || review.createdAt)} · Hội viên #{review.memberId}</small>
+                    <div className="session-review-heading"><strong>{student?.fullName || review.memberName || (memberId != null ? `Hội viên #${memberId}` : `Lượt đăng ký #${review.registrationId}`)}</strong><span className="session-review-rating"><Star size={16} fill="currentColor" />{review.rating}/5 sao</span></div>
+                    <small>{formatDate(review.updatedAt || review.createdAt)} · {memberId != null ? `Hội viên #${memberId}` : `Lượt đăng ký #${review.registrationId}`}</small>
                     <p className="session-review-comment">{review.comment?.trim() || 'Học viên không để lại nhận xét.'}</p>
                   </article>
                 }}

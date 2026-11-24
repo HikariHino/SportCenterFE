@@ -16,6 +16,7 @@ import { ManagerWorkspaceProvider, ManagerViewActivity, useManagerResource } fro
 import StaffManagement from './StaffManagement'
 import ClassManagement from './ClassManagement'
 import RoomManagement from './RoomManagement'
+import { ManagerCenterTimetable } from '../../components/CenterTimetable'
 import PackageManagement from './PackageManagement'
 import CancellationPolicyManagement from './CancellationPolicyManagement'
 import ReportManagement from './ReportManagement'
@@ -45,6 +46,7 @@ const managerNavSections = [
       { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
       { id: 'users', label: 'Nhân sự & Phân quyền', icon: Users },
       { id: 'classes', label: 'Danh mục & Lớp học', icon: BookOpen },
+      { id: 'timetable', label: 'Thời khóa biểu trung tâm', icon: CalendarDays },
       { id: 'rooms', label: 'Phòng tập / Cơ sở vật chất', icon: DoorOpen },
       { id: 'packages', label: 'Gói thẻ hội viên', icon: Package },
       { id: 'cancellation', label: 'Chính sách hủy lịch', icon: Ban },
@@ -359,7 +361,7 @@ function ManagerWorkspace() {
         </header>
 
         <main className={`manager-main${section === 'overview' ? ' manager-overview' : ''}`} id="manager-content" ref={contentMotion}>
-          {!['rooms', 'packages', 'cancellation', 'reports', 'profile'].includes(section) && <>
+          {!['rooms', 'packages', 'cancellation', 'reports', 'profile', 'timetable'].includes(section) && <>
           <section className="manager-welcome">
             <div>
               <p className="manager-eyebrow">VẬN HÀNH HIỆU QUẢ, KẾT NỐI ĐAM MÊ</p>
@@ -446,6 +448,7 @@ function ManagerWorkspace() {
           <div className="manager-view-content" hidden={section !== 'classes'}><ManagerViewActivity active={section === 'classes'}><ClassManagement /></ManagerViewActivity></div>
 
           {/* 3. Phòng tập / Cơ sở vật chất (RoomsController) */}
+          <div className="manager-view-content" hidden={section !== 'timetable'}><ManagerViewActivity active={section === 'timetable'}><ManagerCenterTimetable /></ManagerViewActivity></div>
           <div className="manager-view-content" hidden={section !== 'rooms'}><ManagerViewActivity active={section === 'rooms'}><RoomManagement /></ManagerViewActivity></div>
 
           {/* 4. Gói thẻ hội viên (MembershipPackagesController) */}
@@ -498,14 +501,12 @@ function ManagerWorkspace() {
                   <div className="manager-chart-bars">
                     {chartData.map(item => {
                       const rev = Number(item.revenue) || 0
-                      const valueLabel = (rev / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })
                       const heightPercent = maxRevenueValue > 0
                         ? Math.min(100, Math.round((rev / maxRevenueValue) * 88) + (rev > 0 ? 12 : 2))
                         : 2
                       const isCurrent = item.month === currentMonthNumber
                       return (
                         <div className="manager-chart-column" key={item.month}>
-                          {rev > 0 && valueLabel !== '0' && <span className="manager-bar-value">{valueLabel}</span>}
                           <div
                             className={`manager-bar ${isCurrent ? 'latest' : ''}`}
                             style={{ height: `${heightPercent}%` }}

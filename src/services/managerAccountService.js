@@ -2,11 +2,13 @@ import { createMember } from './memberService'
 import { createStaffUser } from './userService'
 import { getManagerMemberValidationError, getManagerStaffValidationError, getManagerStaffValidationErrors } from '../utils/managerAccountValidation.js'
 import api from './api'
+import { getMemberContactConflicts } from '../utils/memberRegistrationErrors.js'
 
+let pendingMemberCreation = Promise.resolve()
 export async function createManagerMember(form) {
   const error = getManagerMemberValidationError(form)
   if (error) throw Object.assign(new Error(error.message), { field: error.field })
-  return createMember({
+  const values = {
     ...form,
     fullName: form.fullName.trim(),
     email: form.email.trim(),
@@ -14,7 +16,15 @@ export async function createManagerMember(form) {
     dateOfBirth: form.dateOfBirth ? `${form.dateOfBirth}T00:00:00.000Z` : null,
     address: form.address?.trim() || null,
     fitnessGoal: form.fitnessGoal?.trim() || null,
+  }
+  const request = pendingMemberCreation.then(async () => {
+    const groups = await Promise.all([readAccountContacts('/users/staff'), readAccountContacts('/members')])
+    const fieldErrors = getMemberContactConflicts(values, groups.flat())
+    if (Object.keys(fieldErrors).length) throw Object.assign(new Error(Object.values(fieldErrors)[0]), { fieldErrors })
+    return createMember(values)
   })
+  pendingMemberCreation = request.catch(() => {})
+  return request
 }
 
 async function readAccountContacts(path) {

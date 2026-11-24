@@ -21,22 +21,27 @@ import { emptyMemberForm, EmptyState, formatMemberDate, genderLabel, requestErro
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from '../../utils/fullNameValidation'
 import { paymentCheckoutMessage } from '../../utils/memberPayments'
 import { profileBirthDateLimit, PROFILE_BIRTH_DATE_MIN } from '../../utils/profileValidation'
+import { getMemberRegistrationFieldErrors } from '../../utils/memberRegistrationErrors'
 
 function CreateMemberDialog({ onClose, onCreated }) {
   const [form, setForm] = useState(emptyMemberForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [invalidField, setInvalidField] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const updateField = event => {
     setForm(current => ({ ...current, [event.target.name]: event.target.value }))
     setError('')
     setInvalidField('')
+    setFieldErrors(current => { const next = { ...current }; delete next[event.target.name]; return next })
   }
 
   const submit = async event => {
     event.preventDefault()
     if (saving) return
+    const formElement = event.currentTarget
+    setFieldErrors({})
     const validationError = getReceptionistMemberValidationError(form)
     if (validationError) {
       setError(validationError.message)
@@ -52,7 +57,10 @@ function CreateMemberDialog({ onClose, onCreated }) {
       onCreated(member)
       onClose()
     } catch (requestError) {
-      setError(requestErrorMessage(requestError, 'Không thể đăng ký hội viên tại quầy.'))
+      const errors = getMemberRegistrationFieldErrors(requestError)
+      setFieldErrors(errors)
+      if (Object.keys(errors).length) formElement.elements.namedItem(Object.keys(errors)[0])?.focus()
+      else setError(requestErrorMessage(requestError, 'Không thể đăng ký hội viên tại quầy.'))
     } finally {
       setSaving(false)
     }
@@ -64,14 +72,15 @@ function CreateMemberDialog({ onClose, onCreated }) {
       <form onSubmit={submit}>
         <div className="reception-member-form-grid">
           <label>Họ và tên<input pattern={FULL_NAME_PATTERN} title={FULL_NAME_MESSAGE} name="fullName" value={form.fullName} onChange={updateField} maxLength="100" aria-invalid={invalidField === 'fullName' || undefined} aria-describedby={invalidField === 'fullName' ? 'reception-create-member-error' : undefined} required /></label>
-          <label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="256" required /></label>
+          <label>Email<input name="email" type="email" value={form.email} onChange={updateField} maxLength="256" aria-invalid={!!fieldErrors.email || undefined} aria-describedby={fieldErrors.email ? 'reception-create-member-email-error' : undefined} required />{fieldErrors.email && <span id="reception-create-member-email-error" className="reception-form-error" role="alert">{fieldErrors.email}</span>}</label>
           <label>Mật khẩu ban đầu<input name="password" type="password" value={form.password} onChange={updateField} minLength={NEW_PASSWORD_MIN_LENGTH} maxLength={NEW_PASSWORD_MAX_LENGTH} aria-invalid={invalidField === 'password' || undefined} aria-describedby={invalidField === 'password' ? 'reception-create-member-error' : undefined} autoComplete="new-password" placeholder="Từ 8 đến 72 ký tự" required /></label>
-          <label>Số điện thoại<input name="phone" type="tel" inputMode="numeric" pattern={RECEPTIONIST_PHONE_PATTERN} title={RECEPTIONIST_PHONE_MESSAGE} minLength="10" maxLength="10" value={form.phone} onChange={updateField} aria-invalid={invalidField === 'phone' || undefined} aria-describedby={invalidField === 'phone' ? 'reception-create-member-error' : undefined} placeholder="0912345678" /></label>
+          <label>Số điện thoại<input name="phone" type="tel" inputMode="numeric" pattern={RECEPTIONIST_PHONE_PATTERN} title={RECEPTIONIST_PHONE_MESSAGE} minLength="10" maxLength="10" value={form.phone} onChange={updateField} aria-invalid={invalidField === 'phone' || !!fieldErrors.phone || undefined} aria-describedby={fieldErrors.phone ? 'reception-create-member-phone-error' : invalidField === 'phone' ? 'reception-create-member-error' : undefined} placeholder="0912345678" />{fieldErrors.phone && <span id="reception-create-member-phone-error" className="reception-form-error" role="alert">{fieldErrors.phone}</span>}</label>
           <label>Ngày sinh<input name="dateOfBirth" type="date" value={form.dateOfBirth} min={PROFILE_BIRTH_DATE_MIN} max={profileBirthDateLimit()} onChange={updateField} aria-invalid={invalidField === 'dateOfBirth' || undefined} aria-describedby={invalidField === 'dateOfBirth' ? 'reception-create-member-error' : undefined} /><small>Từ 01/01/1950 và đủ 16 tuổi trở lên.</small></label>
           <label>Giới tính<select name="gender" value={form.gender} onChange={updateField}><option value="">Chưa cung cấp</option><option value="Male">Nam</option><option value="Female">Nữ</option><option value="Other">Khác</option></select></label>
           <label className="wide">Địa chỉ<input name="address" value={form.address} onChange={updateField} maxLength="200" /></label>
           <label className="wide">Mục tiêu tập luyện<input name="fitnessGoal" value={form.fitnessGoal} onChange={updateField} maxLength="100" placeholder="Ví dụ: tăng sức bền, giảm cân..." /></label>
         </div>
+        {Object.entries(fieldErrors).filter(([field]) => !['email', 'phone'].includes(field)).map(([field, message]) => <p key={field} className="reception-form-error" role="alert">{message}</p>)}
         {error && <p id="reception-create-member-error" className="reception-form-error" role="alert">{error}</p>}
         <footer><button type="button" onClick={onClose} disabled={saving}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang đăng ký...' : 'Đăng ký hội viên'}</button></footer>
       </form>

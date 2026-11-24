@@ -5,7 +5,7 @@ import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 
-let window, server, createRoot, FrontDesk, Receptionist, writes
+let window, server, createRoot, FrontDesk, Receptionist, writes, failure, hold, release, memberContacts, staffContacts, contactsFailure
 const descriptors = new Map()
 before(async () => {
   window = new Window({ url: 'http://localhost/manager' })
@@ -19,7 +19,18 @@ before(async () => {
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   const api = (await server.ssrLoadModule('/src/services/api.js')).default
   api.defaults.adapter = async config => {
-    if (config.method !== 'get') writes.push(JSON.parse(config.data))
+    if (config.method === 'get' && ['/members', '/users/staff'].includes(config.url)) {
+      if (contactsFailure) throw new Error('Không thể kiểm tra thông tin tài khoản')
+      return { data: { success: true, data: config.url === '/members' ? memberContacts : staffContacts }, status: 200, headers: {}, config }
+    }
+    if (config.method !== 'get') {
+      writes.push(JSON.parse(config.data))
+      if (hold) await new Promise(resolve => { release = resolve })
+      if (failure) {
+        const data = typeof failure === 'string' ? { message: failure } : failure
+        throw { response: { status: 409, data } }
+      }
+    }
     return { data: { success: true, data: config.method === 'get' ? [] : { memberId: 7 } }, status: 200, headers: {}, config }
   }
   FrontDesk = (await server.ssrLoadModule('/src/pages/CenterManager/FrontDeskOperations.jsx')).default
@@ -35,13 +46,14 @@ after(async () => {
   }
 })
 async function screen(run, receptionist = false) {
-  writes = []
+  writes = []; failure = ''; hold = false; release = null; memberContacts = []; staffContacts = []; contactsFailure = false
   const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
   try {
     await act(async () => root.render(receptionist ? h(Receptionist, { query: '', showNotice() {} }) : h(FrontDesk)))
     await act(async () => [...container.querySelectorAll('button')].find(button => button.textContent.includes(receptionist ? 'Đăng ký hội viên' : 'Thêm hội viên')).click())
     await run(container.querySelector(receptionist ? '.reception-dialog form' : '.fdesk-dialog form'))
   } finally {
+    if (release) await act(async () => release())
     await act(async () => root.unmount())
     container.remove()
   }
@@ -52,6 +64,30 @@ const change = (form, name, value) => act(async () => {
   input.dispatchEvent(new window.Event('input', { bubbles: true }))
 })
 const submit = form => act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+
+test('manager counter prevents a create request when email or phone belongs to any existing account, including inactive staff', () => screen(async form => {
+  for (const [field, value] of Object.entries({ fullName: 'Nguyễn Văn An', email: 'an@example.com', password: 'Password123!', phone: '0912345678', dateOfBirth: '1995-01-01' })) await change(form, field, value)
+  memberContacts = [{ email: ' AN@EXAMPLE.COM ', phone: '0900000000', isActive: false }]
+  staffContacts = [{ email: 'coach@example.com', phoneNumber: '+84 912 345 678', isActive: false }]
+  await submit(form)
+  assert.equal(writes.length, 0)
+  for (const field of ['email', 'phone']) assert.equal(form.elements[field].getAttribute('aria-invalid'), 'true')
+  await change(form, 'email', 'new@example.com')
+  await change(form, 'phone', '0987654321')
+  await submit(form)
+  assert.equal(writes.length, 1)
+}))
+
+test('manager counter does not register if system contacts could not be checked', () => screen(async form => {
+  for (const [field, value] of Object.entries({ fullName: 'Nguyễn Văn An', email: 'an@example.com', password: 'Password123!', phone: '0912345678', dateOfBirth: '1995-01-01' })) await change(form, field, value)
+  contactsFailure = true
+  await submit(form)
+  assert.equal(writes.length, 0)
+  assert.match(document.querySelector('#manager-member-create-error').textContent, /Không thể kiểm tra thông tin tài khoản/)
+  contactsFailure = false
+  await submit(form)
+  assert.equal(writes.length, 1)
+}))
 
 test('counter member form shows all required errors together and focuses the first invalid field', () => screen(async form => {
   await submit(form)
@@ -66,6 +102,48 @@ test('counter member form shows all required errors together and focuses the fir
   assert.equal(form.elements.fullName.getAttribute('aria-invalid'), 'false')
   assert.equal(form.elements.email.getAttribute('aria-invalid'), 'true')
 }))
+
+for (const receptionist of [false, true]) {
+  test(`${receptionist ? 'receptionist' : 'manager'} counter form maps duplicate email and phone errors to fields, keeps input and permits correction`, () => screen(async form => {
+    for (const [field, value] of Object.entries({ fullName: 'Nguyễn Văn An', email: 'an@example.com', password: 'Password123!', phone: '0912345678', dateOfBirth: '1995-01-01' })) await change(form, field, value)
+    failure = 'Email đã được sử dụng. Vui lòng nhập email khác. Số điện thoại đã được sử dụng. Vui lòng nhập số khác.'
+    await submit(form)
+    for (const name of ['email', 'phone']) {
+      const input = form.elements.namedItem(name)
+      assert.equal(input.getAttribute('aria-invalid'), 'true', name)
+      assert.match(document.getElementById(input.getAttribute('aria-describedby')).textContent, /đã được sử dụng/)
+    }
+    assert.equal(document.activeElement.name, 'email')
+    assert.equal(form.elements.phone.value, '0912345678')
+    assert.equal(form.elements.password.value, 'Password123!')
+    await change(form, 'email', 'new@example.com')
+    assert.notEqual(form.elements.email.getAttribute('aria-invalid'), 'true')
+    assert.equal(form.elements.phone.getAttribute('aria-invalid'), 'true')
+    await change(form, 'phone', '0987654321')
+    failure = ''
+    await submit(form)
+    assert.equal(writes.length, 2)
+    assert.equal(document.querySelector(receptionist ? '.reception-dialog form' : '.fdesk-dialog form'), null)
+  }, receptionist))
+
+  test(`${receptionist ? 'receptionist' : 'manager'} counter form maps English and structured contact conflicts and blocks repeated submission while pending`, () => screen(async form => {
+    for (const [field, value] of Object.entries({ fullName: 'Nguyễn Văn An', email: 'an@example.com', password: 'Password123!', phone: '0912345678', dateOfBirth: '1995-01-01' })) await change(form, field, value)
+    failure = 'Email is already registered.'
+    await submit(form)
+    assert.equal(form.elements.email.getAttribute('aria-invalid'), 'true')
+    failure = { errors: { PhoneNumber: ['Số điện thoại đã được sử dụng.'] } }
+    await submit(form)
+    assert.equal(form.elements.phone.getAttribute('aria-invalid'), 'true')
+    assert.equal(document.activeElement.name, 'phone')
+    failure = ''; hold = true
+    await submit(form)
+    const before = writes.length
+    await submit(form)
+    assert.equal(writes.length, before)
+    await act(async () => release())
+    release = null
+  }, receptionist))
+}
 
 test('counter member form blocks invalid contact details and underage birthdays, then submits corrected data', t => {
   t.mock.method(Date, 'now', () => Date.parse('2026-11-24T10:00:00+07:00'))

@@ -714,6 +714,14 @@
 .fdesk-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 16px; }
 .fdesk-form-grid > * { min-width: 0; }
 .fdesk-form-grid .wide { grid-column: 1 / -1; }
+.fdesk-member-demographics .fdesk-input,
+.fdesk-member-demographics .fdesk-select {
+  box-sizing: border-box;
+  width: 100%;
+  height: calc(46px + var(--font-size-adjustment, 0px));
+  padding: 9px 13px;
+  border-radius: 8px;
+}
 .fdesk-form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding-top: 16px; border-top: 1px solid var(--manager-line, #e9edf3); }
 .fdesk-subscription-notice { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 9px; flex: 1 1 360px; min-width: 0; padding: 12px 14px; border: 1px solid var(--manager-info-border, #c8dafa); border-radius: 8px; background: var(--manager-info-bg, #eff6ff); color: var(--manager-info, #1d4ed8); font-size: calc(17px + var(--font-size-adjustment, 0px)); line-height: 1.7; }
 .fdesk-subscription-notice > svg { flex-shrink: 0; margin-top: 2px; }

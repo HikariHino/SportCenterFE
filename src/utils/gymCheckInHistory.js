@@ -19,13 +19,15 @@ export function shiftGymDate(date, days) {
   return Number.isFinite(stamp) ? new Date(stamp + days * 86400_000).toISOString().slice(0, 10) : ''
 }
 
-export function gymDateRangeReason({ fromDate = '', toDate = '' } = {}) {
+export function gymDateRangeReason({ fromDate = '', toDate = '' } = {}, now = Date.now()) {
   for (const value of [fromDate, toDate]) {
     const stamp = Date.parse(`${value}T00:00:00Z`)
     if (value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(stamp) || new Date(stamp).toISOString().slice(0, 10) !== value)) {
       return 'Vui lòng chọn ngày hợp lệ.'
     }
   }
+  const today = gymDateKey(now)
+  if (fromDate > today || toDate > today) return 'Chỉ được xem lịch sử đến hôm nay. Vui lòng không chọn ngày trong tương lai.'
   return fromDate && toDate && fromDate > toDate ? 'Ngày bắt đầu không được sau ngày kết thúc.' : ''
 }
 

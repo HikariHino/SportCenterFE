@@ -1,5 +1,6 @@
 import api from './api'
 import { normalizeProfileUpdate, profileValidationErrors } from '../utils/profileValidation.js'
+import { getStaffEmailValidationError } from '../utils/changeEmailValidation.js'
 
 /**
  * Trích xuất lỗi từ backend cho Profile
@@ -47,12 +48,16 @@ export async function updateProfile(dto) {
 }
 
 export async function requestChangeEmailOtp(newEmail) {
+  const error = getStaffEmailValidationError(newEmail)
+  if (error) throw new Error(error)
   const response = await api.post('/profile/change-email/request-otp', { newEmail: newEmail.trim().toLowerCase() })
   if (response.data?.success === false || Number(response.data?.statusCode) >= 400) throw Object.assign(new Error(response.data.message || 'Không thể gửi mã xác nhận email.'), { response })
   return response.data
 }
 
 export async function verifyChangeEmailOtp(newEmail, otp) {
+  const error = getStaffEmailValidationError(newEmail)
+  if (error) throw new Error(error)
   if (!/^\d{6}$/.test(otp.trim())) throw new Error('Mã OTP phải có 6 chữ số.')
   const response = await api.post('/profile/change-email/verify-otp', { newEmail: newEmail.trim().toLowerCase(), otp: otp.trim() })
   const body = response.data

@@ -1,6 +1,7 @@
 import { getNewPasswordValidationError } from './passwordValidation.js'
 import { getFullNameCharactersError } from './fullNameValidation.js'
 import { timetableDateKey } from './memberTimetable.js'
+import { getAccountEmailValidationError } from './emailValidation.js'
 
 export const PROFILE_FULL_NAME_MAX_LENGTH = 100
 export const PROFILE_PHONE_MAX_LENGTH = 30
@@ -95,17 +96,23 @@ export function profileFieldErrors(error) {
   const body = error?.response?.data
   for (const [key, messages] of Object.entries(body?.errors || {})) {
     const name = key.split('.').at(-1)
-    const field = fields.find(field => field.toLowerCase() === name.toLowerCase())
+    const field = name.toLowerCase() === 'phone' ? 'phoneNumber' : fields.find(field => field.toLowerCase() === name.toLowerCase())
     const message = (Array.isArray(messages) ? messages : [messages]).find(value => typeof value === 'string' && value.trim())
     if (field && message) result[field] = message
   }
   const message = body?.message || error?.message || ''
   if (!Object.keys(result).length) {
-    if (/số điện thoại|phone number/i.test(message)) result.phoneNumber = message
+    if (/số điện thoại|phone/i.test(message)) result.phoneNumber = message
     else if (/ngày sinh|date of birth/i.test(message)) result.dateOfBirth = message
     else if (/họ (?:và )?tên|full name/i.test(message)) result.fullName = message
   }
   return result
+}
+
+export function isProfilePhoneConflict(error) {
+  const message = profileFieldErrors(error).phoneNumber
+  return Boolean(message && (Number(error?.response?.status) === 409 || Number(error?.response?.data?.statusCode) === 409
+    || /đã.*(?:sử dụng|tồn tại|đăng ký)|trùng|already.*(?:in use|registered|used|exists|taken)|duplicate/i.test(message)))
 }
 
 export function getFullNameValidationError(value) {
@@ -132,5 +139,5 @@ export function getEmailValidationError(value) {
   const email = String(value || '').trim()
   if (!email) return 'Email không được để trống.'
   if (!/^[^\s@]+@[^\s@]+\.com$/i.test(email)) return 'Email phải có @ và kết thúc bằng .com.'
-  return ''
+  return getAccountEmailValidationError(email)
 }

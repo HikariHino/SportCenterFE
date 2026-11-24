@@ -20,6 +20,7 @@ import '../../style/Receptionist/ReceptionistMotion.css'
 import '../../style/PortalSidebar.css'
 
 const viewLoaders = {
+  'Thời khóa biểu trung tâm': () => import('../../components/CenterTimetable'),
   'Đánh giá coach': () => import('../../components/CoachReviewsView'),
   'Tổng quan': () => import('./OverviewView'), 'Buổi học': () => import('./ScheduleView'),
   'Phòng tập': () => import('./RoomsView'), 'Check-in': () => import('./CheckInView'),
@@ -35,11 +36,13 @@ const RoomsView = lazy(() => viewLoaders['Phòng tập']().then(module => ({ def
 const SessionsView = lazy(() => viewLoaders['Buổi học']().then(module => ({ default: module.ReceptionistScheduleView })))
 const SupportTicketsView = lazy(() => viewLoaders['Hỗ trợ']().then(module => ({ default: module.SupportTicketsView })))
 const CoachReviewsView = lazy(viewLoaders['Đánh giá coach'])
+const CenterTimetable = lazy(() => viewLoaders['Thời khóa biểu trung tâm']().then(module => ({ default: module.ReceptionistCenterTimetable })))
 const preloadView = view => viewLoaders[view]?.().catch(() => {})
 
 const navigation = [
   [LayoutDashboard, 'Tổng quan'],
   [CalendarDays, 'Buổi học'],
+  [CalendarDays, 'Thời khóa biểu trung tâm'],
   [DoorOpen, 'Phòng tập'],
   [ScanLine, 'Check-in'],
   [Users, 'Hội viên'],
@@ -62,6 +65,7 @@ const storedSelectedSession = () => {
 }
 
 const pageMeta = {
+  'Thời khóa biểu trung tâm': ['LỊCH HỌC TOÀN TRUNG TÂM', 'Thời khóa biểu trung tâm', 'Xem các buổi đã lên lịch, đã hoàn thành và danh sách học viên theo từng buổi.'],
   'Đánh giá coach': ['PHẢN HỒI TỪ HỘI VIÊN', 'Đánh giá coach', 'Chọn huấn luyện viên để xem điểm đánh giá và nhận xét của hội viên.'],
   'Buổi học': ['QUẢN LÝ LỊCH HỌC', 'Buổi học', 'Chọn môn thể thao và huấn luyện viên để theo dõi lịch, lớp và hội viên.'],
   'Phòng tập': ['VẬN HÀNH CƠ SỞ', 'Phòng tập', 'Theo dõi phòng, sức chứa và lịch sử dụng tại trung tâm.'],
@@ -210,6 +214,7 @@ function ReceptionistWorkspace() {
   }
 
   const renderView = view => {
+    if (view === 'Thời khóa biểu trung tâm') return <CenterTimetable />
     if (view === 'Đánh giá coach') return <CoachReviewsView active={activeNav === view} />
     if (view === 'Buổi học') return <SessionsView showNotice={showNotice} selectedSession={selectedReceptionSession} onSelectSession={selectReceptionSession} />
     if (view === 'Phòng tập') return <RoomsView onOpenSessions={session => selectNavigation('Buổi học', session)} onSelectSession={selectReceptionSession} />

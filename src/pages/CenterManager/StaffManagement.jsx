@@ -1,9 +1,11 @@
 import { ManagerList } from './ManagerPagination'
 import StaffCoachRating from './StaffCoachRating'
+import { CoachReviewDetails } from '../../components/CoachReviewsView'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useMemo, useRef, useState } from "react"
 import {
   AlertCircle,
+  ArrowLeft,
   Ban,
   CheckCircle2,
   Eye,
@@ -77,13 +79,6 @@ const formatDate = (dateStr) => {
       }).format(date)
 }
 
-const formatBirthDate = value => {
-  const key = typeof value === 'string' ? value.slice(0, 10) : ''
-  const date = new Date(`${key}T00:00:00Z`)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== key) return 'Chưa cập nhật'
-  return `${key.slice(8, 10)}/${key.slice(5, 7)}/${key.slice(0, 4)}`
-}
-
 export default function StaffManagement() {
   const viewActive = useManagerViewActive()
   const { user: currentUser } = useAuth()
@@ -100,6 +95,11 @@ export default function StaffManagement() {
   const [selectedStaffForRole, setSelectedStaffForRole] = useState(null)
   const [selectedStaffForDeactivate, setSelectedStaffForDeactivate] = useState(null)
   const [selectedStaffForDetail, setSelectedStaffForDetail] = useState(null)
+  const [showCoachReviews, setShowCoachReviews] = useState(false)
+  const closeStaffDetail = () => {
+    setSelectedStaffForDetail(null)
+    setShowCoachReviews(false)
+  }
 
   // Form states
   const [createForm, setCreateForm] = useState({
@@ -855,26 +855,33 @@ export default function StaffManagement() {
       {viewActive && selectedStaffForDetail && (
         <div
           className="staff-modal-backdrop"
-          onClick={(e) => e.target === e.currentTarget && setSelectedStaffForDetail(null)}
+          onClick={(e) => e.target === e.currentTarget && closeStaffDetail()}
         >
-          <div className="staff-modal">
+          <div className="staff-modal" role="dialog" aria-modal="true" aria-label={showCoachReviews ? 'Đánh giá coach từ hội viên' : 'Hồ sơ nhân sự'}>
             <div className="staff-modal-header">
               <div>
-                <h3>Hồ sơ nhân sự #{selectedStaffForDetail.userId}</h3>
-                <p>Thông tin liên hệ, vai trò và trạng thái tài khoản.</p>
+                <h3>{showCoachReviews ? 'Đánh giá coach từ hội viên' : `Hồ sơ nhân sự #${selectedStaffForDetail.userId}`}</h3>
+                <p>{showCoachReviews ? selectedStaffForDetail.fullName : 'Thông tin liên hệ, vai trò và trạng thái tài khoản.'}</p>
               </div>
               <button
                 type="button"
                 className="staff-modal-close"
-                aria-label="Đóng hồ sơ nhân sự"
-                onClick={() => setSelectedStaffForDetail(null)}
+                aria-label={showCoachReviews ? 'Đóng đánh giá coach' : 'Đóng hồ sơ nhân sự'}
+                onClick={closeStaffDetail}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="staff-modal-body">
-              <div className="staff-detail-grid">
+            <div className="staff-modal-body" key={showCoachReviews ? 'reviews' : 'profile'}>
+              {showCoachReviews ? <>
+                <button type="button" autoFocus className="staff-btn staff-btn-secondary staff-reviews-back" onClick={() => setShowCoachReviews(false)}>
+                  <ArrowLeft size={18} />Trở về hồ sơ nhân sự
+                </button>
+                <div className="coach-reviews-view">
+                  <CoachReviewDetails key={selectedStaffForDetail.coachId} coach={{ id: selectedStaffForDetail.coachId, fullName: selectedStaffForDetail.fullName }} />
+                </div>
+              </> : <div className="staff-detail-grid">
                 <div className="staff-detail-item full-width">
                   <small>Họ và tên</small>
                   <strong>{selectedStaffForDetail.fullName}</strong>
@@ -917,13 +924,8 @@ export default function StaffManagement() {
                 )}
 
                 {String(selectedStaffForDetail.role).toLowerCase() === 'coach' && selectedStaffForDetail.coachId > 0 && (
-                  <StaffCoachRating key={selectedStaffForDetail.coachId} coachId={selectedStaffForDetail.coachId} />
+                  <StaffCoachRating key={selectedStaffForDetail.coachId} coachId={selectedStaffForDetail.coachId} onViewReviews={() => setShowCoachReviews(true)} />
                 )}
-
-                {String(selectedStaffForDetail.role).toLowerCase() === 'coach' && <div className="staff-detail-item staff-coach-birthdate">
-                  <small>Ngày sinh</small>
-                  <strong>{formatBirthDate(selectedStaffForDetail.dateOfBirth)}</strong>
-                </div>}
 
                 {String(selectedStaffForDetail.role).toLowerCase() === 'coach' && selectedStaffForDetail.coachId > 0 && (
                   <StaffCoachRating key={`sessions-${selectedStaffForDetail.coachId}`} coachId={selectedStaffForDetail.coachId} sessionQuality />
@@ -938,14 +940,14 @@ export default function StaffManagement() {
                   <small>Cập nhật lần cuối</small>
                   <strong>{formatDate(selectedStaffForDetail.updatedAt)}</strong>
                 </div>
-              </div>
+              </div>}
             </div>
 
             <div className="staff-modal-footer">
               <button
                 type="button"
                 className="staff-btn staff-btn-secondary"
-                onClick={() => setSelectedStaffForDetail(null)}
+                onClick={closeStaffDetail}
               >
                 Đóng
               </button>

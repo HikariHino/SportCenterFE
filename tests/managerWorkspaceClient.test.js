@@ -83,12 +83,23 @@ const tick = interval => act(async () => { for (const timer of [...intervals.val
 
 test('Manager warms all primary tabs with reads and deduplicates common resources', () => {
   assert.deepEqual(errors, [])
-  assert.equal(document.querySelectorAll('.manager-view-content').length, 8)
+  assert.equal(document.querySelectorAll('.manager-view-content').length, 9)
   for (const url of ['/Reports/overview', '/Reports/revenue', '/users/staff', '/Rooms', '/sports', '/classes/manage', '/membership-packages/manage', '/payments', '/members', '/SupportTickets']) assert.ok(count(url), url)
   assert.equal(count('/users/staff'), 1)
   assert.equal(count('/payments'), 1)
   assert.equal(count('/Rooms'), 1)
   assert.ok(requests.every(request => request.method === 'get'))
+})
+
+test('Manager sidebar opens the center-wide timetable without write actions', async () => {
+  await tab('Thời khóa biểu trung tâm')
+  const view = document.querySelector('.manager-view-content:not([hidden])')
+  assert.match(view.querySelector('h2').textContent, /Thời khóa biểu trung tâm/)
+  assert.ok(view.querySelector('.member-timetable-table'))
+  assert.equal(view.querySelector('.member-timetable-create-slot'), null)
+  assert.equal(count('/class-sessions'), 1)
+  assert.ok(requests.every(request => request.method === 'get'))
+  await tab('Tổng quan')
 })
 
 test('changing Manager tabs preserves their mounted views without initial reloads', async () => {

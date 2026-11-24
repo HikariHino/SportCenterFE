@@ -38,29 +38,31 @@ function ExerciseTable({ exercises }) {
   </div>
 }
 
-export function TrainingPlansView({ user }) {
+export function TrainingPlansView({ user, completedOnly = false }) {
   const cache = useMemberCache()
   const plansRead = useMemberResource('training-plans', async () => {
     const member = await cache.load('member-profile', getMyMemberProfile)
     return getMemberTrainingPlans(member?.memberId)
   }, { initialData: [] })
-  const plans = [...plansRead.data].sort((a, b) => (Date.parse(b.startDate) || 0) - (Date.parse(a.startDate) || 0))
+  const plans = plansRead.data
+    .filter(plan => (String(plan.status || '').trim().toLowerCase() === 'completed') === completedOnly)
+    .sort((a, b) => (Date.parse(b.startDate) || 0) - (Date.parse(a.startDate) || 0) || Number(b.id) - Number(a.id))
   const { loading, reload } = plansRead
   const error = !plansRead.hasData && plansRead.error ? getTrainingPlanErrorMessage(plansRead.error) : ''
 
   return <div className="member-view-stack training-plans-view">
     <div className="member-section-heading">
-      <div><h2>Lộ trình tập luyện cá nhân</h2><p className="training-plans-muted">Mục tiêu và bài tập do huấn luyện viên thiết kế cho bạn.</p></div>
+      <div><h2>{completedOnly ? 'Lịch sử giáo án đã hoàn thành' : 'Lộ trình tập luyện cá nhân'}</h2><p className="training-plans-muted">{completedOnly ? 'Xem lại bài tập và nhận xét trong các giáo án đã được huấn luyện viên xác nhận hoàn thành.' : 'Mục tiêu và bài tập do huấn luyện viên thiết kế cho bạn.'}</p></div>
       <button className="training-plans-button" type="button" disabled={loading} onClick={reload}><RefreshCw size={16} /> Làm mới giáo án</button>
     </div>
 
-    <section aria-label="Giáo án tập luyện cá nhân" aria-busy={loading}>
+    <section aria-label={completedOnly ? 'Lịch sử giáo án đã hoàn thành' : 'Giáo án tập luyện cá nhân'} aria-busy={loading}>
       {loading ? <div className="training-plans-state" role="status"><LoaderCircle className="member-spin" size={28} /><strong>Đang tải giáo án tập luyện...</strong></div>
         : error ? <div className="training-plans-state training-plans-error" role="alert"><AlertCircle size={30} /><h3>Không thể tải giáo án</h3><p>{error}</p><button className="training-plans-button" type="button" onClick={reload}><RefreshCw size={16} /> Thử lại</button></div>
-          : plans.length === 0 ? <div className="training-plans-state" role="status"><BookOpen size={38} /><h3>Chưa có giáo án tập luyện cá nhân</h3><p>Giáo án sẽ xuất hiện tại đây khi huấn luyện viên thiết kế kế hoạch tập luyện cho bạn.</p></div>
+          : plans.length === 0 ? <div className="training-plans-state" role="status"><BookOpen size={38} /><h3>{completedOnly ? 'Chưa có giáo án đã hoàn thành' : 'Chưa có giáo án tập luyện cá nhân'}</h3><p>{completedOnly ? 'Giáo án sẽ được lưu tại đây sau khi huấn luyện viên đánh dấu hoàn thành.' : 'Giáo án sẽ xuất hiện tại đây khi huấn luyện viên thiết kế kế hoạch tập luyện cho bạn.'}</p></div>
             : <>
               <div className="training-plans-list-heading"><p className="training-plans-count">{plans.length} giáo án</p><span>Ngày bắt đầu mới nhất trước</span></div>
-              <MemberList items={plans} label="Giáo án tập luyện" className="training-plans-list" showOrdinal={false} layout="flow" hideSinglePagePagination>{plan => {
+              <MemberList items={plans} label={completedOnly ? 'Giáo án đã hoàn thành' : 'Giáo án tập luyện'} resetKey={String(completedOnly)} className="training-plans-list" showOrdinal={false} layout="flow" hideSinglePagePagination>{plan => {
                 const exercises = Array.isArray(plan.exercises) ? plan.exercises : []
                 return <article className="training-plans-card" key={plan.id} aria-labelledby={`training-plan-${plan.id}`}>
                   <header className="training-plans-card-header">

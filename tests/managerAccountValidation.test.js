@@ -176,3 +176,52 @@ test('valid forms still preserve duplicate-email and other backend failures', as
   await assert.rejects(service.createManagerMember(member), /Email already registered/)
   await assert.rejects(service.createManagerStaff(staff), /Email already registered/)
 })
+
+test('member registration checks current member and staff contacts, including normalized inactive accounts', async t => {
+  t.mock.method(Date, 'now', () => now)
+  let posts = 0
+  api.defaults.adapter = async config => {
+    assert.equal(config.method, 'get')
+    const data = config.url === '/users/staff'
+      ? [{ email: 'other@example.com', phoneNumber: '+84 (912) 345-678', isActive: false }]
+      : [{ email: ' ANH@FPT.EDU.VN ', phone: '0900000000', isActive: false }]
+    if (config.method === 'post') posts++
+    return { config, status: 200, headers: {}, data: { success: true, data } }
+  }
+  await assert.rejects(service.createManagerMember(member), error => {
+    assert.deepEqual(Object.keys(error.fieldErrors), ['email', 'phone'])
+    return true
+  })
+  assert.equal(posts, 0)
+})
+
+test('queued member registrations reread accounts and reject reused contacts after a successful creation', async t => {
+  t.mock.method(Date, 'now', () => now)
+  const members = [], posts = []
+  api.defaults.adapter = async config => {
+    let data = config.url === '/members' ? [...members] : []
+    if (config.method === 'post') {
+      const values = JSON.parse(config.data)
+      posts.push(values)
+      members.push({ ...values, memberId: 1 })
+      data = members[0]
+    }
+    return { config, status: 200, headers: {}, data: { success: true, data } }
+  }
+  const results = await Promise.allSettled([service.createManagerMember(member), service.createManagerMember(member)])
+  assert.equal(results[0].status, 'fulfilled')
+  assert.equal(results[1].status, 'rejected')
+  assert.deepEqual(Object.keys(results[1].reason.fieldErrors), ['email', 'phone'])
+  assert.equal(posts.length, 1)
+})
+
+test('member registration fails closed on unreadable or malformed contact lists', async t => {
+  t.mock.method(Date, 'now', () => now)
+  for (const body of [{ success: false, message: 'Không thể tải danh sách tài khoản.' }, { success: true, data: { items: [] } }]) {
+    api.defaults.adapter = async config => {
+      assert.equal(config.method, 'get')
+      return { config, status: 200, headers: {}, data: body }
+    }
+    await assert.rejects(service.createManagerMember(member), /Không thể tải|Chưa tải đủ/)
+  }
+})

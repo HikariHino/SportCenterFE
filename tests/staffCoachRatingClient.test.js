@@ -45,7 +45,12 @@ before(async () => {
       if (failure) throw new Error('offline')
       const id = Number(config.url.split('/')[2])
       const average = reviewRatings?.[0] ?? (id === 2 ? 3.5 : 4.75)
-      data = { coachId: id, items: [], total: reviewRatings?.length === 0 ? 0 : 40, page: config.params.page,
+      const items = reviewRatings?.length === 0 ? [] : Array.from({ length: 40 }, (_, i) => ({
+        id: i + 1, coachId: id, memberId: i + 10, memberName: `Hội viên ${i + 1}`, rating: 5,
+        comment: `Nhận xét về coach #${id}`, createdAt: '2026-11-24T01:00:00Z',
+      }))
+      const { page, pageSize } = config.params
+      data = { coachId: id, items: items.slice((page - 1) * pageSize, page * pageSize), total: reviewRatings?.length === 0 ? 0 : 40, page,
         averageRating: average, reviewCount: reviewRatings?.length === 0 ? 0 : 40 }
     }
     return { data: { success: true, data }, status: 200, headers: {}, config }
@@ -71,7 +76,7 @@ async function screen(run) {
 const click = selector => act(async () => { const node = document.querySelector(selector); assert.ok(node); node.click() })
 const box = () => document.querySelector('.staff-coach-rating')
 
-test('staff profile displays coach birth date, direct coach score and session quality from their respective sources', () => screen(async () => {
+test('staff profile hides coach birth date and displays direct coach score and session quality from their respective sources', () => screen(async () => {
   assert.equal(requests.filter(item => item.url.endsWith('/reviews')).length, 0)
   await click('[aria-label="Xem hồ sơ Coach An"]')
   assert.match(box().textContent, /4,75\/5 sao/)
@@ -79,14 +84,15 @@ test('staff profile displays coach birth date, direct coach score and session qu
   const read = requests.find(item => item.url.startsWith('/coaches/') && item.url.endsWith('/reviews'))
   assert.equal(read.url, '/coaches/1/reviews')
   assert.deepEqual(read.params, { page: 1, pageSize: 1 })
-  assert.match(document.querySelector('.staff-coach-birthdate').textContent, /20\/05\/1990/)
+  assert.equal(document.querySelector('.staff-coach-birthdate'), null)
+  assert.doesNotMatch(document.querySelector('.staff-detail-grid').textContent, /Ngày sinh|20\/05\/1990/)
   assert.match(document.querySelector('.staff-session-quality').textContent, /3\/5 sao/)
   assert.match(document.querySelector('.staff-session-quality').textContent, /3 lượt đánh giá buổi học/)
   assert.equal(requests.find(item => item.url === '/class-sessions').params.coachId, 1)
   await click('[aria-label="Đóng hồ sơ nhân sự"]')
   await click('[aria-label="Xem hồ sơ Coach Bình"]')
   assert.match(box().textContent, /3,5\/5 sao/)
-  assert.match(document.querySelector('.staff-coach-birthdate').textContent, /Chưa cập nhật/)
+  assert.equal(document.querySelector('.staff-coach-birthdate'), null)
   await click('[aria-label="Đóng hồ sơ nhân sự"]')
   const before = requests.length
   await click('[aria-label="Xem hồ sơ Lễ tân"]')
@@ -124,9 +130,52 @@ test('errors and malformed totals do not masquerade as an unrated coach and allo
   assert.match(box().textContent, /Chưa tải được điểm đánh giá/)
   assert.doesNotMatch(box().textContent, /Chưa có đánh giá/)
   failure = false; reviewRatings = [8, 3, 1]
-  await click('.staff-coach-rating button')
+  await click('.staff-coach-rating .staff-btn-secondary')
   assert.match(box().textContent, /Chưa tải được điểm đánh giá/)
   reviewRatings = null
-  await click('.staff-coach-rating button')
+  await click('.staff-coach-rating .staff-btn-secondary')
   assert.match(box().textContent, /4,75\/5 sao/)
+}))
+
+test('coach reviews replace the profile dialog and return to the same staff member', () => screen(async () => {
+  await click('[aria-label="Xem hồ sơ Coach An"]')
+  const before = requests.length
+  await click('.staff-coach-reviews-toggle')
+  assert.equal(document.querySelectorAll('.staff-modal').length, 1)
+  assert.equal(document.querySelector('[role="dialog"]').getAttribute('aria-label'), 'Đánh giá coach từ hội viên')
+  assert.equal(document.querySelector('.staff-detail-grid'), null)
+  const back = document.querySelector('.staff-reviews-back')
+  const body = document.querySelector('.staff-modal-body')
+  assert.equal(body.firstElementChild, back, 'back action appears above the review list')
+  assert.match(back.textContent, /Trở về hồ sơ nhân sự/)
+  assert.match(body.textContent, /Hội viên 1/)
+  assert.match(body.textContent, /Nhận xét về coach #1/)
+  assert.equal(document.querySelectorAll('.coach-reviews-item').length, 10)
+  await click('[aria-label="Trang sau: Đánh giá coach"]')
+  assert.match(body.textContent, /Hội viên 11/)
+  assert.ok(requests.slice(before).every(request => request.url === '/coaches/1/reviews'))
+  await click('.staff-reviews-back')
+  assert.match(document.querySelector('.staff-modal-header h3').textContent, /Hồ sơ nhân sự #3/)
+  assert.match(document.querySelector('.staff-detail-grid').textContent, /Coach An/)
+  assert.equal(document.querySelector('.coach-reviews-details'), null)
+  await click('.staff-coach-reviews-toggle')
+  await click('[aria-label="Đóng đánh giá coach"]')
+  assert.equal(document.querySelector('.staff-modal'), null)
+  await click('[aria-label="Xem hồ sơ Coach Bình"]')
+  assert.match(document.querySelector('.staff-modal-header h3').textContent, /Hồ sơ nhân sự #8/)
+  await click('.staff-coach-reviews-toggle')
+  assert.match(document.querySelector('.coach-reviews-details').textContent, /Nhận xét về coach #2/)
+}))
+
+test('coach reviews dialog supports retry and an empty list while keeping the back action', () => screen(async () => {
+  await click('[aria-label="Xem hồ sơ Coach An"]')
+  failure = true
+  await click('.staff-coach-reviews-toggle')
+  assert.ok(document.querySelector('.coach-reviews-details [role="alert"]'))
+  assert.ok(document.querySelector('.staff-reviews-back'))
+  failure = false; reviewRatings = []
+  await act(async () => [...document.querySelectorAll('.coach-reviews-details button')].find(node => node.textContent === 'Thử lại').click())
+  assert.match(document.querySelector('.coach-reviews-details').textContent, /Chưa có nhận xét của hội viên/)
+  await click('.staff-reviews-back')
+  assert.match(box().textContent, /Chưa có đánh giá/)
 }))
