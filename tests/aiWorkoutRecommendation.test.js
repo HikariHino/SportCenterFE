@@ -5,15 +5,15 @@ import { applyExercisesPerSession, buildCoachWorkoutGoalContext, buildWorkoutGoa
 test('Coach freeform requests preserve the prompt, selected goal, both dates and sport within the backend limit', () => {
   const input = { prompt: '  Cải thiện sức bền, ưu tiên kỹ thuật  ', goal: 'Tăng sức bền', startDate: '2026-11-18', endDate: '2026-12-16', sportName: 'Tennis', exerciseCatalog: [{ exerciseName: 'Squat (Gánh tạ đùi)' }] }
   const context = buildCoachWorkoutGoalContext(input)
-  assert.ok(context.includes('Mục tiêu: Tăng sức bền'))
+  assert.equal(context.split('.')[0], 'Tăng sức bền')
   for (const value of [input.prompt.trim(), input.startDate, input.endDate, input.sportName]) assert.ok(context.includes(value), value)
   assert.ok(context.includes('Squat'))
   assert.ok(context.length <= 1000)
   assert.equal(COACH_AI_PROMPT_MAX_LENGTH, 400)
   const maximum = { ...input, prompt: 'a'.repeat(400) }
   const payload = buildWorkoutRecommendationPayload({ ...maximum, memberId: 4, level: 'Beginner', daysPerWeek: 3 })
-  assert.ok(payload.goal.startsWith(maximum.prompt))
-  assert.ok(payload.goal.includes('Mục tiêu: Tăng sức bền'))
+  assert.ok(payload.goal.includes(maximum.prompt))
+  assert.equal(payload.goal.split('.')[0], 'Tăng sức bền')
   assert.ok(payload.goal.includes('2026-11-18'))
   assert.ok(payload.goal.includes('2026-12-16'))
   assert.ok(payload.goal.length > 400 && payload.goal.length <= 1000)
@@ -22,8 +22,25 @@ test('Coach freeform requests preserve the prompt, selected goal, both dates and
 
 test('Coach prompts reject blank input, missing or impossible dates and reversed dates before an AI request', () => {
   const input = { prompt: 'Tăng sức bền', goal: 'Tăng sức bền', startDate: '2026-11-18', endDate: '2026-12-16', sportName: 'Tennis' }
-  for (const invalid of [{ prompt: '  ' }, { goal: '' }, { startDate: '' }, { endDate: '' }, { endDate: '2026-02-30' }, { endDate: '2026-11-17' }]) {
+  for (const invalid of [{ prompt: '  ' }, { goal: '' }, { goal: 'Unknown' }, { startDate: '' }, { endDate: '' }, { endDate: '2026-02-30' }, { endDate: '2026-11-17' }]) {
     assert.throws(() => buildCoachWorkoutGoalContext({ ...input, ...invalid }))
+  }
+})
+
+test('every Coach goal remains recognizable by BE regardless of prompt punctuation or a different requested focus', () => {
+  const goals = [['WeightLoss', 'Giảm cân'], ['MuscleGain', 'Tăng cơ'], ['Endurance', 'Tăng sức bền'],
+    ['Flexibility', 'Cải thiện độ dẻo'], ['GeneralFitness', 'Thể lực tổng quát']]
+  for (const [code, label] of goals) {
+    for (const goal of [code, label, ` ${label.toUpperCase()} `, label.normalize('NFD')]) {
+      for (const prompt of ['Tăng sức bền', 'Tăng sức bền. Ưu tiên nhẹ nhàng.', 'Yoga\nCải thiện kỹ thuật']) {
+        const payload = buildWorkoutRecommendationPayload({ memberId: 7, goal, prompt, level: 'Beginner', daysPerWeek: 3,
+          startDate: '2026-11-25', endDate: '2026-12-23', sportName: 'Yoga' })
+        const separator = payload.goal.indexOf('.')
+        assert.equal(payload.goal.slice(0, separator), label)
+        const requirements = payload.goal.slice(separator + 1)
+        for (const part of [prompt, '2026-11-25', '2026-12-23', 'Yoga']) assert.ok(requirements.includes(part), part)
+      }
+    }
   }
 })
 

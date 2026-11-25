@@ -40,6 +40,7 @@ before(async () => {
       throw Object.assign(new Error('Conflict'), { response: { status: 409, data: { code: 'DUPLICATE_COMPLETED_PLAN', message: duplicate.message, matchedPlans: duplicate.matchedPlans } } })
     }
     if (config.url === '/ai/workout-recommendations') {
+      assert.ok(['Giảm cân', 'Tăng cơ', 'Tăng sức bền', 'Cải thiện độ dẻo', 'Thể lực tổng quát'].includes(body.goal.split('.')[0]), 'BE must recognize the selected preset before the Coach requirements')
       if (failAi) throw new Error('AI đang bận')
       if (holdAi) await new Promise(resolve => { pendingAi = resolve })
       return response({ ...aiAnswer, level: body.level, daysPerWeek: body.daysPerWeek })
@@ -58,13 +59,13 @@ after(async () => {
   }
 })
 
-async function screen(run) {
+async function screen(run, selectedStudent = student) {
   requests = []; failAi = false; holdAi = false; pendingAi = null; aiAnswer = recommendation
   duplicateResult = { isDuplicate: false, matchedPlans: [] }; checkFailure = false; creationConflict = false
   const container = document.body.appendChild(document.createElement('div'))
   const root = createRoot(container)
   try {
-    await act(async () => root.render(h(Dialog, { student, onClose() {}, onCreated() {} })))
+    await act(async () => root.render(h(Dialog, { student: selectedStudent, onClose() {}, onCreated() {} })))
     await run(container)
   } finally {
     if (pendingAi) await act(async () => pendingAi())
@@ -122,7 +123,8 @@ test('AI generation sends the chosen inputs and places tagged exercises directly
   assert.equal(requests[0].url, '/ai/workout-recommendations')
   assert.equal(requests[0].body.level, 'Advanced')
   assert.equal(requests[0].body.daysPerWeek, 7)
-  for (const text of ['Tăng sức bền và cải thiện kỹ thuật', 'Mục tiêu: Tăng cơ', '2026-11-18', '2026-12-16', 'Tennis']) assert.ok(requests[0].body.goal.includes(text))
+  assert.equal(requests[0].body.goal.split('.')[0], 'Tăng cơ')
+  for (const text of ['Tăng sức bền và cải thiện kỹ thuật', '2026-11-18', '2026-12-16', 'Tennis']) assert.ok(requests[0].body.goal.includes(text))
   assert.deepEqual(Object.keys(requests[0].body).sort(), ['daysPerWeek', 'goal', 'level', 'memberId'])
   assert.ok(requests[0].body.goal.length <= 1000)
   assert.equal(container.querySelector('.coach-plan-ai-result'), null)
@@ -141,6 +143,20 @@ test('AI generation sends the chosen inputs and places tagged exercises directly
   assert.equal(new Date(saved.body.endDate).toLocaleDateString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }), '2026-12-16')
   assert.equal(saved.body.goal, 'MuscleGain')
 }))
+
+test('the short endurance prompt for a Yoga member is sent as requirements under the selected preset', () => screen(async container => {
+  await click('Tạo bài tập bằng AI')
+  await change(container.querySelector('textarea'), 'Tăng sức bền')
+  await click('Tạo'); await finishProgress()
+  assert.equal(requests.length, 1)
+  const payload = requests[0].body
+  assert.equal(payload.memberId, 7)
+  assert.equal(payload.goal.split('.')[0], 'Thể lực tổng quát')
+  assert.match(payload.goal, /Yêu cầu của Coach: Tăng sức bền/)
+  assert.match(payload.goal, /Bộ môn: Yoga/)
+  assert.equal(container.querySelector('.coach-plan-form-error'), null)
+  assert.equal(container.querySelectorAll('.coach-plan-exercise-ai-tag').length, 7)
+}, { ...student, memberId: 7, sportName: 'Yoga' }))
 
 const submitPlan = () => act(async () => {
   const form = document.querySelector('.coach-plan-create-dialog form')

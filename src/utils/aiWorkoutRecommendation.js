@@ -1,3 +1,5 @@
+import { TRAINING_GOALS } from './trainingPlanValidation.js'
+
 const allowedLevels = new Set(['Beginner', 'Intermediate', 'Advanced'])
 export const COACH_AI_PROMPT_MAX_LENGTH = 400
 const COACH_WORKOUT_CONTEXT_MAX_LENGTH = 1000
@@ -7,26 +9,28 @@ const promptCatalogName = value => String(value || '')
   .replace(/\s+/g, ' ')
   .trim()
 
-const coachWorkoutContext = ({ goal, startDate, endDate, sportName }) =>
-  ` Mục tiêu: ${String(goal || '').trim()}. Thời gian: ${startDate} – ${endDate}.${String(sportName || '').trim() ? ` Bộ môn: ${String(sportName).trim()}.` : ''}`
+const coachWorkoutContext = ({ startDate, endDate, sportName }) =>
+  ` Thời gian: ${startDate} – ${endDate}.${String(sportName || '').trim() ? ` Bộ môn: ${String(sportName).trim()}.` : ''}`
 
 export function buildCoachWorkoutGoalContext({ prompt, goal, startDate, endDate, sportName, exerciseCatalog }) {
   const normalizedPrompt = typeof prompt === 'string' ? prompt.trim() : ''
-  if (typeof goal !== 'string' || !goal.trim()) throw new Error('Vui lòng chọn mục tiêu trước khi tạo bằng AI.')
+  const goalKey = typeof goal === 'string' ? goal.trim().normalize('NFC').toLowerCase() : ''
+  const selectedGoal = TRAINING_GOALS.find(options => options.some(value => value.toLowerCase() === goalKey))?.[1]
+  if (!selectedGoal) throw new Error('Vui lòng chọn mục tiêu hợp lệ trước khi tạo bằng AI.')
   for (const value of [startDate, endDate]) {
     const stamp = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? Date.parse(`${value}T00:00:00Z`) : NaN
     if (!Number.isFinite(stamp) || new Date(stamp).toISOString().slice(0, 10) !== value) throw new Error('Vui lòng chọn ngày bắt đầu và ngày kết thúc hợp lệ trước khi tạo bằng AI.')
   }
   if (endDate < startDate) throw new Error('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.')
   if (!normalizedPrompt || normalizedPrompt.length > COACH_AI_PROMPT_MAX_LENGTH) throw new Error(`Yêu cầu AI phải có từ 1 đến ${COACH_AI_PROMPT_MAX_LENGTH} ký tự.`)
-  let context = normalizedPrompt + coachWorkoutContext({ goal, startDate, endDate, sportName })
+  // BE recognizes a preset from the first sentence and treats the rest as requirements.
+  let context = `${selectedGoal}. Yêu cầu của Coach: ${normalizedPrompt}.` + coachWorkoutContext({ startDate, endDate, sportName })
   if (context.length > COACH_WORKOUT_CONTEXT_MAX_LENGTH) throw new Error('Yêu cầu AI cùng mục tiêu, thời gian và bộ môn không được vượt quá 1000 ký tự.')
   const names = [...new Set((Array.isArray(exerciseCatalog) ? exerciseCatalog : []).map(item => promptCatalogName(item?.exerciseName)).filter(Boolean))]
   for (const name of names) {
     const separator = context.includes('Chỉ dùng tên bài trong kho:') ? ', ' : ' Chỉ dùng tên bài trong kho: '
     const candidate = context + separator + name
-    // Keep short requests compatible with the current 200-character API.
-    // A full 400-character prompt needs the backend expansion documented in docs.
+    // Catalog hints are optional; keep the full prompt, goal and dates intact.
     if (candidate.length <= 200) context = candidate
   }
   return context
