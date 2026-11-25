@@ -37,6 +37,17 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  const refreshUserProfile = profile => {
+    const current = getSavedUser()
+    if (!current || String(current.userId ?? current.id) !== String(profile?.userId)) return
+    const next = { ...current, fullName: profile.fullName, name: profile.fullName, email: profile.email }
+    try {
+      sessionStorage.setItem('user', JSON.stringify(next))
+      if (localStorage.getItem('loginSessionId') === sessionStorage.getItem('loginSessionId')) localStorage.setItem('user', JSON.stringify(next))
+    } catch { /* The current view can still reflect the confirmed profile. */ }
+    setUser(next)
+  }
+
   const logout = async () => {
     const refreshTokenKey = getRefreshTokenKey()
     // End all tabs now, even if the server is slow or offline. A late logout
@@ -50,7 +61,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, endSession }}>
+    <AuthContext.Provider value={{ user, login, logout, endSession, refreshUserProfile }}>
       {children}
     </AuthContext.Provider>
   )
