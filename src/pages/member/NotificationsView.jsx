@@ -1,3 +1,4 @@
+import { formatNotificationContent } from '../../utils/notificationContent'
 import { MemberList } from './MemberPagination'
 import { useEffect, useRef, useState } from 'react'
 import { useMemberResource } from '../../contexts/MemberWorkspaceContext'
@@ -116,7 +117,7 @@ export function NotificationsView({ refreshKey = 0, onNotificationsChange, onVie
                 <span className="member-notifications-icon">{isSessionUpdateNotification(item) ? <CalendarDays size={16} /> : <Bell size={16} />}</span>
                 <div className="member-notifications-content">
                   <h3 id={`member-notification-${item.id}`}>{item.title || 'Thông báo từ trung tâm'}</h3>
-                  <p>{item.content}</p>
+                  <p>{formatNotificationContent(item.content)}</p>
                   <div className="member-notifications-meta"><span>{formatDate(item.sentAt)}</span><span className="member-notifications-badge">{item.isRead ? 'Đã đọc' : 'Chưa đọc'}</span></div>
                   {isSessionUpdateNotification(item) && <details className="member-notifications-schedule-info"><summary>Thông tin về đăng ký</summary><p>Vui lòng kiểm tra ngày, giờ và HLV trong lịch đã đặt (giờ Việt Nam). Đăng ký của bạn được giữ nguyên. Nếu không thể tham gia, bạn có thể tự hủy đăng ký theo hạn hủy của buổi học.</p></details>}
                 </div>

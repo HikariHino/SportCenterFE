@@ -1,3 +1,4 @@
+import { formatNotificationContent } from '../../utils/notificationContent'
 import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, ArrowRight, BellRing, CalendarDays, CheckCircle2, Clock3, Info, LoaderCircle, MapPin, RefreshCw, User, X } from 'lucide-react'
 import { confirmSessionReview, getPendingSessionReviews } from '../../services/memberScheduleReviewService'
@@ -126,7 +127,7 @@ export default function MemberScheduleReviewGate({ children, refreshKey, reopenR
             </> : <p className="member-schedule-review-missing">Buổi học hiện không có trong lịch đã đăng ký. Bạn có thể xem nội dung từ trung tâm bên dưới.</p>}
             <details className="member-schedule-review-messages" open={session ? undefined : true}>
               <summary>Nội dung thông báo từ trung tâm{review.notifications.length > 1 ? ` (${review.notifications.length})` : ''}</summary>
-              {review.notifications.map(item => <p key={item.id}>{item.content}</p>)}
+              {review.notifications.map(item => <p key={item.id}>{formatNotificationContent(item.content)}</p>)}
             </details>
           </section>
           <aside className="member-schedule-review-note"><Info size={18} /><div><strong>Chủ động sắp xếp lịch tập</strong><p>Nếu lịch mới không phù hợp, bạn có thể hủy tại mục Lớp học & Đặt lịch buổi học, trong thời hạn cho phép.</p>{deadline && <p>Hạn hủy: <strong>{formatClassDateTime(deadline)}</strong></p>}</div></aside>

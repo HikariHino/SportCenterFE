@@ -1,3 +1,4 @@
+import { formatNotificationContent } from '../../utils/notificationContent'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../../components/ThemeToggle'
@@ -448,7 +449,7 @@ function MemberWorkspace() {
                           className={item.isRead ? '' : 'unread'}
                         >
                             <h4>{item.title}</h4>
-                            <p>{item.content}</p>
+                            <p>{formatNotificationContent(item.content)}</p>
                             {isSessionUpdateNotification(item) && <div className="member-session-update-notice"><p>Kiểm tra lịch mới và HLV. Đăng ký được giữ nguyên; bạn có thể tự hủy theo hạn hủy nếu không tham gia được.</p><button type="button" onClick={() => viewUpdatedSchedule(item)}>Xem lịch đã đặt</button></div>}
                             {!item.isRead && !isSessionUpdateNotification(item) && (
                               <button
