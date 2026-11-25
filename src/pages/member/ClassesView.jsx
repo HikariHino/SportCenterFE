@@ -79,7 +79,7 @@ export function ActionDialog({ action, busy, error, onClose, onSubmit, hasActive
       <h3>{action.item.className || `Buổi học #${action.item.sessionId || action.item.id}`}</h3>
       {action.type === 'bookClass' ? <>
         <p>Xác nhận đăng ký {bulkResult?.remaining.length || action.item.sessions.length} buổi bạn đã chọn bên dưới. Mỗi buổi được kiểm tra lại trước khi đăng ký.</p>
-        <MemberList items={action.item.sessions.filter(item => !bulkResult?.remaining.length || bulkResult.remaining.includes(String(item.id)))} label="Buổi học chờ xác nhận" as="ul" className="member-class-booking-preview" compact>{item => <li key={item.id}><strong>Buổi #{item.id}</strong><span>{formatDate(item.startsAt)} – {formatDate(item.endsAt)}</span></li>}</MemberList>
+        <ul className="member-class-booking-preview" aria-label="Buổi học chờ xác nhận">{pendingSessions.map(item => <li key={item.id}><strong>Buổi #{item.id}</strong><span>{formatDate(item.startsAt)} – {formatDate(item.endsAt)}</span></li>)}</ul>
         {bulkResult && <p className="member-classes-notice" role="status">Đã đăng ký {bulkResult.registered.length} buổi; {bulkResult.existing.length} buổi đã có sẵn; bỏ qua {bulkResult.skipped.length} buổi.</p>}
         {bulkResult?.skipped.length > 0 && <MemberList items={bulkResult.skipped} label="Buổi học bị bỏ qua" as="ul" compact>{item => <li key={item.id}>Buổi #{item.id}: {item.reason}</li>}</MemberList>}
         {bulkProgress && <p role="status">Đang xử lý {bulkProgress.completed}/{bulkProgress.total} buổi...</p>}
