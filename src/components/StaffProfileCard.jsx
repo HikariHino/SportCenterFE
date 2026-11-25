@@ -4,6 +4,7 @@ import '../style/StaffProfileCard.css'
 const roles = {
   Coach: { label: 'Huấn luyện viên', badge: 'Huấn luyện viên Olympus', fallback: 'HLV' },
   Receptionist: { label: 'Lễ tân', badge: 'Lễ tân Olympus', fallback: 'LT' },
+  Manager: { label: 'Quản lý trung tâm', badge: 'Quản lý Olympus', fallback: 'QL' },
 }
 
 function accountStatus(profile) {

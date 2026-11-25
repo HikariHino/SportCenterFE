@@ -33,6 +33,8 @@ import { getManagerStaffValidationErrors, getManagerStaffFieldErrors, MANAGER_AC
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from "../../utils/passwordValidation"
 import "../../style/CenterManager/StaffManagement.css"
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from "../../utils/fullNameValidation"
+import { PROFILE_BIRTH_DATE_MIN, profileBirthDateLimit } from '../../utils/profileValidation'
+import { formatStaffBirthDate } from '../../services/staffProfileService'
 
 const ROLE_DESCRIPTIONS = {
   Coach: "Quản lý lớp học, điểm danh và học viên.",
@@ -107,6 +109,7 @@ export default function StaffManagement() {
     email: "",
     password: "",
     phone: "",
+    dateOfBirth: '',
     role: "Coach",
   })
   const [createSubmitting, setCreateSubmitting] = useState(false)
@@ -183,6 +186,7 @@ export default function StaffManagement() {
       email: "",
       password: "",
       phone: "",
+      dateOfBirth: '',
       role: "Coach",
     })
     setCreateError("")
@@ -224,6 +228,12 @@ export default function StaffManagement() {
       setShowCreateModal(false)
       fetchStaff()
     } catch (err) {
+      if (err.createdStaff) {
+        setShowCreateModal(false)
+        await fetchStaff()
+        setError(err.message)
+        return
+      }
       const fields = getManagerStaffFieldErrors(err)
       if (Object.keys(fields).length) {
         setCreateFieldErrors(fields)
@@ -675,6 +685,12 @@ export default function StaffManagement() {
                   {createFieldError("role")}
                   <small>{ROLE_DESCRIPTIONS[createForm.role]}</small>
                 </div>
+                <div className="staff-form-group">
+                  <label htmlFor="staff-birthdate">Ngày sinh</label>
+                  <input id="staff-birthdate" name="dateOfBirth" type="date" min={PROFILE_BIRTH_DATE_MIN} max={profileBirthDateLimit()} value={createForm.dateOfBirth} {...createFieldProps('dateOfBirth')} onChange={event => changeCreateField('dateOfBirth', event.target.value)} />
+                  <small>Không bắt buộc. Từ 01/01/1950, đủ 16 tuổi trở lên.</small>
+                  {createFieldError('dateOfBirth')}
+                </div>
               </div>
 
               <div className="staff-modal-footer">
@@ -905,6 +921,7 @@ export default function StaffManagement() {
                     </span>
                   </div>
                 </div>
+                <div className="staff-detail-item"><small>Ngày sinh</small><strong>{formatStaffBirthDate(selectedStaffForDetail)}</strong></div>
 
                 <div className="staff-detail-item">
                   <small>Trạng thái</small>

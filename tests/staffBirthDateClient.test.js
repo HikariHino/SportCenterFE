@@ -23,6 +23,8 @@ before(async () => {
     roles[role] = { View: (await server.ssrLoadModule(`/src/pages/${page}/ProfileView.jsx`))[view],
       Provider: (await server.ssrLoadModule(`/src/contexts/${role}WorkspaceContext.jsx`))[`${role}WorkspaceProvider`] }
   }
+  roles.Manager = { View: (await server.ssrLoadModule('/src/pages/CenterManager/ProfileView.jsx')).default,
+    Provider: (await server.ssrLoadModule('/src/contexts/ManagerWorkspaceContext.jsx')).ManagerWorkspaceProvider }
   api = (await server.ssrLoadModule('/src/services/api.js')).default
   api.defaults.adapter = async config => {
     state.calls.push({ method: config.method, url: config.url, data: config.data && JSON.parse(config.data) })
@@ -70,7 +72,7 @@ const changeBirthday = value => act(async () => {
 const submit = () => act(async () => document.querySelector('form[id]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
 const writes = () => state.calls.filter(call => call.method === 'put')
 
-for (const role of ['Coach', 'Receptionist']) {
+for (const role of ['Coach', 'Receptionist', 'Manager']) {
   test(`${role} shows, edits and verifies a persisted birthday before reporting success`, () => screen(role, async container => {
     assert.match(container.textContent, /Ngày sinh/)
     await clickText('Chỉnh sửa')
@@ -80,7 +82,8 @@ for (const role of ['Coach', 'Receptionist']) {
     assert.equal(writes()[0].data.dateOfBirth, '2001-03-01T00:00:00.000Z')
     assert.match(container.textContent, /01\/03\/2001/)
     assert.equal(container.querySelector('[name=dateOfBirth]'), null)
-    assert.equal(state.notices.length, 1)
+    if (role === 'Manager') assert.match(container.querySelector('.manager-profile-notice').textContent, /Đã cập nhật/)
+    else assert.equal(state.notices.length, 1)
     assert.equal(state.calls.at(-1).method, 'get')
   }, '2000-02-29T00:00:00Z'))
 
@@ -110,3 +113,39 @@ for (const role of ['Coach', 'Receptionist']) {
     assert.equal(state.profile.dateOfBirth, null)
   }))
 }
+
+test('Manager shows email verification and password editing only in edit mode and refreshes the saved display name', () => screen('Manager', async container => {
+  assert.equal(container.querySelector('[type=email]'), null)
+  await clickText('Chỉnh sửa')
+  assert.ok(container.querySelector('.account-email-change [type=email]'))
+  assert.ok(container.querySelector('[name=currentPassword]'))
+  const input = container.querySelector('[name=fullName]')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, 'Nguyễn Quản Lý')
+    input.dispatchEvent(new window.Event('input', { bubbles: true }))
+  })
+  await submit()
+  assert.equal(JSON.parse(sessionStorage.getItem('user')).fullName, 'Nguyễn Quản Lý')
+  assert.equal(container.querySelector('[type=email]'), null)
+  assert.match(container.textContent, /Nguyễn Quản Lý/)
+}))
+
+test('Manager password changes require the current password and do not store password fields in the login profile', () => screen('Manager', async container => {
+  await clickText('Chỉnh sửa')
+  const change = (name, value) => act(async () => {
+    const input = container.querySelector(`[name=${name}]`)
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value)
+    input.dispatchEvent(new window.Event('input', { bubbles: true }))
+  })
+  await change('password', 'NewPassword!')
+  await submit()
+  assert.equal(writes().length, 0)
+  assert.equal(container.querySelector('[name=currentPassword]').getAttribute('aria-invalid'), 'true')
+  await change('currentPassword', 'OldPassword!'); await submit()
+  assert.equal(writes().length, 1)
+  assert.equal(writes()[0].data.currentPassword, 'OldPassword!')
+  assert.equal(writes()[0].data.password, 'NewPassword!')
+  const saved = JSON.parse(sessionStorage.getItem('user'))
+  assert.equal(saved.password, undefined)
+  assert.equal(saved.currentPassword, undefined)
+}))

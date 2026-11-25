@@ -5,7 +5,7 @@ import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 
-let window, server, createRoot, Staff, AuthProvider, api, writes, failure, release, staffContacts, memberContacts, failContacts
+let window, server, createRoot, Staff, AuthProvider, api, writes, failure, release, staffContacts, memberContacts, failContacts, ignoreBirthday
 const descriptors = new Map()
 before(async () => {
   window = new Window({ url: 'http://localhost/manager' })
@@ -27,7 +27,11 @@ before(async () => {
     assert.equal(config.url, '/users/staff')
     writes.push(JSON.parse(config.data))
     if (failure) throw { response: { status: 409, data: failure } }
-    return new Promise(resolve => { release = () => resolve(respond({ userId: 7, ...JSON.parse(config.data) })) })
+    return new Promise(resolve => { release = () => {
+      const result = { userId: 7, ...JSON.parse(config.data) }
+      if (ignoreBirthday) delete result.dateOfBirth
+      resolve(respond(result))
+    } })
   }
   Staff = (await server.ssrLoadModule('/src/pages/CenterManager/StaffManagement.jsx')).default
   AuthProvider = (await server.ssrLoadModule('/src/contexts/AuthContext.jsx')).AuthProvider
@@ -41,7 +45,7 @@ after(async () => {
   }
 })
 async function screen(run) {
-  writes = []; failure = null; release = null; staffContacts = []; memberContacts = []; failContacts = false
+  writes = []; failure = null; release = null; staffContacts = []; memberContacts = []; failContacts = false; ignoreBirthday = false
   const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
   try {
     await act(async () => root.render(h(AuthProvider, null, h(Staff))))
@@ -64,6 +68,29 @@ async function valid() {
   await change('password', ' pass123 ')
   await change('phone', '0912345678')
 }
+
+test('staff birthday is validated before creation and sent as a calendar date', () => screen(async form => {
+  await valid()
+  await change('dateOfBirth', '2099-01-01')
+  await act(async () => submit(form))
+  assert.equal(writes.length, 0)
+  assert.equal(form.querySelector('[name=dateOfBirth]').getAttribute('aria-invalid'), 'true')
+  await change('dateOfBirth', '2000-02-29')
+  await act(async () => submit(form))
+  assert.equal(writes.length, 1)
+  assert.equal(writes[0].dateOfBirth, '2000-02-29T00:00:00.000Z')
+  await act(async () => release())
+}))
+
+test('a legacy API that ignores birthday reports the created account without inviting duplicate creation', () => screen(async form => {
+  await valid(); await change('dateOfBirth', '2000-01-01')
+  ignoreBirthday = true
+  await act(async () => submit(form))
+  await act(async () => release())
+  assert.equal(writes.length, 1)
+  assert.equal(document.querySelector('.staff-modal form'), null)
+  assert.match(document.body.textContent, /Tài khoản đã được tạo nhưng chưa xác nhận lưu ngày sinh/)
+}))
 test('empty staff form shows field errors together, focuses first error and does not call API', () => screen(async form => {
   await act(async () => submit(form))
   for (const field of ['fullName', 'email', 'password', 'phone']) {

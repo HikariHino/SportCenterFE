@@ -139,3 +139,42 @@ export async function completeTrainingPlan(planId) {
   const response = await api.put(`/TrainingPlans/${Number(planId)}/status`, null, { params: { status: 'Completed' } })
   if (response.data?.success === false) throw new Error(response.data.message || 'Không thể hoàn thành giáo án.')
 }
+
+async function readMyPlan(planId) {
+  if (!validPlanId(planId)) throw new Error('Không xác định được giáo án đã chọn.')
+  const member = await getMyMemberProfile()
+  const plans = await getMemberTrainingPlans(member?.memberId)
+  const plan = plans.find(item => String(item.id) === String(planId))
+  if (!plan) throw new Error('Không tìm thấy giáo án trong lộ trình của bạn. Vui lòng làm mới.')
+  return plan
+}
+
+export async function completeMyTrainingPlan(planId) {
+  const current = await readMyPlan(planId)
+  const status = String(current.status).trim().toLowerCase()
+  if (status === 'completed') return current
+  if (status !== 'active') throw new Error('Chỉ đánh dấu đã tập cho giáo án đang áp dụng.')
+  if (!Number.isFinite(Date.parse(current.startDate)) || Date.parse(current.startDate) > Date.now()) throw new Error('Giáo án chưa đến ngày bắt đầu.')
+  let response
+  try { response = await api.post(`/TrainingPlans/${Number(planId)}/complete`) }
+  catch (error) {
+    if ([404, 405].includes(error?.response?.status)) throw new Error('Máy chủ chưa hỗ trợ hội viên đánh dấu đã tập. Vui lòng liên hệ huấn luyện viên để xác nhận hoàn thành.')
+    throw error
+  }
+  const body = response.data
+  if (body?.success === false || Number(body?.statusCode) >= 400) throw new Error(body.message || 'Không thể đánh dấu hoàn thành giáo án.')
+  const completed = body?.data ?? body
+  if (String(completed?.id) !== String(planId) || String(completed.status).trim().toLowerCase() !== 'completed') {
+    throw new Error('Chưa xác nhận được giáo án đã hoàn thành. Vui lòng làm mới lộ trình.')
+  }
+  return completed
+}
+
+export async function requestMyTrainingPlanChange(planId, reason) {
+  if (typeof reason !== 'string' || !reason.trim() || reason.trim().length > 1000) throw new Error('Yêu cầu đổi giáo án phải có từ 1 đến 1.000 ký tự.')
+  const current = await readMyPlan(planId)
+  if (String(current.status).trim().toLowerCase() !== 'active') throw new Error('Chỉ gửi yêu cầu thay đổi giáo án đang áp dụng.')
+  const response = await api.post(`/TrainingPlans/${Number(planId)}/request-change`, { reason: reason.trim() })
+  const body = response.data
+  if (body?.success === false || Number(body?.statusCode) >= 400) throw new Error(body.message || 'Không thể gửi yêu cầu thay đổi giáo án.')
+}

@@ -75,3 +75,21 @@
   .training-plans-exercises summary { padding: 9px 12px; }
   .training-plans-table-scroll th, .training-plans-table-scroll td { padding: 9px 12px; }
 }
+
+.training-plan-repeat-notice { display:flex; align-items:flex-start; gap:10px; margin:0 18px 16px; padding:12px; border:1px solid var(--theme-gold,#bb8420); border-radius:8px; color:var(--theme-text); background:var(--theme-gold-bg,#fff8e6); }
+.training-plan-repeat-notice > svg { flex-shrink:0; margin-top:3px; }
+.training-plan-repeat-notice p { margin:5px 0 0; line-height:1.6; }
+.training-plan-card-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; padding:14px 18px; border-top:1px solid var(--theme-border); }
+.training-plan-card-actions button,.training-plan-action-dialog button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:39px; padding:8px 12px; border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text); background:var(--theme-surface); font:inherit; cursor:pointer; }
+.training-plan-card-actions button:first-child,.training-plan-action-dialog button[type='submit'] { border-color:#1557d5; color:#fff; background:#1557d5; }
+.training-plan-card-actions button:disabled,.training-plan-action-dialog button:disabled { opacity:.55; cursor:not-allowed; }
+.training-plan-action-dialog { width:min(540px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); margin:auto; padding:20px; overflow:auto; border:1px solid var(--theme-border); border-radius:14px; color:var(--theme-text); background:var(--theme-surface); }
+.training-plan-action-dialog::backdrop { background:#071327a8; backdrop-filter:blur(4px); }
+.training-plan-action-dialog form { display:grid; gap:14px; }
+.training-plan-action-dialog header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.training-plan-action-dialog h3,.training-plan-action-dialog p { margin:0; line-height:1.65; }
+.training-plan-action-dialog label { display:grid; gap:7px; font-weight:700; }
+.training-plan-action-dialog textarea { width:100%; padding:10px; resize:vertical; border:1px solid var(--theme-border); border-radius:8px; color:var(--theme-text); background:var(--theme-raised); font:inherit; }
+.training-plan-action-dialog footer { display:flex; justify-content:flex-end; gap:8px; }
+.training-plan-action-dialog .training-plan-action-error { color:var(--theme-red,#b42335); }
+.training-plan-action-notice { color:var(--theme-green,#087450); }

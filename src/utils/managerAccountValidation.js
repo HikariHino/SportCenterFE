@@ -66,6 +66,10 @@ export function getManagerStaffValidationErrors(form = {}, accounts = []) {
   const phoneError = form.phone != null && typeof form.phone !== 'string' ? MANAGER_PHONE_MESSAGE : getVietnamPhoneValidationError(form.phone, { required: true })
   if (phoneError) errors.phone = phoneError
   if (!STAFF_ASSIGNABLE_ROLES.includes(form.role)) errors.role = 'Vui lòng chọn vai trò Huấn luyện viên hoặc Lễ tân.'
+  if (form.dateOfBirth) {
+    const birthError = getRegistrationBirthDateError(form.dateOfBirth)
+    if (birthError) errors.dateOfBirth = birthError
+  }
   const emailKey = value => typeof value === 'string' ? value.trim().toLowerCase() : ''
   const phoneKey = value => typeof value === 'string' ? value.trim().replace(/[\s().-]/g, '').replace(/^\+84/, '0') : ''
   if (!errors.email && accounts.some(account => emailKey(account.email) === emailKey(form.email))) errors.email = 'Email đã được sử dụng. Vui lòng nhập email khác.'
@@ -74,7 +78,7 @@ export function getManagerStaffValidationErrors(form = {}, accounts = []) {
 }
 
 export function getManagerStaffFieldErrors(error) {
-  const fields = ['fullName', 'email', 'password', 'phone', 'role']
+  const fields = ['fullName', 'email', 'password', 'phone', 'role', 'dateOfBirth']
   const result = {}
   for (const [key, value] of Object.entries(error?.fieldErrors || error?.response?.data?.errors || {})) {
     const name = key.split('.').at(-1).toLowerCase()

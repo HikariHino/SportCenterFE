@@ -45,6 +45,7 @@ before(async () => {
     if (offline) throw new Error('offline')
     let data = []
     const url = config.url.toLowerCase()
+    if (url === '/profile') data = { userId: 1, fullName: 'Quản lý An', email: 'manager@example.com', roleName: 'Manager', status: 'Active' }
     if (url === '/reports/overview') data = { totalActiveMembers: 23, totalActiveClasses: 23, totalRevenue: 23000, currentMonthRevenue: 1000 }
     if (url === '/reports/revenue') data = Array.from({ length: 12 }, (_, index) => ({ month: index + 1, revenue: 1000 }))
     if (url === '/users/staff') data = rows(id => ({ id, fullName: `Nhân sự ${id}`, email: `staff${id}@example.com`, role: 'Coach', isActive: true }))
@@ -108,7 +109,11 @@ test('changing Manager tabs preserves their mounted views without initial reload
   for (const label of ['Nhân sự', 'Danh mục', 'Phòng tập', 'Gói thẻ', 'Chính sách', 'Báo cáo', 'Quầy lễ tân', 'Hồ sơ', 'Tổng quan']) await tab(label)
   assert.equal(document.querySelector('.staff-mgmt'), staff)
   assert.equal(document.querySelector('.room-mgmt'), roomView)
-  assert.equal(requests.length, before)
+  assert.equal(requests.length, before + 1, 'the profile loads its saved server data on the first visit')
+  assert.equal(count('/profile'), 1)
+  const loaded = requests.length
+  await tab('Hồ sơ'); await tab('Tổng quan')
+  assert.equal(requests.length, loaded)
   assert.deepEqual(errors, [])
 })
 

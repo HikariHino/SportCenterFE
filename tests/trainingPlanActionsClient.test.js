@@ -5,7 +5,7 @@ import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 
-let window, server, createRoot, CoachPlans, MemberPlans, api, plans, calls, failure, release, hold
+let window, server, createRoot, CoachPlans, MemberPlans, api, plans, calls, failure, release, hold, unsupportedMemberCompletion
 const descriptors = new Map()
 const plan = (id, status = 'Active') => ({ id, planName: `Giáo án ${id}`, status, goal: 'GeneralFitness',
   startDate: '2026-11-01', endDate: '2026-11-30', coachName: 'Coach An', exercises: [
@@ -38,7 +38,7 @@ after(async () => {
 })
 
 async function screen(run) {
-  plans = [plan(1), plan(2, 'Completed')]; calls = []; failure = ''; hold = false; release = null
+  plans = [plan(1), plan(2, 'Completed')]; calls = []; failure = ''; hold = false; release = null; unsupportedMemberCompletion = false
   api.defaults.adapter = async config => {
     calls.push(config)
     let data
@@ -48,7 +48,14 @@ async function screen(run) {
     } else {
       if (hold) await new Promise(resolve => { release = resolve })
       if (failure) return { config, data: { success: false, message: failure }, status: 200, headers: {} }
-      if (config.method === 'delete') {
+      if (config.method === 'post' && config.url === '/TrainingPlans/1/complete') {
+        if (unsupportedMemberCompletion) throw Object.assign(new Error('Not found'), { response: { status: 404 } })
+        plans = plans.map(item => item.id === 1 ? { ...item, status: 'Completed' } : item)
+        return { config, data: { success: true, data: plans.find(item => item.id === 1) }, status: 200, headers: {} }
+      } else if (config.method === 'post' && config.url === '/TrainingPlans/1/request-change') {
+        assert.ok(JSON.parse(config.data).reason.trim())
+        return { config, data: { success: true }, status: 200, headers: {} }
+      } else if (config.method === 'delete') {
         assert.equal(config.url, '/TrainingPlans/1')
         plans = plans.filter(item => item.id !== 1)
       } else {
@@ -147,4 +154,62 @@ test('empty completed history shows a clear message', () => screen(async (contai
   await render(h(MemberPlans, { completedOnly: true }))
   assert.match(container.textContent, /Chưa có giáo án đã hoàn thành/)
   assert.equal(container.querySelector('.training-plans-card'), null)
+}))
+
+test('Member completion requires confirmation, persists once and moves the plan into history', () => screen(async (container, render) => {
+  await render(h(MemberPlans))
+  await clickText(container, 'Đã tập')
+  assert.equal(writes().length, 0)
+  await act(async () => {
+    const form = container.querySelector('.training-plan-action-dialog form')
+    for (let i = 0; i < 2; i++) form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }))
+  })
+  assert.equal(writes().length, 1)
+  assert.equal(writes()[0].url, '/TrainingPlans/1/complete')
+  assert.equal(container.querySelector('.training-plans-card'), null)
+  assert.match(container.textContent, /Đã đánh dấu hoàn thành/)
+  await render(h(MemberPlans, { completedOnly: true }))
+  assert.equal(container.querySelectorAll('.training-plans-card').length, 2)
+  assert.equal(container.querySelector('.training-plan-card-actions'), null)
+}))
+
+test('Member sees the repeat warning and can send a change request without completing the plan', () => screen(async (container, render) => {
+  plans[0] = { ...plans[0], hasCompletedBefore: true, previousCompletedPlanId: 2, repeatNotice: 'Giáo án tương tự #2 đã được hoàn thành.' }
+  await render(h(MemberPlans))
+  assert.match(container.querySelector('.training-plan-repeat-notice').textContent, /đã từng hoàn thành/)
+  assert.match(container.querySelector('.training-plan-repeat-notice').textContent, /#2/)
+  await clickText(container, 'Yêu cầu đổi giáo án')
+  const input = container.querySelector('textarea')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set.call(input, '  Tôi muốn thay đổi bài tập  ')
+    input.dispatchEvent(new window.Event('input', { bubbles: true }))
+  })
+  await clickText(container, 'Gửi yêu cầu')
+  assert.deepEqual(JSON.parse(writes()[0].data), { reason: 'Tôi muốn thay đổi bài tập' })
+  assert.equal(plans[0].status, 'Active')
+  assert.match(container.textContent, /Đã gửi yêu cầu điều chỉnh/)
+}))
+
+test('Member cancellation, API failures and an unsupported completion route never fake completion', () => screen(async (container, render) => {
+  await render(h(MemberPlans)); await clickText(container, 'Đã tập'); await clickText(container, 'Hủy')
+  assert.equal(writes().length, 0)
+  unsupportedMemberCompletion = true
+  await clickText(container, 'Đã tập'); await clickText(container, 'Xác nhận đã tập')
+  assert.match(container.querySelector('[role=alert]').textContent, /Máy chủ chưa hỗ trợ/)
+  assert.equal(plans[0].status, 'Active')
+  assert.ok(container.querySelector('.training-plans-card'))
+}))
+
+test('Member change request preserves the entered reason after failure', () => screen(async (container, render) => {
+  await render(h(MemberPlans)); await clickText(container, 'Yêu cầu đổi giáo án')
+  const input = container.querySelector('textarea')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set.call(input, 'Điều chỉnh cường độ')
+    input.dispatchEvent(new window.Event('input', { bubbles: true }))
+  })
+  failure = 'Không thể gửi yêu cầu'
+  await clickText(container, 'Gửi yêu cầu')
+  assert.equal(container.querySelector('textarea').value, 'Điều chỉnh cường độ')
+  assert.match(container.querySelector('[role=alert]').textContent, /Không thể gửi/)
+  assert.equal(plans[0].status, 'Active')
 }))

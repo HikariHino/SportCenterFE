@@ -1,5 +1,6 @@
 import api from './api'
 import { STAFF_ASSIGNABLE_ROLES } from '../utils/managerAccountValidation.js'
+import { profileValidationErrors } from '../utils/profileValidation.js'
 
 /**
  * @typedef {Object} StaffUser
@@ -75,13 +76,16 @@ export async function getStaffUserById(id) {
  * @param {'Manager'|'Receptionist'|'Coach'} data.role
  * @returns {Promise<StaffUser>}
  */
-export async function createStaffUser({ email, password, fullName, phone, role }) {
+export async function createStaffUser({ email, password, fullName, phone, role, dateOfBirth }) {
+  const birthError = dateOfBirth ? profileValidationErrors({ dateOfBirth }, { partial: true }).dateOfBirth : ''
+  if (birthError) throw Object.assign(new Error(birthError), { field: 'dateOfBirth' })
   const response = await api.post('/users/staff', {
     email: email.trim(),
     password,
     fullName: fullName.trim(),
     phone: phone ? phone.trim() : null,
     role,
+    ...(dateOfBirth && { dateOfBirth: `${dateOfBirth.slice(0, 10)}T00:00:00.000Z` }),
   })
   const body = response.data
 
@@ -89,7 +93,18 @@ export async function createStaffUser({ email, password, fullName, phone, role }
     throw Object.assign(new Error(body.message || 'Không thể tạo tài khoản nhân viên.'), { response })
   }
 
-  return body?.data ?? body
+  const created = body?.data ?? body
+  if (dateOfBirth) {
+    let saved = created
+    try {
+      if (String(created?.dateOfBirth || '').slice(0, 10) !== dateOfBirth.slice(0, 10)) saved = await getStaffUserById(created.userId)
+      if (String(saved?.userId) !== String(created?.userId) || String(saved?.dateOfBirth || '').slice(0, 10) !== dateOfBirth.slice(0, 10)) throw new Error('Birthday not persisted')
+    } catch {
+      throw Object.assign(new Error('Tài khoản đã được tạo nhưng chưa xác nhận lưu ngày sinh. Không tạo lại tài khoản; hãy kiểm tra hồ sơ nhân viên sau khi máy chủ được cập nhật.'), { createdStaff: created })
+    }
+    return saved
+  }
+  return created
 }
 
 /**
