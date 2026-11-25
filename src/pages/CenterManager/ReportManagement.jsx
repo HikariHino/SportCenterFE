@@ -1,3 +1,4 @@
+import { paymentMethodLabel } from '../../utils/paymentPresentation'
 import { ManagerList } from './ManagerPagination'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
@@ -260,7 +261,7 @@ export default function ReportManagement() {
         String(p.id).includes(paymentSearch.trim()) ||
         String(p.memberId).includes(paymentSearch.trim()) ||
         (p.transactionReference && p.transactionReference.toLowerCase().includes(paymentSearch.toLowerCase().trim())) ||
-        (p.paymentMethod && p.paymentMethod.toLowerCase().includes(paymentSearch.toLowerCase().trim()))
+        (p.paymentMethod && paymentMethodLabel(p.paymentMethod, '').toLowerCase().includes(paymentSearch.toLowerCase().trim()))
 
       if (!matchesSearch) return false
 
@@ -955,7 +956,7 @@ export default function ReportManagement() {
                           </td>
                           <td>
                             <span className="report-chip" style={{ background: 'var(--manager-raised, #f1f5f9)', color: 'var(--manager-secondary, #475569)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))' }}>
-                              {p.paymentMethod || 'PayOS / Online'}
+                              {paymentMethodLabel(p.paymentMethod, 'Banking / Online')}
                             </span>
                           </td>
                           <td>

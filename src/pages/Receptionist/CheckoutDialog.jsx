@@ -89,7 +89,7 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
       const payment = await checkoutReceptionistSubscription({ memberId, subscriptionId, amount: selectedOrder.agreedPrice, paymentMethod: payWithPayOS ? 'PayOS' : paymentMethod, paymentReceived: received })
       if (mounted.current) {
         const url = payWithPayOS && paymentStatus(payment) === 'pending' ? receptionistCheckoutUrl(payment) : ''
-        if (payWithPayOS && paymentStatus(payment) === 'pending' && !url) throw new Error('Chưa có liên kết PayOS hợp lệ. Vui lòng tải lại trạng thái trước khi trả tiền.')
+        if (payWithPayOS && paymentStatus(payment) === 'pending' && !url) throw new Error('Chưa có liên kết Banking hợp lệ. Vui lòng tải lại trạng thái trước khi trả tiền.')
         onCreated(payment, { redirect: false })
         if (url) window.location.assign(url)
         onClose()
@@ -113,7 +113,7 @@ function OrderCheckoutDialog({ onClose, onCreated, memberId: fixedMemberId, subs
           {memberId && !ordersLoading && !subscriptions.length && <p role="status">Hội viên chưa có đơn đang chờ. Hãy tạo đăng ký gói ở tab Hội viên trước.</p>}
           {detailLoading && <p role="status">Đang kiểm tra đơn và biên nhận...</p>}
           {selectedOrder && <div className="reception-checkout-summary"><WalletCards size={24} /><div><strong>{selectedOrder.packageName}</strong><small>Đơn #{selectedOrder.id} · {selectedOrder.durationInDays} ngày · {formatDateTime(selectedOrder.createdAt)}</small></div><b>{currency(selectedOrder.agreedPrice)}</b></div>}
-          <label>Phương thức<select value={paymentMethod} disabled={saving} onChange={event => { setPaymentMethod(event.target.value); setReceived(false) }}><option value="PayOS">Thanh toán chuyển khoản</option><option value="Cash">Tiền mặt</option></select></label>
+          <label>Phương thức<select value={paymentMethod} disabled={saving} onChange={event => { setPaymentMethod(event.target.value); setReceived(false) }}><option value="PayOS">Banking</option><option value="Cash">Tiền mặt</option></select></label>
         </div>
         {!payWithPayOS && <label className="reception-payment-confirm"><input type="checkbox" checked={received} required disabled={saving} onChange={event => setReceived(event.target.checked)} /><span><strong>Tôi đã thực nhận đủ tiền theo giá của đơn</strong><small>Chỉ xác nhận khoản tiền mặt đã thu đủ từ hội viên.</small></span></label>}
         {error && <p className="reception-form-error" role="alert">{error}</p>}

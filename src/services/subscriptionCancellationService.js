@@ -8,7 +8,7 @@ function assertUnpaidClosed(payment) {
   const status = paymentStatus(payment)
   if (status === 'completed' || status === 'paid') throw new Error('Giao dịch đã thanh toán thành công. Không thể hủy đơn gói này.')
   if (status === 'needsreview' || Number(payment.amountReceived) > 0) throw new Error('Giao dịch cần đối soát. Chưa thể hủy đơn gói.')
-  if (!['cancelled', 'expired', 'failed'].includes(status)) throw new Error('Chưa xác nhận hủy giao dịch PayOS. Vui lòng đồng bộ hoặc thử lại.')
+  if (!['cancelled', 'expired', 'failed'].includes(status)) throw new Error('Chưa xác nhận hủy giao dịch Banking. Vui lòng đồng bộ hoặc thử lại.')
 }
 
 export async function cancelOpenPayment(payment, reason) {

@@ -3,6 +3,7 @@ import { createPayment, getPaymentById, isTemporaryPaymentError, syncPayment } f
 import { getToken } from '../utils/auth'
 import { paymentStatus } from '../utils/memberPayments'
 import api from './api'
+import { formatBankingText } from '../utils/paymentPresentation.js'
 
 const validId = value => /^[1-9]\d*$/.test(String(value)) && Number(value) <= 2147483647
 const methods = ['PayOS', 'Cash']
@@ -13,10 +14,10 @@ export function getReceptionistPaymentError(error, fallback = 'Không thể xử
   const body = error?.response?.data
   const message = body?.message || (body?.errors && Object.values(body.errors).flat()[0]) || error?.message
   if (/Key cannot be null|API.?key|checksum.?key|not configured/i.test(message || '')) {
-    return 'Máy chủ chưa cấu hình đầy đủ PayOS. Vui lòng liên hệ quản trị kiểm tra cấu hình thanh toán rồi thử lại.'
+    return 'Máy chủ chưa cấu hình đầy đủ Banking. Vui lòng liên hệ quản trị kiểm tra cấu hình thanh toán rồi thử lại.'
   }
-  if (typeof message !== 'string' || message.length > 400 || /LINQ|DbSet|System\.[A-Z]|Microsoft\.|stack\s*trace|could not be translated/i.test(message)) return fallback
-  return message || fallback
+  if (typeof message !== 'string' || message.length > 400 || /LINQ|DbSet|System\.[A-Z]|Microsoft\.|stack\s*trace|could not be translated/i.test(message)) return formatBankingText(fallback)
+  return formatBankingText(message || fallback)
 }
 
 export function receptionistCheckoutUrl(payment, now = Date.now()) {
@@ -68,7 +69,7 @@ async function checkout({ subscriptionId, memberId, packageId, paymentMethod, am
     const transportError = error.response ? error : error.cause || error
     const uncertain = !transportError.response || isTemporaryPaymentError(transportError)
     const message = getReceptionistPaymentError(error)
-    const wrapped = new Error(/cấu hình.*PayOS/.test(message) ? message : uncertain ? uncertainResult : message, { cause: error })
+    const wrapped = new Error(/cấu hình.*Banking/.test(message) ? message : uncertain ? uncertainResult : message, { cause: error })
     wrapped.requiresRefresh = true
     throw wrapped
   }
@@ -87,14 +88,14 @@ function validatePaymentResult(result, expected) {
 }
 
 export async function syncReceptionistPayment(payment) {
-  if (!validId(payment?.id) || String(payment.paymentMethod).toLowerCase() !== 'payos') throw new Error('Giao dịch không hỗ trợ đồng bộ PayOS.')
+  if (!validId(payment?.id) || String(payment.paymentMethod).toLowerCase() !== 'payos') throw new Error('Giao dịch không hỗ trợ đồng bộ Banking.')
   try {
     return { payment: validatePaymentResult(await syncPayment(payment.id), payment), warning: '' }
   } catch (error) {
     if (!isTemporaryPaymentError(error)) throw error
     // A webhook may have committed even if the sync response was lost.
     const current = validatePaymentResult(await getPaymentById(payment.id), payment)
-    return { payment: current, warning: paymentStatus(current) === 'completed' ? '' : 'Chưa đồng bộ được với PayOS. Đang hiển thị trạng thái đã lưu; hãy thử lại, không thu tiền thêm.' }
+    return { payment: current, warning: paymentStatus(current) === 'completed' ? '' : 'Chưa đồng bộ được với Banking. Đang hiển thị trạng thái đã lưu; hãy thử lại, không thu tiền thêm.' }
   }
 }
 

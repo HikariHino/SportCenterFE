@@ -1,3 +1,4 @@
+import { paymentMethodLabel } from '../../utils/paymentPresentation'
 import { ManagerList } from './ManagerPagination'
 import { useManagerCache, useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -425,7 +426,7 @@ export default function FrontDeskOperations() {
         paymentMethod,
         paymentReceived: counterPaymentReceived,
       })
-      setSuccessMessage(`Đã xác nhận thanh toán (${paymentMethod}) và kích hoạt gói thành công!`)
+      setSuccessMessage(`Đã xác nhận thanh toán (${paymentMethodLabel(paymentMethod)}) và kích hoạt gói thành công!`)
       setPayModalSubscription(null)
       setPayOsData(null)
       if (subMemberId) await handleLoadMemberSubscriptions(subMemberId)
@@ -448,7 +449,7 @@ export default function FrontDeskOperations() {
       setSuccessMessage(paymentCheckoutMessage(payment))
       if (subMemberId) await handleLoadMemberSubscriptions(subMemberId)
     } catch (err) {
-      setPaymentError(getPackageErrorMessage(err, 'Không thể tạo mã thanh toán PayOS.'))
+      setPaymentError(getPackageErrorMessage(err, 'Không thể tạo mã thanh toán Banking.'))
     } finally {
       setSubmitting(false)
     }
@@ -1055,7 +1056,7 @@ export default function FrontDeskOperations() {
               <div>
                 <h3>Đăng ký gói thẻ hội viên tại quầy</h3>
                 <p style={{ margin: '3px 0 0', fontSize: 'calc(17px + var(--font-size-adjustment, 0px))', color: 'var(--manager-muted, #748096)' }}>
-                  Chọn hội viên và gói tập phù hợp. Sau khi đăng ký có thể xác nhận thu tiền mặt hoặc tạo link PayOS.
+                  Chọn hội viên và gói tập phù hợp. Sau khi đăng ký có thể xác nhận thu tiền mặt hoặc tạo link Banking.
                 </p>
               </div>
             </div>
@@ -1201,7 +1202,7 @@ export default function FrontDeskOperations() {
                                   }}
                                 >
                                   <CreditCard size={13} />
-                                  Thu tiền / PayOS
+                                  Thu tiền / Banking
                                 </button>
                                 {!counterOrderCancellationReason(sub) && <button type="button" className="fdesk-btn fdesk-btn-danger" disabled={submitting} onClick={() => setCancelOrder(sub)}><Ban size={13} />Hủy đơn thanh toán</button>}
                                 </div>
@@ -1527,11 +1528,11 @@ export default function FrontDeskOperations() {
                       style={{ textDecoration: 'none' }}
                     >
                       <ExternalLink size={14} />
-                      Mở cổng thanh toán PayOS
+                      Mở cổng thanh toán Banking
                     </a>
                   )}
-                  {canSyncPayOSPayment(payOsData) && <button type="button" className="fdesk-btn fdesk-btn-primary" disabled={submitting} onClick={() => handlePayOsAction('sync')}><RefreshCw size={16} />Đồng bộ trạng thái PayOS</button>}
-                  {canCancelPayOSPayment(payOsData) && <button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={submitting} onClick={() => handlePayOsAction('cancel')}><Ban size={16} />Hủy liên kết PayOS</button>}
+                  {canSyncPayOSPayment(payOsData) && <button type="button" className="fdesk-btn fdesk-btn-primary" disabled={submitting} onClick={() => handlePayOsAction('sync')}><RefreshCw size={16} />Đồng bộ trạng thái Banking</button>}
+                  {canCancelPayOSPayment(payOsData) && <button type="button" className="fdesk-btn fdesk-btn-secondary" disabled={submitting} onClick={() => handlePayOsAction('cancel')}><Ban size={16} />Hủy liên kết Banking</button>}
                   {['Cancelled', 'Expired', 'Failed'].includes(payOsData.status) && Number(payOsData.amountReceived || 0) === 0 && <button type="button" className="fdesk-btn fdesk-btn-primary" disabled={submitting} onClick={handleCreatePayOsLink}>Tạo yêu cầu thanh toán mới</button>}
                 </div>
               ) : (
@@ -1560,7 +1561,7 @@ export default function FrontDeskOperations() {
                     disabled={submitting}
                   >
                     <QrCode size={16} />
-                    Tạo mã QR thanh toán PayOS trực tuyến
+                    Tạo mã QR thanh toán Banking trực tuyến
                   </button>
                 </div>
               )}

@@ -48,7 +48,7 @@ export default function CounterOrderCancellationDialog({ subscription, currentPa
         <h3>{subscription.packageName}</h3>
         <dl className="subscription-purchase-breakdown"><div><dt>Số tiền của đơn</dt><dd>{Number(subscription.agreedPrice || 0).toLocaleString('vi-VN')} đ</dd></div><div><dt>Hội viên</dt><dd>#{subscription.memberId}</dd></div></dl>
         <p>Chỉ xác nhận hủy khi chưa thu tiền cho đơn này. Đơn đã hủy sẽ không còn chờ thanh toán hoặc kích hoạt gói.</p>
-        <p className="subscription-purchase-note">Nếu có liên kết PayOS đang chờ, hệ thống sẽ đóng liên kết trước khi hủy đơn. Gói đang sử dụng của hội viên vẫn được giữ nguyên.</p>
+        <p className="subscription-purchase-note">Nếu có liên kết Banking đang chờ, hệ thống sẽ đóng liên kết trước khi hủy đơn. Gói đang sử dụng của hội viên vẫn được giữ nguyên.</p>
         {(blockedReason || error) && <p className="subscription-purchase-error" role="alert"><AlertCircle size={18} />{blockedReason || error}</p>}
       </div>
       <footer><button type="button" autoFocus onClick={onClose} disabled={saving}>Quay lại</button><button type="submit" className="danger" disabled={saving || Boolean(blockedReason)}>{saving ? <LoaderCircle size={16} className="member-spin" /> : <Ban size={16} />}{saving ? 'Đang hủy đơn...' : 'Xác nhận hủy đơn'}</button></footer>

@@ -9,10 +9,10 @@ export function paymentCheckoutMessage(payment) {
   if (paymentStatus(payment) === 'needsreview' || (paymentStatus(payment) !== 'completed' && Number(payment?.amountReceived) > 0)) return 'Giao dịch đã nhận tiền và cần đối soát. Vui lòng đồng bộ trạng thái hoặc liên hệ trung tâm trước khi thanh toán tiếp.'
   return {
     completed: 'Thanh toán đã hoàn tất và gói đã được kích hoạt.',
-    cancelled: 'Giao dịch PayOS đã hủy. Chỉ tạo thanh toán mới nếu đơn gói vẫn đang chờ thanh toán.',
-    expired: 'Liên kết PayOS đã hết hạn. Chỉ tạo thanh toán mới nếu đơn gói vẫn đang chờ thanh toán.',
-    failed: 'Giao dịch PayOS thất bại. Vui lòng kiểm tra trạng thái đơn trước khi tạo thanh toán mới.',
-    pending: canCheckoutPayOSPayment(payment) ? 'Giao dịch đang chờ thanh toán qua PayOS.' : 'Giao dịch đang chờ nhưng chưa có liên kết thanh toán. Vui lòng đồng bộ trạng thái trước khi thử lại.',
+    cancelled: 'Giao dịch Banking đã hủy. Chỉ tạo thanh toán mới nếu đơn gói vẫn đang chờ thanh toán.',
+    expired: 'Liên kết Banking đã hết hạn. Chỉ tạo thanh toán mới nếu đơn gói vẫn đang chờ thanh toán.',
+    failed: 'Giao dịch Banking thất bại. Vui lòng kiểm tra trạng thái đơn trước khi tạo thanh toán mới.',
+    pending: canCheckoutPayOSPayment(payment) ? 'Giao dịch đang chờ thanh toán qua Banking.' : 'Giao dịch đang chờ nhưng chưa có liên kết thanh toán. Vui lòng đồng bộ trạng thái trước khi thử lại.',
   }[paymentStatus(payment)] || 'Chưa xác định được trạng thái giao dịch. Vui lòng tải lại trước khi thanh toán.'
 }
 export function paymentStatusLabel(payment) {

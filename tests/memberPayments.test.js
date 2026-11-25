@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { canCancelPayOSPayment, canCheckoutPayOSPayment, canSyncPayOSPayment, filterMemberPayments, paymentCheckoutMessage, paymentReceivedAmount, paymentStatus, paymentStatusLabel, paymentSummary } from '../src/utils/memberPayments.js'
+import { formatBankingText, paymentMethodLabel } from '../src/utils/paymentPresentation.js'
 
 const rows = [
   { id: 1, status: 'Completed', amount: 2000, amountReceived: 2000, subscriptionId: 13, transactionReference: 'BANK-ABC' },
@@ -26,6 +27,10 @@ test('only an unpaid pending PayOS link can be opened or cancelled, including re
   assert.equal(canSyncPayOSPayment({ ...payment, paymentMethod: 'Cash' }), false)
 })
 test('payment labels cover review and refund without treating them as completed', () => {
+  assert.equal(paymentMethodLabel('PayOS'), 'Banking')
+  assert.equal(paymentMethodLabel(null), 'Banking')
+  assert.equal(paymentMethodLabel('Cash'), 'Cash')
+  assert.equal(formatBankingText('PayOS: https://pay.payos.vn/web/fixture'), 'Banking: https://pay.payos.vn/web/fixture')
   assert.equal(paymentStatus({ status: ' needs_review ' }), 'needsreview')
   assert.equal(paymentStatus({ status: 'Canceled' }), 'cancelled')
   assert.equal(paymentStatusLabel({ status: 'NeedsReview' }), 'Cần đối soát')

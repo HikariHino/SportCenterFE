@@ -1,3 +1,4 @@
+import { paymentMethodLabel } from '../../utils/paymentPresentation'
 import { ManagerList } from './ManagerPagination'
 import ThemeToggle from '../../components/ThemeToggle'
 import { useRef, useState } from "react"
@@ -153,7 +154,7 @@ function ManagerWorkspace() {
   const filteredPayments = paymentsList.filter(payment => {
     const matchStatus = paymentStatusFilter === 'all' ||
       String(payment.status || '').toLowerCase() === paymentStatusFilter.toLowerCase()
-    const searchStr = `${payment.id} ${payment.transactionReference || ''} ${payment.memberId} ${payment.paymentMethod || ''}`.toLowerCase()
+    const searchStr = `${payment.id} ${payment.transactionReference || ''} ${payment.memberId} ${paymentMethodLabel(payment.paymentMethod, '')}`.toLowerCase()
     const matchQuery = !paymentQuery.trim() || searchStr.includes(paymentQuery.trim().toLowerCase())
     return matchStatus && matchQuery
   })
@@ -213,7 +214,7 @@ function ManagerWorkspace() {
         p.memberId,
         p.subscriptionId || 'N/A',
         p.amountReceived > 0 ? p.amountReceived : p.amount,
-        p.paymentMethod || 'PayOS',
+        paymentMethodLabel(p.paymentMethod),
         p.status,
         p.paidAt ? new Date(p.paidAt).toLocaleDateString('vi-VN') : (p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : 'N/A'),
       ]),
@@ -565,7 +566,7 @@ function ManagerWorkspace() {
               <div className="manager-card-heading">
                 <div>
                   <h2>Giao dịch gần đây <span className="manager-count">{paymentsList.length}</span></h2>
-                  <p>Lịch sử thanh toán gói tập và dịch vụ qua PayOS & Tiền mặt</p>
+                  <p>Lịch sử thanh toán gói tập và dịch vụ qua Banking & Tiền mặt</p>
                 </div>
               </div>
               <div className="manager-table-tools">
@@ -612,7 +613,7 @@ function ManagerWorkspace() {
                           </div>
                         </td>
                         <td>
-                          <span style={{ fontWeight: 550 }}>{payment.paymentMethod || 'PayOS'}</span>
+                          <span style={{ fontWeight: 550 }}>{paymentMethodLabel(payment.paymentMethod)}</span>
                         </td>
                         <td>
                           <span className="manager-time">
@@ -729,7 +730,7 @@ function ManagerWorkspace() {
                 ['Mã tham chiếu', selectedPayment.transactionReference || 'GD Quầy trực tiếp'],
                 ['Mã hội viên', `Hội viên #${selectedPayment.memberId}`],
                 ['Gói thẻ áp dụng', selectedPayment.subscriptionId ? `Gói thẻ #${selectedPayment.subscriptionId}` : 'Không áp dụng'],
-                ['Phương thức', selectedPayment.paymentMethod || 'PayOS'],
+                ['Phương thức', paymentMethodLabel(selectedPayment.paymentMethod)],
                 ['Số tiền niêm yết', money(selectedPayment.amount)],
                 ['Số tiền thực nhận', money(selectedPayment.amountReceived > 0 ? selectedPayment.amountReceived : selectedPayment.amount)],
                 ['Thời gian tạo', selectedPayment.createdAt ? new Date(selectedPayment.createdAt).toLocaleString('vi-VN') : '—'],

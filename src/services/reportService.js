@@ -1,4 +1,5 @@
 import api from './api'
+import { formatBankingText } from '../utils/paymentPresentation.js'
 import { getAllClassSessions, getSessionRoster } from './sportClassService'
 
 const normalizedStatus = value => String(value ?? '').trim().toLowerCase().replace(/[\s_-]/g, '')
@@ -23,10 +24,10 @@ export function getReportErrorMessage(error, fallback = 'Có lỗi xảy ra khi 
   if (validationErrors && typeof validationErrors === 'object') {
     const firstKey = Object.keys(validationErrors)[0]
     if (firstKey && Array.isArray(validationErrors[firstKey])) {
-      return validationErrors[firstKey][0]
+      return formatBankingText(validationErrors[firstKey][0])
     }
   }
-  return body?.message || error?.message || fallback
+  return formatBankingText(body?.message || error?.message || fallback)
 }
 
 /**

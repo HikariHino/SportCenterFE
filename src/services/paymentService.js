@@ -1,9 +1,10 @@
 import api from './api'
 import { getToken } from '../utils/auth'
+import { formatBankingText } from '../utils/paymentPresentation.js'
 
 function unwrap(body, fallback) {
   if (body?.success === false || Number(body?.statusCode) >= 400) {
-    throw new Error(body.message || fallback)
+    throw new Error(formatBankingText(body.message || fallback))
   }
 
   return body?.data ?? body
@@ -76,7 +77,7 @@ export function verifyPaymentResult(orderCode, { refresh = false, cancelRequeste
 async function verifyPayment(orderCode, refresh, cancelRequested) {
   const payments = await getMyPayments()
   let payment = payments.find(item => String(item.payOSOrderCode) === String(orderCode))
-  if (!payment || !Number.isSafeInteger(Number(payment.id)) || Number(payment.id) <= 0) throw new Error('Không tìm thấy giao dịch PayOS vừa thực hiện.')
+  if (!payment || !Number.isSafeInteger(Number(payment.id)) || Number(payment.id) <= 0) throw new Error('Không tìm thấy giao dịch Banking vừa thực hiện.')
   const id = payment.id
   const { memberId, subscriptionId } = payment
   const validate = result => {
