@@ -5,7 +5,7 @@ import { AlertCircle, AlertTriangle, Ban, CalendarDays, CheckCircle2, Clock3, Cr
 import { deactivateMember, getMembers } from "../../services/memberService"
 import { createManagerMember } from '../../services/managerAccountService'
 import { getMemberRegistrationFieldErrors } from '../../utils/memberRegistrationErrors'
-import { getManagerMemberValidationErrors, MANAGER_ACCOUNT_LIMITS, MEMBER_PHONE_MESSAGE, MEMBER_PHONE_PATTERN } from '../../utils/managerAccountValidation'
+import { getManagerMemberValidationErrors, MANAGER_ACCOUNT_LIMITS, MEMBER_PHONE_MESSAGE } from '../../utils/managerAccountValidation'
 import { registrationBirthDateLimit } from '../../utils/authRegistrationValidation'
 import { PROFILE_BIRTH_DATE_MIN } from '../../utils/profileValidation'
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from '../../utils/passwordValidation'
@@ -1658,10 +1658,8 @@ export default function FrontDeskOperations() {
                     className="fdesk-input"
                     placeholder="0987654321"
                     name="phone"
-                    inputMode="numeric"
-                    pattern={MEMBER_PHONE_PATTERN}
+                    inputMode="tel"
                     title={MEMBER_PHONE_MESSAGE}
-                    minLength={MANAGER_ACCOUNT_LIMITS.phone}
                     maxLength={MANAGER_ACCOUNT_LIMITS.phone}
                     aria-invalid={!!memberFieldErrors.phone}
                     aria-describedby={memberFieldErrors.phone ? 'manager-member-phone-error' : undefined}

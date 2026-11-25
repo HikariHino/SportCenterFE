@@ -44,6 +44,7 @@ function mockApi(t, { sessions = [session], roster = [student], ticketList = [{ 
       if (config.url.endsWith('/sessions')) data = { items: sessions.slice(config.params.page - 1, config.params.page), total: sessions.length, page: config.params.page }
       else if (config.url.endsWith('/roster')) data = roster
       else if (config.url === '/SupportTickets') data = ticketList
+      else if (config.url === '/Rooms') data = [{ id: 1, capacity: 30, isActive: true }]
       else throw new Error('Unexpected read: ' + config.url)
       afterRead?.(config)
     } else if (config.url.startsWith('/sports')) {

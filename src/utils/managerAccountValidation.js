@@ -1,16 +1,14 @@
 import { getNewPasswordValidationError } from './passwordValidation.js'
-import { getVietnamPhoneValidationError, getFullNameValidationError, profileDateLimit } from './profileValidation.js'
+import { getProfilePhoneValidationError, getFullNameValidationError, profileDateLimit, PROFILE_PHONE_MAX_LENGTH, PROFILE_PHONE_MESSAGE } from './profileValidation.js'
 import { getTextLengthValidationError } from './textLengthValidation.js'
 import { getAccountEmailValidationError } from './emailValidation.js'
 import { getRegistrationBirthDateError } from './authRegistrationValidation.js'
 
-export const MANAGER_ACCOUNT_LIMITS = { fullName: 100, email: 256, phone: 10, address: 200, fitnessGoal: 100 }
+export const MANAGER_ACCOUNT_LIMITS = { fullName: 100, email: 256, phone: PROFILE_PHONE_MAX_LENGTH, address: 200, fitnessGoal: 100 }
 export const STAFF_ASSIGNABLE_ROLES = ['Coach', 'Receptionist']
-export const MANAGER_PHONE_PATTERN = '0[0-9]{9}'
-export const MANAGER_PHONE_MESSAGE = 'Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0.'
+export const MANAGER_PHONE_MESSAGE = PROFILE_PHONE_MESSAGE
 export const managerBirthDateLimit = profileDateLimit
-export const MEMBER_PHONE_PATTERN = '0[35789][0-9]{8}'
-export const MEMBER_PHONE_MESSAGE = 'Số di động Việt Nam phải gồm 10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09.'
+export const MEMBER_PHONE_MESSAGE = PROFILE_PHONE_MESSAGE
 
 function getStrictAccountEmailError(value) {
   const error = getAccountEmailValidationError(value)
@@ -36,8 +34,8 @@ export function getManagerMemberValidationErrors(form = {}, now = Date.now()) {
   if (emailError) errors.email = emailError
   const passwordError = getNewPasswordValidationError(form.password)
   if (passwordError) errors.password = passwordError
-  if (typeof form.phone !== 'string' || !form.phone.trim()) errors.phone = 'Vui lòng nhập số điện thoại.'
-  else if (!new RegExp(`^${MEMBER_PHONE_PATTERN}$`).test(form.phone.trim())) errors.phone = MEMBER_PHONE_MESSAGE
+  const phoneError = getProfilePhoneValidationError(form.phone, { required: true })
+  if (phoneError) errors.phone = phoneError
   const birthError = getRegistrationBirthDateError(form.dateOfBirth, now)
   if (birthError) errors.dateOfBirth = birthError
   else if (!/^\d{4}-\d{2}-\d{2}$/.test(form.dateOfBirth)) errors.dateOfBirth = 'Ngày sinh không hợp lệ.'
@@ -63,7 +61,7 @@ export function getManagerStaffValidationErrors(form = {}, accounts = []) {
   if (emailError) errors.email = emailError
   const passwordError = getNewPasswordValidationError(form.password)
   if (passwordError) errors.password = passwordError
-  const phoneError = form.phone != null && typeof form.phone !== 'string' ? MANAGER_PHONE_MESSAGE : getVietnamPhoneValidationError(form.phone, { required: true })
+  const phoneError = getProfilePhoneValidationError(form.phone, { required: true })
   if (phoneError) errors.phone = phoneError
   if (!STAFF_ASSIGNABLE_ROLES.includes(form.role)) errors.role = 'Vui lòng chọn vai trò Huấn luyện viên hoặc Lễ tân.'
   if (form.dateOfBirth) {

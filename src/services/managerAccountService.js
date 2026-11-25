@@ -3,6 +3,7 @@ import { createStaffUser } from './userService'
 import { getManagerMemberValidationError, getManagerStaffValidationError, getManagerStaffValidationErrors } from '../utils/managerAccountValidation.js'
 import api from './api'
 import { getMemberContactConflicts } from '../utils/memberRegistrationErrors.js'
+import { normalizeProfilePhone } from '../utils/profileValidation.js'
 
 let pendingMemberCreation = Promise.resolve()
 export async function createManagerMember(form) {
@@ -12,7 +13,7 @@ export async function createManagerMember(form) {
     ...form,
     fullName: form.fullName.trim(),
     email: form.email.trim(),
-    phone: form.phone.trim(),
+    phone: normalizeProfilePhone(form.phone),
     dateOfBirth: form.dateOfBirth ? `${form.dateOfBirth}T00:00:00.000Z` : null,
     address: form.address?.trim() || null,
     fitnessGoal: form.fitnessGoal?.trim() || null,
@@ -40,7 +41,7 @@ let pendingStaffCreation = Promise.resolve()
 export function createManagerStaff(form) {
   const error = getManagerStaffValidationError(form)
   if (error) return Promise.reject(Object.assign(new Error(error.message), { field: error.field }))
-  const values = { ...form, phone: form.phone.trim() }
+  const values = { ...form, phone: normalizeProfilePhone(form.phone) }
   // Re-read both account lists immediately before creating. Never treat an
   // unreadable list as empty, and include inactive accounts in uniqueness checks.
   const request = pendingStaffCreation.then(async () => {
