@@ -74,3 +74,20 @@ test('booking can confirm just before start and blocks at start or when membersh
   assert.equal(document.querySelector('[type=submit]').disabled, true)
   await submit(); assert.equal(submits(), 1)
 }))
+
+test('booking confirmation lists every selected session without ordinal labels or pagination and retains retry filtering', () => screen(async (render, submits) => {
+  const sessions = Array.from({ length: 12 }, (_, index) => ({ id: index + 221, status: 'Scheduled',
+    startsAt: `2026-12-${String(index + 1).padStart(2, '0')}T17:30:00+07:00`, endsAt: `2026-12-${String(index + 1).padStart(2, '0')}T18:30:00+07:00` }))
+  const action = { type: 'bookClass', item: { id: 11, className: 'Gym sức mạnh cơ bản', sessions } }
+  await render({ action, hasActiveSubscription: true })
+  const list = document.querySelector('[aria-label="Buổi học chờ xác nhận"]')
+  assert.equal(list.querySelectorAll('li').length, 12)
+  assert.match(list.lastElementChild.textContent, /Buổi #232/)
+  assert.equal(list.querySelector('.member-numbered-item'), null)
+  assert.equal(document.querySelector('.member-classes-dialog .member-pagination'), null)
+  assert.equal(document.querySelector('.member-classes-dialog .member-list-scroll'), null)
+  await submit(); assert.equal(submits(), 1)
+  await render({ action, hasActiveSubscription: true, bulkResult: { remaining: ['231', '232'], registered: ['221'], existing: [], skipped: [] } })
+  assert.deepEqual([...document.querySelectorAll('.member-class-booking-preview strong')].map(item => item.textContent), ['Buổi #231', 'Buổi #232'])
+  assert.equal(document.querySelector('.member-classes-dialog .member-pagination'), null)
+}))

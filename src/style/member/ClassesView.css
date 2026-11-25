@@ -99,7 +99,7 @@
 .member-course-heading p { margin: 0; }
 .member-classes-view .member-course-back { padding: 0; border: 0; background: transparent; color: var(--theme-accent); }
 .member-course-sessions h4 { margin: 0; font-size: calc(21px + var(--font-size-adjustment, 0px)); }
-.member-class-booking-preview { max-height: 220px; overflow-y: auto; margin: 0; padding: 12px 12px 12px 32px; border-radius: 8px; background: var(--theme-bg); }
+.member-class-booking-preview { list-style: none; margin: 0; padding: 12px; border: 1px solid var(--theme-border); border-radius: 8px; background: var(--theme-bg); }
 .member-class-booking-preview li + li { margin-top: 8px; }
 .member-class-booking-preview li > strong, .member-class-booking-preview li > span { display: block; }
 .member-class-booking-preview li > span { color: var(--theme-muted); font-size: calc(17px + var(--font-size-adjustment, 0px)); }
