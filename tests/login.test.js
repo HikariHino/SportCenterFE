@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { afterEach, beforeEach, test } from 'node:test'
-import { ACTIVE_LOGIN_KEY, BROWSER_SESSION_KEY, getRefreshTokenKey, getAccessTokenExpiry } from '../src/utils/auth.js'
+import { beforeEach, test } from 'node:test'
+import { ACTIVE_LOGIN_KEY, BROWSER_SESSION_KEY, getRefreshTokenKey, getAccessTokenExpiry, initializeBrowserSession } from '../src/utils/auth.js'
 import { canUsePayments, clearSession, getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getLoginRedirectPath, getLoginSessionId, getSavedUser, getToken, saveSession, updateSessionTokens } from '../src/utils/auth.js'
 
 function memoryStorage() {
@@ -12,15 +12,9 @@ function memoryStorage() {
   }
 }
 
-const documentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'document')
 beforeEach(() => {
   globalThis.localStorage = memoryStorage()
   globalThis.sessionStorage = memoryStorage()
-  Object.defineProperty(globalThis, 'document', { configurable: true, writable: true, value: { cookie: '' } })
-})
-afterEach(() => {
-  if (documentDescriptor) Object.defineProperty(globalThis, 'document', documentDescriptor)
-  else delete globalThis.document
 })
 
 const authResponse = {
@@ -210,16 +204,16 @@ test('logout with an older access token still retires the same login after anoth
   assert.equal(localStorage.getItem(ACTIVE_LOGIN_KEY), `signed-out:${loginId}`)
 })
 
-for (const remember of [false, true]) test(`browser closure respects remember=${remember}`, () => {
+for (const remember of [false, true]) test(`closing all website tabs respects remember=${remember}, even with the browser still open`, async () => {
   saveSession(authResponse, 'browser-token', remember)
   const originalTab = sessionStorage
   const loginId = getLoginSessionId()
   globalThis.sessionStorage = memoryStorage()
   assert.equal(getToken(), 'browser-token')
   assert.equal(getLoginSessionId(), loginId)
-  // A new browser session has the same persistent storage but no session cookie.
-  document.cookie = ''
+  // All website tabs have closed. Local storage (and any old cookies) survive.
   globalThis.sessionStorage = memoryStorage()
+  await initializeBrowserSession({ presence: { hasLiveTab: async () => false, start: () => assert.fail('Closed session revived') }, navigationType: 'navigate' })
   assert.equal(getToken(), remember ? 'browser-token' : null)
   assert.equal(getSavedUser()?.userId ?? null, remember ? authResponse.userId : null)
   if (!remember) {
@@ -229,6 +223,40 @@ for (const remember of [false, true]) test(`browser closure respects remember=${
     globalThis.sessionStorage = originalTab
     assert.equal(getToken(), null, 'restoring an old tab cannot revive the expired browser session')
   }
+})
+
+test('a new tab joins an unremembered login only while another tab is alive', async () => {
+  saveSession(authResponse, 'shared-token', false)
+  const id = getLoginSessionId()
+  globalThis.sessionStorage = memoryStorage()
+  const joined = []
+  await initializeBrowserSession({ presence: { hasLiveTab: async value => value === id, start: value => joined.push(value) }, navigationType: 'navigate' })
+  assert.deepEqual(joined, [id])
+  assert.equal(getToken(), 'shared-token')
+  assert.equal(getLoginSessionId(), id)
+})
+
+test('reload keeps the current unremembered tab, but reopening a restored closed tab requires login', async () => {
+  saveSession(authResponse, 'reload-token', false)
+  const id = getLoginSessionId(), joined = []
+  const presence = { hasLiveTab: async () => false, start: value => joined.push(value) }
+  await initializeBrowserSession({ presence, navigationType: 'reload' })
+  assert.equal(getToken(), 'reload-token')
+  assert.deepEqual(joined, [id])
+  // Restored sessionStorage must not count as a live tab by itself.
+  await initializeBrowserSession({ presence, navigationType: 'back_forward' })
+  assert.equal(getToken(), null)
+  assert.equal(updateSessionTokens('late-token', 'late-key'), false)
+})
+
+test('a login established during startup checking cannot be cleared by the old startup result', async () => {
+  saveSession(authResponse, 'old-token', false)
+  await initializeBrowserSession({ presence: { hasLiveTab: async () => {
+    saveSession({ ...authResponse, userId: 20 }, 'new-token', true)
+    return false
+  } }, navigationType: 'navigate' })
+  assert.equal(getToken(), 'new-token')
+  assert.equal(getSavedUser().userId, 20)
 })
 
 test('expiry metadata supports base64url JWT payloads and opaque tokens without trusting the claims for authorization', () => {
