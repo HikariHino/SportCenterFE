@@ -4,12 +4,14 @@ import { act, createElement as h } from 'react'
 import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 
-let window, server, createRoot, Dialog, requests, failAi, holdAi, pendingAi, aiAnswer
+let window, server, createRoot, Dialog, requests, failAi, holdAi, pendingAi, aiAnswer, duplicateResult, checkFailure, creationConflict
 const descriptors = new Map()
 const student = { memberId: 4, name: 'Nguyễn Văn An', sportName: 'Tennis', className: 'Tennis A' }
 const catalog = Array.from({ length: 7 }, (_, index) => ({ id: index + 1, exerciseName: `Exercise ${index + 1}` }))
 const recommendation = { goal: 'Tăng sức bền', level: 'Beginner', daysPerWeek: 3,
   sessions: [{ day: 1, title: 'Kỹ thuật', exercises: catalog.map(item => ({ exerciseName: item.exerciseName, sets: 3, reps: 10 })) }], warnings: [] }
+const completedMatch = { id: 81, planName: 'Giáo án đã hoàn thành', goal: 'GeneralFitness', startDate: '2026-10-01T00:00:00Z', endDate: '2026-10-31T00:00:00Z' }
+const duplicate = { isDuplicate: true, message: 'Học viên đã hoàn thành giáo án tương tự.', matchedPlans: [completedMatch] }
 
 before(async () => {
   window = new Window({ url: 'http://localhost:3000/coach' })
@@ -29,6 +31,14 @@ before(async () => {
     if (config.method === 'get') return response(catalog)
     const body = JSON.parse(config.data)
     requests.push({ url: config.url, body, signal: config.signal })
+    if (config.url === '/TrainingPlans/check-duplicate') {
+      if (checkFailure) throw new Error('Không kiểm tra được lịch sử')
+      return response(duplicateResult)
+    }
+    if (config.url === '/TrainingPlans' && creationConflict) {
+      creationConflict = false
+      throw Object.assign(new Error('Conflict'), { response: { status: 409, data: { code: 'DUPLICATE_COMPLETED_PLAN', message: duplicate.message, matchedPlans: duplicate.matchedPlans } } })
+    }
     if (config.url === '/ai/workout-recommendations') {
       if (failAi) throw new Error('AI đang bận')
       if (holdAi) await new Promise(resolve => { pendingAi = resolve })
@@ -50,6 +60,7 @@ after(async () => {
 
 async function screen(run) {
   requests = []; failAi = false; holdAi = false; pendingAi = null; aiAnswer = recommendation
+  duplicateResult = { isDuplicate: false, matchedPlans: [] }; checkFailure = false; creationConflict = false
   const container = document.body.appendChild(document.createElement('div'))
   const root = createRoot(container)
   try {
@@ -122,12 +133,74 @@ test('AI generation sends the chosen inputs and places tagged exercises directly
   assert.equal(container.querySelectorAll('.coach-plan-exercises article').length, 7, 'freeform results are not capped at the former five exercises')
   assert.equal(container.querySelector('.coach-plan-exercises article select').value, '1')
   await act(async () => container.querySelector('form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
-  assert.equal(requests[1].url, '/TrainingPlans')
-  assert.equal(requests[1].body.exercises.length, 7)
-  assert.ok(requests[1].body.exercises.every(exercise => !Object.hasOwn(exercise, 'isAiSuggested')))
-  assert.equal(new Date(requests[1].body.startDate).toLocaleDateString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }), '2026-11-18')
-  assert.equal(new Date(requests[1].body.endDate).toLocaleDateString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }), '2026-12-16')
-  assert.equal(requests[1].body.goal, 'MuscleGain')
+  assert.equal(requests[1].url, '/TrainingPlans/check-duplicate')
+  const saved = requests.find(request => request.url === '/TrainingPlans')
+  assert.equal(saved.body.exercises.length, 7)
+  assert.ok(saved.body.exercises.every(exercise => !Object.hasOwn(exercise, 'isAiSuggested')))
+  assert.equal(new Date(saved.body.startDate).toLocaleDateString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }), '2026-11-18')
+  assert.equal(new Date(saved.body.endDate).toLocaleDateString('sv-SE', { timeZone: 'Asia/Ho_Chi_Minh' }), '2026-12-16')
+  assert.equal(saved.body.goal, 'MuscleGain')
+}))
+
+const submitPlan = () => act(async () => {
+  const form = document.querySelector('.coach-plan-create-dialog form')
+  for (let i = 0; i < 2; i++) form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }))
+})
+
+test('a duplicate shows completed plan details and creates only after an explicit repeat confirmation', () => screen(async container => {
+  duplicateResult = duplicate
+  await submitPlan()
+  assert.equal(requests.filter(request => request.url === '/TrainingPlans/check-duplicate').length, 1)
+  assert.equal(requests.filter(request => request.url === '/TrainingPlans').length, 0)
+  assert.match(container.querySelector('.coach-plan-duplicate').textContent, /#81 · Giáo án đã hoàn thành/)
+  await click('Xác nhận tập lại')
+  const saved = requests.filter(request => request.url === '/TrainingPlans')
+  assert.equal(saved.length, 1)
+  assert.equal(saved[0].body.confirmRepeat, true)
+  assert.equal(saved[0].body.memberId, 4)
+}))
+
+test('editing a duplicate invalidates repeat consent and rechecks the updated plan', () => screen(async container => {
+  duplicateResult = duplicate
+  await submitPlan()
+  await change(container.querySelector('.coach-plan-form-grid input'), 'Giáo án đã thay đổi')
+  assert.equal(container.querySelector('.coach-plan-duplicate'), null)
+  duplicateResult = { isDuplicate: false, matchedPlans: [] }
+  await submitPlan()
+  const saved = requests.find(request => request.url === '/TrainingPlans')
+  assert.equal(saved.body.planName, 'Giáo án đã thay đổi')
+  assert.equal(saved.body.confirmRepeat, undefined)
+  assert.equal(requests.filter(request => request.url === '/TrainingPlans/check-duplicate').length, 2)
+}))
+
+test('duplicate actions let the Coach edit or reopen AI without saving or discarding the draft', () => screen(async container => {
+  duplicateResult = duplicate
+  await submitPlan(); await click('Chỉnh sửa giáo án')
+  assert.equal(container.querySelector('.coach-plan-duplicate'), null)
+  assert.equal(document.activeElement, container.querySelector('.coach-plan-form-grid input'))
+  await submitPlan(); await click('Tạo lại bằng AI')
+  assert.ok(container.querySelector('.coach-plan-ai-demo textarea'))
+  assert.equal(container.querySelector('.coach-plan-duplicate'), null)
+  assert.equal(requests.filter(request => request.url === '/TrainingPlans').length, 0)
+}))
+
+test('a duplicate detected during creation opens the same review instead of silently repeating', () => screen(async container => {
+  creationConflict = true
+  await submitPlan()
+  assert.ok(container.querySelector('.coach-plan-duplicate'))
+  assert.equal(requests.find(request => request.url === '/TrainingPlans').body.confirmRepeat, undefined)
+  await click('Xác nhận tập lại')
+  assert.equal(requests.filter(request => request.url === '/TrainingPlans').at(-1).body.confirmRepeat, true)
+}))
+
+test('failed or malformed duplicate checks never proceed to plan creation', () => screen(async container => {
+  checkFailure = true
+  await submitPlan()
+  assert.match(container.querySelector('[role=alert]').textContent, /Không kiểm tra được lịch sử/)
+  checkFailure = false; duplicateResult = { isDuplicate: false, matchedPlans: [completedMatch] }
+  await submitPlan()
+  assert.match(container.querySelector('[role=alert]').textContent, /Chưa xác nhận/)
+  assert.equal(requests.filter(request => request.url === '/TrainingPlans').length, 0)
 }))
 
 test('reversed dates never reach AI and a failed request preserves the prompt for retry', () => screen(async container => {

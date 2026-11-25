@@ -7,7 +7,7 @@ import { getTrainingExercisesValidationError } from '../src/utils/trainingPlanVa
 let server, api, memberService, reception, training, auth
 const descriptors = new Map()
 const registration = { id: 10, memberId: 20, sessionId: 30, status: 'Registered', sessionStatus: 'Scheduled', startsAt: '2026-11-04T00:15:00+07:00', endsAt: '2026-11-04T01:00:00+07:00' }
-const registrationForm = { fullName: 'Nguyễn An', email: 'test@fpt.edu.vn', password: 'Password123!', phone: '0912345678', address: 'Hà Nội', fitnessGoal: 'Thể lực' }
+const registrationForm = { fullName: 'Nguyễn An', email: 'test@fpt.edu.vn', password: 'Password123!', phone: '0912345678', dateOfBirth: '2000-01-01', address: 'Hà Nội', fitnessGoal: 'Thể lực' }
 const exercise = { exerciseId: 1, sets: 3, reps: 10, durationInMinutes: 15, notes: 'Theo hướng dẫn' }
 const plan = { planName: 'Giáo án', goal: 'GeneralFitness', memberId: 20, startDate: '2026-11-04', endDate: '2026-11-10', exercises: [exercise] }
 
