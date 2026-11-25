@@ -92,7 +92,8 @@ test('Google session uses the existing role destinations, remember choice and sa
     assert.equal(auth.getAuthDestination(user.role, 'https://untrusted.example/'), destination)
     assert.equal(sessionStorage.getItem('token'), 'be-jwt')
     assert.equal(sessionStorage.getItem('refreshTokenKey'), 'be-refresh')
-    assert.equal(localStorage.getItem('token'), null)
+    assert.equal(localStorage.getItem('token'), 'be-jwt')
+    assert.ok(localStorage.getItem(auth.BROWSER_SESSION_KEY))
     assert.doesNotMatch(sessionStorage.getItem('user'), /idToken|credential/)
   }
   auth.saveSession({ role: 'Member', token: 'remembered-jwt' }, 'remembered-jwt', true)

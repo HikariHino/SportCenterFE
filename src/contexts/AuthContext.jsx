@@ -10,8 +10,11 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const expired = () => setUser(null)
-    const sync = () => { if (!reconcileBrowserSession()) setUser(null) }
-    const storage = event => { if (event.key === ACTIVE_LOGIN_KEY || event.key === null) sync() }
+    const sync = () => {
+      const saved = reconcileBrowserSession() ? getSavedUser() : null
+      setUser(current => JSON.stringify(current) === JSON.stringify(saved) ? current : saved)
+    }
+    const storage = event => { if (event.key === ACTIVE_LOGIN_KEY || event.key === 'user' || event.key === null) sync() }
     const visible = () => { if (document.visibilityState === 'visible') sync() }
     window.addEventListener(SESSION_EXPIRED_EVENT, expired)
     window.addEventListener('storage', storage)

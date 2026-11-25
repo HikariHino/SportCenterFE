@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
-import { canUsePayments, getToken, isManagerRole } from './utils/auth'
+import { canUsePayments, getAuthDestination, getToken, isManagerRole } from './utils/auth'
 import { canUseCoachDemo } from './utils/coachDemoAccess'
 
 const SportDashboard = lazy(() => import('./pages/SportDashboard'))
@@ -16,6 +16,14 @@ const CenterManager = lazy(() => import('./pages/CenterManager/CenterManager'))
 
 function RouteFallback() {
   return <main role="status" aria-live="polite" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#526177', background: '#f4f7fa', fontFamily: "'Be Vietnam Pro', sans-serif" }}>Đang tải trang...</main>
+}
+
+function HomeRoute() {
+  const { user } = useAuth()
+  const location = useLocation()
+  const destination = user && getToken() ? getAuthDestination(user.role) : '/'
+  return destination !== '/' && !location.hash && !location.state?.membership
+    ? <Navigate to={destination} replace /> : <SportDashboard />
 }
 
 function CoachRoute() {
@@ -56,7 +64,7 @@ function App() {
     <BrowserRouter>
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/" element={<SportDashboard />} />
+          <Route path="/" element={<HomeRoute />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
