@@ -636,7 +636,7 @@
 .coach-overview-workspace > .coach-schedule { display: flex; flex-direction: column; min-width: 0; }
 .coach-overview-workspace > .coach-schedule > .coach-week-more { margin-top: auto; flex-shrink: 0; justify-content: center; }
 
-.coach-account-profile-fields { grid-template-areas: 'name current-password' 'phone new-password' 'birthdate birthdate'; }
+.coach-account-profile-fields { grid-template-areas: 'name current-password' 'phone new-password'; }
 .coach-profile-name-field { grid-area: name; }
 .coach-profile-phone-field { grid-area: phone; }
 .coach-profile-current-password-field { grid-area: current-password; }
@@ -644,13 +644,9 @@
 html:has(.coach-view-content:not([hidden]) .coach-account-profile-layout) { scrollbar-width: none; }
 html:has(.coach-view-content:not([hidden]) .coach-account-profile-layout)::-webkit-scrollbar { width: 0; }
 @media(max-width:520px) {
-  .coach-account-profile-fields { grid-template-areas: 'name' 'phone' 'birthdate' 'current-password' 'new-password'; }
+  .coach-account-profile-fields { grid-template-areas: 'name' 'phone' 'current-password' 'new-password'; }
   .coach-account-profile-actions { margin-inline: 14px; }
 }
-
-.coach-profile-birthdate-field { grid-area:birthdate; }
-.coach-profile-birthdate-field small { color:var(--theme-muted); font-size:calc(14px + var(--font-size-adjustment, 0px)); }
-.coach-profile-birthdate-field input[aria-invalid="true"] { border-color:var(--theme-red, #b42335); }
 
 .coach-plan-duplicate { margin-top:16px; padding:14px; border:1px solid var(--theme-gold, #c28a20); border-radius:10px; color:var(--theme-text); background:var(--theme-gold-bg, #fff8e6); }
 .coach-plan-duplicate h3 { margin:0 0 8px; font-size:calc(19px + var(--font-size-adjustment, 0px)); }
