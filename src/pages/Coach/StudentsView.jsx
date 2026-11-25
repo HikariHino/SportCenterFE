@@ -68,6 +68,7 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
   const saveLock = useRef(false)
   const planNameInput = useRef(null)
   const aiPromptInput = useRef(null)
+  const aiCancelButton = useRef(null)
   const duplicateHeading = useRef(null)
   const today = new Date()
   const defaultEndDate = new Date(today)
@@ -275,6 +276,17 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
   }
 
   const aiDemoLoading = aiDemoProgress !== null
+  useEffect(() => {
+    if (!aiDemoLoading) return
+    const overflow = document.body.style.overflow
+    const previousFocus = document.activeElement
+    document.body.style.overflow = 'hidden'
+    aiCancelButton.current?.focus({ preventScroll: true })
+    return () => {
+      document.body.style.overflow = overflow
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true })
+    }
+  }, [aiDemoLoading])
   const stopAiRecommendation = () => {
     aiDemoRunRef.current += 1
     aiRequestControllerRef.current?.abort()
@@ -324,21 +336,20 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
       </form>
     </section>
     {aiDemoLoading && <div className="coach-ai-progress-backdrop" role="presentation">
-      <section className="coach-ai-progress-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-ai-progress-title">
+      <section className="coach-ai-progress-dialog" role="dialog" aria-modal="true" aria-labelledby="coach-ai-progress-title" aria-describedby="coach-ai-progress-status coach-ai-progress-context">
         <div className="coach-ai-progress-icon"><Sparkles size={24} /></div>
         <span>AI WORKOUT</span>
         <h3 id="coach-ai-progress-title">Đang tạo giáo án phù hợp</h3>
-        <p role="status" aria-live="polite">{aiDemoProgress.stepIndex < aiTrainingPlanDemoSteps.length ? aiTrainingPlanDemoSteps[aiDemoProgress.stepIndex] : 'Đã hoàn tất gợi ý giáo án'}</p>
+        <p id="coach-ai-progress-status" role="status" aria-live="polite">{aiDemoProgress.stepIndex < aiTrainingPlanDemoSteps.length ? aiTrainingPlanDemoSteps[aiDemoProgress.stepIndex] : 'Đã hoàn tất gợi ý giáo án'}</p>
         <div className="coach-ai-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={aiDemoProgress.percent} aria-label="Tiến độ tạo giáo án AI"><i style={{ width: `${aiDemoProgress.percent}%` }} /></div>
         <strong>{aiDemoProgress.percent}%</strong>
         <ol>
           {aiTrainingPlanDemoSteps.map((step, index) => {
             const state = index < aiDemoProgress.stepIndex || aiDemoProgress.stepIndex === aiTrainingPlanDemoSteps.length ? 'done' : index === aiDemoProgress.stepIndex ? 'active' : ''
-            return <li className={state} key={step}><span>{state === 'done' ? <CheckCircle2 size={15} /> : index + 1}</span>{step.replace(/^Đang /, '')}</li>
+            return <li className={state} key={step}><span>{state === 'done' ? <CheckCircle2 size={15} /> : index + 1}</span><div>{step.replace(/^Đang /, '')}{index === 3 && <small id="coach-ai-progress-context">Tuổi từ ngày sinh, giới tính, giáo án và điểm danh gần đây.</small>}</div></li>
           })}
         </ol>
-        <small>AI có tối đa 35 giây để phản hồi.</small>
-        <button type="button" className="coach-ai-progress-cancel" onClick={stopAiRecommendation}>Dừng tạo</button>
+        <footer><small>AI có tối đa 35 giây để phản hồi.</small><button ref={aiCancelButton} type="button" className="coach-ai-progress-cancel" onClick={stopAiRecommendation}>Dừng tạo</button></footer>
       </section>
     </div>}
   </div>

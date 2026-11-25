@@ -15,6 +15,7 @@ export const aiTrainingPlanDemoSteps = [
   'Đang lấy mục tiêu của học viên',
   'Đang xác định thời gian giáo án',
   'Đang lấy bộ môn học viên đăng ký với Coach',
+  'Đang lấy dữ liệu bổ sung của hội viên',
   'Đang hoàn thiện gợi ý bài tập',
 ]
 

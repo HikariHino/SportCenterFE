@@ -298,7 +298,7 @@ html[data-theme='dark'] { scrollbar-color: #52637d var(--theme-bg); }
 [data-theme='dark'] .coach-plan-exercise-ai-tag { border-color:#62519e; color:#d5c9ff; background:#32264f; }
 [data-theme='dark'] .coach-ai-progress-dialog { border-color:#4c56a4; background:var(--theme-surface); }
 [data-theme='dark'] .coach-ai-progress-dialog h3 { color:var(--theme-text); }
-[data-theme='dark'] .coach-ai-progress-dialog>p,[data-theme='dark'] .coach-ai-progress-dialog>small { color:var(--theme-muted); }
+[data-theme='dark'] .coach-ai-progress-dialog>p,[data-theme='dark'] .coach-ai-progress-dialog>footer small { color:var(--theme-muted); }
 [data-theme='dark'] .coach-ai-progress-track { background:var(--theme-border); }
 [data-theme='dark'] .coach-ai-progress-dialog li>span { border-color:var(--theme-border); background:var(--theme-raised); }
 [data-theme='dark'] .coach-ai-progress-cancel { border-color:var(--theme-border); color:var(--theme-text); background:var(--theme-raised); }

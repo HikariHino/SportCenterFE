@@ -235,6 +235,15 @@ test('stopping AI aborts the request and ignores its late response', () => scree
   await change(container.querySelector('textarea'), 'Tăng sức bền')
   await click('Tạo')
   assert.ok([...container.querySelectorAll('.coach-plan-ai-options select')].every(select => select.disabled))
+  const progress = container.querySelector('.coach-ai-progress-dialog')
+  assert.equal(progress.querySelectorAll('li').length, 5)
+  assert.match(progress.textContent, /lấy dữ liệu bổ sung của hội viên/)
+  assert.match(progress.querySelector('#coach-ai-progress-context').textContent, /Tuổi từ ngày sinh, giới tính/)
+  assert.ok(progress.querySelector('footer .coach-ai-progress-cancel'))
+  assert.equal(document.body.style.overflow, 'hidden')
+  await finishProgress()
+  assert.notEqual(progress.querySelector('[role=progressbar]').getAttribute('aria-valuenow'), '100')
+  assert.equal(document.activeElement, progress.querySelector('.coach-ai-progress-cancel'))
   await click('Dừng tạo')
   assert.equal(requests[0].signal.aborted, true)
   await act(async () => pendingAi())
@@ -242,6 +251,7 @@ test('stopping AI aborts the request and ignores its late response', () => scree
   assert.equal(container.querySelector('.coach-plan-ai-result'), null)
   assert.equal(container.querySelectorAll('.coach-plan-exercises article').length, 0)
   assert.equal(container.querySelector('textarea').value, 'Tăng sức bền')
+  assert.equal(document.body.style.overflow, '')
 }))
 
 test('AI tags survive pagination and edits while manually added exercises remain untagged', () => screen(async container => {
