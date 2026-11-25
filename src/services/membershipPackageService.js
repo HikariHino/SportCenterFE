@@ -1,4 +1,5 @@
 import api from './api'
+import { formatBankingText } from '../utils/paymentPresentation.js'
 import { getManagerFormValidationError } from '../utils/managerFormValidation.js'
 
 function packageTypeFields(packageType) {
@@ -16,10 +17,10 @@ export function getPackageErrorMessage(error, fallback = 'Có lỗi xảy ra khi
   if (validationErrors && typeof validationErrors === 'object') {
     const firstKey = Object.keys(validationErrors)[0]
     if (firstKey && Array.isArray(validationErrors[firstKey])) {
-      return validationErrors[firstKey][0]
+      return formatBankingText(validationErrors[firstKey][0])
     }
   }
-  return body?.message || error?.message || fallback
+  return formatBankingText(body?.message || error?.message || fallback)
 }
 
 /**

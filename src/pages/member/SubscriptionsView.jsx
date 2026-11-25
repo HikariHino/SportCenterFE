@@ -1,3 +1,4 @@
+import { paymentMethodLabel } from '../../utils/paymentPresentation'
 import { MemberList } from './MemberPagination'
 import { useEffect, useRef, useState } from 'react'
 import { MEMBER_TRANSACTION_RESOURCES, useMemberCache, useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
@@ -259,7 +260,7 @@ export function SubscriptionsView({ showNotice }) {
         }
       }
     } catch (err) {
-      setCheckoutFeedback({ message: getPackageErrorMessage(err, 'Không thể khởi tạo thanh toán PayOS.'), error: true })
+      setCheckoutFeedback({ message: getPackageErrorMessage(err, 'Không thể khởi tạo thanh toán Banking.'), error: true })
     } finally {
       setPayingSubId(null)
       registrationLock.current = false
@@ -370,7 +371,7 @@ export function SubscriptionsView({ showNotice }) {
             <button type="button" className="member-button" onClick={() => handleOpenSubDetail(item)}><Eye size={15} />Chi tiết</button>
             {subscriptionStatus(item, now) === 'pending' && <><button type="button" className="member-btn-checkout" disabled={payingSubId !== null || cancelLoading || ['completed', 'needsreview'].includes(subscriptionPaymentState(item))} onClick={() => handlePayOSCheckout(item.id)}>{payingSubId === item.id ? <LoaderCircle size={15} className="member-spin" /> : <CreditCard size={15} />}{['cancelled', 'expired', 'failed'].includes(subscriptionPaymentState(item)) ? 'Thanh toán lại' : 'Thanh toán'}</button><button type="button" className="member-button member-button--danger" disabled={cancelLoading || payingSubId !== null || ['completed', 'needsreview'].includes(subscriptionPaymentState(item))} onClick={() => handlePromptCancelSub(item)}><Trash2 size={15} />{subscriptionPaymentState(item) === 'cancelled' ? 'Hoàn tất hủy đơn' : 'Hủy đơn'}</button></>}
           </div>
-          {subscriptionStatus(item, now) === 'pending' && subscriptionPaymentState(item) === 'cancelled' && <p className="member-sub-payment-note">Giao dịch PayOS đã hủy nhưng đơn gói chưa được hủy. Chọn “Hoàn tất hủy đơn” để đóng đơn, hoặc “Thanh toán lại” nếu bạn vẫn muốn đăng ký.</p>}
+          {subscriptionStatus(item, now) === 'pending' && subscriptionPaymentState(item) === 'cancelled' && <p className="member-sub-payment-note">Giao dịch Banking đã hủy nhưng đơn gói chưa được hủy. Chọn “Hoàn tất hủy đơn” để đóng đơn, hoặc “Thanh toán lại” nếu bạn vẫn muốn đăng ký.</p>}
         </li>}</MemberList> : <div className="member-sub-empty"><Search size={27} /><h4>{subscriptions.length ? 'Không tìm thấy đơn phù hợp' : 'Bạn chưa có đơn đăng ký'}</h4><p>{subscriptions.length ? 'Thử thay đổi từ khóa hoặc trạng thái lọc.' : 'Chọn một gói trong danh mục để bắt đầu đăng ký.'}</p>{!subscriptions.length && <button type="button" className="member-button" onClick={() => setTab('catalog')}>Khám phá gói tập<ArrowRight size={16} /></button>}</div>}
       </section>}
 
@@ -585,7 +586,7 @@ export function SubscriptionsView({ showNotice }) {
 
               <div style={{ background: 'var(--theme-gold-bg, #fff7e5)', border: '1px solid var(--theme-border, #d8e0ed)', borderRadius: 8, padding: 12 }}>
                 <p style={{ margin: 0, fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', color: 'var(--theme-gold, #805200)', lineHeight: 1.5 }}>
-                  💡 <strong>Bước tiếp theo:</strong> Bạn có thể bấm <strong>"Thanh toán PayOS ngay"</strong> để quét mã QR ngân hàng và kích hoạt gói tức thì, hoặc chọn <strong>"Để sau"</strong> để thanh toán tiền mặt tại quầy lễ tân hoặc thanh toán sau tại mục Thanh toán trực tuyến.
+                  💡 <strong>Bước tiếp theo:</strong> Bạn có thể bấm <strong>"Thanh toán Banking ngay"</strong> để quét mã QR ngân hàng và kích hoạt gói tức thì, hoặc chọn <strong>"Để sau"</strong> để thanh toán tiền mặt tại quầy lễ tân hoặc thanh toán sau tại mục Thanh toán trực tuyến.
                 </p>
               </div>
             </div>
@@ -607,7 +608,7 @@ export function SubscriptionsView({ showNotice }) {
                 {payingSubId === registrationSuccessSub.id ? (
                   <><LoaderCircle className="member-spin" size={15} /> Đang mở cổng...</>
                 ) : (
-                  <><CreditCard size={15} /> Thanh toán PayOS ngay <ArrowRight size={14} /></>
+                  <><CreditCard size={15} /> Thanh toán Banking ngay <ArrowRight size={14} /></>
                 )}
               </button>
             </div>
@@ -652,7 +653,7 @@ export function SubscriptionsView({ showNotice }) {
                       <div>
                         <strong style={{ color: 'var(--theme-gold, #805200)', fontSize: 'calc(18px + var(--font-size-adjustment, 0px))' }}>{subscriptionDisplayStatusLabel(viewingSub, now)}</strong>
                         <p style={{ color: 'var(--theme-gold, #805200)', fontSize: 'calc(16px + var(--font-size-adjustment, 0px))', margin: '2px 0 0' }}>
-                          {subscriptionPaymentState(viewingSub) === 'cancelled' ? 'Giao dịch PayOS đã hủy. Chọn Hủy đơn đăng ký này để hoàn tất hủy đơn gói, hoặc thanh toán lại nếu bạn vẫn muốn đăng ký.' : 'Gói tập chưa được kích hoạt. Trạng thái đơn và thanh toán được cập nhật theo xác nhận của hệ thống.'}
+                          {subscriptionPaymentState(viewingSub) === 'cancelled' ? 'Giao dịch Banking đã hủy. Chọn Hủy đơn đăng ký này để hoàn tất hủy đơn gói, hoặc thanh toán lại nếu bạn vẫn muốn đăng ký.' : 'Gói tập chưa được kích hoạt. Trạng thái đơn và thanh toán được cập nhật theo xác nhận của hệ thống.'}
                         </p>
                       </div>
                     </div>
@@ -778,7 +779,7 @@ export function SubscriptionsView({ showNotice }) {
                                 <td className="member-amount">{formatCurrency(p.amount)}</td>
                                 <td>
                                   <span className="member-tag" style={{ textTransform: 'uppercase' }}>
-                                    {p.paymentMethod || 'PayOS'}
+                                    {paymentMethodLabel(p.paymentMethod)}
                                   </span>
                                 </td>
                                 <td>
@@ -827,7 +828,7 @@ export function SubscriptionsView({ showNotice }) {
                     {payingSubId === viewingSub.id ? (
                       <><LoaderCircle className="member-spin" size={14} /> Đang mở cổng...</>
                     ) : (
-                      <><CreditCard size={14} /> Thanh toán PayOS ngay</>
+                      <><CreditCard size={14} /> Thanh toán Banking ngay</>
                     )}
                   </button>
                 </>

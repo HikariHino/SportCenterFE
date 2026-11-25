@@ -111,7 +111,7 @@ test('PayOS configuration errors are actionable and private server details are h
     if (config.method === 'get') return response(config, order)
     throw failure(400, "Key cannot be null or empty (Parameter 'key')")
   }
-  await assert.rejects(service.checkoutReceptionistSubscription(input), /cấu hình.*PayOS/)
+  await assert.rejects(service.checkoutReceptionistSubscription(input), /cấu hình.*Banking/)
   assert.equal(service.getReceptionistPaymentError(failure(400, 'DbSet could not be translated'), 'Lỗi máy chủ'), 'Lỗi máy chủ')
   assert.equal(service.getReceptionistPaymentError(failure(403, 'Không có quyền thu tiền.')), 'Không có quyền thu tiền.')
 })

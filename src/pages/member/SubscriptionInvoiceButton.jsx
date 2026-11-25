@@ -1,3 +1,4 @@
+import { formatBankingText, paymentMethodLabel } from '../../utils/paymentPresentation'
 import { useEffect, useId, useRef, useState } from 'react'
 import { ArrowDownToLine, LoaderCircle, X } from 'lucide-react'
 import { getMyPayments } from '../../services/paymentService'
@@ -51,7 +52,7 @@ export default function SubscriptionInvoiceButton({ subscription, disabled = fal
         else setChoices(completed)
       }
     } catch (failure) {
-      if (mounted.current) setError(failure.response?.data?.message || failure.message || 'Không thể tải hóa đơn PDF. Vui lòng thử lại.')
+      if (mounted.current) setError(formatBankingText(failure.response?.data?.message || failure.message || 'Không thể tải hóa đơn PDF. Vui lòng thử lại.'))
     } finally {
       lock.current = false
       if (mounted.current) setBusy(false)
@@ -72,7 +73,7 @@ export default function SubscriptionInvoiceButton({ subscription, disabled = fal
       <header><h3 id={titleId}>Hóa đơn của đơn #SUB-{subscription.id}</h3><button type="button" className="member-button" aria-label="Đóng danh sách hóa đơn" disabled={busy} onClick={() => setChoices([])}><X size={18} /></button></header>
       <p>Chọn giao dịch đã thanh toán để tải hóa đơn.</p>
       {error && <p className="member-sub-invoice-error" role="alert">{error}</p>}
-      <ul>{choices.map(item => <li key={item.id}><span><strong>#PAY-{item.id}</strong> · {Number(item.amount).toLocaleString('vi-VN')} đ · {item.paymentMethod || 'Thanh toán'}</span><button type="button" className="member-button" disabled={busy} onClick={() => exportInvoice(item)}><ArrowDownToLine size={15} />Tải PDF</button></li>)}</ul>
+      <ul>{choices.map(item => <li key={item.id}><span><strong>#PAY-{item.id}</strong> · {Number(item.amount).toLocaleString('vi-VN')} đ · {paymentMethodLabel(item.paymentMethod, 'Thanh toán')}</span><button type="button" className="member-button" disabled={busy} onClick={() => exportInvoice(item)}><ArrowDownToLine size={15} />Tải PDF</button></li>)}</ul>
     </dialog>}
   </div>
 }

@@ -174,7 +174,7 @@ test('bank transfer collection hides receipt consent and pays the existing order
   await click('[aria-label="Thu tiền đơn đăng ký 28"]')
   assert.ok(document.querySelector('.reception-payment-confirm'))
   const methods = '.reception-checkout-fields label:last-child select'
-  assert.deepEqual([...document.querySelector(methods).options].map(option => [option.value, option.textContent]), [['PayOS', 'Thanh toán chuyển khoản'], ['Cash', 'Tiền mặt']])
+  assert.deepEqual([...document.querySelector(methods).options].map(option => [option.value, option.textContent]), [['PayOS', 'Banking'], ['Cash', 'Tiền mặt']])
   await choose(methods, 'PayOS')
   assert.equal(document.querySelector('.reception-payment-confirm'), null)
   const payButton = document.querySelector('.reception-checkout-dialog [type=submit]')

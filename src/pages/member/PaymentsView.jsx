@@ -1,4 +1,5 @@
 import { MemberList } from './MemberPagination'
+import { formatBankingText, paymentMethodLabel } from '../../utils/paymentPresentation'
 import { useEffect, useId, useRef, useState } from 'react'
 import { MEMBER_TRANSACTION_RESOURCES, useMemberCache, useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
 import {
@@ -14,7 +15,7 @@ import '../../style/member/PaymentsView.css'
 
 const currency = value => `${Number(value ?? 0).toLocaleString('vi-VN')} đ`
 const dateTime = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : 'Chưa cập nhật'
-const errorMessage = (error, fallback) => error?.response?.data?.message || error?.message || fallback
+const errorMessage = (error, fallback) => formatBankingText(error?.response?.data?.message || error?.message || fallback)
 
 function PaymentStatus({ payment }) {
   return <span className="mpay-status" data-status={paymentStatus(payment)}><span />{paymentStatusLabel(payment)}</span>
@@ -48,13 +49,13 @@ function PaymentQr({ payment, onCheckout, disabled }) {
     setError('')
     QRCode.toDataURL(payload, { width: 240, margin: 4, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } })
       .then(url => { if (active) setImage({ payload, url }) })
-      .catch(() => { if (active) setError('Chưa thể hiển thị mã QR. Bạn vẫn có thể mở liên kết PayOS để thanh toán.') })
+      .catch(() => { if (active) setError('Chưa thể hiển thị mã QR. Bạn vẫn có thể mở liên kết Banking để thanh toán.') })
     return () => { active = false }
   }, [payload])
-  return <section className="mpay-qr" aria-label="Thông tin thanh toán PayOS">
-    <div className="mpay-qr-heading"><QrCode size={20} /><div><h3>{payment.qrCode ? 'Quét mã QR để thanh toán' : 'Mở trang thanh toán PayOS'}</h3><p>{payment.qrCode ? 'Dùng ứng dụng ngân hàng để quét mã QR do PayOS cung cấp.' : 'Quét mã bằng camera điện thoại hoặc mở liên kết để đến trang thanh toán.'}</p></div></div>
-    <div className="mpay-qr-content">{error ? <p className="mpay-muted" role="status">{error}</p> : image?.payload === payload ? <img src={image.url} width="176" height="176" alt={payment.qrCode ? 'Mã QR thanh toán PayOS' : 'Mã QR mở trang PayOS'} /> : <LoaderCircle size={28} className="member-spin" aria-label="Đang tạo mã QR" />}
-      <div><span>Số tiền cần thanh toán</span><strong>{currency(payment.amount)}</strong>{payment.expiresAt && <small>Hết hạn: {dateTime(payment.expiresAt)}</small>}{payment.checkoutUrl && <button type="button" className="mpay-button is-primary" disabled={disabled} onClick={() => onCheckout(payment)}><ExternalLink size={16} />Mở PayOS</button>}</div>
+  return <section className="mpay-qr" aria-label="Thông tin thanh toán Banking">
+    <div className="mpay-qr-heading"><QrCode size={20} /><div><h3>{payment.qrCode ? 'Quét mã QR để thanh toán' : 'Mở trang thanh toán Banking'}</h3><p>{payment.qrCode ? 'Dùng ứng dụng ngân hàng để quét mã QR do Banking cung cấp.' : 'Quét mã bằng camera điện thoại hoặc mở liên kết để đến trang thanh toán.'}</p></div></div>
+    <div className="mpay-qr-content">{error ? <p className="mpay-muted" role="status">{error}</p> : image?.payload === payload ? <img src={image.url} width="176" height="176" alt={payment.qrCode ? 'Mã QR thanh toán Banking' : 'Mã QR mở trang Banking'} /> : <LoaderCircle size={28} className="member-spin" aria-label="Đang tạo mã QR" />}
+      <div><span>Số tiền cần thanh toán</span><strong>{currency(payment.amount)}</strong>{payment.expiresAt && <small>Hết hạn: {dateTime(payment.expiresAt)}</small>}{payment.checkoutUrl && <button type="button" className="mpay-button is-primary" disabled={disabled} onClick={() => onCheckout(payment)}><ExternalLink size={16} />Mở Banking</button>}</div>
     </div>
   </section>
 }
@@ -92,7 +93,7 @@ export function PaymentsView({ showNotice }) {
   const openDetail = payment => { setActionError(''); setNotice(''); setViewingId(payment.id) }
   const checkout = payment => {
     if (busy || loading || !canCheckoutPayOSPayment(payment)) return
-    if (!payment.checkoutUrl) { setActionError('Giao dịch chưa có liên kết PayOS. Hãy mở chi tiết và đồng bộ trạng thái hoặc liên hệ lễ tân.'); return }
+    if (!payment.checkoutUrl) { setActionError('Giao dịch chưa có liên kết Banking. Hãy mở chi tiết và đồng bộ trạng thái hoặc liên hệ lễ tân.'); return }
     window.location.assign(payment.checkoutUrl)
   }
   const updatePayment = result => {
@@ -106,7 +107,7 @@ export function PaymentsView({ showNotice }) {
       cache.invalidate(MEMBER_TRANSACTION_RESOURCES)
       await loadPayments()
       updatePayment(updated)
-      announce('Đã cập nhật trạng thái giao dịch từ PayOS.')
+      announce('Đã cập nhật trạng thái giao dịch từ Banking.')
     } catch (err) { setActionError(errorMessage(err, 'Không thể đồng bộ thanh toán. Vui lòng thử lại.')) }
     finally { actionLock.current = false; setAction(null) }
   }
@@ -140,7 +141,7 @@ export function PaymentsView({ showNotice }) {
   }
 
   return <div className="member-payments-view">
-    <header className="mpay-page-heading"><div><p className="member-eyebrow"><ReceiptText size={16} />QUẢN LÝ GIAO DỊCH</p><h2>Thanh toán & Hóa đơn</h2><p>Quản lý giao dịch, kiểm tra trạng thái PayOS và tải hóa đơn của bạn.</p></div><button type="button" className="mpay-button" disabled={loading || busy} onClick={loadPayments} aria-label="Làm mới" title="Làm mới giao dịch"><RefreshCw size={16} className={loading ? 'member-spin' : undefined} /><span>Làm mới</span></button></header>
+    <header className="mpay-page-heading"><div><p className="member-eyebrow"><ReceiptText size={16} />QUẢN LÝ GIAO DỊCH</p><h2>Thanh toán & Hóa đơn</h2><p>Quản lý giao dịch, kiểm tra trạng thái Banking và tải hóa đơn của bạn.</p></div><button type="button" className="mpay-button" disabled={loading || busy} onClick={loadPayments} aria-label="Làm mới" title="Làm mới giao dịch"><RefreshCw size={16} className={loading ? 'member-spin' : undefined} /><span>Làm mới</span></button></header>
     {loadError && <Message error>{loadError}{hasLoaded ? ' Dữ liệu đang hiển thị là lần tải gần nhất.' : ''}</Message>}
     {actionError && !viewing && !cancelling && <Message error>{actionError}</Message>}
     {notice && <Message>{notice}</Message>}
@@ -156,12 +157,12 @@ export function PaymentsView({ showNotice }) {
 
     <section className="mpay-history" aria-labelledby="mpay-history-title" aria-busy={loading}>
       <div className="mpay-section-heading"><div><h3 id="mpay-history-title">Lịch sử thanh toán</h3><p>Hóa đơn PDF có thể tải khi giao dịch đã được xác nhận thanh toán.</p></div>{hasLoaded && <span>{filtered.length} / {payments.length} giao dịch</span>}</div>
-      <div className="mpay-toolbar"><label className="mpay-search"><Search size={18} aria-hidden="true" /><input type="search" maxLength={200} value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm mã giao dịch, mã PayOS, mã đăng ký..." aria-label="Tìm giao dịch thanh toán" /></label><label className="mpay-filter"><span>Trạng thái</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">Tất cả giao dịch</option><option value="completed">Đã thanh toán</option><option value="pending">Chờ thanh toán</option><option value="needsreview">Cần đối soát</option><option value="closed">Giao dịch đã đóng</option><option value="cancelled">Đã hủy</option><option value="expired">Hết hạn</option><option value="failed">Thất bại</option><option value="refunded">Đã hoàn tiền</option></select></label></div>
+      <div className="mpay-toolbar"><label className="mpay-search"><Search size={18} aria-hidden="true" /><input type="search" maxLength={200} value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm mã giao dịch, mã Banking, mã đăng ký..." aria-label="Tìm giao dịch thanh toán" /></label><label className="mpay-filter"><span>Trạng thái</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">Tất cả giao dịch</option><option value="completed">Đã thanh toán</option><option value="pending">Chờ thanh toán</option><option value="needsreview">Cần đối soát</option><option value="closed">Giao dịch đã đóng</option><option value="cancelled">Đã hủy</option><option value="expired">Hết hạn</option><option value="failed">Thất bại</option><option value="refunded">Đã hoàn tiền</option></select></label></div>
       {loading && !hasLoaded ? <div className="mpay-empty" role="status"><LoaderCircle size={28} className="member-spin" /><p>Đang tải giao dịch và hóa đơn...</p></div> : !hasLoaded && loadError ? <div className="mpay-empty"><AlertCircle size={28} /><h4>Chưa thể tải lịch sử thanh toán</h4><button type="button" className="mpay-button" onClick={loadPayments}>Thử lại</button></div> : filtered.length ? <div className="mpay-records">
         <div className="mpay-record-labels" aria-hidden="true"><span>Giao dịch</span><span>Số tiền</span><span>Thời gian</span><span>Trạng thái</span><span>Thao tác</span></div>
         <MemberList items={filtered} label="Lịch sử thanh toán" as="ul" className="mpay-record-list" showOrdinal={false} resetKey={JSON.stringify([search, statusFilter])}>{payment => <li className="mpay-record" key={payment.id} data-payment-id={payment.id}>
           <div className="mpay-record-main"><span className="mpay-record-icon"><ReceiptText size={19} /></span><div><h4>#PAY-{payment.id}</h4><p>{payment.packageName || (payment.subscriptionId ? `Đăng ký gói #SUB-${payment.subscriptionId}` : 'Giao dịch thanh toán')}</p></div></div>
-          <div className="mpay-record-amount"><span className="mpay-mobile-label">Số tiền</span><strong>{currency(paymentStatus(payment) === 'completed' ? paymentReceivedAmount(payment) : payment.amount)}</strong><small>{payment.paymentMethod || 'PayOS'}</small></div>
+          <div className="mpay-record-amount"><span className="mpay-mobile-label">Số tiền</span><strong>{currency(paymentStatus(payment) === 'completed' ? paymentReceivedAmount(payment) : payment.amount)}</strong><small>{paymentMethodLabel(payment.paymentMethod)}</small></div>
           <div className="mpay-record-date"><span className="mpay-mobile-label">Thời gian</span><time>{dateTime(payment.paidAt || payment.createdAt)}</time><small>{payment.paidAt ? 'Ngày thanh toán' : 'Ngày tạo giao dịch'}</small></div>
           <div className="mpay-record-status"><PaymentStatus payment={payment} /></div>
           <div className="mpay-record-actions"><button type="button" className="mpay-button" onClick={() => openDetail(payment)} aria-label={`Xem chi tiết giao dịch PAY-${payment.id}`}><Eye size={15} />Chi tiết</button>{canCheckoutPayOSPayment(payment) && <button type="button" className="mpay-button is-primary" disabled={busy || loading} onClick={() => checkout(payment)}><ExternalLink size={15} />Thanh toán</button>}{paymentStatus(payment) === 'completed' && <button type="button" className="mpay-button is-soft" disabled={busy || loading} onClick={() => exportPdf(payment)}>{action?.id === payment.id && action.type === 'pdf' ? <LoaderCircle className="member-spin" size={15} /> : <ArrowDownToLine size={15} />}Hóa đơn PDF</button>}</div>
@@ -177,7 +178,7 @@ export function PaymentsView({ showNotice }) {
       <div className="mpay-detail-summary"><div><span>Số tiền giao dịch</span><strong>{currency(viewing.amount)}</strong></div><PaymentStatus payment={viewing} /></div>
       {actionError && <Message error>{actionError}</Message>}{loadError && <Message error>{loadError}</Message>}
       {paymentStatus(viewing) === 'needsreview' && <Message>{viewing.reviewReason || 'Giao dịch cần được kiểm tra đối soát. Vui lòng liên hệ lễ tân để được hỗ trợ.'}</Message>}
-      <dl className="mpay-detail-grid"><DetailField label="Mã giao dịch">#PAY-{viewing.id}</DetailField><DetailField label="Đăng ký gói tập">{viewing.subscriptionId ? `#SUB-${viewing.subscriptionId}` : 'Chưa cập nhật'}</DetailField><DetailField label="Phương thức">{viewing.paymentMethod || 'PayOS'}</DetailField><DetailField label="Mã đơn PayOS">{viewing.payOSOrderCode ?? 'Chưa cập nhật'}</DetailField><DetailField label="Ngày tạo">{dateTime(viewing.createdAt)}</DetailField><DetailField label="Ngày thanh toán">{dateTime(viewing.paidAt)}</DetailField><DetailField label="Số tiền thực nhận">{currency(viewing.amountReceived ?? 0)}</DetailField><DetailField label="Mã tham chiếu">{viewing.transactionReference || 'Chưa cập nhật'}</DetailField></dl>
+      <dl className="mpay-detail-grid"><DetailField label="Mã giao dịch">#PAY-{viewing.id}</DetailField><DetailField label="Đăng ký gói tập">{viewing.subscriptionId ? `#SUB-${viewing.subscriptionId}` : 'Chưa cập nhật'}</DetailField><DetailField label="Phương thức">{paymentMethodLabel(viewing.paymentMethod)}</DetailField><DetailField label="Mã đơn Banking">{viewing.payOSOrderCode ?? 'Chưa cập nhật'}</DetailField><DetailField label="Ngày tạo">{dateTime(viewing.createdAt)}</DetailField><DetailField label="Ngày thanh toán">{dateTime(viewing.paidAt)}</DetailField><DetailField label="Số tiền thực nhận">{currency(viewing.amountReceived ?? 0)}</DetailField><DetailField label="Mã tham chiếu">{viewing.transactionReference || 'Chưa cập nhật'}</DetailField></dl>
       {canCheckoutPayOSPayment(viewing) && (viewing.qrCode || viewing.checkoutUrl) && <PaymentQr payment={viewing} onCheckout={checkout} disabled={busy || loading} />}
       {paymentStatus(viewing) === 'pending' && !viewing.checkoutUrl && !viewing.qrCode && <Message>Giao dịch chưa có liên kết thanh toán. Hãy đồng bộ trạng thái hoặc liên hệ lễ tân để được hỗ trợ.</Message>}
     </PaymentDialog>}

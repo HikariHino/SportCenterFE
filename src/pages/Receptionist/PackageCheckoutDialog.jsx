@@ -167,7 +167,7 @@ export default function PackageCheckoutDialog({ onClose, onCreated, onOrderCreat
           {order && <small>Đã tạo đơn #SUB-{order.id}. Tiếp tục thanh toán cho đơn này.</small>}
         </div>}
         {purchase?.reason && !order && <p className="reception-form-error" role="alert">{purchase.reason}</p>}
-        <label className="reception-checkout-method">Phương thức<select value={method} disabled={saving || refreshing} onChange={event => { setMethod(event.target.value); setReceived(false) }}><option value="PayOS">Thanh toán chuyển khoản</option><option value="Cash">Tiền mặt</option></select></label>
+        <label className="reception-checkout-method">Phương thức<select value={method} disabled={saving || refreshing} onChange={event => { setMethod(event.target.value); setReceived(false) }}><option value="PayOS">Banking</option><option value="Cash">Tiền mặt</option></select></label>
         {method === 'PayOS' ? <p className="reception-checkout-note">Nhấn Trả tiền để chuyển đến trang thanh toán. Khi quay lại, hệ thống kiểm tra kết quả và cập nhật giao dịch.</p> : <label className="reception-payment-confirm"><input type="checkbox" required checked={received} disabled={saving || refreshing} onChange={event => setReceived(event.target.checked)} /><span><strong>Tôi đã thực nhận đủ {money(amount)}</strong><small>Chỉ xác nhận sau khi đã nhận đủ tiền của hội viên.</small></span></label>}
         {error && <p className="reception-form-error" role="alert">{error}</p>}
         </div>

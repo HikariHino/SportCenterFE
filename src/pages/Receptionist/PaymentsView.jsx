@@ -56,7 +56,7 @@ export function PaymentsView({ query, showNotice, paymentReturn }) {
   const onCreated = (payment, { redirect = true } = {}) => {
     const payosPending = String(payment.paymentMethod).toLowerCase() === 'payos' && paymentStatus(payment) === 'pending'
     const url = payosPending ? receptionistCheckoutUrl(payment) : ''
-    if (payosPending && !url) throw new Error('Chưa có liên kết PayOS hợp lệ. Hãy tải lại trạng thái giao dịch trước khi tiếp tục.')
+    if (payosPending && !url) throw new Error('Chưa có liên kết Banking hợp lệ. Hãy tải lại trạng thái giao dịch trước khi tiếp tục.')
     paymentsQuery.setData(current => [payment, ...(current || []).filter(item => String(item.id) !== String(payment.id))])
     refresh()
     if (url) { if (redirect) window.location.assign(url); return }
@@ -70,7 +70,7 @@ export function PaymentsView({ query, showNotice, paymentReturn }) {
   return <>
     <RefreshStatus refreshing={refreshing || ordersQuery.refreshing} />
     {paymentReturn?.id && <div className="reception-payment-return" data-status={returnStatus} role="status">{{ success: 'Thanh toán thành công', cancelled: 'Giao dịch đã hủy', failed: 'Thanh toán không thành công', pending: 'Giao dịch đang chờ xác nhận', review: 'Giao dịch cần đối soát' }[returnStatus] || 'Đã quay lại danh sách thanh toán'}</div>}
-    <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{summary.paid.toLocaleString('vi-VN')} đ</strong><p>{summary.completed} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{summary.pending + allRows.filter(row => row.kind === 'order' && !row.order.blockedReason).length}</strong><p>{summary.review} giao dịch cần đối soát</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{summary.total}</strong><p>PayOS và thanh toán tại quầy</p></div></article></section>
+    <section className="reception-payment-metrics"><article><span className="green"><WalletCards size={21} /></span><div><small>Tổng đã thu</small><strong>{summary.paid.toLocaleString('vi-VN')} đ</strong><p>{summary.completed} giao dịch thành công</p></div></article><article><span className="amber"><Clock3 size={21} /></span><div><small>Chờ thanh toán</small><strong>{summary.pending + allRows.filter(row => row.kind === 'order' && !row.order.blockedReason).length}</strong><p>{summary.review} giao dịch cần đối soát</p></div></article><article><span className="blue"><ReceiptText size={21} /></span><div><small>Tổng giao dịch</small><strong>{summary.total}</strong><p>Banking và thanh toán tại quầy</p></div></article></section>
     <section className="reception-card reception-table-card reception-payments-card">
       <div className="reception-table-tools"><div><strong>Danh sách thanh toán</strong><small>{rows.length - visibleCounterCount} giao dịch · {visibleCounterCount} đơn chờ {(loading || pendingLoading) && '· Đang cập nhật...'}</small></div><div><button className="reception-refresh-icon" type="button" aria-label="Làm mới danh sách thanh toán" title="Làm mới" disabled={loading || pendingLoading} onClick={refresh}><RefreshCw size={17} aria-hidden="true" /></button><button className="reception-primary-button" type="button" onClick={() => setShowCreateDialog(true)}><Plus size={14} />Tạo thanh toán</button></div></div>
       <div className="reception-payment-filters"><label>Trạng thái<select value={status} onChange={event => setStatus(event.target.value)}>{receptionistPaymentStatuses.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label><label>Phương thức<select value={method} onChange={event => setMethod(event.target.value)}>{receptionistPaymentMethods.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label></div>
@@ -147,7 +147,7 @@ function PaymentDetailDialog({ paymentId, onClose, onUpdated, showNotice }) {
     } catch (requestError) {
       if (mounted.current) {
         setGatewayUncertain(true)
-        setActionError(getReceptionistPaymentError(requestError, 'Không thể đồng bộ trạng thái PayOS.'))
+        setActionError(getReceptionistPaymentError(requestError, 'Không thể đồng bộ trạng thái Banking.'))
       }
     } finally {
       actionLock.current = false
@@ -185,15 +185,15 @@ function PaymentDetailDialog({ paymentId, onClose, onUpdated, showNotice }) {
               <div><small>Hội viên</small><strong>#{payment.memberId}</strong></div><div><small>Đăng ký gói</small><strong>{payment.subscriptionId ? `#${payment.subscriptionId}` : 'Không có'}</strong></div>
               <div><small>Số tiền</small><strong>{Number(payment.amount || 0).toLocaleString('vi-VN')} đ</strong></div><div><small>Đã nhận</small><strong>{Number(payment.amountReceived || (paymentStatus(payment) === 'completed' ? payment.amount : 0)).toLocaleString('vi-VN')} đ</strong></div>
               <div><small>Ngày tạo</small><strong>{formatDateTime(payment.createdAt)}</strong></div><div><small>Ngày thanh toán</small><strong>{formatDateTime(payment.paidAt)}</strong></div><div><small>Mã tham chiếu</small><strong>{payment.transactionReference || 'Chưa có'}</strong></div>
-              {String(payment.paymentMethod).toLowerCase() === 'payos' && <><div><small>Trạng thái PayOS</small><strong>{payment.gatewayStatus || 'Chưa đồng bộ'}</strong></div><div><small>Mã đơn PayOS</small><strong>{payment.payOSOrderCode || 'Chưa có'}</strong></div><div><small>Hết hạn</small><strong>{formatDateTime(payment.expiresAt)}</strong></div><div><small>Lý do kiểm tra</small><strong>{payment.reviewReason || 'Không có'}</strong></div></>}
+              {String(payment.paymentMethod).toLowerCase() === 'payos' && <><div><small>Trạng thái Banking</small><strong>{payment.gatewayStatus || 'Chưa đồng bộ'}</strong></div><div><small>Mã đơn Banking</small><strong>{payment.payOSOrderCode || 'Chưa có'}</strong></div><div><small>Hết hạn</small><strong>{formatDateTime(payment.expiresAt)}</strong></div><div><small>Lý do kiểm tra</small><strong>{payment.reviewReason || 'Không có'}</strong></div></>}
             </div>
             {paymentStatus(payment) === 'needsreview' && <p className="reception-form-error" role="alert">Giao dịch cần đối soát. Không thu thêm tiền cho đến khi xác minh xong.</p>}
             {actionError && <p className="reception-form-error" role="alert">{actionError}</p>}
             <div className="reception-payment-detail-actions">
               {paymentStatus(payment) === 'completed' && <button className="export" type="button" onClick={handleExport} disabled={exporting || syncing}><Download size={14} />{exporting ? 'Đang xuất PDF...' : 'Tải hóa đơn PDF'}</button>}
               {checkoutUrl && !syncing && <a href={checkoutUrl} target="_blank" rel="noopener noreferrer">Mở trang thanh toán <ArrowRight size={14} /></a>}
-              {canSyncPayOSPayment(payment) && <button type="button" onClick={handleSync} disabled={syncing || exporting}><ScanLine size={14} />{syncing ? 'Đang đồng bộ...' : 'Đồng bộ PayOS'}</button>}
-              {!gatewayUncertain && canCancelPayOSPayment(payment) && <button className="cancel" type="button" onClick={() => setShowCancelDialog(true)} disabled={syncing || exporting}><Ban size={14} />Hủy yêu cầu PayOS</button>}
+              {canSyncPayOSPayment(payment) && <button type="button" onClick={handleSync} disabled={syncing || exporting}><ScanLine size={14} />{syncing ? 'Đang đồng bộ...' : 'Đồng bộ Banking'}</button>}
+              {!gatewayUncertain && canCancelPayOSPayment(payment) && <button className="cancel" type="button" onClick={() => setShowCancelDialog(true)} disabled={syncing || exporting}><Ban size={14} />Hủy yêu cầu Banking</button>}
               <button type="button" onClick={() => setRequestKey(key => key + 1)} disabled={syncing || exporting}><RefreshCw size={14} />Tải lại</button>
             </div>
           </>}
@@ -226,7 +226,7 @@ function CancelPaymentDialog({ payment, onClose, onCancelled, onReconciled }) {
       onClose()
     } catch (requestError) {
       if (requestError.paymentResult) onReconciled(requestError.paymentResult)
-      setError(getReceptionistPaymentError(requestError, 'Không thể hủy yêu cầu thanh toán PayOS.'))
+      setError(getReceptionistPaymentError(requestError, 'Không thể hủy yêu cầu thanh toán Banking.'))
     } finally {
       lock.current = false
       setSaving(false)
@@ -235,8 +235,8 @@ function CancelPaymentDialog({ payment, onClose, onCancelled, onReconciled }) {
 
   return <div className="reception-dialog-backdrop reception-nested-dialog" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) onClose() }}>
     <section className="reception-dialog reception-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-cancel-payment-title">
-      <header><div><span>HỦY YÊU CẦU PAYOS</span><h2 id="reception-cancel-payment-title">Thanh toán #{payment.id}</h2><p>Chỉ giao dịch đang chờ mới có thể hủy.</p></div><button type="button" aria-label="Đóng xác nhận hủy thanh toán" onClick={onClose} disabled={saving}><X size={19} /></button></header>
-      <form onSubmit={submit}><label className="reception-cancel-reason">Lý do hủy<textarea value={reason} onChange={event => setReason(event.target.value)} rows="4" maxLength="200" placeholder="Nhập lý do gửi tới PayOS..." disabled={saving} required /></label>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button className="danger" type="submit" disabled={saving || !canCancelPayOSPayment(payment)}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
+      <header><div><span>HỦY YÊU CẦU BANKING</span><h2 id="reception-cancel-payment-title">Thanh toán #{payment.id}</h2><p>Chỉ giao dịch đang chờ mới có thể hủy.</p></div><button type="button" aria-label="Đóng xác nhận hủy thanh toán" onClick={onClose} disabled={saving}><X size={19} /></button></header>
+      <form onSubmit={submit}><label className="reception-cancel-reason">Lý do hủy<textarea value={reason} onChange={event => setReason(event.target.value)} rows="4" maxLength="200" placeholder="Nhập lý do gửi tới Banking..." disabled={saving} required /></label>{error && <p className="reception-form-error" role="alert">{error}</p>}<footer><button type="button" onClick={onClose} disabled={saving}>Quay lại</button><button className="danger" type="submit" disabled={saving || !canCancelPayOSPayment(payment)}>{saving ? 'Đang hủy...' : 'Xác nhận hủy'}</button></footer></form>
     </section>
   </div>
 }

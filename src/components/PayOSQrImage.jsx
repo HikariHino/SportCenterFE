@@ -10,10 +10,10 @@ export default function PayOSQrImage({ value, className }) {
     setError('')
     QRCode.toDataURL(value, { width: 240, margin: 4, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } })
       .then(url => { if (active) setImage({ value, url }) })
-      .catch(() => { if (active) setError('Chưa tạo được ảnh QR. Bạn có thể mở cổng PayOS để thanh toán.') })
+      .catch(() => { if (active) setError('Chưa tạo được ảnh QR. Bạn có thể mở cổng Banking để thanh toán.') })
     return () => { active = false }
   }, [value])
   if (error) return <p role="status">{error}</p>
   if (image?.value !== value) return <LoaderCircle size={28} className="member-spin" aria-label="Đang tạo mã QR thanh toán" />
-  return <img src={image.url} width="240" height="240" alt="Mã QR thanh toán PayOS" className={className} />
+  return <img src={image.url} width="240" height="240" alt="Mã QR thanh toán Banking" className={className} />
 }
