@@ -93,7 +93,7 @@ test('invalid profile fields are rejected before PUT, including bypassed HTML le
   for (const dto of [
     { fullName: '   ' }, { fullName: 'a'.repeat(201) }, { phoneNumber: 'abc123' }, { phoneNumber: '091234567' },
     { dateOfBirth: '2015-01-01' }, { dateOfBirth: '1900-01-01' }, { dateOfBirth: '2025-02-29' }, { dateOfBirth: '2099-10-25' }, { gender: 'Invalid' },
-    { address: 'a'.repeat(501) }, { fitnessGoal: 'a'.repeat(101) }, { emergencyContact: 'a'.repeat(101) }, { emergencyContact: 'Mẹ - 0901234567' }, { emergencyContact: '1'.repeat(7) }, { emergencyContact: '1'.repeat(31) },
+    { address: 'a'.repeat(501) }, { fitnessGoal: 'a'.repeat(101) }, { emergencyContact: 'a'.repeat(101) }, { emergencyContact: 'Mẹ - 0901234567' }, { emergencyContact: '1'.repeat(7) }, { emergencyContact: '1'.repeat(31) }, { emergencyContact: '--------' },
     { password: 'a'.repeat(73), currentPassword: 'old' },
     { password: 'SamePassword!', currentPassword: 'SamePassword!' },
   ]) {

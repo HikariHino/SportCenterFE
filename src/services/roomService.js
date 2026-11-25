@@ -1,5 +1,24 @@
 import api from './api'
 import { getManagerFormValidationError } from '../utils/managerFormValidation.js'
+import { loadClassTimetables, withSessionWriteLock } from './sessionSchedulingService'
+import { assertRoomMutationAllowed } from '../utils/roomMutationValidation.js'
+
+async function validateRoomMutation(id, data, deactivate = false) {
+  const rooms = await getRooms()
+  const room = rooms.find(item => String(item.id) === String(id))
+  if (!room) throw new Error('Chưa xác nhận được thông tin phòng. Vui lòng tải lại danh sách phòng.')
+  if (!Number.isInteger(Number(room.capacity)) || Number(room.capacity) < 1) throw new Error('Chưa xác nhận được sức chứa hiện tại của phòng. Vui lòng tải lại.')
+  if (deactivate || Number(data.capacity) < Number(room.capacity)) {
+    const groups = await loadClassTimetables()
+    assertRoomMutationAllowed({ room, rooms, groups, capacity: data?.capacity, deactivate })
+  }
+}
+
+function assertRoomWriteSucceeded(response) {
+  if (response.data?.success === false || Number(response.data?.statusCode) >= 400) {
+    throw Object.assign(new Error(response.data.message || 'Không thể lưu thay đổi phòng.'), { response })
+  }
+}
 
 /**
  * Trích xuất thông báo lỗi từ backend
@@ -81,15 +100,19 @@ export async function createRoom(data) {
 export async function updateRoom(id, data) {
   const error = getManagerFormValidationError('room', data)
   if (error) throw new Error(error)
-  const response = await api.put(`/Rooms/${id}`, {
-    name: data.name.trim(),
-    roomType: data.roomType ? data.roomType.trim() : 'General',
-    capacity: Number(data.capacity),
-    location: data.location ? data.location.trim() : null,
-    isActive: data.isActive !== false,
+  return withSessionWriteLock(async () => {
+    await validateRoomMutation(id, data, data.isActive === false)
+    const response = await api.put(`/Rooms/${id}`, {
+      name: data.name.trim(),
+      roomType: data.roomType ? data.roomType.trim() : 'General',
+      capacity: Number(data.capacity),
+      location: data.location ? data.location.trim() : null,
+      isActive: data.isActive !== false,
+    })
+    assertRoomWriteSucceeded(response)
+    const body = response.data
+    return body?.data ?? body
   })
-  const body = response.data
-  return body?.data ?? body
 }
 
 /**
@@ -98,8 +121,12 @@ export async function updateRoom(id, data) {
  * @param {number} id
  */
 export async function deleteRoom(id) {
-  const response = await api.delete(`/Rooms/${id}`)
-  return response.data
+  return withSessionWriteLock(async () => {
+    await validateRoomMutation(id, null, true)
+    const response = await api.delete(`/Rooms/${id}`)
+    assertRoomWriteSucceeded(response)
+    return response.data
+  })
 }
 
 export default {

@@ -46,9 +46,8 @@ export function profileValidationErrors(values, { partial = false, requirePhone 
     if (phoneError) errors.phoneNumber = phoneError
   }
   if (!errors.phoneNumber && getProfilePhoneConflict(phone, phoneConflict)) errors.phoneNumber = getProfilePhoneConflict(phone, phoneConflict)
-  if (!errors.emergencyContact && typeof values.emergencyContact === 'string' && values.emergencyContact.trim()
-    && !/^[0-9+\-().\s]{8,30}$/.test(values.emergencyContact.trim())) {
-    errors.emergencyContact = 'Liên hệ khẩn cấp phải là số điện thoại dài 8–30 ký tự, chỉ gồm chữ số, + - ( ) . và khoảng trắng.'
+  if (!errors.emergencyContact && getProfilePhoneValidationError(values.emergencyContact)) {
+    errors.emergencyContact = `Liên hệ khẩn cấp: ${PROFILE_PHONE_MESSAGE}`
   }
   if (values.gender != null && !['', 'Male', 'Female', 'Other'].includes(String(values.gender).trim())) errors.gender = 'Vui lòng chọn giới tính trong danh sách.'
   const dob = values.dateOfBirth
@@ -138,6 +137,5 @@ export function getVietnamPhoneValidationError(value, { required = false } = {})
 export function getEmailValidationError(value) {
   const email = String(value || '').trim()
   if (!email) return 'Email không được để trống.'
-  if (!/^[^\s@]+@[^\s@]+\.com$/i.test(email)) return 'Email phải có @ và kết thúc bằng .com.'
   return getAccountEmailValidationError(email)
 }

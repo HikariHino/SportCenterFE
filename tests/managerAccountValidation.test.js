@@ -14,11 +14,11 @@ test('member form reports all missing required fields together', () => {
   assert.deepEqual(Object.keys(getManagerMemberValidationErrors({}, now)), ['fullName', 'email', 'password', 'phone', 'dateOfBirth', 'gender'])
 })
 
-test('member email, mobile prefixes, gender and whitespace-only details are rejected before writes', async t => {
+test('member email, invalid phones, gender and whitespace-only details are rejected before writes', async t => {
   const calls = mockApi(t)
   for (const [field, values] of [
     ['email', ['.an@example.com', 'an.@example.com', 'a..n@example.com', 'an@localhost', 'an@gmail.c', 'a'.repeat(65) + '@example.com']],
-    ['phone', ['0112345678', '0212345678', '0412345678', '0612345678', '0012345678']],
+    ['phone', ['1256894585', '+840256894585', '025689458', '02568945855']],
     ['gender', ['', null, undefined, 'male', 'Unknown', {}]],
     ['address', ['   ', '\t\n', {}]], ['fitnessGoal', ['   ', '\t\n', 123]],
   ]) {
@@ -99,11 +99,20 @@ for (const [name, form, validation, create] of [
 
   test(`Manager ${name} blocks nonnumeric and incorrectly sized phone numbers before any request`, async t => {
     const calls = mockApi(t)
-    for (const phone of ['abc', '091234567', '09123456789', '1912345678', '+84912345678', '0912 345 678', '091234567a', '０９１２３４５６７８', 912345678, {}, []]) {
+    for (const phone of ['abc', '091234567', '09123456789', '1912345678', '+840912345678', '--------', '091234567a', '０９１２３４５６７８', 912345678, {}, []]) {
       await assert.rejects(create({ ...form, phone }), error => error.field === 'phone')
     }
     assert.equal(calls.length, 0)
     assert.equal(validation({ ...form, phone: ' 0912345678 ' }), null)
+  })
+
+  test(`Manager ${name} accepts Member phone formats and sends normalized values`, async t => {
+    const calls = mockApi(t)
+    for (const [phone, expected] of [['0256894585', '0256894585'], ['(0912) 345-678', '0912345678'], ['+84 912.345.678', '+84912345678']]) {
+      assert.equal(validation({ ...form, phone }), null)
+      await create({ ...form, phone })
+      assert.equal(calls.at(-1).data.phone, expected)
+    }
   })
 }
 

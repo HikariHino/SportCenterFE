@@ -40,7 +40,7 @@ test('only supported gender values are accepted, and optional text is checked ag
     assert.deepEqual(errors({ [field]: `  ${'x'.repeat(limit)}  ` }), {})
     assert.ok(errors({ [field]: 'x'.repeat(limit + 1) })[field])
   }
-  for (const emergencyContact of ['0912345678', '+84 912 345 678', '(090) 123-4567', '1'.repeat(8), '1'.repeat(30)]) assert.deepEqual(errors({ emergencyContact }), {})
+  for (const emergencyContact of ['0912345678', '+84 912 345 678', '(090) 123-4567', '0256894585']) assert.deepEqual(errors({ emergencyContact }), {})
 })
 
 test('partial profile writes omit unrelated fields and preserve exact passwords', () => {
@@ -55,8 +55,8 @@ test('partial profile writes omit unrelated fields and preserve exact passwords'
   assert.deepEqual(normalizeProfileUpdate({ phoneNumber: '' }), { phoneNumber: null })
 })
 
-test('emergency contacts reject names, forbidden symbols and numbers outside 8–30 characters', () => {
-  for (const emergencyContact of ['Mẹ - 0901234567', 'Nguyễn An 0912345678', '0901234', '1'.repeat(31), '0901234567/ext', '0901234567@', 901234567]) {
+test('emergency contacts require a valid local or +84 phone, not just allowed punctuation', () => {
+  for (const emergencyContact of ['--------', '........', '()()()()', '1'.repeat(8), '1'.repeat(30), '+840912345678', 'Mẹ - 0901234567', 'Nguyễn An 0912345678', '0901234', '1'.repeat(31), '0901234567/ext', '0901234567@', 901234567]) {
     assert.ok(errors({ emergencyContact }).emergencyContact, String(emergencyContact))
   }
   for (const emergencyContact of ['', null, undefined, '  +84 (912) 345-678  ', '090.123.4567']) assert.deepEqual(errors({ emergencyContact }), {})
@@ -128,9 +128,9 @@ test('Vietnam phone number uses exactly ten digits and starts with zero', () => 
   }
 })
 
-test('account email contains one domain separator and ends in dot com', () => {
-  for (const email of ['member@example.com', 'coach@sub.example.com']) assert.equal(getEmailValidationError(email), '')
-  for (const email of ['', 'member.example.com', 'member@example.vn', 'member@example.com.vn', 'member@@example.com', '.member@example.com', 'member..new@example.com', 'member@-example.com', 'member@example..com']) {
+test('account email accepts education and other domains while rejecting malformed addresses', () => {
+  for (const email of ['member@example.com', 'coach@sub.example.com', 'member@fpt.edu.vn', 'member@example.vn', 'member@example.com.vn', 'member@example.org']) assert.equal(getEmailValidationError(email), '')
+  for (const email of ['', 'member.example.com', 'member@@example.com', '.member@example.com', 'member..new@example.com', 'member@-example.com', 'member@example..com']) {
     assert.notEqual(getEmailValidationError(email), '')
   }
 })

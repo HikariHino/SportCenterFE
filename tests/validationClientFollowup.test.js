@@ -64,6 +64,15 @@ const click = text => act(async () => { const button = [...document.querySelecto
 const escape = () => act(async () => document.activeElement.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
 const change = (input, value) => act(async () => { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value); input.dispatchEvent(new window.Event('input', { bubbles: true })) })
 
+test('Member email editor accepts education domains and sends the OTP request', () => screen('member', async () => {
+  await click('Chỉnh sửa')
+  const input = document.querySelector('.account-email-change input[type=email]')
+  await change(input, 'member@fpt.edu.vn')
+  assert.equal(input.checkValidity(), true)
+  await click('Gửi mã xác nhận')
+  assert.deepEqual(writes, [{ url: '/profile/change-email/request-otp', body: { newEmail: 'member@fpt.edu.vn' } }])
+}))
+
 test('member profile blocks named emergency contacts and birth dates outside backend bounds with inline errors', t => {
   t.mock.method(Date, 'now', () => Date.parse('2026-11-24T10:00:00+07:00'))
   return screen('member', async () => {

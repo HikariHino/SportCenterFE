@@ -37,7 +37,8 @@ function mockApi({ ticketStatus = 'Open', missingTicket = false, readError, writ
   api.defaults.adapter = async config => {
     calls.push({ url: config.url, method: config.method, data: config.data && JSON.parse(config.data) })
     if (config.method === 'get' && readError) throw new Error('Cannot read current tickets')
-    const data = config.method === 'get' ? (missingTicket ? [] : [{ id: 1, status: ticketStatus }])
+    const data = config.method === 'get' ? (config.url === '/Rooms' ? [{ id: 1, capacity: 30 }]
+      : config.url === '/classes/manage' ? [] : missingTicket ? [] : [{ id: 1, status: ticketStatus }])
       : { id: 1, userId: 2, role: 'Member', token: 'test-token', status: 'Resolved' }
     return { config, status: 200, headers: {}, data: config.method !== 'get' && writeError
       ? { success: false, message: 'Server rejected write' } : { success: true, data } }

@@ -29,7 +29,7 @@ import {
   updateStaffRole,
 } from "../../services/userService"
 import { createManagerStaff } from "../../services/managerAccountService"
-import { getManagerStaffValidationErrors, getManagerStaffFieldErrors, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, MANAGER_PHONE_PATTERN, STAFF_ASSIGNABLE_ROLES } from "../../utils/managerAccountValidation"
+import { getManagerStaffValidationErrors, getManagerStaffFieldErrors, MANAGER_ACCOUNT_LIMITS, MANAGER_PHONE_MESSAGE, STAFF_ASSIGNABLE_ROLES } from "../../utils/managerAccountValidation"
 import { NEW_PASSWORD_MAX_LENGTH, NEW_PASSWORD_MIN_LENGTH } from "../../utils/passwordValidation"
 import "../../style/CenterManager/StaffManagement.css"
 import { FULL_NAME_PATTERN, FULL_NAME_MESSAGE } from "../../utils/fullNameValidation"
@@ -656,10 +656,8 @@ export default function StaffManagement() {
                     id="staff-phone"
                     name="phone"
                     required
-                    inputMode="numeric"
-                    pattern={MANAGER_PHONE_PATTERN}
+                    inputMode="tel"
                     title={MANAGER_PHONE_MESSAGE}
-                    minLength={MANAGER_ACCOUNT_LIMITS.phone}
                     maxLength={MANAGER_ACCOUNT_LIMITS.phone}
                     {...createFieldProps("phone")}
                     type="tel"
