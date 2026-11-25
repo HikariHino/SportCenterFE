@@ -32,7 +32,7 @@ export async function getExerciseCatalog() {
     .sort((left, right) => String(left.exerciseName).localeCompare(String(right.exerciseName), 'vi'))
 }
 
-export async function createTrainingPlan({ planName, goal, memberId, startDate, endDate, exercises = [] }) {
+function trainingPlanPayload({ planName, goal, memberId, startDate, endDate, exercises = [], confirmRepeat = false }) {
   const planError = getTrainingPlanValidationError({ planName, goal, memberId, startDate, endDate })
   if (planError) throw new Error(planError)
   const exerciseError = getTrainingExercisesValidationError(exercises)
@@ -41,18 +41,49 @@ export async function createTrainingPlan({ planName, goal, memberId, startDate, 
     const notesError = getTextLengthValidationError(exercise.notes, 'Ghi chú bài tập', EXERCISE_NOTES_MAX_LENGTH)
     if (notesError) throw new Error(notesError)
   }
-  const response = await api.post('/TrainingPlans', {
+  if (typeof confirmRepeat !== 'boolean') throw new Error('Xác nhận tập lại giáo án không hợp lệ.')
+  return {
     planName: planName.trim(),
     goal,
     memberId: Number(memberId),
     startDate: toUtcISOString(startDate),
     endDate: toUtcISOString(endDate),
-    exercises: exercises.map(exercise => ({ ...exercise, exerciseId: Number(exercise.exerciseId), sets: Number(exercise.sets), reps: Number(exercise.reps),
-      durationInMinutes: exercise.durationInMinutes == null || String(exercise.durationInMinutes).trim() === '' ? null : Number(exercise.durationInMinutes) })),
-  })
+    ...(confirmRepeat && { confirmRepeat: true }),
+    exercises: exercises.map(exercise => ({ exerciseId: Number(exercise.exerciseId), sets: Number(exercise.sets), reps: Number(exercise.reps),
+      durationInMinutes: exercise.durationInMinutes == null || String(exercise.durationInMinutes).trim() === '' ? null : Number(exercise.durationInMinutes),
+      notes: exercise.notes?.trim() || null })),
+  }
+}
+
+function readDuplicatePlanResult(result) {
+  if (!result || typeof result.isDuplicate !== 'boolean' || !Array.isArray(result.matchedPlans)
+    || result.isDuplicate !== (result.matchedPlans.length > 0)
+    || result.matchedPlans.some(plan => !Number.isSafeInteger(Number(plan?.id)) || Number(plan.id) < 1
+      || typeof plan.planName !== 'string' || !plan.planName.trim()
+      || !Number.isFinite(Date.parse(plan.startDate)) || !Number.isFinite(Date.parse(plan.endDate)))) {
+    throw new Error('Chưa xác nhận được lịch sử giáo án trùng. Vui lòng thử lại trước khi lưu.')
+  }
+  return { ...result, message: result.message || 'Học viên đã hoàn thành giáo án tương tự. Hãy kiểm tra trước khi cho tập lại.' }
+}
+
+export async function checkTrainingPlanDuplicate(input) {
+  const response = await api.post('/TrainingPlans/check-duplicate', trainingPlanPayload(input))
+  const body = response.data
+  if (body?.success === false || Number(body?.statusCode) >= 400) throw new Error(body.message || 'Không thể kiểm tra giáo án đã hoàn thành.')
+  return readDuplicatePlanResult(body?.data ?? body)
+}
+
+export function getTrainingPlanDuplicateConflict(error) {
+  const body = error?.response?.data
+  if (body?.code !== 'DUPLICATE_COMPLETED_PLAN') return null
+  return readDuplicatePlanResult({ isDuplicate: true, message: body.message, matchedPlans: body.matchedPlans })
+}
+
+export async function createTrainingPlan(input) {
+  const response = await api.post('/TrainingPlans', trainingPlanPayload(input))
   const body = response.data
 
-  if (body?.success === false) {
+  if (body?.success === false || Number(body?.statusCode) >= 400) {
     throw new Error(body.message || 'Không thể tạo giáo án.')
   }
 

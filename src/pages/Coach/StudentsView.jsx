@@ -8,7 +8,7 @@ import StudentDetailsDialog from './StudentDetailsDialog'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { BookOpen, CalendarDays, CheckCircle2, Clock3, PencilLine, Plus, Sparkles, Trash2, UserCheck, UserRound, Users, X } from 'lucide-react'
 import { checkInCoachRegistration, getCoachSessionRoster } from '../../services/coachService'
-import { completeTrainingPlan, createTrainingPlan, deleteTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, getTrainingPlanErrorMessage, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
+import { checkTrainingPlanDuplicate, completeTrainingPlan, createTrainingPlan, deleteTrainingPlan, getExerciseCatalog, getMemberTrainingPlans, getTrainingPlanDuplicateConflict, getTrainingPlanErrorMessage, updateTrainingPlanExerciseResult } from '../../services/trainingPlanService'
 import { getWorkoutRecommendation, getWorkoutRecommendationError } from '../../services/aiService'
 import { aiTrainingPlanDemoSteps } from '../../utils/aiTrainingPlanDemo'
 import { buildCoachWorkoutGoalContext, COACH_AI_PROMPT_MAX_LENGTH, mapWorkoutRecommendationToPlanExercises } from '../../utils/aiWorkoutRecommendation'
@@ -45,6 +45,7 @@ const formatTimeSessionOption = session => {
 const trainingGoals = TRAINING_GOALS
 
 const planDateFormatter = new Intl.DateTimeFormat('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh',
   day: '2-digit',
   month: '2-digit',
   year: 'numeric',
@@ -64,6 +65,10 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
   const promptId = useId()
   const aiDemoRunRef = useRef(0)
   const aiRequestControllerRef = useRef(null)
+  const saveLock = useRef(false)
+  const planNameInput = useRef(null)
+  const aiPromptInput = useRef(null)
+  const duplicateHeading = useRef(null)
   const today = new Date()
   const defaultEndDate = new Date(today)
   defaultEndDate.setDate(defaultEndDate.getDate() + 28)
@@ -83,6 +88,7 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
   const [catalogRequestKey, setCatalogRequestKey] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [duplicatePlan, setDuplicatePlan] = useState(null)
   const [aiDemoMessage, setAiDemoMessage] = useState('')
   const [aiDemoProgress, setAiDemoProgress] = useState(null)
   const [aiPromptOpen, setAiPromptOpen] = useState(false)
@@ -91,6 +97,9 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
   const [aiDaysPerWeek, setAiDaysPerWeek] = useState('3')
   const registeredSportName = String(student.sportName || '').trim()
   const promptLimit = COACH_AI_PROMPT_MAX_LENGTH
+
+  useEffect(() => { setDuplicatePlan(null) }, [form, exercises])
+  useEffect(() => { if (duplicatePlan) duplicateHeading.current?.focus() }, [duplicatePlan])
 
   useEffect(() => () => {
     aiDemoRunRef.current += 1
@@ -130,6 +139,7 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
     aiDemoRunRef.current = runId
     setAiDemoMessage('')
     setError('')
+    setDuplicatePlan(null)
 
     if (!registeredSportName) {
       setError('Không xác định được bộ môn học viên đang đăng ký với Coach trong lớp đã chọn.')
@@ -191,8 +201,37 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
     setAiDemoMessage(`Đã tạo bản nháp theo yêu cầu, mục tiêu ${snapshot.goal}, bộ môn ${snapshot.sportName} và thời gian ${snapshot.startDate} – ${snapshot.endDate}; ${matchedCount}/${mappedResult.exercises.length} bài đã ghép duy nhất với kho.${missingMessage}`)
   }
 
+  const savePlan = async (input, confirmRepeat = false) => {
+    if (saveLock.current) return
+    saveLock.current = true
+    setSaving(true)
+    setError('')
+    try {
+      if (!confirmRepeat) {
+        const result = await checkTrainingPlanDuplicate(input)
+        if (result.isDuplicate) {
+          setDuplicatePlan({ input, ...result })
+          return
+        }
+      }
+      const plan = await createTrainingPlan({ ...input, confirmRepeat })
+      onCreated(plan)
+      onClose()
+    } catch (requestError) {
+      try {
+        const conflict = getTrainingPlanDuplicateConflict(requestError)
+        if (conflict) setDuplicatePlan({ input, ...conflict })
+        else setError(getTrainingPlanErrorMessage(requestError))
+      } catch (invalidConflict) { setError(invalidConflict.message) }
+    } finally {
+      saveLock.current = false
+      setSaving(false)
+    }
+  }
+
   const handleSubmit = async event => {
     event.preventDefault()
+    if (saveLock.current || aiDemoProgress !== null) return
     setError('')
     if (student.isDemo) {
       setError('Đây là bản xem trước AI Demo. Đăng nhập Coach và chọn học viên thật để lưu giáo án.')
@@ -219,9 +258,7 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
       return
     }
 
-    setSaving(true)
-    try {
-      const plan = await createTrainingPlan({
+    await savePlan({
         planName: form.planName.trim(),
         goal: form.goal,
         memberId: student.memberId,
@@ -235,13 +272,6 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
           notes: exercise.notes.trim() || null,
         })),
       })
-      onCreated(plan)
-      onClose()
-    } catch (requestError) {
-      setError(requestError.response?.data?.message || requestError.message || 'Không thể tạo giáo án.')
-    } finally {
-      setSaving(false)
-    }
   }
 
   const aiDemoLoading = aiDemoProgress !== null
@@ -263,11 +293,11 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
           <strong>{registeredSportName || 'Chưa xác định được bộ môn'}</strong>
           <small>{student.className ? `Lớp ${student.className}` : 'Hãy mở giáo án từ học viên trong một buổi huấn luyện cụ thể.'}</small>
         </div>
-        <div className="coach-plan-form-grid"><label><span>Tên giáo án</span><input value={form.planName} maxLength={TRAINING_PLAN_NAME_MAX_LENGTH} onChange={event => setForm(current => ({ ...current, planName: event.target.value }))} /></label><label><span>Mục tiêu</span><select value={form.goal} disabled={aiDemoLoading} onChange={event => setForm(current => ({ ...current, goal: event.target.value }))}>{trainingGoals.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>Ngày bắt đầu</span><input type="date" value={form.startDate} disabled={aiDemoLoading} onChange={event => setForm(current => ({ ...current, startDate: event.target.value }))} /></label><label><span>Ngày kết thúc</span><input type="date" min={form.startDate} value={form.endDate} disabled={aiDemoLoading} onChange={event => setForm(current => ({ ...current, endDate: event.target.value }))} /></label></div>
+        <div className="coach-plan-form-grid"><label><span>Tên giáo án</span><input ref={planNameInput} disabled={saving || aiDemoLoading} value={form.planName} maxLength={TRAINING_PLAN_NAME_MAX_LENGTH} onChange={event => setForm(current => ({ ...current, planName: event.target.value }))} /></label><label><span>Mục tiêu</span><select value={form.goal} disabled={saving || aiDemoLoading} onChange={event => setForm(current => ({ ...current, goal: event.target.value }))}>{trainingGoals.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>Ngày bắt đầu</span><input type="date" value={form.startDate} disabled={saving || aiDemoLoading} onChange={event => setForm(current => ({ ...current, startDate: event.target.value }))} /></label><label><span>Ngày kết thúc</span><input type="date" min={form.startDate} value={form.endDate} disabled={saving || aiDemoLoading} onChange={event => setForm(current => ({ ...current, endDate: event.target.value }))} /></label></div>
         {aiPromptOpen && <div className="coach-plan-ai-demo" id={promptId}>
           <span><Sparkles size={19} /><span><strong>Tạo bài tập bằng AI</strong><small>Mô tả mục tiêu và yêu cầu bài tập để xem trước gợi ý.</small></span></span>
           <button className="coach-plan-ai-close" type="button" aria-label="Đóng nhập yêu cầu AI" disabled={aiDemoLoading || saving} onClick={() => setAiPromptOpen(false)}><X size={16} /></button>
-          <label className="coach-plan-ai-prompt"><span>Yêu cầu cho AI</span><textarea value={aiPrompt} rows={3} maxLength={promptLimit} autoFocus disabled={aiDemoLoading || saving} aria-describedby={`${promptId}-hint`} onChange={event => setAiPrompt(event.target.value)} placeholder="Ví dụ: Tăng sức bền cho học viên mới, ưu tiên bài nhẹ và cải thiện kỹ thuật." /></label>
+          <label className="coach-plan-ai-prompt"><span>Yêu cầu cho AI</span><textarea ref={aiPromptInput} value={aiPrompt} rows={3} maxLength={promptLimit} autoFocus disabled={aiDemoLoading || saving} aria-describedby={`${promptId}-hint`} onChange={event => setAiPrompt(event.target.value)} placeholder="Ví dụ: Tăng sức bền cho học viên mới, ưu tiên bài nhẹ và cải thiện kỹ thuật." /></label>
           <div className="coach-plan-form-grid coach-plan-ai-options">
             <label><span>Trình độ</span><select value={aiLevel} disabled={aiDemoLoading || saving} onChange={event => setAiLevel(event.target.value)}>{Object.entries(workoutLevelLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label><span>Số ngày tập mỗi tuần</span><select value={aiDaysPerWeek} disabled={aiDemoLoading || saving} onChange={event => setAiDaysPerWeek(event.target.value)}>{Array.from({ length: 7 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} ngày/tuần</option>)}</select></label>
@@ -278,11 +308,19 @@ export function TrainingPlanDialog({ student, onClose, onCreated }) {
         <div className="coach-plan-exercises">
           <div className="coach-plan-exercises-head"><div><strong>Bài tập</strong><span>Không bắt buộc · chọn bài tập theo tên từ kho hiện có</span></div><div className="coach-plan-exercise-actions"><button type="button" aria-expanded={aiPromptOpen} aria-controls={promptId} disabled={saving || aiDemoLoading} onClick={() => setAiPromptOpen(true)}><Sparkles size={15} />Tạo bài tập bằng AI</button><button type="button" disabled={catalogLoading || !exerciseCatalog.length || saving || aiDemoLoading} onClick={() => { setExercises(current => [...current, newPlanExercise()]); setExercisePage(Math.floor(exercises.length / 10) + 1) }}><Plus size={15} />Thêm bài tập</button></div></div>
           {catalogLoading ? <div className="coach-exercise-catalog-state">Đang tải kho bài tập...</div> : catalogError ? <div className="coach-exercise-catalog-state error"><span>{catalogError}</span><button type="button" onClick={() => setCatalogRequestKey(key => key + 1)}>Thử lại</button></div> : !exerciseCatalog.length ? <div className="coach-exercise-catalog-state">Kho bài tập chưa có dữ liệu.</div> : null}
-          {exercises.length ? <CoachList items={visibleExercises} label="Bài tập đang soạn" showOrdinal={false} page={exercisePage} total={exercises.length} onPageChange={setExercisePage}>{(exercise, ordinal) => { const index = ordinal - 1; return <article key={index}><div className="coach-plan-exercise-title"><div className="coach-plan-exercise-heading"><strong>Bài tập {index + 1}</strong>{exercise.isAiSuggested && <span className="coach-plan-exercise-ai-tag" aria-label="Bài tập do AI gợi ý"><Sparkles size={13} aria-hidden="true" />AI</span>}</div><button type="button" aria-label={`Xóa bài tập ${index + 1}`} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div>{exercise.aiExerciseName && <p className="coach-plan-ai-message" role={!exercise.exerciseId ? 'alert' : undefined}>AI đề xuất: <strong>{exercise.aiExerciseName}</strong>{!exercise.exerciseId && (exercise.matchIssue === 'ambiguous' ? ' · Có nhiều bài phù hợp. Hãy chọn đúng bài trong kho hoặc xóa dòng này.' : ' · Không tìm thấy bài phù hợp. Hãy chọn bài trong kho hoặc xóa dòng này.')}</p>}<div><label className="exercise-picker"><span>Tên bài tập</span><select value={exercise.exerciseId} aria-label={`Bài tập ${index + 1}: chọn bài trong kho`} aria-invalid={!exercise.exerciseId && !!exercise.matchIssue} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} required><option value="">Chọn bài tập</option>{exerciseCatalog.map(option => <option value={option.id} key={option.id}>{option.exerciseName}{option.muscleGroup ? ` · ${option.muscleGroup}` : ''} · #{option.id}</option>)}</select></label><label><span>Số hiệp</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.sets} onChange={event => updateExercise(index, 'sets', event.target.value)} required /></label><label><span>Số lần</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.reps} onChange={event => updateExercise(index, 'reps', event.target.value)} required /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.durationInMinutes} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={EXERCISE_NOTES_MAX_LENGTH} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article> }}</CoachList> : !catalogLoading && !catalogError && exerciseCatalog.length ? <p className="coach-plan-exercises-empty">Nhấn “Thêm bài tập” để chọn bài tập theo tên từ kho.</p> : null}
+          {exercises.length ? <CoachList items={visibleExercises} label="Bài tập đang soạn" showOrdinal={false} page={exercisePage} total={exercises.length} onPageChange={setExercisePage}>{(exercise, ordinal) => { const index = ordinal - 1; return <article key={index}><div className="coach-plan-exercise-title"><div className="coach-plan-exercise-heading"><strong>Bài tập {index + 1}</strong>{exercise.isAiSuggested && <span className="coach-plan-exercise-ai-tag" aria-label="Bài tập do AI gợi ý"><Sparkles size={13} aria-hidden="true" />AI</span>}</div><button type="button" aria-label={`Xóa bài tập ${index + 1}`} disabled={saving || aiDemoLoading} onClick={() => setExercises(current => current.filter((_, exerciseIndex) => exerciseIndex !== index))}><Trash2 size={15} /></button></div>{exercise.aiExerciseName && <p className="coach-plan-ai-message" role={!exercise.exerciseId ? 'alert' : undefined}>AI đề xuất: <strong>{exercise.aiExerciseName}</strong>{!exercise.exerciseId && (exercise.matchIssue === 'ambiguous' ? ' · Có nhiều bài phù hợp. Hãy chọn đúng bài trong kho hoặc xóa dòng này.' : ' · Không tìm thấy bài phù hợp. Hãy chọn bài trong kho hoặc xóa dòng này.')}</p>}<div><label className="exercise-picker"><span>Tên bài tập</span><select value={exercise.exerciseId} disabled={saving || aiDemoLoading} aria-label={`Bài tập ${index + 1}: chọn bài trong kho`} aria-invalid={!exercise.exerciseId && !!exercise.matchIssue} onChange={event => updateExercise(index, 'exerciseId', event.target.value)} required><option value="">Chọn bài tập</option>{exerciseCatalog.map(option => <option value={option.id} key={option.id}>{option.exerciseName}{option.muscleGroup ? ` · ${option.muscleGroup}` : ''} · #{option.id}</option>)}</select></label><label><span>Số hiệp</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.sets} disabled={saving || aiDemoLoading} onChange={event => updateExercise(index, 'sets', event.target.value)} required /></label><label><span>Số lần</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.reps} disabled={saving || aiDemoLoading} onChange={event => updateExercise(index, 'reps', event.target.value)} required /></label><label><span>Thời lượng (phút)</span><input type="number" min="1" max={TRAINING_INTEGER_MAX} step="1" value={exercise.durationInMinutes} disabled={saving || aiDemoLoading} onChange={event => updateExercise(index, 'durationInMinutes', event.target.value)} /></label><label className="wide"><span>Ghi chú</span><input value={exercise.notes} maxLength={EXERCISE_NOTES_MAX_LENGTH} onChange={event => updateExercise(index, 'notes', event.target.value)} /></label></div></article> }}</CoachList> : !catalogLoading && !catalogError && exerciseCatalog.length ? <p className="coach-plan-exercises-empty">Nhấn “Thêm bài tập” để chọn bài tập theo tên từ kho.</p> : null}
         </div>
+        {duplicatePlan && <section className="coach-plan-duplicate" role="alert" aria-labelledby={`${promptId}-duplicate-title`}>
+          <h3 ref={duplicateHeading} tabIndex={-1} id={`${promptId}-duplicate-title`}>Học viên đã tập giáo án tương tự</h3>
+          <p>{duplicatePlan.message}</p>
+          <ul>{duplicatePlan.matchedPlans.map(plan => <li key={plan.id}><strong>#{plan.id} · {plan.planName}</strong><span>{trainingGoalLabel(plan.goal)} · {planDateFormatter.format(new Date(plan.startDate))} – {planDateFormatter.format(new Date(plan.endDate))}</span></li>)}</ul>
+          <div><button type="button" disabled={saving} onClick={() => { setDuplicatePlan(null); planNameInput.current?.focus() }}>Chỉnh sửa giáo án</button>
+            <button type="button" disabled={saving || !registeredSportName || catalogLoading} onClick={() => { setDuplicatePlan(null); setAiPromptOpen(true); window.requestAnimationFrame(() => aiPromptInput.current?.focus()) }}><Sparkles size={15} />Tạo lại bằng AI</button>
+            <button type="button" disabled={saving} onClick={() => savePlan(duplicatePlan.input, true)}>{saving ? 'Đang lưu...' : 'Xác nhận tập lại'}</button></div>
+        </section>}
         {error && <div className="coach-plan-form-error" role="alert">{error}</div>}
         </div>
-        <footer><button type="button" disabled={saving || aiDemoLoading} onClick={onClose}>Hủy</button><button type="submit" disabled={saving || aiDemoLoading || student.isDemo}>{student.isDemo ? 'Bản xem trước · Không lưu' : saving ? 'Đang tạo...' : 'Tạo giáo án'}</button></footer>
+        <footer><button type="button" disabled={saving || aiDemoLoading} onClick={onClose}>Hủy</button><button type="submit" disabled={saving || aiDemoLoading || student.isDemo || Boolean(duplicatePlan)}>{student.isDemo ? 'Bản xem trước · Không lưu' : saving ? 'Đang tạo...' : 'Tạo giáo án'}</button></footer>
       </form>
     </section>
     {aiDemoLoading && <div className="coach-ai-progress-backdrop" role="presentation">
