@@ -8,7 +8,10 @@ export default function ThemeToggle({ compact = true }) {
 
   return (
     <button className={`theme-toggle${compact ? ' theme-toggle--icon' : ''}`} type="button" onClick={toggleTheme} aria-label={label} title={label}>
-      {isDark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+      <span className="theme-toggle-icon" data-theme={theme} aria-hidden="true">
+        <Sun className="theme-toggle-sun" size={18} />
+        <Moon className="theme-toggle-moon" size={18} />
+      </span>
       {!compact && <span>{isDark ? 'Chế độ sáng' : 'Chế độ tối'}</span>}
     </button>
   )

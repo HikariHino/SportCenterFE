@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createThemeTransition } from '../utils/themeTransition'
 
 const ThemeContext = createContext(null)
 const storageKey = 'sportcenter-theme'
@@ -18,27 +19,22 @@ export function ThemeProvider({ children }) {
   const [preference, setPreference] = useState(getSavedTheme)
   const [systemDark, setSystemDark] = useState(() => window.matchMedia(systemQuery).matches)
   const theme = preference || (systemDark ? 'dark' : 'light')
-  const previousTheme = useRef(theme)
+  const transition = useRef(null)
+  const initialized = useRef(false)
 
   useLayoutEffect(() => {
-    const root = document.documentElement
-    const shouldAnimate = previousTheme.current !== theme
-      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    if (shouldAnimate) root.classList.add('theme-transitioning')
-    root.dataset.theme = theme
-    root.style.colorScheme = theme
-    previousTheme.current = theme
-
-    // Remove the temporary override after the 280ms color transition.
-    const timer = shouldAnimate
-      ? window.setTimeout(() => root.classList.remove('theme-transitioning'), 350)
-      : null
-    return () => {
-      window.clearTimeout(timer)
-      root.classList.remove('theme-transitioning')
-    }
+    if (!transition.current) transition.current = createThemeTransition()
+    transition.current.apply(theme, { animate: initialized.current })
+    initialized.current = true
   }, [theme])
+
+  useLayoutEffect(() => {
+    return () => {
+      transition.current?.dispose()
+      transition.current = null
+      initialized.current = false
+    }
+  }, [])
 
   useEffect(() => {
     const media = window.matchMedia(systemQuery)
@@ -58,14 +54,14 @@ export function ThemeProvider({ children }) {
   }, [])
 
   function toggleTheme() {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark'
-    setPreference(nextTheme)
-    try {
-      localStorage.setItem(storageKey, nextTheme)
-    } catch {
-      // Switching still works when browser storage is unavailable.
-    }
+    setPreference(current => (current || (systemDark ? 'dark' : 'light')) === 'dark' ? 'light' : 'dark')
   }
+
+  useEffect(() => {
+    if (!preference) return
+    try { localStorage.setItem(storageKey, preference) }
+    catch { /* Switching still works when browser storage is unavailable. */ }
+  }, [preference])
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>
 }
