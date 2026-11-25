@@ -78,7 +78,7 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
     {sessions.loading || sessions.error || !allSessions.length ? <State resource={sessions} emptyText="Lớp chưa có buổi học. Vui lòng quay lại sau." /> : <>
       <div className="member-session-list">
         <div className="member-session-list-heading" aria-hidden="true"><span>Buổi học</span><span>Phòng & Huấn luyện viên</span><span>Sĩ số</span><span>Trạng thái</span></div>
-        <MemberList items={allSessions.slice((sessionPage - 1) * PAGE_SIZE, sessionPage * PAGE_SIZE)} total={allSessions.length} page={sessionPage} onPageChange={setSessionPage} label="Buổi học của lớp" as="ul" className="member-session-rows">{session => {
+        <MemberList items={allSessions.slice((sessionPage - 1) * PAGE_SIZE, sessionPage * PAGE_SIZE)} total={allSessions.length} page={sessionPage} onPageChange={setSessionPage} label="Buổi học của lớp" as="ul" className="member-session-rows" showOrdinal={false}>{session => {
         const unavailable = bookingUnavailableReason(session, registered.has(String(session.id)), now, planned)
         const selected = !unavailable && selectedSet.has(String(session.id))
         const deadline = cancellationDeadline(session)
