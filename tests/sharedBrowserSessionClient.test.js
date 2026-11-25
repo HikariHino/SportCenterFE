@@ -46,6 +46,7 @@ for (const remember of [false, true]) for (const [role, destination, portal] of 
     auth.saveSession({ userId: 12, role, token: 'browser-token', refreshTokenKey: 'browser-refresh' }, 'browser-token', remember)
     const id = auth.getLoginSessionId()
     sessionStorage.clear() // New independent tab: shared localStorage and cookies, empty sessionStorage.
+    await auth.initializeBrowserSession({ presence: { hasLiveTab: async () => true, start() {} }, navigationType: 'navigate' })
     window.history.replaceState(null, '', path)
     const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
     try {
@@ -72,3 +73,21 @@ for (const remember of [false, true]) for (const [role, destination, portal] of 
     } finally { await act(async () => root.unmount()); container.remove() }
   })
 }
+
+for (const remember of [false, true]) test(`reopening the website after closing every tab respects remember=${remember} before rendering routes`, async () => {
+  localStorage.clear(); sessionStorage.clear()
+  auth.saveSession({ userId: 12, role: 'Member', token: 'closed-tab-token' }, 'closed-tab-token', remember)
+  sessionStorage.clear()
+  await auth.initializeBrowserSession({ presence: { hasLiveTab: async () => false, start() { assert.fail('No live tab') } }, navigationType: 'navigate' })
+  window.history.replaceState(null, '', '/member')
+  const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
+  try {
+    await act(async () => root.render(h(ThemeProvider, null, h(AuthProvider, null, h(App)))))
+    for (let i = 0; i < 100 && !container.querySelector(remember ? '[data-portal]' : '.login-page'); i++) {
+      await act(async () => new Promise(resolve => setTimeout(resolve, 10)))
+    }
+    assert.equal(window.location.pathname, remember ? '/member' : '/login')
+    assert.equal(Boolean(container.querySelector('[data-portal]')), remember)
+    assert.equal(auth.getToken(), remember ? 'closed-tab-token' : null)
+  } finally { await act(async () => root.unmount()); container.remove() }
+})

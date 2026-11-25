@@ -1,3 +1,5 @@
+import { getBrowserSessionPresence } from './browserSessionPresence.js'
+
 export function getUserDisplayName(user) {
   return [user?.fullName, user?.name, user?.email]
     .find(value => typeof value === 'string' && value.trim())?.trim() || 'Hội viên'
@@ -13,31 +15,28 @@ export const SESSION_EXPIRED_EVENT = 'sportcenter:session-expired'
 export const ACTIVE_LOGIN_KEY = 'sportcenter:active-login'
 const replacedSessionKey = 'sportcenter:session-replaced'
 export const BROWSER_SESSION_KEY = 'sportcenter:browser-session'
-const browserSessionCookie = 'sportcenter_browser_session'
-
-function setBrowserSessionCookie(id) {
-  if (typeof document === 'undefined') return
-  document.cookie = `${browserSessionCookie}=${id ? encodeURIComponent(id) : ''}; Path=/; SameSite=Lax${globalThis.window?.location?.protocol === 'https:' ? '; Secure' : ''}${id ? '' : '; Max-Age=0'}`
-}
-
-function expireClosedBrowserSession() {
+// Run before mounting routes or making authenticated requests. Persistent
+// credentials alone are not evidence of an open tab for an unremembered login.
+export async function initializeBrowserSession({ presence = getBrowserSessionPresence(), navigationType = globalThis.performance?.getEntriesByType?.('navigation')?.[0]?.type } = {}) {
   const id = localStorage.getItem(BROWSER_SESSION_KEY)
-  if (!id || typeof document === 'undefined') return
-  const cookie = document.cookie.split(';').map(item => item.trim()).find(item => item.startsWith(`${browserSessionCookie}=`))
-  if (cookie === `${browserSessionCookie}=${encodeURIComponent(id)}`) return
-  // Credentials are shared by tabs, but a session cookie controls whether an
-  // unremembered login can survive a new browser session.
+  if (!id) return
+  const reload = navigationType === 'reload' && sessionStorage.getItem('loginSessionId') === id && sessionStorage.getItem('token')
+  const alive = await presence.hasLiveTab(id)
+  // Another tab can log in/out while the presence check is pending.
+  if (localStorage.getItem(BROWSER_SESSION_KEY) !== id || localStorage.getItem(ACTIVE_LOGIN_KEY) !== id) return
+  if (alive || reload) { presence.start(id); return }
   if (localStorage.getItem('loginSessionId') === id) {
     for (const key of sessionKeys) localStorage.removeItem(key)
     localStorage.setItem(ACTIVE_LOGIN_KEY, `signed-out:${id}`)
   }
   localStorage.removeItem(BROWSER_SESSION_KEY)
+  for (const key of sessionKeys) sessionStorage.removeItem(key)
+  sessionStorage.setItem(replacedSessionKey, 'true')
 }
 
 // Share one login across tabs, including when it is not remembered.
 // A superseded tab must not silently adopt the new account's stored credentials.
 export function reconcileBrowserSession() {
-  expireClosedBrowserSession()
   if (sessionStorage.getItem(replacedSessionKey)) return false
   const activeLogin = localStorage.getItem(ACTIVE_LOGIN_KEY)
   if (activeLogin && sessionStorage.getItem('token')
@@ -123,7 +122,7 @@ export function clearSession() {
   if (ownsSession) {
     for (const key of sessionKeys) localStorage.removeItem(key)
     localStorage.removeItem(BROWSER_SESSION_KEY)
-    setBrowserSessionCookie(null)
+    getBrowserSessionPresence().stop()
     if (tabToken) localStorage.setItem(ACTIVE_LOGIN_KEY, `signed-out:${loginId || newLoginSessionId()}`)
   }
 }
@@ -205,10 +204,10 @@ export function saveSession(userData, token, remember = true) {
   }
   if (remember) {
     localStorage.removeItem(BROWSER_SESSION_KEY)
-    setBrowserSessionCookie(null)
+    getBrowserSessionPresence().stop()
   } else {
-    setBrowserSessionCookie(loginSessionId)
     localStorage.setItem(BROWSER_SESSION_KEY, loginSessionId)
+    getBrowserSessionPresence().start(loginSessionId)
   }
   // Publish last so other tabs never observe a half-written login.
   localStorage.setItem(ACTIVE_LOGIN_KEY, loginSessionId)
