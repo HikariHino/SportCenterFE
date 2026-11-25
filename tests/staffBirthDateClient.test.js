@@ -72,7 +72,27 @@ const changeBirthday = value => act(async () => {
 const submit = () => act(async () => document.querySelector('form[id]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
 const writes = () => state.calls.filter(call => call.method === 'put')
 
-for (const role of ['Coach', 'Receptionist', 'Manager']) {
+for (const role of ['Coach', 'Receptionist']) {
+  test(`${role} hides the birthday in view and edit modes and does not send it when saving`, async () => {
+    for (const birthday of [null, '2000-02-29T00:00:00Z', '1949-12-31T00:00:00Z']) {
+      await screen(role, async container => {
+        assert.doesNotMatch(container.textContent, /Ngày sinh/)
+        await clickText('Chỉnh sửa')
+        assert.equal(container.querySelector('[name=dateOfBirth]'), null)
+        assert.doesNotMatch(container.textContent, /Ngày sinh/)
+        assert.ok(container.querySelector('.account-email-change [type=email]'))
+        await submit()
+        assert.equal(writes().length, 1)
+        assert.equal(Object.hasOwn(writes()[0].data, 'dateOfBirth'), false)
+        assert.equal(state.profile.dateOfBirth, birthday)
+        assert.equal(state.notices.length, 1)
+        assert.equal(container.querySelector('[name=fullName]'), null)
+      }, birthday)
+    }
+  })
+}
+
+for (const role of ['Manager']) {
   test(`${role} shows, edits and verifies a persisted birthday before reporting success`, () => screen(role, async container => {
     assert.match(container.textContent, /Ngày sinh/)
     await clickText('Chỉnh sửa')
@@ -114,10 +134,12 @@ for (const role of ['Coach', 'Receptionist', 'Manager']) {
   }))
 }
 
-test('Manager shows email verification and password editing only in edit mode and refreshes the saved display name', () => screen('Manager', async container => {
+test('Manager keeps the email read-only while allowing profile and password editing', () => screen('Manager', async container => {
   assert.equal(container.querySelector('[type=email]'), null)
+  assert.match(container.textContent, /staff@example.com/)
   await clickText('Chỉnh sửa')
-  assert.ok(container.querySelector('.account-email-change [type=email]'))
+  assert.equal(container.querySelector('.account-email-change'), null)
+  assert.equal(container.querySelector('[type=email]'), null)
   assert.ok(container.querySelector('[name=currentPassword]'))
   const input = container.querySelector('[name=fullName]')
   await act(async () => {
@@ -125,6 +147,7 @@ test('Manager shows email verification and password editing only in edit mode an
     input.dispatchEvent(new window.Event('input', { bubbles: true }))
   })
   await submit()
+  assert.equal(Object.hasOwn(writes()[0].data, 'email'), false)
   assert.equal(JSON.parse(sessionStorage.getItem('user')).fullName, 'Nguyễn Quản Lý')
   assert.equal(container.querySelector('[type=email]'), null)
   assert.match(container.textContent, /Nguyễn Quản Lý/)

@@ -7,7 +7,6 @@ import { formatStaffBirthDate, staffBirthDateValue, updateStaffProfile } from '.
 import { profileBirthDateLimit, profileFieldErrors, profileValidationErrors, PROFILE_BIRTH_DATE_MIN, PROFILE_FULL_NAME_MAX_LENGTH, PROFILE_PHONE_MAX_LENGTH } from '../../utils/profileValidation'
 import useProfileMorph from '../../hooks/useProfileMorph'
 import StaffProfileCard from '../../components/StaffProfileCard'
-import ChangeEmailForm from '../../components/ChangeEmailForm'
 import FontSizeControl from '../../components/FontSizeControl'
 import '../../style/CenterManager/ManagerProfile.css'
 
@@ -90,7 +89,6 @@ export default function ManagerProfileView() {
           <label>Mật khẩu hiện tại<input {...inputProps('currentPassword')} type="password" autoComplete="current-password" placeholder="Bắt buộc khi đổi mật khẩu" />{fieldError('currentPassword')}</label>
           <label className="manager-profile-wide">Mật khẩu mới (không bắt buộc)<input {...inputProps('password')} type="password" minLength={8} maxLength={72} autoComplete="new-password" placeholder="Để trống nếu không đổi mật khẩu" />{fieldError('password')}</label>
         </form>
-        <ChangeEmailForm currentEmail={profile.email} disabled={saving} allowAnyEmailDomain />
         <footer className="manager-profile-actions"><button type="button" disabled={saving} onClick={cancel}>Hủy thay đổi</button><button type="submit" form={`${id}-form`} disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button></footer>
       </> : <dl>
         <div><dt><Mail size={15} /> Email</dt><dd>{profile.email}</dd></div>
