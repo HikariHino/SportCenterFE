@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { beforeEach, test } from 'node:test'
-import { ACTIVE_LOGIN_KEY, getRefreshTokenKey, getAccessTokenExpiry } from '../src/utils/auth.js'
+import { afterEach, beforeEach, test } from 'node:test'
+import { ACTIVE_LOGIN_KEY, BROWSER_SESSION_KEY, getRefreshTokenKey, getAccessTokenExpiry } from '../src/utils/auth.js'
 import { canUsePayments, clearSession, getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getLoginRedirectPath, getLoginSessionId, getSavedUser, getToken, saveSession, updateSessionTokens } from '../src/utils/auth.js'
 
 function memoryStorage() {
@@ -12,9 +12,15 @@ function memoryStorage() {
   }
 }
 
+const documentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'document')
 beforeEach(() => {
   globalThis.localStorage = memoryStorage()
   globalThis.sessionStorage = memoryStorage()
+  Object.defineProperty(globalThis, 'document', { configurable: true, writable: true, value: { cookie: '' } })
+})
+afterEach(() => {
+  if (documentDescriptor) Object.defineProperty(globalThis, 'document', documentDescriptor)
+  else delete globalThis.document
 })
 
 const authResponse = {
@@ -42,7 +48,7 @@ test('login identity survives token refresh but changes on every explicit login,
   assert.equal(localStorage.getItem('sportcenter.ai.conversations.v1:12'), 'saved-conversations')
   saveSession(authResponse, authResponse.token, false)
   assert.notEqual(getLoginSessionId(), loginId)
-  assert.equal(localStorage.getItem('loginSessionId'), null)
+  assert.equal(localStorage.getItem(BROWSER_SESSION_KEY), getLoginSessionId())
   assert.equal(localStorage.getItem('sportcenter.ai.conversations.v1:12'), 'saved-conversations')
 })
 
@@ -82,13 +88,14 @@ test('direct AuthResponse without success logs in, persists the session and sele
   assert.equal(sessionStorage.getItem('token'), authResponse.token)
 })
 
-test('wrapped response keeps login compatibility and remember=false uses session storage', () => {
+test('wrapped response keeps login compatibility and remember=false shares the browser session', () => {
   const data = getLoginData({ success: true, statusCode: 200, data: { ...authResponse, role: 'Coach' } })
   const user = saveSession(data, data.token, false)
   assert.equal(getAuthDestination(user.role), '/coach')
   assert.deepEqual(getSavedUser(), user)
   assert.equal(sessionStorage.getItem('refreshTokenKey'), authResponse.refreshTokenKey)
-  assert.equal(localStorage.getItem('token'), null)
+  assert.equal(localStorage.getItem('token'), authResponse.token)
+  assert.equal(localStorage.getItem(BROWSER_SESSION_KEY), getLoginSessionId())
 })
 
 test('accessToken alias and wrapper without success are supported', () => {
@@ -148,12 +155,12 @@ for (const oldRemember of [false, true]) for (const newRemember of [false, true]
     globalThis.sessionStorage = newTab
     assert.equal(getToken(), 'new-token')
     globalThis.sessionStorage = memoryStorage()
-    assert.equal(getToken(), newRemember ? 'new-token' : null, 'fresh tabs only restore remembered credentials')
+    assert.equal(getToken(), 'new-token', 'fresh tabs share both remembered and browser-only logins')
   })
 }
 
-test('same remembered login may share refreshed tokens across tabs without eviction', () => {
-  saveSession(authResponse, 'old-token', true)
+for (const remember of [false, true]) test(`same login shares refreshed tokens across tabs without eviction, remember=${remember}`, () => {
+  saveSession(authResponse, 'old-token', remember)
   const firstTab = sessionStorage
   const identity = localStorage.getItem(ACTIVE_LOGIN_KEY)
   globalThis.sessionStorage = memoryStorage()
@@ -177,10 +184,9 @@ for (const remember of [false, true]) {
   test(`logging out one tab retires all copies of the same session, remember=${remember}`, () => {
     saveSession(authResponse, 'old-token', remember)
     const firstTab = sessionStorage
-    const keys = ['user', 'token', 'refreshTokenKey', 'loginSessionId']
     const secondTab = memoryStorage()
-    for (const key of keys) secondTab.setItem(key, firstTab.getItem(key))
     globalThis.sessionStorage = secondTab
+    assert.equal(getToken(), 'old-token', 'a newly opened tab automatically joins the login')
     updateSessionTokens('new-token', 'new-refresh')
     clearSession()
     assert.equal(getToken(), null)
@@ -202,6 +208,27 @@ test('logout with an older access token still retires the same login after anoth
   clearSession()
   assert.equal(localStorage.getItem('token'), null)
   assert.equal(localStorage.getItem(ACTIVE_LOGIN_KEY), `signed-out:${loginId}`)
+})
+
+for (const remember of [false, true]) test(`browser closure respects remember=${remember}`, () => {
+  saveSession(authResponse, 'browser-token', remember)
+  const originalTab = sessionStorage
+  const loginId = getLoginSessionId()
+  globalThis.sessionStorage = memoryStorage()
+  assert.equal(getToken(), 'browser-token')
+  assert.equal(getLoginSessionId(), loginId)
+  // A new browser session has the same persistent storage but no session cookie.
+  document.cookie = ''
+  globalThis.sessionStorage = memoryStorage()
+  assert.equal(getToken(), remember ? 'browser-token' : null)
+  assert.equal(getSavedUser()?.userId ?? null, remember ? authResponse.userId : null)
+  if (!remember) {
+    assert.equal(localStorage.getItem('token'), null)
+    assert.equal(localStorage.getItem('refreshTokenKey'), null)
+    assert.equal(localStorage.getItem(BROWSER_SESSION_KEY), null)
+    globalThis.sessionStorage = originalTab
+    assert.equal(getToken(), null, 'restoring an old tab cannot revive the expired browser session')
+  }
 })
 
 test('expiry metadata supports base64url JWT payloads and opaque tokens without trusting the claims for authorization', () => {

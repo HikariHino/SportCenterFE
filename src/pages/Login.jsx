@@ -1,11 +1,11 @@
 import ThemeToggle from '../components/ThemeToggle'
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, CreditCard, Eye, EyeOff, LockKeyhole, Mail, Phone, ShieldCheck, Trophy, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { login as loginApi, loginWithGoogle } from '../services/authService'
-import { getAuthDestination, getLoginErrorMessage } from '../utils/auth'
+import { getAuthDestination, getLoginErrorMessage, getToken } from '../utils/auth'
 import { getGoogleLoginErrorMessage } from '../utils/googleAuth'
 import '../style/Login.css'
 import { ACCOUNT_EMAIL_MAX_LENGTH, getAccountEmailValidationError } from '../utils/emailValidation'
@@ -24,7 +24,7 @@ function Brand() {
 export default function Login() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, user } = useAuth()
   const selectedMembership = location.state?.membership
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -102,6 +102,11 @@ export default function Login() {
       submitting.current = false
       if (mounted.current) setIsSubmitting(false)
     }
+  }
+
+  if (user && getToken()) {
+    const returnTo = location.state?.from || new URLSearchParams(location.search).get('returnTo')
+    return <Navigate to={getAuthDestination(user.role, returnTo)} replace state={{ membership: selectedMembership }} />
   }
 
   return <main className="login-page">
