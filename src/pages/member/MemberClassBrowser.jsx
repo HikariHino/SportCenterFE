@@ -111,7 +111,7 @@ export default function MemberClassBrowser({ sports, coaches, rooms, registered,
       {coaches.error && <p className="member-classes-error" role="alert">{coaches.error} <button type="button" onClick={coaches.reload}>Thử lại HLV</button></p>}
     </form>
     {classes.loading || classes.error || !classes.data?.items.length ? <State resource={classes} emptyText="Không tìm thấy lớp học phù hợp. Hãy thử thay đổi bộ lọc." /> : <>
-      <MemberList items={classes.data.items} total={classes.data.total} page={page} onPageChange={setPage} label="Lớp học" className="member-classes-grid">{item => <button type="button" className="member-course-card" key={item.id} data-member-class-id={item.id} onClick={() => { setCourse(item); setSessionPage(1); setSelectedIds([]) }}>
+      <MemberList items={classes.data.items} total={classes.data.total} page={page} onPageChange={setPage} label="Lớp học" className="member-classes-grid" showOrdinal={false}>{item => <button type="button" className="member-course-card" key={item.id} data-member-class-id={item.id} onClick={() => { setCourse(item); setSessionPage(1); setSelectedIds([]) }}>
         {isCatalogImageUrl(item.imageUrl) && <CatalogImage src={item.imageUrl} className="catalog-image--cover member-course-image" />}
         <span className="member-course-card-top"><span className="member-classes-badge">{item.sportName || 'Lớp học'}</span><small>#{item.id}</small></span><strong>{item.className}</strong>
         <span><User size={16} />{item.coachName || 'Chưa phân công HLV'}</span><span><MapPin size={16} />{getRoomForClass(item, rooms)?.name || 'Chưa cập nhật phòng'}</span>

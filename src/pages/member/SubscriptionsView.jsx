@@ -1,6 +1,6 @@
 import { paymentMethodLabel } from '../../utils/paymentPresentation'
 import { MemberList } from './MemberPagination'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { MEMBER_TRANSACTION_RESOURCES, useMemberCache, useMemberResource, useMemberViewActive } from '../../contexts/MemberWorkspaceContext'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -58,6 +58,8 @@ export function SubscriptionsView({ showNotice }) {
   const confirmedCancellations = useRef(new Map())
   const [registrationError, setRegistrationError] = useState('')
   const [tab, setTab] = useState('catalog')
+  const [showPackageRules, setShowPackageRules] = useState(false)
+  const packageRulesId = useId()
   const [now, setNow] = useState(Date.now)
 
   // Bộ lọc & tìm kiếm danh mục gói tập mở bán
@@ -376,8 +378,8 @@ export function SubscriptionsView({ showNotice }) {
       </section>}
 
       {tab === 'catalog' && <section className="member-sub-catalog" aria-labelledby="member-package-catalog">
-        <div className="member-sub-section-heading"><div><h3 id="member-package-catalog">Chọn gói tập phù hợp</h3><p>Xem thông tin và thời hạn trước khi tạo đơn đăng ký.</p></div><span>{filteredPackages.length} gói</span></div>
-        <div className="member-sub-message" role="note"><Info size={18} /><p>Standard đang còn hạn chỉ được nâng cấp lên gói có giá cao hơn giá đầy đủ của gói đang dùng; không so với riêng tiền bù nâng cấp. PT được đăng ký độc lập với Standard, thanh toán nguyên giá và không mua trùng đúng gói PT đang Active.</p></div>
+        <div className="member-sub-section-heading"><div><h3 id="member-package-catalog">Chọn gói tập phù hợp</h3><p>Xem thông tin và thời hạn trước khi tạo đơn đăng ký.</p></div><div className="member-sub-catalog-tools"><span>{filteredPackages.length} gói</span><button type="button" className="member-sub-info-button" aria-label="Quy tắc đăng ký và nâng cấp gói tập" title="Quy tắc đăng ký và nâng cấp gói tập" aria-expanded={showPackageRules} aria-controls={packageRulesId} onClick={() => setShowPackageRules(value => !value)}><Info size={19} aria-hidden="true" /></button></div></div>
+        <div id={packageRulesId} className="member-sub-message member-sub-package-rules" role="note" hidden={!showPackageRules}><Info size={18} /><p>Standard đang còn hạn chỉ được nâng cấp lên gói có giá cao hơn giá đầy đủ của gói đang dùng; không so với riêng tiền bù nâng cấp. PT được đăng ký độc lập với Standard, thanh toán nguyên giá và không mua trùng đúng gói PT đang Active.</p></div>
         {registrationReason && <div id="member-sub-registration-lock" className="member-sub-message" role="status"><LockKeyhole size={18} /><p>{registrationReason}</p></div>}
         <div className="member-sub-toolbar">
           <label className="member-sub-search"><Search size={17} aria-hidden="true" /><input type="search" maxLength={200} value={packageSearch} onChange={event => setPackageSearch(event.target.value)} placeholder="Tìm tên gói hoặc từ khóa..." aria-label="Tìm gói tập" /></label>
