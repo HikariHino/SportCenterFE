@@ -370,12 +370,13 @@ export default function PackageManagement() {
           </button>
           <button
             type="button"
-            className="pkg-btn pkg-btn-secondary"
+            className="pkg-btn pkg-btn-secondary manager-refresh-icon"
+            aria-label="Làm mới danh sách gói hội viên"
+            title="Làm mới danh sách gói hội viên"
             onClick={loadPackages}
             disabled={loading}
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-            Làm mới
           </button>
           <button
             type="button"

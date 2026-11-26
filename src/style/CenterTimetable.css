@@ -1,6 +1,7 @@
 .center-timetable-view { min-width: 0; color: var(--theme-text, #18263e); }
 .center-timetable-view button, .center-session-dialog button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 14px; border: 1px solid var(--theme-border, #d5deed); border-radius: 10px; background: var(--theme-surface, #fff); color: var(--theme-accent, #2463eb); font: inherit; cursor: pointer; }
 .center-timetable-view button:disabled, .center-session-dialog button:disabled { opacity: .55; cursor: wait; }
+.center-timetable-view button.center-timetable-refresh-icon { width: 42px; min-width: 42px; height: 42px; padding: 0; flex-shrink: 0; }
 .center-timetable-view :focus-visible, .center-session-dialog :focus-visible { outline: 3px solid var(--theme-accent, #2463eb); outline-offset: 3px; }
 .center-timetable-heading, .center-timetable-heading > div:last-child, .center-session-dialog > header, .center-session-roster > header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .center-timetable-heading { margin-bottom: 20px; }
