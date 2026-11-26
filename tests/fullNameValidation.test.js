@@ -70,8 +70,12 @@ for (const [name, save, url] of [
     const calls = []
     api.defaults.adapter = async config => {
       if (config.method === 'get') return { config, status: 200, headers: {}, data: { success: true, data: [] } }
-      calls.push({ url: config.url, data: JSON.parse(config.data) })
-      return { config, status: 200, headers: {}, data: { success: true, data: { id: 1 } } }
+      const payload = JSON.parse(config.data)
+      calls.push({ url: config.url, data: payload })
+      const data = config.url === '/users/staff'
+        ? { userId: 1, fullName: payload.fullName, dateOfBirth: payload.dateOfBirth }
+        : { id: 1 }
+      return { config, status: 200, headers: {}, data: { success: true, data } }
     }
     for (const fullName of validNames) {
       await save(fullName)

@@ -919,7 +919,7 @@ export default function StaffManagement() {
                     </span>
                   </div>
                 </div>
-                <div className="staff-detail-item"><small>Ngày sinh</small><strong>{formatStaffBirthDate(selectedStaffForDetail)}</strong></div>
+                {!['coach', 'receptionist'].includes(String(selectedStaffForDetail.role).trim().toLowerCase()) && <div className="staff-detail-item"><small>Ngày sinh</small><strong>{formatStaffBirthDate(selectedStaffForDetail)}</strong></div>}
 
                 <div className="staff-detail-item">
                   <small>Trạng thái</small>
