@@ -1,17 +1,18 @@
 import { MemberList } from './MemberPagination'
 import { useEffect, useState } from 'react'
 import { listPage } from '../../utils/listPagination'
-import { LoaderCircle, MessageSquare, Plus, RefreshCw } from 'lucide-react'
+import { LoaderCircle, MessageSquare, Plus, RefreshCw, X } from 'lucide-react'
 import { memberAiHistoryDate } from '../../utils/memberAiHistory'
 import { visibleMemberConversations } from '../../utils/memberAiConversations'
 
-export default function MemberAiConversationSidebar({ workspace, history, disabled, storageError, onSelect, onNew }) {
+export default function MemberAiConversationSidebar({ id, sidebarRef, onClose, workspace, history, disabled, storageError, onSelect, onNew }) {
   const conversations = visibleMemberConversations(workspace)
   const [page, setPage] = useState(1)
   const range = listPage(conversations.length, page)
   useEffect(() => { if (page !== range.page) setPage(range.page) }, [page, range.page])
   const hasMore = history.data && history.data.page * history.pageSize < history.data.total
-  return <aside className="member-ai-conversation-sidebar" aria-label="Lịch sử cuộc trò chuyện AI">
+  return <aside id={id} ref={sidebarRef} className="member-ai-conversation-sidebar" aria-label="Lịch sử cuộc trò chuyện AI">
+    {onClose && <div className="member-ai-history-heading"><h3>Lịch sử trò chuyện</h3><button type="button" className="member-ai-history-close" aria-label="Đóng lịch sử trò chuyện" onClick={onClose}><X size={19} /></button></div>}
     <button type="button" className="member-ai-new-conversation" disabled={disabled} onClick={() => { setPage(1); onNew() }}><Plus size={17} />Cuộc trò chuyện mới</button>
     <div className="member-ai-sidebar-heading"><h3>Cuộc trò chuyện</h3><button type="button" aria-label="Tải lại lịch sử từ máy chủ" disabled={disabled || history.loading} onClick={history.latest}><RefreshCw size={15} /></button></div>
     <MemberList items={conversations.slice(range.offset, range.to)} total={conversations.length} page={range.page} onPageChange={setPage} label="Cuộc trò chuyện AI" as="nav" className="member-ai-conversation-list" showOrdinal={false} layout="embedded" hideSinglePagePagination iconOnlyPagination disabled={disabled}>{item => <button type="button" key={item.id} className={item.id === workspace.activeId ? 'is-active' : ''} aria-current={item.id === workspace.activeId ? 'true' : undefined} disabled={disabled} onClick={() => onSelect(item.id)} title={item.title}>

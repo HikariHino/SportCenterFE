@@ -393,6 +393,46 @@ test('member profile blocks invalid contacts and birth dates and remembers serve
   }
 })
 
+test('mobile AI history opens inside the chat, closes without losing the draft and restores focus', async () => {
+  await clickTab('Trợ lý AI')
+  const toggle = document.querySelector('.member-ai-history-toggle')
+  const panel = document.getElementById(toggle.getAttribute('aria-controls'))
+  const input = document.querySelector('#member-ai-question')
+  const draft = 'Câu hỏi đang soạn trên điện thoại'
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set.call(input, draft)
+    input.dispatchEvent(new window.Event('input', { bubbles: true }))
+  })
+  const before = requests.length
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  await act(async () => toggle.click())
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true')
+  assert.ok(panel.closest('.member-ai-history-panel.is-open'))
+  assert.equal(document.activeElement, panel.querySelector('.member-ai-history-close'))
+  await act(async () => panel.querySelector('.member-ai-history-close').click())
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  assert.equal(document.activeElement, toggle)
+  assert.equal(input.value, draft)
+  await act(async () => toggle.click())
+  await act(async () => document.activeElement.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  await act(async () => toggle.click())
+  await act(async () => document.querySelector('.member-ai-history-backdrop').click())
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  assert.equal(input.value, draft)
+  assert.equal(requests.length, before, 'Opening and closing history reuses existing conversations')
+  await act(async () => toggle.click())
+  await act(async () => panel.querySelector('.member-ai-conversation-list button').click())
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  await act(async () => toggle.click())
+  await act(async () => panel.querySelector('.member-ai-new-conversation').click())
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  assert.equal(input.value, '')
+  await act(async () => toggle.click())
+  await clickTab('Gói tập & Thẻ hội viên')
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false', 'Switching portal tabs closes the mobile history')
+})
+
 test('AI conversation pages show ten conversations and keep older imported history reachable', async () => {
   await clickTab('Trợ lý AI')
   assert.equal(listRows('Cuộc trò chuyện AI').length, 2)

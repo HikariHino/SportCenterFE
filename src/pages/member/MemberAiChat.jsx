@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, ArrowUpRight, Bot, CalendarDays, CreditCard, Dumbbell, LoaderCircle, RotateCcw, Send, Sparkles, Square, Trash2, User } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { AlertCircle, ArrowUpRight, Bot, CalendarDays, CreditCard, Dumbbell, LoaderCircle, PanelLeft, RotateCcw, Send, Sparkles, Square, Trash2, User } from 'lucide-react'
 import { AI_QUESTION_MAX_LENGTH, askMemberAi, clearMemberAiChatHistory, getMemberAiChatHistory, getMemberAiErrorMessage } from '../../services/memberAiService'
 import useMemberAiHistory from '../../hooks/useMemberAiHistory'
 import useMemberAiConversations from '../../hooks/useMemberAiConversations'
@@ -26,6 +26,11 @@ export default function MemberAiChat({ active, onNavigate, showWorkoutShortcut }
   const [confirmClear, setConfirmClear] = useState(false)
   const [clearing, setClearing] = useState(false)
   const [clearError, setClearError] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const historyPanelId = useId()
+  const layoutRef = useRef(null)
+  const historyToggleRef = useRef(null)
+  const historyPanelRef = useRef(null)
   const clearLock = useRef(false)
   const mounted = useRef(false)
   const history = useMemberAiHistory(getMemberAiChatHistory, active)
@@ -37,6 +42,26 @@ export default function MemberAiChat({ active, onNavigate, showWorkoutShortcut }
   const conversationRef = useRef(null)
   const inputRef = useRef(null)
   const animatedAnswerIds = useRef(new Set())
+
+  const closeHistory = () => {
+    setHistoryOpen(false)
+    historyToggleRef.current?.focus({ preventScroll: true })
+  }
+
+  useEffect(() => { if (!active) setHistoryOpen(false) }, [active])
+
+  useEffect(() => {
+    if (!historyOpen) return
+    historyPanelRef.current?.querySelector('.member-ai-history-close')?.focus({ preventScroll: true })
+    const resize = () => {
+      if (layoutRef.current?.getBoundingClientRect().width > 600) setHistoryOpen(false)
+    }
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null
+    if (layoutRef.current) observer?.observe(layoutRef.current)
+    window.addEventListener('resize', resize)
+    resize()
+    return () => { observer?.disconnect(); window.removeEventListener('resize', resize) }
+  }, [historyOpen])
 
   useEffect(() => {
     mounted.current = true
@@ -129,11 +154,15 @@ export default function MemberAiChat({ active, onNavigate, showWorkoutShortcut }
         <span className="member-ai-heading-tag"><Sparkles size={13} /> Dành cho hội viên</span>
       </div>
 
-      <div className="member-ai-chat-layout">
-        <MemberAiConversationSidebar workspace={chat.workspace} history={history} disabled={sending || clearing} storageError={chat.storageError}
-          onNew={() => { chat.start(); setDraft(''); inputRef.current?.focus() }} onSelect={id => { chat.select(id); setDraft('') }} />
+      <div className="member-ai-chat-layout" ref={layoutRef}>
+        <div className={`member-ai-history-panel${historyOpen ? ' is-open' : ''}`} onKeyDown={event => { if (historyOpen && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeHistory() } }}>
+          <button type="button" className="member-ai-history-backdrop" aria-label="Đóng lịch sử trò chuyện" tabIndex={-1} onClick={closeHistory} />
+          <MemberAiConversationSidebar id={historyPanelId} sidebarRef={historyPanelRef} onClose={closeHistory} workspace={chat.workspace} history={history} disabled={sending || clearing} storageError={chat.storageError}
+            onNew={() => { chat.start(); setDraft(''); if (historyOpen) closeHistory(); else inputRef.current?.focus() }} onSelect={id => { chat.select(id); setDraft(''); if (historyOpen) closeHistory() }} />
+        </div>
         <section className="member-ai-chat" aria-label="Trao đổi với trợ lý AI">
           <header className="member-ai-chat-header">
+            <button ref={historyToggleRef} type="button" className="member-ai-history-toggle" aria-label="Mở lịch sử trò chuyện" title="Lịch sử trò chuyện" aria-expanded={historyOpen} aria-controls={historyPanelId} onClick={() => setHistoryOpen(value => !value)}><PanelLeft size={20} /></button>
             <span className="member-ai-avatar"><Bot size={19} /></span>
             <div><h3 title={conversation?.title}>{conversation?.title || 'Cuộc trò chuyện mới'}</h3><p>SportPulse AI · Hỗ trợ tra cứu & tư vấn</p></div>
             <button type="button" className="member-ai-clear" aria-label="Xóa tất cả cuộc trò chuyện" title="Xóa tất cả cuộc trò chuyện" disabled={sending || clearing || history.loading || (!chat.workspace.conversations.some(item => item.messages.length) && !history.data?.total)} onClick={() => { setClearError(''); setConfirmClear(true) }}>
