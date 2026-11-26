@@ -1,17 +1,24 @@
-﻿import { createContext, useContext, useEffect, useState } from 'react'
+﻿import { createContext, useContext, useEffect, useRef, useState } from 'react'
 
 import { logout as logoutApi } from '../services/authService'
-import { ACTIVE_LOGIN_KEY, clearSession, getRefreshTokenKey, getSavedUser, reconcileBrowserSession, saveSession, SESSION_EXPIRED_EVENT } from '../utils/auth'
+import { ACTIVE_LOGIN_KEY, adoptPublishedBrowserLogin, clearSession, getRefreshTokenKey, getSavedUser, reconcileBrowserSession, saveSession, SESSION_EXPIRED_EVENT } from '../utils/auth'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getSavedUser)
+  const currentUser = useRef(user)
+  const observedLogin = useRef(localStorage.getItem(ACTIVE_LOGIN_KEY))
+  currentUser.current = user
 
   useEffect(() => {
-    const expired = () => setUser(null)
+    const expired = () => { currentUser.current = null; setUser(null) }
     const sync = () => {
+      const activeLogin = localStorage.getItem(ACTIVE_LOGIN_KEY)
+      if (!currentUser.current && activeLogin !== observedLogin.current) adoptPublishedBrowserLogin(observedLogin.current)
+      observedLogin.current = activeLogin
       const saved = reconcileBrowserSession() ? getSavedUser() : null
+      currentUser.current = saved
       setUser(current => JSON.stringify(current) === JSON.stringify(saved) ? current : saved)
     }
     const storage = event => { if (event.key === ACTIVE_LOGIN_KEY || event.key === 'user' || event.key === null) sync() }
@@ -31,12 +38,16 @@ export function AuthProvider({ children }) {
 
   const login = (userData, token, remember = true) => {
     const savedUser = saveSession(userData, token, remember)
+    currentUser.current = savedUser
+    observedLogin.current = localStorage.getItem(ACTIVE_LOGIN_KEY)
     setUser(savedUser)
     return savedUser
   }
 
   const endSession = () => {
     clearSession()
+    currentUser.current = null
+    observedLogin.current = localStorage.getItem(ACTIVE_LOGIN_KEY)
     setUser(null)
   }
 

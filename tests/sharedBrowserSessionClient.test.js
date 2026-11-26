@@ -91,3 +91,43 @@ for (const remember of [false, true]) test(`reopening the website after closing 
     assert.equal(auth.getToken(), remember ? 'closed-tab-token' : null)
   } finally { await act(async () => root.unmount()); container.remove() }
 })
+
+for (const signal of ['storage', 'focus', 'visibilitychange']) for (const remember of [false, true]) for (const [role, destination, portal] of [
+  ['Member', '/member', 'member/Member'], ['Coach', '/coach', 'Coach/Coach'],
+  ['Receptionist', '/receptionist', 'Receptionist/Receptionist'], ['CenterManager', '/manager', 'CenterManager/CenterManager'],
+]) test(`an already-open logged-out ${role} tab adopts a newly published login on ${signal} without reload, remember=${remember}`, async () => {
+  localStorage.clear(); sessionStorage.clear()
+  auth.saveSession({ userId: 9, role: 'Member' }, 'previous-token', false)
+  auth.clearSession() // A prior logout leaves a retirement marker in this tab.
+  window.history.replaceState(null, '', '/login')
+  const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
+  try {
+    await act(async () => root.render(h(ThemeProvider, null, h(AuthProvider, null, h(App)))))
+    for (let i = 0; i < 100 && !container.querySelector('.login-page'); i++) {
+      await act(async () => new Promise(resolve => setTimeout(resolve, 10)))
+    }
+    assert.ok(container.querySelector('.login-page'))
+    const existingSession = globalThis.sessionStorage, values = new Map()
+    const remoteSession = { getItem: key => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) }
+    Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: remoteSession })
+    let id
+    try {
+      auth.saveSession({ userId: 12, role, refreshTokenKey: 'new-refresh' }, 'new-token', remember)
+      id = auth.getLoginSessionId()
+    } finally { Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: existingSession }) }
+    await act(async () => {
+      if (signal === 'storage') window.dispatchEvent(new window.StorageEvent('storage', { key: auth.ACTIVE_LOGIN_KEY, newValue: id }))
+      else if (signal === 'focus') window.dispatchEvent(new window.Event('focus'))
+      else document.dispatchEvent(new window.Event('visibilitychange'))
+    })
+    for (let i = 0; i < 100 && !container.querySelector('[data-portal]'); i++) {
+      await act(async () => new Promise(resolve => setTimeout(resolve, 10)))
+    }
+    assert.equal(window.location.pathname, destination)
+    assert.equal(container.querySelector('[data-portal]')?.dataset.portal, portal)
+    assert.equal(auth.getSavedUser()?.userId, 12)
+    assert.equal(auth.getLoginSessionId(), id)
+    assert.equal(auth.getToken(), 'new-token')
+  } finally { await act(async () => root.unmount()); container.remove() }
+})

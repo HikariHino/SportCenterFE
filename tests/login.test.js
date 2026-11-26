@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
-import { ACTIVE_LOGIN_KEY, BROWSER_SESSION_KEY, getRefreshTokenKey, getAccessTokenExpiry, initializeBrowserSession } from '../src/utils/auth.js'
+import { ACTIVE_LOGIN_KEY, adoptPublishedBrowserLogin, BROWSER_SESSION_KEY, getRefreshTokenKey, getAccessTokenExpiry, initializeBrowserSession } from '../src/utils/auth.js'
 import { canUsePayments, clearSession, getAuthDestination, getAuthErrorMessage, getLoginData, getLoginErrorMessage, getLoginRedirectPath, getLoginSessionId, getSavedUser, getToken, saveSession, updateSessionTokens } from '../src/utils/auth.js'
 
 function memoryStorage() {
@@ -15,6 +15,22 @@ function memoryStorage() {
 beforeEach(() => {
   globalThis.localStorage = memoryStorage()
   globalThis.sessionStorage = memoryStorage()
+})
+
+test('a logged-out tab can join only a complete newly published login, while ordinary reads stay retired', () => {
+  saveSession({ userId: 12, role: 'Member' }, 'old-token', false)
+  clearSession()
+  const previousLogin = localStorage.getItem(ACTIVE_LOGIN_KEY)
+  localStorage.setItem('user', JSON.stringify({ userId: 20, role: 'coach' }))
+  localStorage.setItem('token', 'new-token')
+  localStorage.setItem('loginSessionId', 'new-login')
+  assert.equal(adoptPublishedBrowserLogin(previousLogin), false, 'Do not adopt half-published credentials')
+  localStorage.setItem(ACTIVE_LOGIN_KEY, 'new-login')
+  assert.equal(getToken(), null, 'Old API reads must still respect logout')
+  assert.equal(adoptPublishedBrowserLogin('new-login'), false, 'An unchanged login must not revive a retired tab')
+  assert.equal(adoptPublishedBrowserLogin(previousLogin), true)
+  assert.equal(getSavedUser().userId, 20)
+  assert.equal(getToken(), 'new-token')
 })
 
 const authResponse = {

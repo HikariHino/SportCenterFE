@@ -55,6 +55,21 @@ export function reconcileBrowserSession() {
   return true
 }
 
+// Only a logged-out UI may join a different, fully published login. API reads
+// keep honoring retirement markers so old requests cannot adopt a new account.
+export function adoptPublishedBrowserLogin(previousLoginId) {
+  const id = localStorage.getItem(ACTIVE_LOGIN_KEY)
+  if (!id || id === previousLoginId || sessionStorage.getItem('token')
+    || localStorage.getItem('loginSessionId') !== id || !localStorage.getItem('token')) return false
+  try {
+    const user = JSON.parse(localStorage.getItem('user'))
+    if (!user || typeof user !== 'object' || Array.isArray(user)) return false
+  } catch { return false }
+  sessionStorage.removeItem(replacedSessionKey)
+  hydrateTabSession()
+  return Boolean(sessionStorage.getItem('token'))
+}
+
 const newLoginSessionId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 // Separate from JWTs: refreshing an access token must not start a new chat.
