@@ -11,6 +11,7 @@
 .coach-reviews-details h2 { margin: 0; font-size: 1.2em; overflow-wrap: anywhere; }
 .coach-reviews-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 24px 0; padding: 20px; border-radius: 12px; background: var(--theme-bg, #f4f7fc); }
 .coach-reviews-summary > svg, .coach-reviews-stars { color: var(--theme-gold, #987000); }
+:root:not([data-theme='dark']) :is(.coach-reviews-summary > svg, .coach-reviews-stars > svg) { color: #a16207; fill: #fbbf24; }
 .coach-reviews-summary strong { font-size: 1.4em; }
 .coach-reviews-summary span, .coach-reviews-item small { color: var(--theme-muted, #626878); }
 .coach-reviews-list { display: grid; gap: 14px; }
