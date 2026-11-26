@@ -1,4 +1,5 @@
 import useExclusiveAction from '../../hooks/useExclusiveAction'
+import useSlidingPill from '../../hooks/useSlidingPill'
 import ManagerFormError from './ManagerFormError'
 import SessionReviewsSection from './SessionReviewsSection'
 import { ManagerList } from './ManagerPagination'
@@ -152,6 +153,7 @@ export default function ClassManagement() {
   const classesRead = useManagerResource('classes', getAllManagerClasses, { initialData: [] })
   const classes = classesRead.data
   const setClasses = classesRead.setData
+  const tabPill = useSlidingPill(`${activeTab}:${classes.length}:${sports.length}`, viewActive)
 
   // Loading & Error States
   const loading = sportsRead.loading
@@ -857,7 +859,8 @@ export default function ClassManagement() {
       </section>
 
       {/* Tabs */}
-      <div className="class-tabs" role="group" aria-label="Danh mục quản lý">
+      <div className="class-tabs" ref={tabPill.container} role="group" aria-label="Danh mục quản lý">
+        <span className="class-tab-pill" ref={tabPill.pill} aria-hidden="true" />
         <button
           type="button"
           className={`class-tab ${activeTab === 'classes' ? 'active' : ''}`}

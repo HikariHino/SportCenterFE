@@ -96,6 +96,8 @@
 
 /* Tab Navigation */
 .class-tabs {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   align-self: flex-start;
@@ -103,10 +105,36 @@
   padding: 4px;
   border: 1px solid var(--manager-line);
   border-radius: 10px;
-  background: var(--manager-raised, #f8fafc);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent, #2563eb) 6%, transparent), transparent), var(--manager-raised, #f8fafc);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-surface, #fff) 80%, transparent);
+}
+
+.class-tab-pill {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #2563eb) 20%, var(--theme-surface, #fff));
+  border-radius: 8px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-surface, #fff) 90%, transparent), color-mix(in srgb, var(--theme-accent, #2563eb) 12%, transparent)), color-mix(in srgb, var(--theme-surface, #fff) 68%, transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: inset 0 1px 0 #ffffffa6, inset 0 -1px 0 color-mix(in srgb, var(--theme-accent, #2563eb) 12%, transparent), 0 3px 10px color-mix(in srgb, var(--theme-accent, #2563eb) 14%, transparent);
+}
+.class-tab-pill::before { content: ''; position: absolute; inset: 1px; border-radius: inherit; background: radial-gradient(ellipse at 25% 0, #ffffff70, transparent 70%); }
+.class-tabs[data-pill-ready='true'] > .class-tab-pill { opacity: 1; }
+.class-tabs[data-pill-ready='true'] > .class-tab.active { background: transparent; border-color: transparent; box-shadow: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .class-tabs[data-pill-animated='true'] > .class-tab-pill { transition: transform 440ms cubic-bezier(.22, 1.1, .36, 1), width 320ms cubic-bezier(.22, 1, .36, 1), height 240ms ease; }
 }
 
 .class-tab {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -120,7 +148,7 @@
   font-weight: 600;
   color: var(--manager-secondary, #536179);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 
 .class-tab:hover {
