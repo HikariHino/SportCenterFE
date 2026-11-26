@@ -22,7 +22,7 @@ before(async () => {
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   const api = (await server.ssrLoadModule('/src/services/api.js')).default
   api.defaults.adapter = async config => {
-    const profile = savedProfile || { userId: 1, fullName, phoneNumber, email: 'test@example.com' }
+    const profile = savedProfile || { userId: 1, fullName, phoneNumber, email: 'test@example.com', dateOfBirth: '2000-02-29T00:00:00.000Z', gender: 'Male' }
     const response = data => ({ data: { success: true, data }, status: 200, headers: {}, config })
     if (config.method !== 'get') {
       writes.push({ url: config.url, body: JSON.parse(config.data || '{}') })
@@ -71,6 +71,17 @@ test('Member email editor accepts education domains and sends the OTP request', 
   assert.equal(input.checkValidity(), true)
   await click('Gửi mã xác nhận')
   assert.deepEqual(writes, [{ url: '/profile/change-email/request-otp', body: { newEmail: 'member@fpt.edu.vn' } }])
+}))
+
+test('Member profile still requires a birthday before saving other valid fields', () => screen('member', async () => {
+  await click('Chỉnh sửa')
+  const form = document.querySelector('.member-profile-form')
+  const input = form.elements.namedItem('dateOfBirth')
+  await change(input, '')
+  await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+  assert.equal(writes.length, 0)
+  assert.equal(input.getAttribute('aria-invalid'), 'true')
+  assert.match(document.getElementById(input.getAttribute('aria-describedby')).textContent, /nhập ngày sinh/)
 }))
 
 test('member profile blocks named emergency contacts and birth dates outside backend bounds with inline errors', t => {

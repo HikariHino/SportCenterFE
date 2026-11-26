@@ -42,10 +42,12 @@ test('staff email inputs retain native email validation without the dot-com-only
   assert.match(input, /địa chỉ email hợp lệ/)
 })
 
-test('the default email form preserves the existing policy for protected account screens', () => {
+test('the default email form uses native email validation without limiting addresses to dot-com', () => {
   const input = renderForm({}).match(/<input[^>]*type="email"[^>]*>/)[0]
-  assert.match(input, /pattern="\[\^ @\]\+@\[\^ @\]\+\[\.\]com"/)
-  assert.match(input, /kết thúc bằng .com/)
+  assert.doesNotMatch(input, /pattern=/)
+  assert.match(input, /maxLength="254"/)
+  assert.match(input, /required=""/)
+  assert.match(input, /địa chỉ email hợp lệ/)
 })
 
 test('education email requests and OTP verification preserve normalization and existing endpoints', async () => {

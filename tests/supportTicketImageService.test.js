@@ -4,18 +4,32 @@ import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
 let server, api, upload
+const descriptors = new Map()
+const memoryStorage = () => {
+  const values = new Map()
+  return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)),
+    removeItem: key => values.delete(key), clear: () => values.clear() }
+}
 const imageUrl = 'https://assets.example.test/support-tickets/incident.png'
 const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64')
 const image = () => new File([bytes], 'incident.PNG', { type: 'image/png' })
 before(async () => {
-  for (const key of ['localStorage', 'sessionStorage']) Object.defineProperty(globalThis, key, { configurable: true, value: { getItem: () => null, removeItem() {} } })
-  globalThis.window = { location: { pathname: '/login' } }
+  for (const [key, value] of Object.entries({ localStorage: memoryStorage(), sessionStorage: memoryStorage(), window: { location: { pathname: '/login' } } })) {
+    descriptors.set(key, Object.getOwnPropertyDescriptor(globalThis, key))
+    Object.defineProperty(globalThis, key, { configurable: true, value })
+  }
   server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), configFile: false,
     server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   api = (await server.ssrLoadModule('/src/services/api.js')).default
   upload = (await server.ssrLoadModule('/src/services/supportTicketService.js')).uploadSupportTicketImage
 })
-after(async () => { await server?.close(); delete globalThis.localStorage; delete globalThis.sessionStorage; delete globalThis.window })
+after(async () => {
+  await server?.close()
+  for (const [key, descriptor] of descriptors) {
+    if (descriptor) Object.defineProperty(globalThis, key, descriptor)
+    else delete globalThis[key]
+  }
+})
 
 test('support ticket upload sends only the original file after a valid ticket ID and returns the saved image', async () => {
   api.defaults.adapter = async config => {
@@ -56,8 +70,11 @@ test('failed, mismatched and unsafe image responses cannot become a confirmed at
 
 test('ownership and closed ticket rejections from the backend remain available to the UI', async () => {
   for (const status of [401, 403, 409]) {
+    localStorage.clear(); sessionStorage.clear()
+    sessionStorage.setItem('token', 'support-image-test')
     const failure = Object.assign(new Error('Rejected'), { response: { status, data: { message: 'Không được cập nhật ảnh phiếu này.' } } })
     api.defaults.adapter = async () => { throw failure }
     await assert.rejects(upload(7, image()), error => error === failure)
+    assert.equal(sessionStorage.getItem('token'), status === 401 ? null : 'support-image-test')
   }
 })
