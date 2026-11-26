@@ -590,13 +590,13 @@ export default function FrontDeskOperations() {
         <div className="fdesk-actions">
           <button
             type="button"
-            className="fdesk-btn fdesk-btn-secondary"
+            className="fdesk-btn fdesk-btn-secondary manager-refresh-icon"
+            aria-label="Làm mới dữ liệu quầy lễ tân"
             onClick={handleRefresh}
             disabled={loadingMembers || loadingCheckIns || submitting}
             title="Làm mới dữ liệu"
           >
             <RefreshCw size={15} className={loadingMembers || loadingCheckIns || loadingTickets ? 'fdesk-spin' : ''} />
-            Làm mới
           </button>
           <button
             type="button"

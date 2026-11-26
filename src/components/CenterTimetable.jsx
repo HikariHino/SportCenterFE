@@ -14,7 +14,7 @@ import '../style/CenterTimetable.css'
 export function ManagerCenterTimetable() {
   const active = useManagerViewActive()
   const resource = useManagerResource('class-sessions:center', getCenterTimetable, { initialData: [], enabled: active })
-  return <CenterTimetable resource={resource} active={active} />
+  return <CenterTimetable resource={resource} active={active} iconOnlyRefresh />
 }
 
 export function ReceptionistCenterTimetable() {
@@ -79,7 +79,7 @@ export function CenterSessionDetails({ session, onClose }) {
   </dialog>
 }
 
-export default function CenterTimetable({ resource, active = true }) {
+export default function CenterTimetable({ resource, active = true, iconOnlyRefresh = false }) {
   const [week, setWeek] = useState(timetableWeekStart)
   const [selectedId, setSelectedId] = useState(null)
   const items = resource.data || []
@@ -88,7 +88,7 @@ export default function CenterTimetable({ resource, active = true }) {
   const populatedWeek = getRoomTimetableWeek(items, week)
   return <section className="center-timetable-view" aria-label="Thời khóa biểu trung tâm">
     <header className="center-timetable-heading"><div><h2><CalendarDays size={24} />Thời khóa biểu trung tâm</h2><p>Các buổi đã lên lịch và đã hoàn thành · Không bao gồm buổi đã hủy.</p></div>
-      <div><button type="button" onClick={() => setWeek(timetableWeekStart())}>Tuần hiện tại</button><button type="button" disabled={resource.loading || resource.refreshing} onClick={resource.reload}><RefreshCw size={17} />Làm mới lịch</button></div>
+      <div><button type="button" onClick={() => setWeek(timetableWeekStart())}>Tuần hiện tại</button><button type="button" className={iconOnlyRefresh ? 'center-timetable-refresh-icon' : undefined} aria-label="Làm mới lịch" title="Làm mới lịch" disabled={resource.loading || resource.refreshing} onClick={resource.reload}><RefreshCw size={17} />{!iconOnlyRefresh && 'Làm mới lịch'}</button></div>
     </header>
     {resource.error && <p className="center-timetable-error" role="alert">{getClassErrorMessage(resource.error, 'Không thể tải thời khóa biểu.')} <button type="button" onClick={resource.reload}>Thử lại</button></p>}
     {resource.loading ? <p role="status">Đang tải thời khóa biểu trung tâm...</p> : <>

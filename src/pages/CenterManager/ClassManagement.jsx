@@ -788,7 +788,9 @@ export default function ClassManagement() {
         <div className="class-mgmt-actions">
           <button
             type="button"
-            className="class-btn class-btn-secondary"
+            className="class-btn class-btn-secondary manager-refresh-icon"
+            aria-label="Làm mới bộ môn và lớp học"
+            title="Làm mới bộ môn và lớp học"
             onClick={() => {
               loadMasterData()
               loadClasses()
@@ -796,7 +798,6 @@ export default function ClassManagement() {
             disabled={loading || classesLoading}
           >
             <RefreshCw size={15} className={loading || classesLoading ? 'animate-spin' : ''} />
-            Làm mới
           </button>
           {activeTab === 'sports' ? (
             <button
@@ -1147,7 +1148,7 @@ export default function ClassManagement() {
               </button>
             </div>
           ) : (
-            <ManagerList items={filteredSports} label="Danh mục bộ môn" className="sports-grid" as="div" resetKey={JSON.stringify([sportSearch,sportFilterStatus])}>{(sport) => {
+            <ManagerList items={filteredSports} label="Danh mục bộ môn" className="sports-grid" as="div" showOrdinal={false} resetKey={JSON.stringify([sportSearch,sportFilterStatus])}>{(sport) => {
                 const isActive = sport.isActive !== false
                 return (
                   <article key={sport.id} className="sport-card">

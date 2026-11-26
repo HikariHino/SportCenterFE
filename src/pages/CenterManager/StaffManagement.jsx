@@ -322,8 +322,8 @@ export default function StaffManagement() {
             <p>Tra cứu thông tin, tạo tài khoản mới, điều chỉnh phân quyền và quản lý trạng thái hoạt động nhân sự.</p>
           </div>
           <div className="staff-mgmt-actions">
-            <button type="button" className="staff-btn staff-btn-secondary" onClick={fetchStaff} disabled={loading}>
-              <RefreshCw size={16} className={loading ? "spin" : ""} /> Làm mới
+            <button type="button" className="staff-btn staff-btn-secondary manager-refresh-icon" aria-label="Làm mới danh sách nhân sự" title="Làm mới danh sách nhân sự" onClick={fetchStaff} disabled={loading}>
+              <RefreshCw size={16} className={loading ? "spin" : ""} />
             </button>
             <button type="button" className="staff-btn staff-btn-primary" onClick={handleOpenCreateModal}>
               <Plus size={16} /> Thêm nhân viên

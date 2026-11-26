@@ -92,7 +92,7 @@ for (const role of ['Manager', 'Receptionist']) {
       await act(async () => dialog.querySelector('[aria-label="Đóng chi tiết buổi học"]').click())
       assert.equal(container.querySelector('dialog'), null)
       items[0].status = 'Cancelled'
-      await act(async () => [...container.querySelectorAll('.center-timetable-heading button')].find(button => button.textContent.includes('Làm mới lịch')).click())
+      await act(async () => container.querySelector('.center-timetable-heading button[aria-label="Làm mới lịch"]').click())
       assert.equal(container.querySelector('[data-session-id="1"]'), null, 'refresh removes a newly cancelled session')
       await act(async () => container.querySelector('[aria-label="Tuần sau"]').click())
       assert.ok(container.querySelector('[data-session-id="4"]'))

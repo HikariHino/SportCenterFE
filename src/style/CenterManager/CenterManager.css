@@ -163,3 +163,5 @@
   animation: spin 0.9s linear infinite;
 }
 
+.manager-dashboard button.manager-refresh-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 42px; width: 42px; min-width: 42px; height: 42px; padding: 0; justify-self: start; }
+
