@@ -577,7 +577,7 @@ export default function RoomManagement() {
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
-        <ManagerList items={filteredRooms} label="Phòng tập" className="rooms-grid" as="div" resetKey={JSON.stringify([searchQuery,typeFilter,statusFilter])}>{(room) => {
+        <ManagerList items={filteredRooms} label="Phòng tập" className="rooms-grid" as="div" showOrdinal={false} resetKey={JSON.stringify([searchQuery,typeFilter,statusFilter])}>{(room) => {
             const isActive = room.isActive !== false
             const iconClass = getRoomIconClass(room.roomType)
 

@@ -539,7 +539,7 @@ export default function PackageManagement() {
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
-        <ManagerList items={filteredPackages} label="Gói thẻ hội viên" className="packages-grid" as="div" resetKey={JSON.stringify([searchQuery,durationFilter,statusFilter])}>{(pkg) => {
+        <ManagerList items={filteredPackages} label="Gói thẻ hội viên" className="packages-grid" as="div" showOrdinal={false} resetKey={JSON.stringify([searchQuery,durationFilter,statusFilter])}>{(pkg) => {
             const isVip = (pkg.packageName || '').toLowerCase().includes('vip')
             const perDayPrice =
               pkg.durationInDays > 0 ? Math.round(Number(pkg.price) / pkg.durationInDays) : 0

@@ -454,7 +454,7 @@ export default function CancellationPolicyManagement() {
         </div>
       ) : viewMode === 'grid' ? (
         /* GRID VIEW */
-        <ManagerList items={filteredPolicies} label="Chính sách hủy lịch" className="policies-grid" as="div" resetKey={JSON.stringify([searchQuery,timeFilter,statusFilter])}>{(policy) => {
+        <ManagerList items={filteredPolicies} label="Chính sách hủy lịch" className="policies-grid" as="div" showOrdinal={false} resetKey={JSON.stringify([searchQuery,timeFilter,statusFilter])}>{(policy) => {
             return (
               <article
                 key={policy.id}
