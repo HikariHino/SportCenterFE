@@ -36,6 +36,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, initialSlot, on
   const [pending, setPending] = useState(null)
   const [totals, setTotals] = useState({ created: 0, existing: 0 })
   const selectedClass = catalog.classes.find(item => String(item.id) === form.classId)
+  const hasActivePolicy = catalog.policies.some(item => String(item.id) === form.cancellationPolicyId)
   const classRange = getClassDateRange(selectedClass)
   const classRoom = selectedClass ? getSessionRoom({}, selectedClass, rooms) : null
   const locked = pending !== null
@@ -108,7 +109,7 @@ export default function RecurringRoomSessionsForm({ room, rooms, initialSlot, on
       if (!selectedClass || selectedClass.isActive === false) throw new Error('Vui lòng chọn lớp học đang hoạt động.')
       if (room.isActive === false) throw new Error('Phòng đã ngừng hoạt động, không thể mở buổi học.')
       if (!catalog.coaches.some(item => String(item.id) === form.coachId)) throw new Error('Vui lòng chọn huấn luyện viên.')
-      if (!catalog.policies.some(item => String(item.id) === form.cancellationPolicyId)) throw new Error('Vui lòng chọn chính sách hủy đang hoạt động.')
+      if (!hasActivePolicy) throw new Error('Vui lòng chọn chính sách hủy đang hoạt động.')
       if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1 || Number(form.capacity) > maxCapacity) throw new Error(`Sức chứa phải từ 1 đến ${maxCapacity} học viên.`)
       items = pending || buildPlan(form, selectedClass).items
       if (!items.length) throw new Error('Không có buổi học phù hợp để tạo trong thời gian của lớp.')
@@ -183,6 +184,6 @@ export default function RecurringRoomSessionsForm({ room, rooms, initialSlot, on
     {(totals.created > 0 || totals.existing > 0) && <p className="room-recurring-saved" role="status">Đã tạo {totals.created} buổi; {totals.existing} buổi đã có sẵn được giữ nguyên.{pending && ` Còn ${pending.length} buổi cần xử lý.`}</p>}
     {error && <div className="room-recurring-error" role="alert"><p>{error}</p>{conflicts.length > 0 && <ul className="room-recurring-conflicts">{conflicts.map((item, index) => <li key={`${item.startsAt}-${index}`}><strong>{dateLabel(item.date)} · {form.startTime}–{form.endTime}</strong><span>{item.message}</span></li>)}</ul>}</div>}
     {progress && <p role="status">{progress.phase === 'checking' ? 'Đang kiểm tra lịch phòng và huấn luyện viên' : 'Đang tạo buổi học'}: {progress.completed}/{progress.total}...</p>}
-    <footer><button type="button" disabled={busy} onClick={onClose}>Đóng biểu mẫu</button><button type="submit" className="room-recurring-submit" disabled={busy || catalog.loading || Boolean(catalog.error) || Boolean(preview.error) || Boolean(capacityError) || !preview.items.length}>{busy ? 'Đang xử lý...' : pending ? `Thử lại ${pending.length} buổi còn lại` : `Tạo ${preview.items.length || ''} buổi học`}</button></footer>
+    <footer><button type="button" disabled={busy} onClick={onClose}>Đóng biểu mẫu</button><button type="submit" className="room-recurring-submit" disabled={busy || catalog.loading || Boolean(catalog.error) || Boolean(preview.error) || Boolean(capacityError) || !hasActivePolicy || !preview.items.length}>{busy ? 'Đang xử lý...' : pending ? `Thử lại ${pending.length} buổi còn lại` : `Tạo ${preview.items.length || ''} buổi học`}</button></footer>
   </form>
 }

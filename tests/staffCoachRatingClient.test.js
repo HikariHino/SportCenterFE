@@ -9,7 +9,7 @@ const descriptors = new Map()
 const staff = [
   { userId: 3, coachId: 1, fullName: 'Coach An', role: 'Coach', isActive: true, dateOfBirth: '1990-05-20T00:00:00Z' },
   { userId: 8, coachId: 2, fullName: 'Coach Bình', role: 'Coach', isActive: true },
-  { userId: 9, fullName: 'Lễ tân', role: 'Receptionist', isActive: true },
+  { userId: 9, fullName: 'Lễ tân', role: 'Receptionist', isActive: true, dateOfBirth: '1992-06-15T00:00:00Z' },
 ]
 
 before(async () => {
@@ -97,6 +97,7 @@ test('staff profile hides coach birth date and displays direct coach score and s
   const before = requests.length
   await click('[aria-label="Xem hồ sơ Lễ tân"]')
   assert.equal(box(), null)
+  assert.doesNotMatch(document.querySelector('.staff-detail-grid').textContent, /Ngày sinh|15\/06\/1992/)
   assert.equal(document.querySelector('.staff-coach-birthdate'), null)
   assert.equal(document.querySelector('.staff-session-quality'), null)
   assert.equal(requests.length, before)
