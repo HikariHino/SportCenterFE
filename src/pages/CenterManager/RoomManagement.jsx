@@ -1,5 +1,6 @@
 import RoomDialog from './RoomDialog'
 import useExclusiveAction from '../../hooks/useExclusiveAction'
+import useSlidingPill from '../../hooks/useSlidingPill'
 import ManagerFormError from './ManagerFormError'
 import { ManagerList } from './ManagerPagination'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
@@ -14,6 +15,7 @@ import {
   updateRoom,
 } from '../../services/roomService'
 import '../../style/CenterManager/RoomManagement.css'
+import '../../style/CenterManager/ManagerTabMotion.css'
 import RoomTimetableDialog from './RoomTimetableDialog'
 import { getManagerFormValidationError, MANAGER_FORM_LIMITS } from '../../utils/managerFormValidation'
 
@@ -159,6 +161,7 @@ export default function RoomManagement() {
   // Stats
   const activeRoomsCount = rooms.filter((r) => r.isActive !== false).length
   const inactiveRoomsCount = rooms.length - activeRoomsCount
+  const statusPill = useSlidingPill(`${statusFilter}:${activeRoomsCount}:${inactiveRoomsCount}:${loading}`, viewActive)
   const totalCapacity = rooms.reduce((sum, r) => sum + (Number(r.capacity) || 0), 0)
   const hasFilters = Boolean(searchQuery.trim() || typeFilter !== 'ALL' || statusFilter !== 'ALL')
   const resetFilters = () => { setSearchQuery(''); setTypeFilter('ALL'); setStatusFilter('ALL') }
@@ -492,7 +495,8 @@ export default function RoomManagement() {
         <div><h3 id="room-directory-title">Danh sách phòng & sân tập</h3><p>Chọn phòng để xem lịch tuần hoặc kiểm tra khung giờ trống.</p></div>
         {hasFilters && <button type="button" className="room-reset-filters" onClick={resetFilters}><X size={14} /> Xóa bộ lọc</button>}
       </header>
-      <div className="room-status-tabs" role="group" aria-label="Lọc trạng thái phòng">
+      <div className="room-status-tabs manager-smooth-tabs" ref={statusPill.container} role="group" aria-label="Lọc trạng thái phòng">
+        <span className="manager-tab-highlight" ref={statusPill.pill} aria-hidden="true" />
         {[
           ['ALL', 'Tất cả', rooms.length],
           ['ACTIVE', 'Hoạt động', activeRoomsCount],

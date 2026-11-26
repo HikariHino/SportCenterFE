@@ -1,4 +1,5 @@
 import { paymentMethodLabel } from '../../utils/paymentPresentation'
+import useSlidingPill from '../../hooks/useSlidingPill'
 import { ManagerList } from './ManagerPagination'
 import { useManagerResource, useManagerViewActive } from '../../contexts/ManagerWorkspaceContext'
 import { useEffect, useMemo, useState } from 'react'
@@ -37,6 +38,7 @@ import {
   triggerBlobDownload,
 } from '../../services/reportService'
 import '../../style/CenterManager/ReportManagement.css'
+import '../../style/CenterManager/ManagerTabMotion.css'
 
 function formatVND(value) {
   const number = Number(value) || 0
@@ -82,6 +84,7 @@ export default function ReportManagement() {
   const classStatusList = classStatusListRead.data
   const paymentsListRead = useManagerResource('payments', getPaymentsReport, { initialData: [] })
   const paymentsList = paymentsListRead.data
+  const tabPill = useSlidingPill(`${activeTab}:${classStatusList.length}:${paymentsList.length}`, viewActive)
 
   // Loading states
   const loading = overviewRead.loading || revenueDataRead.loading
@@ -415,7 +418,8 @@ export default function ReportManagement() {
       </div>
 
       {/* Tabs */}
-      <div className="report-tabs" aria-label="Loại báo cáo">
+      <div className="report-tabs manager-smooth-tabs" ref={tabPill.container} role="group" aria-label="Loại báo cáo">
+        <span className="manager-tab-highlight" ref={tabPill.pill} aria-hidden="true" />
         <button
           type="button"
           className={`report-tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
