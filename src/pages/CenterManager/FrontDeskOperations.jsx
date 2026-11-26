@@ -840,7 +840,7 @@ export default function FrontDeskOperations() {
               </div>
             ) : (
               <div className="fdesk-table-scroll">
-                <ManagerList items={filteredMembers} label="Danh sách hội viên" table className="fdesk-table" resetKey={JSON.stringify([memberSearch,memberStatusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
+                <ManagerList items={filteredMembers} label="Danh sách hội viên" table className="fdesk-table fdesk-members-table" resetKey={JSON.stringify([memberSearch,memberStatusFilter])} heading={<tr><th scope="col" className="manager-stt">STT</th>
                       <th>Hội viên</th>
                       <th>Liên hệ</th>
                       <th>Ngày sinh / Giới tính</th>

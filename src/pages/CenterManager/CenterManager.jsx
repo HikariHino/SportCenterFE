@@ -537,7 +537,7 @@ function ManagerWorkspace() {
                   <span><i className="available" />Sẵn sàng ({roomsList.filter(r => r.isActive).length})</span>
                   <span><i className="maintenance" />Tạm dừng / Bảo trì ({roomsList.filter(r => !r.isActive).length})</span>
                 </div>
-                <ManagerList items={roomsList} label="Phòng tập tổng quan" className="manager-court-grid">{room => (
+                <ManagerList items={roomsList} label="Phòng tập tổng quan" className="manager-court-grid" showOrdinal={false}>{room => (
                       <div
                         key={room.id}
                         className={`manager-court ${room.isActive ? 'available' : 'maintenance'}`}
@@ -673,7 +673,7 @@ function ManagerWorkspace() {
                   <Check size={13} /> {staffList.filter(s => s.isActive).length} / {staffList.length} nhân sự hoạt động
                 </span>
               </div>
-              <ManagerList items={staffList} label="Nhân sự tổng quan" className="manager-staff-grid" as="div">{person => {
+              <ManagerList items={staffList} label="Nhân sự tổng quan" className="manager-staff-grid" as="div" showOrdinal={false}>{person => {
                     const roleBadge = getRoleBadge(person.role)
                     const initials = getInitials(person.fullName)
                     return (
