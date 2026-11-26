@@ -37,12 +37,16 @@ export async function initializeBrowserSession({ presence = getBrowserSessionPre
 // Share one login across tabs, including when it is not remembered.
 // A superseded tab must not silently adopt the new account's stored credentials.
 export function reconcileBrowserSession() {
-  if (sessionStorage.getItem(replacedSessionKey)) return false
+  if (sessionStorage.getItem(replacedSessionKey)) {
+    getBrowserSessionPresence().stop()
+    return false
+  }
   const activeLogin = localStorage.getItem(ACTIVE_LOGIN_KEY)
   if (activeLogin && sessionStorage.getItem('token')
     && sessionStorage.getItem('loginSessionId') !== activeLogin) {
     for (const key of sessionKeys) sessionStorage.removeItem(key)
     sessionStorage.setItem(replacedSessionKey, 'true')
+    getBrowserSessionPresence().stop()
     if (typeof globalThis.window?.dispatchEvent === 'function' && typeof window.Event === 'function') {
       window.dispatchEvent(new window.Event(SESSION_EXPIRED_EVENT))
     }
@@ -76,15 +80,29 @@ function hydrateTabSession() {
         if (value !== null) sessionStorage.setItem(key, value)
       }
     }
+    syncTabSessionPresence()
     return
   }
-  if (!localStorage.getItem('token')) return
+  if (!localStorage.getItem('token')) {
+    getBrowserSessionPresence().stop()
+    return
+  }
   const activeLogin = localStorage.getItem(ACTIVE_LOGIN_KEY)
   if (activeLogin && localStorage.getItem('loginSessionId') !== activeLogin) return
   for (const key of sessionKeys) {
     const value = localStorage.getItem(key)
     if (value !== null) sessionStorage.setItem(key, value)
   }
+  syncTabSessionPresence()
+}
+
+function syncTabSessionPresence() {
+  const id = sessionStorage.getItem('loginSessionId')
+  const presence = getBrowserSessionPresence()
+  // A tab that adopts a login after startup must also keep that login alive.
+  if (id && sessionStorage.getItem('token') && localStorage.getItem(BROWSER_SESSION_KEY) === id
+    && localStorage.getItem(ACTIVE_LOGIN_KEY) === id) presence.start(id)
+  else presence.stop()
 }
 
 // The expiry only schedules renewal. The backend still validates the JWT.
@@ -114,6 +132,7 @@ export function clearSession() {
   const rememberedToken = localStorage.getItem('token')
   for (const key of sessionKeys) sessionStorage.removeItem(key)
   sessionStorage.setItem(replacedSessionKey, 'true')
+  getBrowserSessionPresence().stop()
 
   // Compare login identities, not rotating access tokens: another tab may have
   // renewed the same session just before logout. Never retire a newer login.
@@ -122,7 +141,6 @@ export function clearSession() {
   if (ownsSession) {
     for (const key of sessionKeys) localStorage.removeItem(key)
     localStorage.removeItem(BROWSER_SESSION_KEY)
-    getBrowserSessionPresence().stop()
     if (tabToken) localStorage.setItem(ACTIVE_LOGIN_KEY, `signed-out:${loginId || newLoginSessionId()}`)
   }
 }
