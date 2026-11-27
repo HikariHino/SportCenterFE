@@ -96,6 +96,10 @@ export function OverviewView({ active = true, onNavigate }) {
     const activeWeek = upcomingWeek.filter(session => session.tone !== 'cancelled')
     const today = activeWeek.filter(session => sameDay(new Date(session.startsAt), from))
     const rosterResults = await Promise.allSettled(today.map(session => cache.load(coachRosterKey(session.id), () => getCoachSessionRoster(session.id))))
+    const failedRosterCount = rosterResults.filter(result => result.status === 'rejected').length
+    const rosterError = failedRosterCount
+      ? `Không thể tải danh sách học viên của ${failedRosterCount}/${today.length} buổi. Thống kê học viên và điểm danh chưa đầy đủ.`
+      : ''
     const studentMap = new Map()
     const attendanceSummary = { present: 0, absent: 0, excused: 0, pending: 0 }
 
@@ -132,16 +136,22 @@ export function OverviewView({ active = true, onNavigate }) {
     const completedCount = today.filter(session => String(session.status).toLowerCase() === 'completed').length
 
 
-    return { sessions: today, weekSessions: activeWeek, students: studentItems, attendance: attendanceSummary, metrics: [
+    return { sessions: today, weekSessions: activeWeek, students: studentItems, attendance: attendanceSummary, rosterError, metrics: [
       { value: today.length, note: today.length ? 'Theo lịch được phân công' : 'Hôm nay chưa có lịch' },
-      { value: studentItems.length, note: 'Không tính trùng hội viên' },
+      { value: rosterError ? '—' : studentItems.length, note: rosterError || 'Không tính trùng hội viên' },
       { value: (totalMinutes / 60).toFixed(totalMinutes % 60 ? 1 : 0) + 'h', note: 'Tổng thời lượng hôm nay' },
       { value: today.length ? percentage(completedCount, today.length) + '%' : '0%', note: completedCount + '/' + today.length + ' buổi' },
     ] }
   }, { initialData: { metrics: [], sessions: [], weekSessions: [], students: [], attendance: { present: 0, absent: 0, excused: 0, pending: 0 } }, refreshKey: requestKey })
-  const { metrics, sessions, weekSessions, students, attendance } = overviewQuery.data
+  const { metrics, sessions, weekSessions, students, attendance, rosterError } = overviewQuery.data
   const { loading, refreshing } = overviewQuery
-  const error = overviewQuery.error?.response?.data?.message || overviewQuery.error?.message || ''
+  const error = overviewQuery.error?.response?.data?.message || overviewQuery.error?.message || rosterError || ''
+  const retryOverview = () => {
+    // A deliberate retry also releases denied nested reads from their cache.
+    const keys = [coachSessionsKey(range), ...sessions.map(session => coachRosterKey(session.id))]
+    cache.invalidate(keys.filter(key => cache.snapshot(key).error))
+    setRequestKey(key => key + 1)
+  }
 
   const nextSession = useMemo(() => {
     const now = new Date()
@@ -164,7 +174,7 @@ export function OverviewView({ active = true, onNavigate }) {
 
   return <>
     <RefreshStatus refreshing={refreshing} />
-    {error && <div className="coach-attendance-error" role="alert">{error}<button className="coach-retry-button" type="button" onClick={() => setRequestKey(key => key + 1)}><RefreshCw size={13} />Thử lại</button></div>}
+    {error && <div className="coach-attendance-error" role="alert">{error}<button className="coach-retry-button" type="button" disabled={refreshing} onClick={retryOverview}><RefreshCw size={13} />Thử lại</button></div>}
 
     <section className="coach-focus-panel" aria-label="Công việc ưu tiên">
       <div className="coach-focus-main">
@@ -174,7 +184,7 @@ export function OverviewView({ active = true, onNavigate }) {
           <strong>{focusSession ? focusSession.className : 'Chưa có buổi huấn luyện sắp tới'}</strong>
           <p>{focusSession ? `${longDateFormatter.format(new Date(focusSession.startsAt))} · ${focusSession.time} · ${focusSession.enrollment}/${focusSession.capacity || '--'} học viên` : 'Kiểm tra lịch để xem các buổi đã được phân công.'}</p>
         </div>
-        <button type="button" onClick={() => onNavigate(primaryAction.target, focusSession)}><PrimaryActionIcon size={17} />{primaryAction.label}<ChevronRight size={15} /></button>
+        <button type="button" onClick={() => onNavigate(primaryAction.target, focusSession, { openSession: true })}><PrimaryActionIcon size={17} />{primaryAction.label}<ChevronRight size={15} /></button>
       </div>
     </section>
 
@@ -191,7 +201,7 @@ export function OverviewView({ active = true, onNavigate }) {
     <div className="coach-overview-workspace">
       <section className="coach-card coach-schedule">
         <div className="coach-card-head"><div><span>ƯU TIÊN HÔM NAY</span><h2>Lịch huấn luyện hôm nay</h2></div><button type="button" onClick={() => onNavigate('Lịch huấn luyện')}>Xem toàn bộ lịch <ChevronRight size={16} /></button></div>
-        {sessions.length ? <div className="coach-session-list">{sessions.map(session => <SessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện', session)} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
+        {sessions.length ? <div className="coach-session-list">{sessions.map(session => <SessionRow key={session.id} session={session} onOpen={() => onNavigate('Lịch huấn luyện', session, { openSession: true })} />)}</div> : <EmptyState title="Hôm nay chưa có lịch" text="Bạn có thể kiểm tra các ngày khác trong lịch huấn luyện." actionLabel="Mở lịch huấn luyện" onAction={() => onNavigate('Lịch huấn luyện')} />}
         {sessions.length > 0 && <button className="coach-week-more" type="button" onClick={() => onNavigate('Lịch huấn luyện', sessions[0])}>Mở lịch {sessions.length} buổi hôm nay <ChevronRight size={15} /></button>}
       </section>
       <section className="coach-card coach-day-progress-card">
@@ -201,12 +211,12 @@ export function OverviewView({ active = true, onNavigate }) {
           <div className="coach-progress-copy"><strong>{completedSessions}/{sessions.length} buổi đã hoàn thành</strong><p>{sessions.length ? `Có ${sessions.length - completedSessions} buổi cần theo dõi trong hôm nay.` : 'Hôm nay chưa có buổi huấn luyện.'}</p></div>
         </div>
         <div className="coach-attendance-breakdown" aria-label="Tình hình điểm danh">
-          <span className="present"><i />Có mặt <strong>{attendance.present}</strong></span>
-          <span className="absent"><i />Vắng <strong>{attendance.absent}</strong></span>
-          <span className="excused"><i />Có phép <strong>{attendance.excused}</strong></span>
-          <span className="pending"><i />Chưa ghi nhận <strong>{attendance.pending}</strong></span>
+          <span className="present"><i />Có mặt <strong>{rosterError ? '—' : attendance.present}</strong></span>
+          <span className="absent"><i />Vắng <strong>{rosterError ? '—' : attendance.absent}</strong></span>
+          <span className="excused"><i />Có phép <strong>{rosterError ? '—' : attendance.excused}</strong></span>
+          <span className="pending"><i />Chưa ghi nhận <strong>{rosterError ? '—' : attendance.pending}</strong></span>
         </div>
-        <footer>{attendanceTotal ? `${attendanceTotal} lượt học viên trong lịch hôm nay` : 'Chưa có dữ liệu điểm danh hôm nay'}</footer>
+        <footer>{rosterError ? 'Chưa thể tổng hợp điểm danh hôm nay' : attendanceTotal ? `${attendanceTotal} lượt học viên trong lịch hôm nay` : 'Chưa có dữ liệu điểm danh hôm nay'}</footer>
       </section>
     </div>
   </>
