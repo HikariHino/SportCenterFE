@@ -94,6 +94,7 @@ function CoachWorkspace() {
     return () => { cancelled = true; window.clearTimeout(timer) }
   }, [cache])
   const [selectedCoachSession, setSelectedCoachSession] = useState(readSelectedSession)
+  const [attendanceNavigation, setAttendanceNavigation] = useState(null)
   const [notice, setNotice] = useState('')
   const [queries, setQueries] = useState({})
   const query = queries[activeNav] || ''
@@ -200,8 +201,9 @@ function CoachWorkspace() {
     })
   }, [])
 
-  const selectNavigation = (label, session) => {
+  const selectNavigation = (label, session, { openSession = false } = {}) => {
     if (session) selectCoachSession(session)
+    if (label === 'Lịch huấn luyện') setAttendanceNavigation({ sessionId: openSession && session?.id ? String(session.id) : null })
     setActiveNav(label)
     setSidebarOpen(false)
     window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
@@ -216,7 +218,7 @@ function CoachWorkspace() {
   const renderView = view => {
     const active = activeNav === view
     if (view === 'Đánh giá coach') return <CoachReviewsView own active={active} />
-    if (view === 'Lịch huấn luyện') return <AttendanceView active={active} query={queries[view] || ''} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
+    if (view === 'Lịch huấn luyện') return <AttendanceView active={active} query={queries[view] || ''} showNotice={showNotice} selectedSession={selectedCoachSession} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} navigationRequest={attendanceNavigation} />
     if (view === 'Phòng tập') return <CoachRoomsView active={active} />
     if (view === 'Học viên') return <StudentsView active={active} query={queries[view] || ''} showNotice={showNotice} selectedSessionId={selectedCoachSession?.id || ''} onSelectSession={selectCoachSession} />
     if (view === 'Hồ sơ') return <CoachProfileView active={active} showNotice={showNotice} />

@@ -25,7 +25,7 @@ const getSessionStatusLabel = (session, now = Date.now()) => {
   return 'Sắp diễn ra'
 }
 
-export function AttendanceView({ active = true, query, showNotice, selectedSession: sharedSelectedSession, selectedSessionId, onSelectSession }) {
+export function AttendanceView({ active = true, query, showNotice, selectedSession: sharedSelectedSession, selectedSessionId, onSelectSession, navigationRequest }) {
   const [weekStart, setWeekStart] = useState(() => timetableWeekStart(sharedSelectedSession?.startsAt || Date.now()))
   const [status, setStatus] = useState('Tất cả')
   const [actionError, setActionError] = useState('')
@@ -33,7 +33,14 @@ export function AttendanceView({ active = true, query, showNotice, selectedSessi
   const [attendanceSelections, setAttendanceSelections] = useState({})
   const [scheduleRequestKey, setScheduleRequestKey] = useState(0)
   const [rosterRequestKey, setRosterRequestKey] = useState(0)
-  const [attendancePageOpen, setAttendancePageOpen] = useState(false)
+  const [attendancePageOpen, setAttendancePageOpen] = useState(() => Boolean(navigationRequest?.sessionId))
+
+  useEffect(() => {
+    if (!navigationRequest) return
+    setAttendancePageOpen(Boolean(navigationRequest.sessionId))
+    setStatus('Tất cả')
+    setActionError('')
+  }, [navigationRequest])
 
   useEffect(() => {
     if (sharedSelectedSession?.startsAt) setWeekStart(timetableWeekStart(sharedSelectedSession.startsAt))
