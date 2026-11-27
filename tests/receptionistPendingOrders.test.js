@@ -149,11 +149,21 @@ test('the shared payment table renders order identity and collection; blocked or
   assert.match(render({ collectingDisabled: true }), /disabled=""/)
 })
 
-test('direct checkout locks the chosen order and honors the selected counter payment method', () => {
-  for (const initialPaymentMethod of ['Cash', 'BankTransfer', 'CreditCard']) {
+test('direct checkout offers only Banking and cash while retaining the gateway API value', () => {
+  for (const initialPaymentMethod of ['Cash', 'PayOS']) {
     const html = renderToStaticMarkup(createElement(Checkout, { memberId: 9, subscriptionId: 48, counterOnly: true, initialPaymentMethod, onClose() {}, onCreated() {} }))
     assert.ok(html.includes('value="' + initialPaymentMethod + '" selected=""'))
-    assert.match(html, /type="checkbox" required=""/)
-    assert.doesNotMatch(html, /value="PayOS"/)
+    const methods = [...html.matchAll(/<option value="(PayOS|Cash)"[^>]*>([^<]+)<\/option>/g)]
+      .map(([, value, label]) => [value, label])
+    assert.deepEqual(methods, [['PayOS', 'Banking'], ['Cash', 'Tiền mặt']])
+    assert.doesNotMatch(html, /CreditCard|BankTransfer|Thẻ tín dụng|Chuyển khoản tại quầy/)
+    assert.doesNotMatch(html.replace(/<[^>]+>/g, ''), /PayOS/i)
+    if (initialPaymentMethod === 'Cash') {
+      assert.match(html, /type="checkbox" required=""/)
+      assert.match(html, />Xác nhận thu tiền<\/button>/)
+    } else {
+      assert.doesNotMatch(html, /type="checkbox"/)
+      assert.match(html, />Trả tiền<\/button>/)
+    }
   }
 })
