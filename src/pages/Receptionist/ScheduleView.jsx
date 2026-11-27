@@ -1,6 +1,6 @@
 import { getAllReceptionistPages } from '../../utils/receptionistPagination'
 import { ReceptionistList } from './ReceptionistPagination'
-import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
+import { useReceptionistCache, useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Plus, Star, Trophy, Users, X } from 'lucide-react'
@@ -186,6 +186,7 @@ function CompleteDialog({ session, onClose, onCompleted }) {
 }
 
 export function ReceptionistScheduleView({ showNotice, selectedSession, onSelectSession }) {
+  const cache = useReceptionistCache()
   const initialDate = selectedSession?.startsAt ? new Date(selectedSession.startsAt) : new Date()
   const [weekOffset, setWeekOffset] = useState(() => getWeekOffsetForDate(initialDate))
   const [selectedDate, setSelectedDate] = useState(() => toDateKey(initialDate))
@@ -194,7 +195,7 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
   const [selectedClassId, setSelectedClassId] = useState('')
   const [statusFilter, setStatusFilter] = useState('Tất cả')
   const [requestKey, setRequestKey] = useState(0)
-  const [activeSession, setActiveSession] = useState(selectedSession || null)
+  const [sessionSelection, setActiveSession] = useState(selectedSession || null)
   const [roster, setRoster] = useState([])
   const [rosterLoading, setRosterLoading] = useState(false)
   const [rosterError, setRosterError] = useState('')
@@ -233,6 +234,7 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
       .then(result => result.map(mapSession))
   }, { initialData: [], enabled: filterReady, refreshKey: requestKey })
   const classes = classesQuery.data, sessions = sessionsQuery.data
+  const activeSession = (sessionSelection && sessions.find(session => String(session.id) === String(sessionSelection.id))) || sessionSelection
   const setSessions = sessionsQuery.setData
   const classesLoading = classesQuery.loading, sessionsLoading = sessionsQuery.loading
   const classesError = classesQuery.error ? requestErrorMessage(classesQuery.error, 'Không thể tải lớp học.') : ''
@@ -272,7 +274,7 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
 
   const loadRoster = async session => {
     cancelRoster()
-    const request = { sessionId: String(session.id), controller: new AbortController() }
+    const request = { sessionId: String(session.id), session, controller: new AbortController() }
     rosterRequest.current = request
     const isCurrent = () => rosterRequest.current === request && !request.controller.signal.aborted
     setActiveSession(session)
@@ -299,8 +301,11 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
   }
 
   const handleRegistered = result => {
+    // Re-read enrollment/seats instead of guessing counts from one registration.
+    cache.invalidate(['sessions:*', 'class-sessions:center'])
+    const currentSession = rosterRequest.current?.session
+    if (currentSession && String(currentSession.id) === String(result.sessionId)) loadRoster(currentSession)
     showNotice?.(`Đã thêm hội viên #${result.memberId} vào buổi học #${result.sessionId}.`)
-    if (activeSession?.id === result.sessionId) loadRoster(activeSession)
   }
 
   if (baseLoading) return <ViewLoader />

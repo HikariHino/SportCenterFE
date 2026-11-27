@@ -5,7 +5,8 @@ import { Window } from 'happy-dom'
 import { createServer } from 'vite'
 import { fileURLToPath } from 'node:url'
 
-let window, server, createRoot, Schedule, Provider, holdRosters, pending, requests, sessions, rosters
+let window, server, createRoot, Schedule, Provider, useCache, holdRosters, pending, requests, sessions, rosters
+let portalNotices, concurrentEnrollment, failRegistration, failSessionReload, holdRegistration, finishRegistration
 const descriptors = new Map()
 const start = new Date(); start.setHours(18, 0, 0, 0)
 const fixtureSessions = [730, 731].map((id, index) => ({ id, classId: 5 + index, className: `Tennis ${index ? 'B' : 'A'}`,
@@ -25,21 +26,47 @@ before(async () => {
   server = await createServer({ root: fileURLToPath(new URL('../', import.meta.url)), configFile: false, esbuild: { jsx: 'automatic' },
     optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' })
   Schedule = (await server.ssrLoadModule('/src/pages/Receptionist/ScheduleView.jsx')).ReceptionistScheduleView
-  Provider = (await server.ssrLoadModule('/src/contexts/ReceptionistWorkspaceContext.jsx')).ReceptionistWorkspaceProvider
+  const context = await server.ssrLoadModule('/src/contexts/ReceptionistWorkspaceContext.jsx')
+  Provider = context.ReceptionistWorkspaceProvider; useCache = context.useReceptionistCache
   const api = (await server.ssrLoadModule('/src/services/api.js')).default
   api.defaults.adapter = async config => {
     requests.push(config)
     const response = data => ({ data: { success: true, data: clone(data) }, status: 200, headers: {}, config })
     if (config.url === '/sports') return response([{ id: 3, name: 'Tennis' }])
     if (config.url === '/coaches') return response([{ id: 41, fullName: 'Coach test' }])
-    if (config.url === '/classes') return response({ items: sessions.map(item => ({ id: item.classId, className: item.className,
-      sportId: 3, sportName: 'Tennis', coachId: 41, coachName: 'Coach test', maxCapacity: 20 })), total: 2 })
-    if (config.url === '/class-sessions') return response({ items: sessions, total: sessions.length })
+    if (config.url === '/classes') {
+      const items = [...new Map(sessions.map(item => [item.classId, { id: item.classId, className: item.className,
+        sportId: 3, sportName: 'Tennis', coachId: 41, coachName: 'Coach test', maxCapacity: 20 }])).values()]
+      return response({ items, total: items.length })
+    }
+    if (config.url === '/class-sessions') {
+      if (failSessionReload && requests.some(item => item.method === 'post')) throw new Error('Không tải lại được lịch')
+      return response({ items: sessions, total: sessions.length })
+    }
+    const classId = Number(config.url.match(/^\/classes\/(\d+)\/sessions$/)?.[1])
+    if (classId) {
+      const items = sessions.filter(item => item.classId === classId)
+      return response({ items, total: items.length })
+    }
     const rosterId = Number(config.url.match(/^\/class-sessions\/(\d+)\/roster$/)?.[1])
     if (rosterId) {
       if (holdRosters) return new Promise((resolve, reject) => pending.push({ sessionId: rosterId, signal: config.signal,
         resolve: items => resolve(response(items || rosters.get(rosterId))), reject }))
       return response(rosters.get(rosterId))
+    }
+    const registration = config.url.match(/^\/class-sessions\/(\d+)\/registrations\/members\/(\d+)$/)
+    if (registration) {
+      if (failRegistration) throw new Error('Không thể đăng ký hội viên')
+      const id = Number(registration[1]), memberId = Number(registration[2])
+      const save = () => {
+        const chosen = sessions.find(item => item.id === id)
+        chosen.currentEnrollment += 1 + concurrentEnrollment
+        chosen.availableSeats -= 1 + concurrentEnrollment
+        rosters.get(id).push(member(memberId, id))
+        return response({ id: 990, sessionId: id, memberId, status: 'Registered' })
+      }
+      if (holdRegistration) return new Promise(resolve => { finishRegistration = () => resolve(save()) })
+      return save()
     }
     throw new Error(`Unexpected schedule request: ${config.method} ${config.url}`)
   }
@@ -55,12 +82,16 @@ after(async () => {
 })
 
 function SharedSelection() {
+  const cache = useCache()
   const [selected, setSelected] = useState(null)
-  return h(Schedule, { selectedSession: selected, onSelectSession: setSelected, showNotice() {} })
+  return h(Schedule, { selectedSession: selected, onSelectSession: setSelected,
+    showNotice: () => { if (portalNotices) cache.invalidate(['sessions:*', 'classes:*']) } })
 }
-async function screen(run) {
+async function screen(run, { sharedClass = false } = {}) {
   holdRosters = false; pending = []; requests = []
+  portalNotices = failRegistration = failSessionReload = holdRegistration = false; concurrentEnrollment = 0; finishRegistration = null
   sessions = clone(fixtureSessions)
+  if (sharedClass) Object.assign(sessions[1], { classId: 5, className: 'Tennis A' })
   rosters = new Map([[730, [member(1, 730)]], [731, [member(2, 731)]]])
   const container = document.body.appendChild(document.createElement('div')), root = createRoot(container)
   try {
@@ -71,6 +102,7 @@ async function screen(run) {
     await run(container, () => act(async () => root.unmount()))
   } finally {
     await act(async () => root.unmount())
+    if (finishRegistration) await act(async () => { finishRegistration(); finishRegistration = null })
     await act(async () => { pending.forEach(item => item.resolve()); pending = [] })
     container.remove()
   }
@@ -140,4 +172,76 @@ test('unmounting the schedule aborts the pending roster request', () => screen(a
   await unmount()
   assert.equal(pending[0].signal?.aborted, true)
   await act(async () => pending[0].resolve())
+}))
+
+async function register(container, sessionId) {
+  const card = [...container.querySelectorAll('.reception-schedule-class-list article')].find(item => item.textContent.includes('Tennis A'))
+  await click(card, '.reception-schedule-add-member')
+  const form = container.querySelector('.reception-add-member-dialog form')
+  if (sessionId) await choose(form.querySelector('select'), String(sessionId))
+  await act(async () => {
+    const input = form.querySelector('input[type=number]')
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, '9')
+    input.dispatchEvent(new window.Event('input', { bubbles: true }))
+  })
+  await act(async () => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true })))
+}
+function assertEnrollment(container, count) {
+  assert.match(active(container).querySelector('.reception-active-session-meta').textContent, new RegExp(`${count}/20 học viên`))
+  const card = container.querySelector('.reception-schedule-session-list article')
+  assert.match(card.querySelector('p').textContent, new RegExp(`${count}/20 học viên`))
+  assert.match(card.textContent, new RegExp(`Còn ${20 - count} chỗ`))
+  assert.equal(requests.filter(item => item.method === 'post').length, 1)
+}
+
+test('successful registration refreshes the roster, selected details, agenda seats and daily total', () => screen(async container => {
+  await open(container, 'Tennis A')
+  await register(container)
+  assert.match(active(container).querySelector('.reception-roster-table').textContent, /Học viên 9/)
+  assertEnrollment(container, 2)
+  assert.equal(container.querySelector('.reception-schedule-summary section > span:last-child strong').textContent, '3')
+}))
+
+test('the portal notification refresh also updates the selected details and uses authoritative concurrent counts', () => screen(async container => {
+  portalNotices = true; concurrentEnrollment = 2
+  await open(container, 'Tennis A')
+  await register(container)
+  assertEnrollment(container, 4)
+}))
+
+test('registering into another session updates its seats without replacing the currently selected roster', () => screen(async container => {
+  await open(container, 'Tennis A')
+  await register(container, 731)
+  assert.match(active(container).querySelector('h2').textContent, /#730/)
+  assert.match(active(container).querySelector('.reception-active-session-meta').textContent, /1\/20 học viên/)
+  assert.doesNotMatch(active(container).querySelector('.reception-roster-table').textContent, /Học viên 9/)
+  const cards = container.querySelectorAll('.reception-schedule-session-list article')
+  assert.match(cards[1].querySelector('p').textContent, /2\/20 học viên/)
+  assert.match(cards[1].textContent, /Còn 18 chỗ/)
+}, { sharedClass: true }))
+
+test('a failed registration retains the original enrollment and reports the failure', () => screen(async container => {
+  failRegistration = true
+  await open(container, 'Tennis A'); await register(container)
+  assertEnrollment(container, 1)
+  assert.match(container.querySelector('.reception-add-member-dialog [role=alert]').textContent, /Không thể đăng ký/)
+}))
+
+test('a failed post-registration refresh can retry the read without repeating the registration', () => screen(async container => {
+  failSessionReload = true
+  await open(container, 'Tennis A'); await register(container)
+  assert.match(container.querySelector('.reception-schedule-agenda').textContent, /Không tải lại được lịch/)
+  failSessionReload = false
+  await click(container, '.reception-schedule-agenda .reception-inline-error button')
+  assertEnrollment(container, 2)
+}))
+
+test('a registration response for A cannot reopen A after the user selects B', () => screen(async container => {
+  holdRegistration = true
+  await open(container, 'Tennis A'); await register(container)
+  await open(container, 'Tennis B')
+  await act(async () => { finishRegistration(); finishRegistration = null })
+  assert.match(active(container).querySelector('h2').textContent, /Tennis B/)
+  assert.match(active(container).querySelector('.reception-roster-table').textContent, /Học viên 2/)
+  assert.equal(requests.filter(item => item.url.endsWith('/730/roster')).length, 1)
 }))
