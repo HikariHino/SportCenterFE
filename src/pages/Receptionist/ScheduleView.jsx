@@ -1,8 +1,8 @@
 import { getAllReceptionistPages } from '../../utils/receptionistPagination'
 import { ReceptionistList } from './ReceptionistPagination'
-import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
+import { useReceptionistCache, useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Plus, Star, Trophy, Users, X } from 'lucide-react'
 import { getCoaches, getSports } from '../../services/classCatalogService'
 import { getReceptionistClasses, getReceptionistClassSessions, getReceptionistClassSessionsByClass, getReceptionistSessionReviews } from '../../services/receptionistCatalogService'
@@ -186,6 +186,7 @@ function CompleteDialog({ session, onClose, onCompleted }) {
 }
 
 export function ReceptionistScheduleView({ showNotice, selectedSession, onSelectSession }) {
+  const cache = useReceptionistCache()
   const initialDate = selectedSession?.startsAt ? new Date(selectedSession.startsAt) : new Date()
   const [weekOffset, setWeekOffset] = useState(() => getWeekOffsetForDate(initialDate))
   const [selectedDate, setSelectedDate] = useState(() => toDateKey(initialDate))
@@ -194,10 +195,23 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
   const [selectedClassId, setSelectedClassId] = useState('')
   const [statusFilter, setStatusFilter] = useState('Tất cả')
   const [requestKey, setRequestKey] = useState(0)
-  const [activeSession, setActiveSession] = useState(selectedSession || null)
+  const [sessionSelection, setActiveSession] = useState(selectedSession || null)
   const [roster, setRoster] = useState([])
   const [rosterLoading, setRosterLoading] = useState(false)
   const [rosterError, setRosterError] = useState('')
+  const rosterRequest = useRef(null)
+  const cancelRoster = useCallback(() => {
+    rosterRequest.current?.controller.abort()
+    rosterRequest.current = null
+  }, [])
+  useEffect(() => cancelRoster, [cancelRoster])
+  const clearSelection = () => {
+    cancelRoster()
+    setActiveSession(null)
+    setRoster([])
+    setRosterError('')
+    setRosterLoading(false)
+  }
   const [addMemberClass, setAddMemberClass] = useState(null)
   const [reviewSession, setReviewSession] = useState(null)
   const [completeSession, setCompleteSession] = useState(null)
@@ -220,6 +234,7 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
       .then(result => result.map(mapSession))
   }, { initialData: [], enabled: filterReady, refreshKey: requestKey })
   const classes = classesQuery.data, sessions = sessionsQuery.data
+  const activeSession = (sessionSelection && sessions.find(session => String(session.id) === String(sessionSelection.id))) || sessionSelection
   const setSessions = sessionsQuery.setData
   const classesLoading = classesQuery.loading, sessionsLoading = sessionsQuery.loading
   const classesError = classesQuery.error ? requestErrorMessage(classesQuery.error, 'Không thể tải lớp học.') : ''
@@ -228,10 +243,16 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
 
   useEffect(() => {
     if (!selectedSession?.startsAt) return
+    if (rosterRequest.current?.sessionId !== String(selectedSession.id)) {
+      cancelRoster()
+      setRoster([])
+      setRosterError('')
+      setRosterLoading(false)
+    }
     setWeekOffset(getWeekOffsetForDate(selectedSession.startsAt))
     setSelectedDate(toDateKey(new Date(selectedSession.startsAt)))
     setActiveSession(selectedSession)
-  }, [selectedSession?.id, selectedSession?.startsAt])
+  }, [selectedSession?.id, selectedSession?.startsAt, cancelRoster])
 
   const selectedClass = classes.find(item => String(item.id) === String(selectedClassId))
   const classSessions = selectedClassId
@@ -248,29 +269,43 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
     const nextWeek = getWeekDays(nextOffset)
     setWeekOffset(nextOffset)
     setSelectedDate(nextWeek[0].key)
-    setActiveSession(null)
-    setRoster([])
+    clearSelection()
   }
 
   const loadRoster = async session => {
+    cancelRoster()
+    const request = { sessionId: String(session.id), session, controller: new AbortController() }
+    rosterRequest.current = request
+    const isCurrent = () => rosterRequest.current === request && !request.controller.signal.aborted
     setActiveSession(session)
+    setRoster([])
     setRosterLoading(true)
     setRosterError('')
     onSelectSession?.(session)
     try {
-      setRoster(await getReceptionistSessionRoster(session.id))
+      const students = await getReceptionistSessionRoster(session.id, request.controller.signal)
+      if (isCurrent()) setRoster(students)
     } catch (requestError) {
-      setRoster([])
-      setRosterError(requestErrorMessage(requestError, 'Không thể tải danh sách học viên của buổi học.'))
+      if (isCurrent()) {
+        setRoster([])
+        setRosterError(requestErrorMessage(requestError, 'Không thể tải danh sách học viên của buổi học.'))
+      }
     } finally {
-      setRosterLoading(false)
-      window.requestAnimationFrame(() => document.getElementById('reception-active-session')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+      if (isCurrent()) {
+        setRosterLoading(false)
+        window.requestAnimationFrame(() => {
+          if (isCurrent()) document.getElementById('reception-active-session')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
+      }
     }
   }
 
   const handleRegistered = result => {
+    // Re-read enrollment/seats instead of guessing counts from one registration.
+    cache.invalidate(['sessions:*', 'class-sessions:center'])
+    const currentSession = rosterRequest.current?.session
+    if (currentSession && String(currentSession.id) === String(result.sessionId)) loadRoster(currentSession)
     showNotice?.(`Đã thêm hội viên #${result.memberId} vào buổi học #${result.sessionId}.`)
-    if (activeSession?.id === result.sessionId) loadRoster(activeSession)
   }
 
   if (baseLoading) return <ViewLoader />
@@ -279,21 +314,21 @@ export function ReceptionistScheduleView({ showNotice, selectedSession, onSelect
     <RefreshStatus refreshing={refreshing} />
     <section className="reception-card reception-schedule-flow">
       <div className="reception-schedule-flow-title"><span><CalendarDays size={19} /></span><div><small>CHỌN THEO THỨ TỰ</small><strong>Môn thể thao → Huấn luyện viên → Lớp</strong></div></div>
-      <label><span>1. Môn thể thao</span><select value={selectedSportId} onChange={event => { setSelectedSportId(event.target.value); setSelectedCoachId(''); setSelectedClassId(''); setActiveSession(null) }}><option value="">Chọn môn thể thao</option>{sports.map(sport => <option key={sport.id} value={sport.id}>{sport.name}</option>)}</select></label>
-      <label><span>2. Huấn luyện viên</span><select value={selectedCoachId} onChange={event => { setSelectedCoachId(event.target.value); setSelectedClassId(''); setActiveSession(null) }} disabled={!selectedSportId}><option value="">Chọn huấn luyện viên</option>{coaches.map(coach => <option key={coach.id} value={coach.id}>{coach.fullName}{coach.specialization ? ` · ${coach.specialization}` : ''}</option>)}</select></label>
-      <label><span>3. Lọc theo lớp</span><select value={selectedClassId} onChange={event => { setSelectedClassId(event.target.value); setActiveSession(null); setRoster([]) }} disabled={!selectedCoachId || classesLoading}><option value="">Tất cả lớp</option>{classes.map(item => <option key={item.id} value={item.id}>{item.className}</option>)}</select></label>
+      <label><span>1. Môn thể thao</span><select value={selectedSportId} onChange={event => { setSelectedSportId(event.target.value); setSelectedCoachId(''); setSelectedClassId(''); clearSelection() }}><option value="">Chọn môn thể thao</option>{sports.map(sport => <option key={sport.id} value={sport.id}>{sport.name}</option>)}</select></label>
+      <label><span>2. Huấn luyện viên</span><select value={selectedCoachId} onChange={event => { setSelectedCoachId(event.target.value); setSelectedClassId(''); clearSelection() }} disabled={!selectedSportId}><option value="">Chọn huấn luyện viên</option>{coaches.map(coach => <option key={coach.id} value={coach.id}>{coach.fullName}{coach.specialization ? ` · ${coach.specialization}` : ''}</option>)}</select></label>
+      <label><span>3. Lọc theo lớp</span><select value={selectedClassId} onChange={event => { setSelectedClassId(event.target.value); clearSelection() }} disabled={!selectedCoachId || classesLoading}><option value="">Tất cả lớp</option>{classes.map(item => <option key={item.id} value={item.id}>{item.className}</option>)}</select></label>
       {baseError && <div className="reception-filter-error"><span>{baseError}</span><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div>}
     </section>
 
     {!selectedSportId || !selectedCoachId ? <section className="reception-card reception-schedule-onboarding"><EmptyState icon={CalendarDays} title={selectedSportId ? 'Chọn huấn luyện viên' : 'Chọn môn thể thao'} text="Hoàn thành bộ lọc phía trên để hiển thị lịch tuần của huấn luyện viên." /></section> : <>
       <section className="reception-card reception-schedule-classes">
         <div className="reception-card-head"><div><span>LỚP CỦA HUẤN LUYỆN VIÊN</span><h2>Chọn lớp hoặc thêm hội viên</h2></div><strong>{classesLoading ? 'Đang tải...' : `${classes.length} lớp`}</strong></div>
-        {classesLoading ? <ViewLoader /> : classesError ? <div className="reception-inline-error"><EmptyState icon={Trophy} title="Không thể tải lớp học" text={classesError} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : classes.length ? <div className="reception-schedule-class-list">{<ReceptionistList items={classes} label="Lớp của huấn luyện viên" showOrdinal={false} resetKey={JSON.stringify([selectedSportId, selectedCoachId])}>{(item, ordinal) => <article key={item.id} className={String(selectedClassId) === String(item.id) ? 'selected' : ''}><button type="button" className="reception-schedule-class-filter" onClick={() => setSelectedClassId(String(item.id))}><span><small>Lớp #{item.id}</small><strong>{item.className}</strong><em>{item.sportName}</em></span><b>{item.maxCapacity} học viên</b></button><button type="button" className="reception-schedule-add-member" onClick={() => setAddMemberClass(item)}><Plus size={14} />Thêm hội viên</button></article>}</ReceptionistList>}</div> : <EmptyState icon={Trophy} title="Chưa có lớp học" text="Huấn luyện viên này chưa phụ trách lớp nào thuộc môn đã chọn." />}
+        {classesLoading ? <ViewLoader /> : classesError ? <div className="reception-inline-error"><EmptyState icon={Trophy} title="Không thể tải lớp học" text={classesError} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : classes.length ? <div className="reception-schedule-class-list">{<ReceptionistList items={classes} label="Lớp của huấn luyện viên" showOrdinal={false} resetKey={JSON.stringify([selectedSportId, selectedCoachId])}>{(item, ordinal) => <article key={item.id} className={String(selectedClassId) === String(item.id) ? 'selected' : ''}><button type="button" className="reception-schedule-class-filter" onClick={() => { setSelectedClassId(String(item.id)); clearSelection() }}><span><small>Lớp #{item.id}</small><strong>{item.className}</strong><em>{item.sportName}</em></span><b>{item.maxCapacity} học viên</b></button><button type="button" className="reception-schedule-add-member" onClick={() => setAddMemberClass(item)}><Plus size={14} />Thêm hội viên</button></article>}</ReceptionistList>}</div> : <EmptyState icon={Trophy} title="Chưa có lớp học" text="Huấn luyện viên này chưa phụ trách lớp nào thuộc môn đã chọn." />}
       </section>
 
       <section className="reception-card reception-week-calendar">
         <button type="button" aria-label="Tuần trước" onClick={() => changeWeek(-1)}><ChevronLeft size={18} /></button>
-        <div>{weekDays.map(day => <button type="button" key={day.key} className={selectedDate === day.key ? 'active' : ''} onClick={() => { setSelectedDate(day.key); setActiveSession(null); setRoster([]) }}><span>{day.weekday}</span><strong>{day.date}</strong>{day.today && <i>Hôm nay</i>}{classSessions.some(item => item.date === day.key) && <b aria-label="Có lịch học" />}</button>)}</div>
+        <div>{weekDays.map(day => <button type="button" key={day.key} className={selectedDate === day.key ? 'active' : ''} onClick={() => { setSelectedDate(day.key); clearSelection() }}><span>{day.weekday}</span><strong>{day.date}</strong>{day.today && <i>Hôm nay</i>}{classSessions.some(item => item.date === day.key) && <b aria-label="Có lịch học" />}</button>)}</div>
         <button type="button" aria-label="Tuần sau" onClick={() => changeWeek(1)}><ChevronRight size={18} /></button>
       </section>
 

@@ -1,5 +1,5 @@
 import { ReceptionistList } from './ReceptionistPagination'
-import { useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
+import { useReceptionistCache, useReceptionistResource } from '../../contexts/ReceptionistWorkspaceContext'
 import RefreshStatus from './RefreshStatus'
 import SupportTicketImage from '../../components/SupportTicketImage'
 import { useRef, useState } from 'react'
@@ -7,13 +7,15 @@ import { CheckCircle2, LifeBuoy, MessageSquareText, RefreshCw, X } from 'lucide-
 import { getAllSupportTickets, getTicketErrorMessage } from '../../services/supportTicketService'
 import { resolveReceptionistSupportTicket } from '../../services/receptionistSupportTicketService'
 import { getSupportResolutionValidationError, SUPPORT_RESOLUTION_MAX_LENGTH } from '../../utils/textLengthValidation'
-import { canUpdateSupportTicket } from '../../utils/supportTickets'
+import { canUpdateSupportTicket, supportTicketStatus } from '../../utils/supportTickets'
 import { EmptyState, formatDateTime, ViewLoader } from './ReceptionistViewShared'
 
 const statusLabel = status => ({ Open: 'Đang mở', InProgress: 'Đang xử lý', Resolved: 'Đã giải quyết', Closed: 'Đã đóng' })[status] || status
 const priorityLabel = priority => ({ Low: 'Thấp', Normal: 'Bình thường', High: 'Cao', Urgent: 'Khẩn cấp' })[priority] || priority
+const statusOptions = [['all', 'Tất cả'], ['Open', 'Đang mở'], ['InProgress', 'Đang xử lý'], ['Resolved', 'Đã giải quyết'], ['Closed', 'Đã đóng']]
 
 export function SupportTicketsView({ query, showNotice }) {
+  const cache = useReceptionistCache()
   const [status, setStatus] = useState('all')
   const [requestKey, setRequestKey] = useState(0)
   const [selectedTicket, setSelectedTicket] = useState(null)
@@ -57,9 +59,28 @@ export function SupportTicketsView({ query, showNotice }) {
     setActionError('')
     try {
       const ticketId = selectedTicket.id
-      await resolveReceptionistSupportTicket(ticketId, resolutionForm)
+      const result = await resolveReceptionistSupportTicket(ticketId, resolutionForm)
+      const savedTicket = {
+        ...selectedTicket,
+        ...resolutionForm,
+        resolutionNote: resolutionForm.resolutionNote.trim(),
+        ...(String(result?.id) === String(ticketId) ? result : {}),
+      }
+      // Commit the confirmed change to every visited filter before refreshing.
+      // A failed reload must not expose an old, actionable copy of a closed ticket.
+      for (const [filter] of statusOptions) {
+        const key = 'support:' + filter
+        const snapshot = cache.snapshot(key)
+        if (!snapshot.hasData) continue
+        const belongs = filter === 'all' || supportTicketStatus(savedTicket) === filter.toLowerCase()
+        const included = snapshot.data.some(ticket => String(ticket.id) === String(ticketId))
+        const updated = snapshot.data.flatMap(ticket => String(ticket.id) === String(ticketId)
+          ? belongs ? [savedTicket] : [] : [ticket])
+        if (belongs && !included) updated.unshift(savedTicket)
+        cache.setData(key, updated)
+      }
+      cache.invalidate(['support:*'])
       setSelectedTicket(null)
-      // The update response may only acknowledge success; reload the saved status and active filter.
       setRequestKey(key => key + 1)
       showNotice?.(`Đã cập nhật phiếu hỗ trợ #${ticketId}.`)
     } catch (requestError) {
@@ -74,7 +95,7 @@ export function SupportTicketsView({ query, showNotice }) {
   return <section className="reception-card reception-support-card">
     {hasData && <RefreshStatus refreshing={refreshing} error={error} onRetry={() => setRequestKey(key => key + 1)} />}
     <div className="reception-card-head"><div><span>QUẢN LÝ PHIẾU HỖ TRỢ</span><h2>Phiếu hỗ trợ hội viên</h2></div><button type="button" onClick={() => setRequestKey(key => key + 1)} disabled={loading}><RefreshCw size={14} />{loading ? 'Đang tải...' : 'Làm mới'}</button></div>
-    <div className="reception-support-toolbar"><div>{[['all', 'Tất cả'], ['Open', 'Đang mở'], ['InProgress', 'Đang xử lý'], ['Resolved', 'Đã giải quyết'], ['Closed', 'Đã đóng']].map(([value, label]) => <button type="button" key={value} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><strong>{loading ? 'Đang đồng bộ' : `${filtered.length} phiếu`}</strong></div>
+    <div className="reception-support-toolbar"><div>{statusOptions.map(([value, label]) => <button type="button" key={value} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><strong>{loading ? 'Đang đồng bộ' : `${filtered.length} phiếu`}</strong></div>
     {loading ? <EmptyState icon={LifeBuoy} title="Đang tải phiếu hỗ trợ" text="Dữ liệu hỗ trợ đang được đồng bộ từ hệ thống." /> : error && !hasData ? <div className="reception-inline-error"><EmptyState icon={LifeBuoy} title="Không thể tải phiếu hỗ trợ" text={error} /><button type="button" onClick={() => setRequestKey(key => key + 1)}>Thử lại</button></div> : filtered.length ? <div className="reception-support-list">{<ReceptionistList items={filtered} label="Phiếu hỗ trợ" resetKey={query + status}>{(ticket, ordinal) => <article key={ticket.id}><span className={`priority ${String(ticket.priority || '').toLowerCase()}`}><MessageSquareText size={18} /></span><div><header><span>#{ticket.id} · {ticket.memberName}</span><b className={String(ticket.status || '').toLowerCase()}>{statusLabel(ticket.status)}</b></header><h3>{ticket.title}</h3><p>{ticket.description}</p><SupportTicketImage imageUrl={ticket.imageUrl} ticketId={ticket.id} /><footer><span>Ưu tiên: <strong>{priorityLabel(ticket.priority)}</strong></span><span>Tạo lúc {formatDateTime(ticket.createdAt)}</span>{ticket.handledByUserName && <span>Xử lý bởi {ticket.handledByUserName}</span>}</footer>{ticket.resolutionNote && <blockquote>{ticket.resolutionNote}</blockquote>}{canUpdateSupportTicket(ticket) && <button className="reception-support-action" type="button" onClick={() => openResolution(ticket)}><CheckCircle2 size={14} />{ticket.status === 'Open' ? 'Nhận xử lý' : 'Cập nhật phiếu'}</button>}</div></article>}</ReceptionistList>}</div> : <EmptyState icon={LifeBuoy} title="Chưa có phiếu hỗ trợ" text={query ? 'Không có phiếu phù hợp với nội dung tìm kiếm.' : 'Không có phiếu hỗ trợ theo trạng thái đã chọn.'} />}
     {selectedTicket && <div className="reception-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setSelectedTicket(null) }}><section className="reception-dialog reception-support-dialog" role="dialog" aria-modal="true" aria-labelledby="reception-support-dialog-title"><header><div><span>PHIẾU #{selectedTicket.id}</span><h2 id="reception-support-dialog-title">Cập nhật trạng thái hỗ trợ</h2><p>{selectedTicket.memberName} · {selectedTicket.title}</p></div><button type="button" aria-label="Đóng" onClick={() => setSelectedTicket(null)} disabled={saving}><X size={18} /></button></header><form onSubmit={submitResolution}><SupportTicketImage imageUrl={selectedTicket.imageUrl} ticketId={selectedTicket.id} /><label>Trạng thái<select value={resolutionForm.status} onChange={event => setResolutionForm(current => ({ ...current, status: event.target.value }))}><option value="Open">Đang mở</option><option value="InProgress">Đang xử lý</option><option value="Resolved">Đã giải quyết</option><option value="Closed">Đã đóng</option></select></label><label>Ghi chú phản hồi<textarea ref={resolutionNoteInput} rows="5" maxLength={SUPPORT_RESOLUTION_MAX_LENGTH} aria-invalid={Boolean(resolutionError)} aria-describedby="reception-support-note-count" value={resolutionForm.resolutionNote} onChange={event => setResolutionForm(current => ({ ...current, resolutionNote: event.target.value }))} placeholder="Nội dung xử lý hoặc hướng dẫn dành cho hội viên" /><small id="reception-support-note-count">{resolutionForm.resolutionNote.length}/{SUPPORT_RESOLUTION_MAX_LENGTH} ký tự</small></label>{actionError && <p role="alert">{actionError}</p>}<footer><button type="button" onClick={() => setSelectedTicket(null)} disabled={saving}>Hủy</button><button type="submit" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu cập nhật'}</button></footer></form></section></div>}
   </section>
